@@ -1,0 +1,24 @@
+[project]
+name = "sero"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Ramon Opazo", email = "ramon.opazo.c@gmail.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "duckdb-engine>=0.15.0",
+    "duckdb>=1.2.0",
+    "pymupdf>=1.25.3",
+    "sqlalchemy>=2.0.38",
+    "alive-progress>=3.2.0",
+    "pydantic>=2.10.6",
+]
+
+[project.scripts]
+sero = "sero:cli.main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
