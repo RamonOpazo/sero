@@ -160,7 +160,6 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "alive-progress" },
-    { name = "duckdb" },
     { name = "duckdb-engine" },
     { name = "pydantic" },
     { name = "pymupdf" },
@@ -170,7 +169,6 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "alive-progress", specifier = ">=3.2.0" },
-    { name = "duckdb", specifier = ">=1.2.0" },
     { name = "duckdb-engine", specifier = ">=0.15.0" },
     { name = "pydantic", specifier = ">=2.10.6" },
     { name = "pymupdf", specifier = ">=1.25.3" },

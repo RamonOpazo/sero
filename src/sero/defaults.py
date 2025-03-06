@@ -14,4 +14,6 @@ PATH_TO_DBFILE = Path("./data.db")
 PATH_TO_OUTDIR = Path("./output")
 RETRIEVE_TYPE_CHOICES = [ "summary:console", "data:console", "data:file", "documents:file" ]
 RETRIEVE_TYPE = RETRIEVE_TYPE_CHOICES[0]
+TEST_TYPE_CHOICES = [ "cropping", "extraction" ]
+TEST_TYPE = TEST_TYPE_CHOICES[0]
 NORMALIZED_UUID = None

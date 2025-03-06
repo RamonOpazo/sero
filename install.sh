@@ -1,38 +1,34 @@
-#!/bin/bash
+#!/bin/sh
 set -e  # Exit immediately if a command fails
 
-INSTALL_DIR="$HOME/.sero"
-BIN_DIR="$HOME/.bin"
-BIN_PATH="$BIN_DIR/sero"
-REPO_URL="https://github.com/your-repo/sero.git"
+TEMP_DIR="/tmp/.sero"
+REPO_URL="https://github.com/RamonOpazo/sero.git"
 
-echo "🔹 Installing Sero..."
+echo "Installing sero..."
 
-mkdir -p "$BIN_DIR"
-
+echo "Checking uv installation..."
 if ! command -v uv &> /dev/null; then
-    echo "⚡ Installing uv..."
-    curl -LsSf https://astral.sh/uv/install.sh | sh
+    read -p "Could not find uv. Do you want to install it? (y/N): " response
+    if [[ "$response" =~ ^[Yy]$ ]]; then
+        echo "Installing uv..."
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "✅ uv installed successfully!"
+    else
+        echo "Installation aborted!"
+        exit 1
+    fi
+else
+    echo "✅ uv already installed."
 fi
 
-rm -rf "$INSTALL_DIR"
-echo "📥 Downloading Sero..."
-git clone --depth 1 "$REPO_URL" "$INSTALL_DIR"
+rm -rf "$TEMP_DIR"
 
-echo "⚙️ Setting up environment..."
-uv venv "$INSTALL_DIR"
-"$INSTALL_DIR/bin/uv" pip install "$INSTALL_DIR"
+echo "Downloading sero..."
+git clone --depth 1 "$REPO_URL" "$TEMP_DIR"
 
-ln -sf "$INSTALL_DIR/bin/sero" "$BIN_PATH"
+echo "Building and installing sero..."
+uv build "$TEMP_DIR"
+LATEST_PACKAGE=$(ls -t $TEMP_DIR/dist/sero-*.tar.gz | head -n 1)
+uv tool install "$LATEST_PACKAGE"
 
-if [[ ":$PATH:" != *":$BIN_DIR:"* ]]; then
-    echo 'export PATH="$HOME/.bin:$PATH"' >> "$HOME/.bashrc"
-    echo 'export PATH="$HOME/.bin:$PATH"' >> "$HOME/.zshrc"
-    export PATH="$HOME/.bin:$PATH"
-fi
-
-echo "✅ Sero installed successfully! Run 'sero --help' to get started."
-
-
-# uv build
-# uv tool install dist/file.whl
+echo "✅ sero installed successfully! Run 'sero --help' to get started."
