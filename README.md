@@ -119,10 +119,13 @@ sero retrieve [-d DATABASE_PATH] [-o OUTPUT_PATH] [-t RETRIEVE_TYPE] [-u UUID]
 - `-u, --uuid`: UUID of the PDF file to retrieve (default: all PDFs)
 
 ## Database Schema
-Sero uses a SQLite database with the following structure:
+
+Sero uses a DuckDB database with the following structure:
 
 ### `units` Table
+
 Stores information about processed PDFs.
+
 ```sql
 CREATE TABLE units (
     id UUID PRIMARY KEY,
@@ -133,7 +136,9 @@ CREATE TABLE units (
 ```
 
 ### `documents` Table
+
 Stores the actual PDF files as blobs.
+
 ```sql
 CREATE TABLE documents (
     id UUID PRIMARY KEY,
@@ -144,7 +149,9 @@ CREATE TABLE documents (
 ```
 
 ### `metadata` Table
+
 Stores regex patterns and dataset descriptions.
+
 ```sql
 CREATE TABLE metadata (
     id UUID PRIMARY KEY,
