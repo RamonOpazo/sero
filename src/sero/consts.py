@@ -1,3 +1,22 @@
+PATH_TO_CONFIG = "./sero.toml"
+
+ANCHOR_BORDER_CHOICES = [
+    "top",
+    "bottom"
+]
+
+TEST_ACTION_CHOICES = [
+    "cropping",
+    "extraction"
+]
+
+RETRIEVE_ACTION_CHOICES = [
+    "summary:console",
+    "data:console",
+    "data:file",
+    "documents:file"
+]
+
 HTML_COLOR_NAMES = {
     "black": "#000000",
     "white": "#FFFFFF",
@@ -20,3 +39,25 @@ HTML_COLOR_NAMES = {
     "brown": "#A52A2A"
 }
 
+DB_LICENSES = {
+    'ODbL': {
+        'name': 'Open Database License (ODbL 1.0)',
+        'link': 'https://opendatacommons.org/licenses/odbl/1-0/',
+        'description': 'Requires attribution, ensures modifications are shared under the same terms, and restricts re-identification of anonymized data.'
+    },
+    'ODC-By': {
+        'name': 'Open Data Commons Attribution License (ODC-By 1.0)',
+        'link': 'https://opendatacommons.org/licenses/by/1-0/',
+        'description': 'Allows users to modify, distribute, and commercially use the database, as long as they credit you as the original creator.'
+    },
+    'CC-BY-NC': {
+        'name': 'Creative Commons Attribution-NonCommercial (CC BY-NC 4.0)',
+        'link': 'https://creativecommons.org/licenses/by-nc/4.0/',
+        'description': 'Allows users to modify and redistribute the database for **non-commercial** purposes only, with credit to you.'
+    },
+    'CC-BY-SA': {
+        'name': 'Creative Commons Attribution-ShareAlike (CC BY-SA 4.0)',
+        'link': 'https://creativecommons.org/licenses/by-sa/4.0/',
+        'description': 'Requires credit and share-alike for modifications, while allowing commercial use, with the same terms for derived works.'
+    }
+}

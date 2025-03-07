@@ -6,7 +6,7 @@ from uuid import UUID, uuid4
 from base64 import b64encode
 from alive_progress import alive_it
 
-from sero import types, defaults
+from sero import _defaults, types
 from sero.crud import save_document, save_unit
 
 
@@ -36,8 +36,8 @@ class Cropper:
         return "\n".join(cropped_texts)
 
     def _insert_id_marker(self, page: pymupdf.Page, uuid: UUID) -> None:
-        header = f"{defaults.ID_MARKER_HEADER}: {uuid}"
-        page.insert_text(defaults.ID_MARKER_POS, header, fontsize=defaults.ID_MARKER_SIZE, color=defaults.ID_MARKER_COLOR)
+        header = f"{_defaults.ID_MARKER_HEADER}: {uuid}"
+        page.insert_text(_defaults.ID_MARKER_POS, header, fontsize=_defaults.ID_MARKER_SIZE, color=_defaults.ID_MARKER_COLOR)
     
     def _is_inside_cropped_area(self, rect: pymupdf.Rect) -> bool:
         return (
@@ -70,8 +70,8 @@ class Cropper:
             if self.database_path is None:
                 return b64encode(doc.write())
 
-            save_unit(db_path=self.database_path, unit_id=uuid, file_name=fp.name, cropped_text=cropped_text)
-            save_document(db_path=self.database_path, unit_id=uuid, data=b64encode(doc.write()))
+            save_unit(dbfile=self.database_path, unit_id=uuid, file_name=fp.name, cropped_text=cropped_text)
+            save_document(dbfile=self.database_path, unit_id=uuid, data=b64encode(doc.write()))
 
     def retrieve_obfuscated_text(self) -> Iterator[str]:
         for fp in self.pdf_files:
@@ -79,10 +79,7 @@ class Cropper:
             _, cropped_text = self._process_doc(doc)
             yield cropped_text
 
-
-# def test_crop(crop_height, pdf_path):
-#     doc = pymupdf.open(pdf_path)
-#     for page in doc:
-#         page.set_cropbox(pymupdf.Rect(0, crop_height, page.rect.width, page.rect.height))
-#     doc.save("cropped_preview.pdf")
-#     print("Saved preview as cropped_preview.pdf")
+    
+def make_obfuscation(args: Namespace) -> None:
+    _cls = Cropper(args)
+    _cls._run()

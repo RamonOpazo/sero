@@ -1,20 +1,23 @@
 import uuid
-import re
 from datetime import datetime, timezone
-from sqlalchemy import Column, UUID, Text, DateTime, ForeignKey, BLOB, select
-from sqlalchemy.orm import declarative_base, relationship, Session
-from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy import Column, UUID, Text, DateTime, ForeignKey, BLOB, BINARY
+from sqlalchemy.orm import declarative_base, relationship
 
 
 Base = declarative_base()
 
 
-class Metadata(Base):
-    __tablename__ = "metadata"
+class Manifest(Base):
+    __tablename__ = "meta"
     id = Column(UUID, primary_key=True, default=lambda: uuid.uuid4())
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    description = Column(Text, default=None, nullable=True)
-    regex = Column(Text, default=None, nullable=True)
+    sero_version = Column(Text, nullable=False)
+    sec_hash = Column(BINARY, nullable=True)
+    sec_validator = Column(Text, nullable=True)
+
+    @property
+    def is_secured(self) -> bool:
+        return self.sec_hash is not None
 
 
 class Unit(Base):
@@ -26,21 +29,21 @@ class Unit(Base):
 
     document = relationship("Document", uselist=False, back_populates="unit")
 
-    @hybrid_property
-    def structured_data(self) -> dict[str, str] | None:
-        session = Session.object_session(self)
+    # @hybrid_property
+    # def structured_data(self) -> dict[str, str] | None:
+    #     session = Session.object_session(self)
         
-        if session is None:
-            return None
+    #     if session is None:
+    #         return None
         
-        res = session.execute(select(Metadata.regex))
-        regex = res.scalar()
+    #     res = session.execute(select(Metadata.regex))
+    #     regex = res.scalar()
         
-        if regex is None:
-            return None
+    #     if regex is None:
+    #         return None
         
-        matches = re.finditer(pattern=regex, string=self.cropped_text)
-        return { k: v for match in matches for k, v in match.groupdict().items() if v }
+    #     matches = re.finditer(pattern=regex, string=self.cropped_text)
+    #     return { k: v for match in matches for k, v in match.groupdict().items() if v }
 
     @property
     def document_size_in_bytes(self) -> int:
@@ -79,7 +82,7 @@ class Document(Base):
     data = Column(BLOB, nullable=False)
 
     unit = relationship("Unit", back_populates="document")
-
+    
     @property
     def size(self) -> int:
-        return len(self.data) if self.data else 0
+        return ((len(self.data) / 4) * 3) if self.data else 0

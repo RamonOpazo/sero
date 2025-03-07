@@ -2,56 +2,68 @@ import argparse
 from uuid import UUID
 from pathlib import Path
 
-from sero import defaults
-from sero.commands import Cropper, Retriever, Setuper, Tester
+from sero import consts, defaults
+from sero.commands import make_obfuscation, make_retrieval, make_config, make_test, make_init, get_sero_version
+
+
+__version__ = get_sero_version()
 
 
 def main():
-    parser = argparse.ArgumentParser(prog="sero", description="Sero - PDF Data Obfuscator")
+    parser = argparse.ArgumentParser(prog="sero", description="Sero - PDF Data Obfuscator", epilog="Visit the GitHub repository at https://github.com/RamonOpazo/sero.git")
+    parser.add_argument("-v", "--version", action="version", version=__version__, help="print out the current version of the program")
 
-    subparsers = parser.add_subparsers(dest="command", required=True)
+    subparsers = parser.add_subparsers(dest="command", title="commands", required=True)
 
-    crop_parser = subparsers.add_parser("crop", help="Crop and store PDFs")
-    crop_parser.add_argument("pattern", type=str, help="PDF file pattern")
-    crop_parser.add_argument("-d", "--database-path", type=Path, default=defaults.PATH_TO_DBFILE, help=f"Database file path; defaults to {defaults.PATH_TO_DBFILE.as_posix()!r}")
-    crop_parser.add_argument("-b", "--anchor-border", choices=defaults.ANCHOR_BORDER_CHOICES, default=defaults.ANCHOR_BORDER, help=f"Anchor border from which to crop; defaults to {defaults.ANCHOR_BORDER!r}")
-    crop_parser.add_argument("-g", "--anchor-gap", type=int, default=defaults.ANCHOR_GAP, help=f"Cropping gap from anchor border, in pixels; defaults to {defaults.ANCHOR_GAP}")
-    crop_parser.add_argument("-r", "--regex", type=str, default=defaults.DATA_EXTRACTION_REGEX, help=f"Regex for structured extraction; defaults to {defaults.DATA_EXTRACTION_REGEX!r}")
-    crop_parser.add_argument("-s", "--description", type=str, default=defaults.DESCRIPTION, help=f"Database description; defaults to {defaults.DESCRIPTION!r}")
+    init_parser = subparsers.add_parser("init", help="initialize a project")
+    init_parser.add_argument("dirpath", type=Path, nargs='?', default=".", help="path to project directory")
 
-    test_parser = subparsers.add_parser("test", help="Allow testing of several document manipulation features")
-    test_parser.add_argument("file", type=Path, help="PDF file")
-    test_parser.add_argument("-t", "--test-type", choices=defaults.TEST_TYPE_CHOICES, default=defaults.TEST_TYPE, help=f"Type of data retrieval; defaults to {defaults.TEST_TYPE!r}")
-    test_parser.add_argument("-b", "--anchor-border", choices=defaults.ANCHOR_BORDER_CHOICES, default=defaults.ANCHOR_BORDER, help=f"Anchor border from which to crop; defaults to {defaults.ANCHOR_BORDER!r}")
+    setup_parser = subparsers.add_parser("setup", help="create and modify the database manifest")
+    setup_parser.add_argument("-n", "--project-name", type=str, required=False, help="project name")
+    setup_parser.add_argument("-p", "--project-description", type=str, required=False, help="project description")
+    setup_parser.add_argument("-V", "--project-version", type=str, required=False, help="project version")
+    setup_parser.add_argument("-N", "--contact-name", type=str, required=False, help="project author/institution's name")
+    setup_parser.add_argument("-E", "--contact-email", type=str, required=False, help="project author/institution's email")
+    setup_parser.add_argument("-s", "--sourcedir", type=Path, required=False, help="document source directory")
+    setup_parser.add_argument("-o", "--outdir", type=Path, required=False, help="output directory")
+    setup_parser.add_argument("-f", "--dbfile", type=Path, required=False, help="database filename")
+    setup_parser.add_argument("-B", "--anchor-border", choices=consts.ANCHOR_BORDER_CHOICES, required=False, help="border from which to anchor the cropping")
+    setup_parser.add_argument("-G", "--anchor-gap", type=int, required=False, help="distance from the cropping anchor to the end of the cropping area")
+    setup_parser.add_argument("-H", "--id-marker-header", type=str, required=False, help="identification marker prefix")
+    setup_parser.add_argument("-P", "--id-marker-position", type=int, nargs=2, required=False, help="identification marker position; starts at (0, 0) from the top-left corner of the cropping area")
+    setup_parser.add_argument("-S", "--id-marker-size", type=int, required=False, help="identification marker font size")
+    setup_parser.add_argument("-C", "--id-marker-color", type=str, required=False, help="identification marker font color")
+
+    test_parser = subparsers.add_parser("test", help="allow testing of several document manipulation features")
+    test_parser.add_argument("filepath", type=Path, help="PDF file")
+    test_parser.add_argument("-t", "--test-type", choices=consts.TEST_ACTION_CHOICES, default=defaults.TEST_ACTION, help=f"Type of data retrieval; defaults to {defaults.TEST_ACTION!r}")
+    test_parser.add_argument("-b", "--anchor-border", choices=consts.ANCHOR_BORDER_CHOICES, default=defaults.ANCHOR_BORDER, help=f"Anchor border from which to crop; defaults to {defaults.ANCHOR_BORDER!r}")
     test_parser.add_argument("-g", "--anchor-gap", type=int, default=defaults.ANCHOR_GAP, help=f"Cropping gap from anchor border, in pixels; defaults to {defaults.ANCHOR_GAP}")
-    test_parser.add_argument("-r", "--regex", type=str, default=defaults.DATA_EXTRACTION_REGEX, help=f"Regex for structured extraction; defaults to {defaults.DATA_EXTRACTION_REGEX!r}")
+    test_parser.add_argument("-r", "--regex", type=str, default=None, help=f"Regex for structured extraction; defaults to {None!r}")
 
-    setup_parser = subparsers.add_parser("setup", help="Create and modify metadata")
-    setup_parser.add_argument("-d", "--database-path", type=Path, default=defaults.PATH_TO_DBFILE, help=f"Database file path; defaults to {defaults.PATH_TO_DBFILE.as_posix()!r}")
-    setup_parser.add_argument("-r", "--regex", type=str, default=defaults.DATA_EXTRACTION_REGEX, help=f"Regex for structured extraction; defaults to {defaults.DATA_EXTRACTION_REGEX!r}")
-    setup_parser.add_argument("-s", "--description", type=str, default=defaults.DESCRIPTION, help=f"Database description; defaults to {defaults.DESCRIPTION!r}")
+    crop_parser = subparsers.add_parser("crop", help="crop and store PDFs")
+    crop_parser.add_argument("pattern", type=str, help="PDF file pattern")
+    crop_parser.add_argument("-b", "--anchor-border", choices=consts.ANCHOR_BORDER_CHOICES, default=defaults.ANCHOR_BORDER, help=f"Anchor border from which to crop; defaults to {defaults.ANCHOR_BORDER!r}")
+    crop_parser.add_argument("-g", "--anchor-gap", type=int, default=defaults.ANCHOR_GAP, help=f"Cropping gap from anchor border, in pixels; defaults to {defaults.ANCHOR_GAP}")
 
-    retrieve_parser = subparsers.add_parser("retrieve", help="Retrieve documents and related data")
-    retrieve_parser.add_argument("-d", "--database-path", type=Path, default=defaults.PATH_TO_DBFILE, help=f"Database file path; defaults to {defaults.PATH_TO_DBFILE.as_posix()!r}")
-    retrieve_parser.add_argument("-o", "--output-path", type=Path, default=defaults.PATH_TO_OUTDIR, help=f"Output dir path; defaults to {defaults.PATH_TO_OUTDIR.as_posix()!r}")
-    retrieve_parser.add_argument("-t", "--retrieve-type", choices=defaults.RETRIEVE_TYPE_CHOICES, default=defaults.RETRIEVE_TYPE, help=f"Type of data retrieval; defaults to {defaults.RETRIEVE_TYPE!r}")
-    retrieve_parser.add_argument("-u", "--uuid", type=UUID, default=defaults.NORMALIZED_UUID, help=f"UUID of the PDF file to retrieve; defaults to {defaults.NORMALIZED_UUID!r} (retrieves all PDFs)")
+    retrieve_parser = subparsers.add_parser("retrieve", help="retrieve documents and related data")
+    retrieve_parser.add_argument("-o", "--output-path", type=Path, default=defaults.PATH_TO_OUTDIR, help=f"Output dir path; defaults to {defaults.PATH_TO_OUTDIR!r}")
+    retrieve_parser.add_argument("-t", "--retrieve-action", choices=consts.RETRIEVE_ACTION_CHOICES, default=defaults.RETRIEVE_ACTION, help=f"Type of data retrieval; defaults to {defaults.RETRIEVE_ACTION!r}")
+    retrieve_parser.add_argument("-u", "--uuid", type=UUID, default=None, help=f"UUID of the PDF file to retrieve; defaults to {None!r} (retrieves all PDFs)")
 
     args = parser.parse_args()
 
     match args.command:
-        case "setup" | "crop":
-            setuper = Setuper(args)
-            setuper.configure_metadata()
-        case "crop":
-            cropper = Cropper(args)
-            cropper.obfuscate_docs()
+        case "init":
+            make_init(args)
         case "test":
-            tester = Tester(args)
-            tester.make_attempt()
+            make_test(args)
+        case "setup":
+            make_config(args)
+        case "crop":
+            make_obfuscation(args)
         case "retrieve":
-            retriever = Retriever(args)
-            retriever.recover_docs()
+            make_retrieval(args)
     
     exit(0)
     

@@ -4,44 +4,41 @@ from sqlalchemy import select, func
 from sqlalchemy.orm import joinedload
 
 from sero.db import get_db_session
-from sero.models import Metadata, Unit, Document
+from sero.models import Manifest, Unit, Document
 
 
-# Save metadata
-def save_metadata(db_path: Path, description: str | None, regex: str | None) -> None:
-    session = next(get_db_session(db_path=db_path))
-    res = session.execute(select(Metadata))
-    meta = res.scalar()
-    new_meta = meta or Metadata()
+def save_manifest(dbfile: Path, sero_version: str, is_secured: bool) -> None:
+    session = next(get_db_session(dbfile))
+    res = session.execute(select(Manifest))
+    mainfest = res.scalar()
+    new_mainfest = mainfest or Manifest()
     
-    for key, value in {"description": description, "regex": regex}.items():
+    for key, value in {"sero_version": sero_version, "is_secured": is_secured}.items():
         if value:
-            setattr(new_meta, key, value)
+            setattr(new_mainfest, key, value)
     
-    if meta is None:
-        session.add(new_meta)
+    if mainfest is None:
+        session.add(new_mainfest)
 
     session.commit()
 
 
-# Save extracted text
-def save_unit(db_path: Path, unit_id: UUID, file_name: str, cropped_text: str) -> None:
-    session = next(get_db_session(db_path=db_path))
+def save_unit(dbfile: Path, unit_id: UUID, file_name: str, cropped_text: str) -> None:
+    session = next(get_db_session(dbfile))
     unit = Unit(id=unit_id, file_name=file_name, cropped_text=cropped_text)
     session.add(unit)
     session.commit()
 
 
-# Save PDF document (linked to a unit)
-def save_document(db_path, unit_id, data) -> None:
-    session = next(get_db_session(db_path=db_path))
+def save_document(dbfile, unit_id, data) -> None:
+    session = next(get_db_session(dbfile))
     doc = Document(unit_id=unit_id, data=data)
     session.add(doc)
     session.commit()
 
 
-def retrieve_units(db_path: Path, unit_id: UUID | None = None) -> list[Unit]:
-    session = next(get_db_session(db_path=db_path))
+def retrieve_units(dbfile: Path, unit_id: UUID | None = None) -> list[Unit]:
+    session = next(get_db_session(dbfile))
     stmt = (
         select(Unit)
         .options(joinedload(Unit.document))
@@ -55,16 +52,16 @@ def retrieve_units(db_path: Path, unit_id: UUID | None = None) -> list[Unit]:
     return units
 
 
-def count_units(db_path: Path) -> int:
-    session = next(get_db_session(db_path=db_path))
+def count_units(dbfile: Path) -> int:
+    session = next(get_db_session(dbfile))
     res = session.execute(select(func.count()).select_from(Unit))
     total_units = res.scalar_one()
     return total_units
 
 
-def retrieve_metadata(db_path: Path) -> Metadata | None:
-    session = next(get_db_session(db_path=db_path))
-    res = session.execute(select(Metadata))
+def retrieve_manifest(dbfile: Path) -> Manifest | None:
+    session = next(get_db_session(dbfile))
+    res = session.execute(select(Manifest))
     meta = res.scalar()
     return meta
 

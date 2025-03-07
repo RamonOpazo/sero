@@ -1,9 +1,12 @@
-from pydantic import validate_call_decorator
+import toml
+from typing import Any
+from pathlib import Path
+from pydantic import validate_call
 
 from sero import types, consts
 
 
-@validate_call_decorator
+@validate_call
 def html_or_hex_to_rgb_float(color: types.HtmlColor) -> types.RGBFloatColor:
     
     def _enforce_hex(color: types.HtmlColor) -> types.HexColor:
@@ -24,3 +27,6 @@ def html_or_hex_to_rgb_float(color: types.HtmlColor) -> types.RGBFloatColor:
     # Convert hex to float RGB
     r, g, b = int(_color[1:3], 16), int(_color[3:5], 16), int(_color[5:7], 16)
     return (r/255.0, g/255.0, b/255.0)
+
+
+
