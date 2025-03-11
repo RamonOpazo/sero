@@ -5,15 +5,16 @@ from sqlalchemy.orm import joinedload
 
 from sero.db import get_db_session
 from sero.models import Manifest, Unit, Document
+from sero.schemas import ManifestCreate
 
 
-def save_manifest(dbfile: Path, sero_version: str, is_secured: bool) -> None:
+def save_manifest(dbfile: Path, **data: ManifestCreate) -> None:
     session = next(get_db_session(dbfile))
     res = session.execute(select(Manifest))
     mainfest = res.scalar()
     new_mainfest = mainfest or Manifest()
     
-    for key, value in {"sero_version": sero_version, "is_secured": is_secured}.items():
+    for key, value in data.items():
         if value:
             setattr(new_mainfest, key, value)
     
@@ -23,14 +24,14 @@ def save_manifest(dbfile: Path, sero_version: str, is_secured: bool) -> None:
     session.commit()
 
 
-def save_unit(dbfile: Path, unit_id: UUID, file_name: str, cropped_text: str) -> None:
+def save_unit(dbfile: Path, unit_id: UUID, file_name: str, cropped_text: bytes) -> None:
     session = next(get_db_session(dbfile))
     unit = Unit(id=unit_id, file_name=file_name, cropped_text=cropped_text)
     session.add(unit)
     session.commit()
 
 
-def save_document(dbfile, unit_id, data) -> None:
+def save_document(dbfile: Path, unit_id: UUID, data: bytes) -> None:
     session = next(get_db_session(dbfile))
     doc = Document(unit_id=unit_id, data=data)
     session.add(doc)

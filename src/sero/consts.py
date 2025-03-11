@@ -1,16 +1,21 @@
-PATH_TO_CONFIG = "./sero.toml"
+from pathlib import Path
 
-ANCHOR_BORDER_CHOICES = [
+
+SOURCEDIR = Path(__file__).resolve().parent
+
+CONFIGFILE = "./sero.toml"
+
+CROP_BORDER_CHOICES = [
     "top",
     "bottom"
 ]
 
-TEST_ACTION_CHOICES = [
+TEST_MODE_CHOICES = [
     "cropping",
     "extraction"
 ]
 
-RETRIEVE_ACTION_CHOICES = [
+RETRIEVE_MODE_CHOICES = [
     "summary:console",
     "data:console",
     "data:file",

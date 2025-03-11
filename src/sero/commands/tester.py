@@ -2,41 +2,46 @@ import re
 import json
 from argparse import Namespace
 from pathlib import Path
-from base64 import b64decode
 
 from .cropper import Cropper
-from sero import _defaults, types
+from sero import defaults, types
+from sero.config import load_settings
 
 
 class Tester:
     def __init__(self, args: Namespace) -> None:
-        self._args = args
+        self.configfile = Path(defaults.PATH_TO_CONFIGFILE)
+        self.settings = load_settings(self.configfile)
         self.filepath: Path = args.filepath
+        self.mode: types.TestMode = args.mode
+        self.crop_border: types.CropBorder = args.crop_border
+        self.crop_gap: types.CropGap = args.crop_gap
         self.regex: str | None = getattr(args, "regex", None)
-        self.anchor_border: types.AnchorBorder = args.anchor_border
-        self.anchor_gap: types.AnchorGap = args.anchor_gap
-        self.test_action: types.TestAction = args.test_action
 
     @property
     def args(self) -> Namespace:
         return self._args
+    
+    @property
+    def testfile(self) -> Path:
+        return self.settings.paths.outdir / "crop_test.pdf"
 
     def _attempt_data_extraction(self) -> None:
-        if not isinstance(self.regex, str):
+        if self.regex is None:
             raise ValueError("Must provide a regular expression in order to attempt data extraction")
         
-        cropper = Cropper.just_cropper(filename=self.filepath.as_posix(), anchor_border=self.anchor_border, anchor_gap=self.anchor_gap)
-        cropped_text = next(cropper.retrieve_obfuscated_text())
-        matches = re.finditer(pattern=self.regex, string=cropped_text)
+        cropper = Cropper.for_testing(filename=self.filepath, crop_border=self.crop_border, crop_gap=self.crop_gap)
+        text: str = next(cropper._obfuscate_and_return(get_text=True))
+        matches = re.finditer(pattern=self.regex, string=text)
         groups = { k: v for match in matches for k, v in match.groupdict().items() if v }
         print(json.dumps(groups))
 
     def _attempt_document_cropping(self) -> None:
-        cropper = Cropper.just_cropper(filename=self.filepath.as_posix(), anchor_border=self.anchor_border, anchor_gap=self.anchor_gap)
-        doc_bytes = cropper.obfuscate_docs()
+        cropper = Cropper.for_testing(filename=self.filepath, crop_border=self.crop_border, crop_gap=self.crop_gap)
+        doc: bytes = next(cropper._obfuscate_and_return(get_doc=True))
 
-        with (_defaults.PATH_TO_OUTDIR / "crop_test.pdf").open("wb") as fp:
-            fp.write(b64decode(doc_bytes))
+        with self.testfile.open("wb") as fp:
+            fp.write(doc)
 
     def _run(self) -> None:
         if self.test_action == "cropping":

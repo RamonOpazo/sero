@@ -1,36 +1,31 @@
 from __future__ import annotations
 
+import toml
 from pathlib import Path
-from pydantic import BaseModel, DirectoryPath, FilePath
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings
 
-from sero import types, consts
-
-
-class _ProjectContact(BaseModel):
-    name: str
-    email: str
+from sero import types
 
 
-class _Project(BaseModel):
+class _Project(BaseSettings):
     name: str
     version: str
     description: str
-    contact: _ProjectContact
+    contact: str 
 
 
-class _Paths(BaseModel):
-    sourcedir: DirectoryPath
-    outdir: DirectoryPath
-    dbfile: FilePath
+class _Paths(BaseSettings):
+    docsdir: Path
+    outdir: Path
+    dbfile: Path
 
 
-class _CropAnchor(BaseModel):
-    border: types.AnchorBorder
+class _Crop(BaseSettings):
+    border: types.CropBorder
     gap: int
 
 
-class _IdMaker(BaseModel):
+class _Marker(BaseSettings):
     header: str
     position: tuple[int, int]
     size: int
@@ -40,14 +35,15 @@ class _IdMaker(BaseModel):
 class Settings(BaseSettings):
     project: _Project = None
     paths: _Paths = None
-    crop_anchor: _CropAnchor = None
-    id_marker: _IdMaker = None
+    crop: _Crop = None
+    marker: _Marker = None
 
 
 def load_settings(configfile: Path) -> Settings:
     if not configfile.exists():
         raise FileExistsError("Sero configuration file not found! This command requires to run inside a project folder")
     
-    model_config = SettingsConfigDict(toml_file=Path(configfile))
-    _cls = Settings(model_config=model_config)
-    return _cls
+    with configfile.open("r") as fp:
+        data = toml.load(fp)
+        _cls = Settings(**data)
+        return _cls

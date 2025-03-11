@@ -1,6 +1,7 @@
 import re
 import bcrypt
 import toml
+import shutil
 from getpass import getpass
 from pathlib import Path
 from argparse import Namespace
@@ -19,6 +20,7 @@ class Initializer:
     contact_name: str
     contact_email: str
     db_license: str
+    db_license_path: Path
     hashed_password: bytes | None
 
     def __init__(self, args: Namespace) -> None:
@@ -33,8 +35,12 @@ class Initializer:
         self.base_path = base_path
 
     @property
+    def configfile(self) -> Path:
+        return self.project_path / defaults.PATH_TO_CONFIGFILE
+
+    @property
     def dbfile(self) -> Path:
-        return (self.project_path / defaults.PATH_TO_DBFILE)
+        return self.project_path / defaults.PATH_TO_DBFILE
 
     @property
     def db_host(self) -> str:
@@ -47,19 +53,16 @@ class Initializer:
                 "name": self.project_name,
                 "description": self.project_description,
                 "version": defaults.PROJECT_VERSION,
-                "contact": {
-                    "name": self.contact_name,
-                    "email": self.contact_email
-                }
+                "contact": f"{self.contact_name} <{self.contact_email}>"
             },
             "paths": {
-                "sourcedir": defaults.PATH_TO_SOURCEDIR,
+                "docsdir": defaults.PATH_TO_DOCSDIR,
                 "outdir": defaults.PATH_TO_OUTDIR,
                 "dbfile": defaults.PATH_TO_DBFILE
             },
-            "crop_anchor": {
-                "border": defaults.ANCHOR_BORDER,
-                "gap": defaults.ANCHOR_GAP
+            "crop": {
+                "border": defaults.CROP_BORDER,
+                "gap": defaults.CROP_GAP
             },
             "id_marker": {
                 "header": defaults.ID_MARKER_HEADER,
@@ -71,11 +74,12 @@ class Initializer:
 
     def _init_prompt(self) -> None:
         self.project_name = self._prompt_project_name()
-        self.project_path = (self.base_path / self.project_name)
+        self.project_path = self.base_path / self.project_name
         self.project_description = self._prompt_project_description()
         self.contact_name = self._prompt_contact_name()
         self.contact_email = self._prompt_contact_email()
         self.db_license = self._prompt_db_license()
+        self.db_license_path = self.project_path / "LICENSE"
         self.hashed_password = self._prompt_password()
 
     def _prompt_project_name(self) -> str:
@@ -139,13 +143,13 @@ class Initializer:
 
     def _prompt_password(self) -> bytes | None:
         while True:
-            match input("Do you want to secure your data with a password (strongly recommended) [Y/n]").lower():
+            match input("Do you want to secure your data with a password (strongly recommended) [Y/n]: ").lower():
                 case "" | "y" | "yes":
                     break
                 case "n" | "no":
                     return None
                 case _:
-                    print("\nInvalid answer. Please respond y/n")
+                    print("\nInvalid answer, please respond y or n")
         while True:
             _ = getpass("Enter a password to secure the data: ")
 
@@ -163,14 +167,16 @@ class Initializer:
             print("\nPasswords do not match! Please try again.")
 
     def _create_project_files(self) -> None:
-        self.project_path.mkdir(exist_ok=True)
         print(f"Project directory: {self.project_path.as_posix()}")
-        
-        config_file = (self.project_path / consts.PATH_TO_CONFIG)
-        print("Creating configuration file...")
+        self.project_path.mkdir(exist_ok=True)
 
-        with config_file.open("w") as fp:
+        print("Creating configuration file...")
+        with self.configfile.open("w") as fp:
             toml.dump(self.config, fp)
+        
+        print("Creating LICENSE file...")
+        license_source = consts.SOURCEDIR / "licenses" / self.db_license
+        shutil.copy(license_source, self.db_license_path)
 
         print("Initializing the database...")
         init_db(self.dbfile)
@@ -179,8 +185,7 @@ class Initializer:
         self._init_prompt()
         self._create_project_files()
         sero_version = get_sero_version()
-        is_secured = self.hashed_password is not None
-        save_manifest(self.dbfile, sero_version=sero_version, is_secured=is_secured)
+        save_manifest(self.dbfile, sero_version=sero_version, sec_hash=self.hashed_password)
         print("\nProject initialization successful!")
 
 
@@ -190,6 +195,7 @@ def make_init(args: Namespace) -> None:
 
 
 def get_sero_version() -> str:
-    with Path("pyproject.toml").open("r") as fp:
+    pyprojectfile = defaults.SOURCEDIR.parent.parent / "pyproject.toml"
+    with pyprojectfile.open("r") as fp:
         config = toml.load(fp)
         return config["project"]["version"]

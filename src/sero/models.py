@@ -13,7 +13,6 @@ class Manifest(Base):
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     sero_version = Column(Text, nullable=False)
     sec_hash = Column(BINARY, nullable=True)
-    sec_validator = Column(Text, nullable=True)
 
     @property
     def is_secured(self) -> bool:
@@ -25,7 +24,7 @@ class Unit(Base):
     id = Column(UUID, primary_key=True, default=lambda: uuid.uuid4())
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     file_name = Column(Text, nullable=False)
-    cropped_text = Column(Text, nullable=True)
+    cropped_text = Column(BINARY, nullable=True)
 
     document = relationship("Document", uselist=False, back_populates="unit")
 
