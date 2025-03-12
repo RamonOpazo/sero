@@ -1,13 +1,12 @@
 import re
-import bcrypt
 import toml
+import base64
 import shutil
 from getpass import getpass
 from pathlib import Path
 from argparse import Namespace
-from base64 import b64encode
 
-from sero import consts, defaults
+from sero import consts, defaults, utils
 from sero.db import init_db
 from sero.crud import save_manifest
 
@@ -34,6 +33,14 @@ class Initializer:
 
         self.base_path = base_path
 
+    @property
+    def docsdir(self) -> Path:
+        return self.project_path / defaults.PATH_TO_DOCSDIR
+
+    @property
+    def outdir(self) -> Path:
+        return self.project_path / defaults.PATH_TO_OUTDIR
+    
     @property
     def configfile(self) -> Path:
         return self.project_path / defaults.PATH_TO_CONFIGFILE
@@ -62,9 +69,10 @@ class Initializer:
             },
             "crop": {
                 "border": defaults.CROP_BORDER,
-                "gap": defaults.CROP_GAP
+                "gap": defaults.CROP_GAP,
+                "pages": defaults.CROP_PAGES
             },
-            "id_marker": {
+            "marker": {
                 "header": defaults.ID_MARKER_HEADER,
                 "position": defaults.ID_MARKER_POS,
                 "size": defaults.ID_MARKER_SIZE,
@@ -151,24 +159,28 @@ class Initializer:
                 case _:
                     print("\nInvalid answer, please respond y or n")
         while True:
-            _ = getpass("Enter a password to secure the data: ")
+            password = getpass("Enter a password to secure the data: ")
 
-            if len(_) < 8:
+            if len(password) < 8:
                 print("The password must be at least 8 characters long")
                 continue
 
-            hashed_password = bcrypt.hashpw(_.encode('utf-8'), bcrypt.gensalt())
+            hashed_password = utils.hash_data(password=password, data=password)
             confirm_password = getpass("Confirm your password: ")
 
-            if bcrypt.checkpw(confirm_password.encode('utf-8'), hashed_password):
+            if utils.verify_hashed_data(password=confirm_password, data=confirm_password, stored_hash=hashed_password):
                 print("Password confirmed successfully!")
-                return b64encode(hashed_password)
+                return base64.b64encode(hashed_password)
             
             print("\nPasswords do not match! Please try again.")
 
     def _create_project_files(self) -> None:
         print(f"Project directory: {self.project_path.as_posix()}")
         self.project_path.mkdir(exist_ok=True)
+
+        print("Creating directory structure...")
+        self.docsdir.mkdir(exist_ok=True)
+        self.outdir.mkdir(exist_ok=True)
 
         print("Creating configuration file...")
         with self.configfile.open("w") as fp:

@@ -165,3 +165,16 @@ CREATE TABLE metadata (
 
 Sero is licensed under the MIT License.
 
+---
+
+## Sample commands
+
+```sh
+sero init
+sero test docs/primer.pdf -m cropping -b top -g 220
+sero setup -p 1:3
+sero test docs/primer.pdf -m extraction -b top -g 220 -r "Núm. H.C.: (?P<hc>\d+)|CIP: (?P<cip>[A-Z0-9]+)|D. Naixement \(Edat\): (?P<birth_date>\d+/\d+/\d+)|Sexe: (?P<sex>\w+)|Data Obtenció: (?P<proc_date>\d+/\d+/\d+)|Núm\. Estudi:\s+(?P<num_corr>[A-Z0-9]+)" | tail -n 1 | jq
+sero crop docs/*.pdf
+sero retrieve -m summary:console
+sero retrieve -m data:console -r "Núm. H.C.: (?P<hc>\d+)|CIP: (?P<cip>[A-Z0-9]+)|D. Naixement \(Edat\): (?P<birth_date>\d+/\d+/\d+)|Sexe: (?P<sex>\w+)|Data Obtenció: (?P<proc_date>\d+/\d+/\d+)|Núm\. Estudi:\s+(?P<num_corr>[A-Z0-9]+)" | tail -n 1 | jq
+```

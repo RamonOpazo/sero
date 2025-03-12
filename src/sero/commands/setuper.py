@@ -4,7 +4,7 @@ from pathlib import Path
 from argparse import Namespace, ArgumentTypeError
 
 from sero import types, defaults
-from sero.config import load_settings
+from sero.config import load_settings, test_settings
 
 
 class Setuper:
@@ -23,12 +23,13 @@ class Setuper:
         self.docsdir: Path | None = getattr(args, "docsdir", None)
         self.outdir: Path | None = getattr(args, "outdir", None)
         self.dbfile: Path | None = getattr(args, "dbfile", None)
-        self.anchor_border: types.CropBorder | None = getattr(args, "anchor_border", None)
-        self.anchor_gap: int | None = getattr(args, "anchor_gap", None)
-        self.id_marker_header: str | None = getattr(args, "id_marker_header", None)
-        self.id_marker_position: tuple[int, int] | None = getattr(args, "id_marker_position", None)
-        self.id_marker_size: int | None = getattr(args, "id_marker_size", None)
-        self.id_marker_color: types.HtmlColor | None = getattr(args, "id_marker_color", None)
+        self.crop_border: types.CropBorder | None = getattr(args, "crop_border", None)
+        self.crop_gap: types.CropGap | None = getattr(args, "crop_gap", None)
+        self.crop_pages: types.CropPages | None = getattr(args, "crop_pages", None)
+        self.marker_header: str | None = getattr(args, "marker_header", None)
+        self.marker_position: tuple[int, int] | None = getattr(args, "marker_position", None)
+        self.marker_size: int | None = getattr(args, "marker_size", None)
+        self.marker_color: types.HtmlColor | None = getattr(args, "marker_color", None)
 
     @property
     def config(self) -> dict[str, Any]:
@@ -37,7 +38,7 @@ class Setuper:
                 "name": self.project_name or self.settings.project.name,
                 "description": self.project_description or self.settings.project.description,
                 "version": self.project_version or self.settings.project.version,
-                "contact": self.contact_name or self.settings.project.contact
+                "contact": self.contact or self.settings.project.contact
             },
             "paths": {
                 "docsdir": str(self.docsdir or self.settings.paths.docsdir),
@@ -45,21 +46,26 @@ class Setuper:
                 "dbfile": str(self.dbfile or self.settings.paths.dbfile)
             },
             "crop": {
-                "border": self.anchor_border or self.settings.crop.border,
-                "gap": self.anchor_gap or self.settings.crop.gap
+                "border": self.crop_border or self.settings.crop.border,
+                "gap": self.crop_gap or self.settings.crop.gap,
+                "pages": self.crop_pages or self.settings.crop.pages
             },
-            "id_marker": {
-                "header": self.id_marker_header or self.settings.marker.header,
-                "position": self.id_marker_position or self.settings.marker.position,
-                "size": self.id_marker_size or self.settings.marker.size,
-                "color": self.id_marker_color or self.settings.marker.color
+            "marker": {
+                "header": self.marker_header or self.settings.marker.header,
+                "position": self.marker_position or self.settings.marker.position,
+                "size": self.marker_size or self.settings.marker.size,
+                "color": self.marker_color or self.settings.marker.color
             }
         }
     
     def _run(self) -> None:
         print("Updating configuration file...")
+        test_settings(self.config)
+        
         with self.configfile.open("w") as fp:
             toml.dump(self.config, fp)
+        
+        print("Update successful!")
 
 
 def make_config(args: Namespace) -> None:

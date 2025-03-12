@@ -28,22 +28,6 @@ class Unit(Base):
 
     document = relationship("Document", uselist=False, back_populates="unit")
 
-    # @hybrid_property
-    # def structured_data(self) -> dict[str, str] | None:
-    #     session = Session.object_session(self)
-        
-    #     if session is None:
-    #         return None
-        
-    #     res = session.execute(select(Metadata.regex))
-    #     regex = res.scalar()
-        
-    #     if regex is None:
-    #         return None
-        
-    #     matches = re.finditer(pattern=regex, string=self.cropped_text)
-    #     return { k: v for match in matches for k, v in match.groupdict().items() if v }
-
     @property
     def document_size_in_bytes(self) -> int:
         return self.document.size

@@ -32,17 +32,20 @@ class Retriever:
 
         while True:
             self._password = getpass("Enter the password: ")
-            hashed_password = utils.hash_data(password=self._password, data=self._password)
+            expected_hashed_password = base64.b64decode(self.manifest.sec_hash)
 
-            if utils.verify_hashed_data(password=self._password, data=hashed_password, stored_hash=self.manifest.sec_hash):
+            if utils.verify_hashed_data(password=self._password, data=self._password, stored_hash=expected_hashed_password):
                 print("Password confirmed successfully!")
                 return
 
             print("\nIncorrect password! Please try again.")
 
-    def _resolve_structured_data(self, data: bytes) -> dict[str, str]:
-        decrypted_data = base64.b64decode(utils.decrypt_data(password=self._password, encrypted_data=data))
-        matches = re.finditer(pattern=self.regex, string=decrypted_data)
+    def _resolve_structured_data(self, data: bytes) -> dict[str, str] | None:
+        if not data:
+            return None
+
+        decrypted_data = base64.b64decode(data) if self.manifest.sec_hash is None else utils.decrypt_data(password=self._password, encrypted_data=data)
+        matches = re.finditer(pattern=self.regex, string=decrypted_data.decode())
         return { k: v for match in matches for k, v in match.groupdict().items() if v }
 
     def _retrieve_data(self, on_console: bool) -> None:
@@ -65,7 +68,7 @@ class Retriever:
             print(json.dumps(output))
             return
     
-        with self.summaryfile.open("wb") as fp:
+        with self.summaryfile.open("w") as fp:
             json.dump(output, fp, indent=4)
 
     def _retrieve_documents(self) -> None:
@@ -76,7 +79,7 @@ class Retriever:
             outfile = self.settings.paths.outdir / f"{unit.id}.pdf"
             
             with outfile.open("wb") as fp:
-                decrypted_doc = base64.b64decode(utils.decrypt_data(password=self._password, encrypted_data=unit.document.data))
+                decrypted_doc = utils.decrypt_data(password=self._password, encrypted_data=unit.document.data)
                 fp.write(decrypted_doc)
 
     def _retrieve_summary(self) -> None:
@@ -98,7 +101,7 @@ class Retriever:
             self._retrieve_data(on_console=True)
             
         if self.mode == "data:file":
-            self._retrieve_data(on_console=True)
+            self._retrieve_data(on_console=False)
                 
         if self.mode == "documents:file":
             self._retrieve_documents()
