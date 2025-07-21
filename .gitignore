@@ -1,0 +1,22 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv/
+
+# Directories
+.temp/
+.vscode/
+
+# Test-generated files
+.pytest_cache/
+.coverage_html/
+.coverage
+
+# Secret files
+*.env
