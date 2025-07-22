@@ -1,10 +1,10 @@
 [project]
 name = "sero"
 version = "0.1.0"
-description = "Add your description here"
+description = "Sero Evelishly Redacts and Obfuscates - Medical document privacy protection platform"
 readme = "README.md"
 authors = [
-    { email = "ramon.opazo.c@gmail.com" }
+    { name = "Ramon Opazo" }
 ]
 requires-python = ">=3.13"
 dependencies = [
@@ -31,6 +31,11 @@ dev = [
 
 [project.scripts]
 sero = "sero:main"
+sero-dev = "sero:dev"
+sero-test = "sero:test"
+sero-test-cov = "sero:test_cov"
+sero-db-init = "sero:db_init"
+sero-version = "sero:version"
 
 [build-system]
 requires = ["hatchling"]
@@ -71,3 +76,33 @@ omit = [
     "*/venv/*",
     "*/.venv/*",
 ]
+
+[tool.semantic_release]
+version_toml = ["pyproject.toml:project.version"]
+build_command = "uv build"
+major_on_zero = true
+tag_format = "v{version}"
+commit_message = "chore(release): v{version} [skip ci]"
+commit_author = "github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>"
+changelog_file = "CHANGELOG.md"
+upload_to_vcs_release = true
+
+[tool.semantic_release.branches.main]
+match = "main"
+prerelease = false
+
+[tool.semantic_release.commit_parser_options]
+allowed_tags = [
+    "build",
+    "chore", 
+    "ci",
+    "docs",
+    "feat",
+    "fix",
+    "perf",
+    "style",
+    "refactor",
+    "test",
+]
+minor_tags = ["feat"]
+patch_tags = ["fix", "perf"]
