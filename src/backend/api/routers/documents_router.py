@@ -11,7 +11,7 @@ from backend.api.controllers import documents_controller
 router = APIRouter()
 
 
-@router.get("/", response_model=list[documents_schema.Document])
+@router.get("", response_model=list[documents_schema.Document])
 async def list_documents(
     skip: int = 0,
     limit: int = 100,
@@ -31,7 +31,7 @@ async def search_documents(
     return documents_controller.search_list(db=db, skip=skip, limit=limit, status=status, project_id=project_id)
 
 
-@router.post("/", response_model=documents_schema.Document)
+@router.post("", response_model=documents_schema.Document)
 async def create_document(
     document_data: documents_schema.DocumentCreate,
     db: Session = Depends(get_db_session)

@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import type { Document } from '@/types'
 
 export function DocumentEditor() {
-  const { projectId, documentId } = useParams<{ projectId: string; documentId: string }>()
+  const { documentId } = useParams<{ projectId: string; documentId: string }>()
   const [document, setDocument] = useState<Document | null>(null)
 
   useEffect(() => {
@@ -21,7 +21,9 @@ export function DocumentEditor() {
 
   return (
     <div className="p-6">
-      <h2 className="text-2xl font-semibold mb-4">{document.title}</h2>
+      <h2 className="text-2xl font-semibold mb-4">
+        {document.original_file?.filename || document.description || 'Untitled Document'}
+      </h2>
       <p className="text-muted-foreground mb-4">{document.description}</p>
       
       {/* Placeholder for PDF viewer and selection tools */}
@@ -30,9 +32,13 @@ export function DocumentEditor() {
         <br />
         Document ID: {document.id}
         <br />
-        Selections: {document.selections?.length || 0}
+        Status: {document.status}
         <br />
-        Prompts: {document.prompts?.length || 0}
+        Original File: {document.original_file?.filename || 'None'}
+        <br />
+        Selections: {document.original_file?.selections?.length || 0}
+        <br />
+        Prompts: {document.original_file?.prompts?.length || 0}
       </div>
     </div>
   )

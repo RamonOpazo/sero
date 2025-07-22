@@ -26,12 +26,13 @@ export interface Document {
   created_at: string
   updated_at: string | null
   project_id: string
-  title: string
   description: string | null
   status: DocumentStatus
-  files: File[]
-  selections: Selection[]
-  prompts: Prompt[]
+  original_file: File | null
+  obfuscated_file: File | null
+  // Computed properties for convenience
+  selections?: Selection[]
+  prompts?: Prompt[]
 }
 
 export interface DocumentCreate {
@@ -46,33 +47,39 @@ export interface File {
   updated_at: string | null
   document_id: string
   filename: string
-  file_path: string
-  file_size: number
-  file_type: string
-  is_original: boolean
-  description: string | null
+  mime_type: string
+  size: string
+  salt: string
+  file_hash: string
+  is_original_file: boolean
+  selections: Selection[]
+  prompts: Prompt[]
 }
 
 export interface Selection {
   id: string
   created_at: string
   updated_at: string | null
-  document_id: string
+  file_id: string
+  label: string
   page_number: number
   x: number
   y: number
   width: number
   height: number
-  description: string | null
+  confidence: number
+  is_ai_generated: boolean
 }
 
 export interface Prompt {
   id: string
   created_at: string
   updated_at: string | null
-  document_id: string
-  content: string
-  order: number
+  file_id: string
+  label: string
+  text: string
+  languages: PromptLanguage[]
+  temperature: number
 }
 
 // Match backend enums exactly

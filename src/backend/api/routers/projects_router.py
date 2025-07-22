@@ -10,7 +10,7 @@ from backend.api.controllers import projects_controller
 router = APIRouter()
 
 
-@router.get("/", response_model=list[projects_schema.Project])
+@router.get("", response_model=list[projects_schema.Project])
 async def list_projects(
     skip: int = 0,
     limit: int = 100,
@@ -30,7 +30,7 @@ async def search_projects(
     return projects_controller.search_list(db=db, skip=skip, limit=limit, name=name, version=version)
 
 
-@router.post("/", response_model=projects_schema.Project, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=projects_schema.Project, status_code=status.HTTP_201_CREATED)
 async def create_project(
     project_data: projects_schema.ProjectCreate,
     db: Session = Depends(get_db_session)

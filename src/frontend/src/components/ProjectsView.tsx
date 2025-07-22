@@ -12,8 +12,19 @@ export function ProjectsView() {
   useEffect(() => {
     // Fetch projects from backend
     fetch('/api/projects')
-      .then(res => res.json())
-      .then(data => setProjects(data));
+      .then(res => {
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        return res.json();
+      })
+      .then(data => {
+        console.log('Projects loaded:', data.length, 'projects');
+        setProjects(data);
+      })
+      .catch(err => {
+        console.error('Error fetching projects:', err);
+      });
   }, []);
 
   const filteredProjects = projects.filter(project =>
@@ -49,7 +60,7 @@ export function ProjectsView() {
               </p>
               <div className="flex items-center justify-between">
                 <span className="text-xs text-muted-foreground">
-                  {project.document_count || 0} documents
+                  {project.documents?.length || 0} documents
                 </span>
                 <Link to={`/project/${project.id}`}>
                   <Button size="sm">

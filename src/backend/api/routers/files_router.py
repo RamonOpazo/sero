@@ -1,5 +1,6 @@
 from uuid import UUID
 from fastapi import APIRouter, Depends
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from backend.core.database import get_db_session
@@ -10,7 +11,7 @@ from backend.api.controllers import files_controller
 router = APIRouter()
 
 
-@router.get("/", response_model=list[files_schema.File])
+@router.get("", response_model=list[files_schema.File])
 async def list_files(
     skip: int = 0,
     limit: int = 100,
@@ -19,7 +20,7 @@ async def list_files(
     return files_controller.get_list(db=db, skip=skip, limit=limit)
 
 
-@router.post("/", response_model=files_schema.File)
+@router.post("", response_model=files_schema.File)
 async def create_file(
     file_data: files_schema.FileCreate,
     db: Session = Depends(get_db_session)
@@ -58,13 +59,14 @@ async def summarize_file(
     return files_controller.summarize(db=db, file_id=file_id)
 
 
-@router.get("/id/{file_id}/download", response_model=files_schema.File)
+@router.get("/id/{file_id}/download", response_class=StreamingResponse)
 async def download_file(
     file_id: UUID,
-    password: str | None = None,
+    password: str,
+    stream: bool = False,
     db: Session = Depends(get_db_session)
-):
-    return files_controller.download(db=db, file_id=file_id, password=password)
+) -> StreamingResponse:
+    return files_controller.download(db=db, file_id=file_id, password=password, stream=stream)
 
 
 @router.get("/id/{file_id}/prompts", response_model=list[prompts_schema.Prompt])

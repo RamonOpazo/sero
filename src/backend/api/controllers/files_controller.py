@@ -85,7 +85,7 @@ def summarize(db: Session, file_id: UUID) -> generics_schema.Success:
     raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED)
 
 
-def download(db: Session, file_id: UUID, password: str) -> StreamingResponse:
+def download(db: Session, file_id: UUID, password: str, stream: bool) -> StreamingResponse:
     file = get(db=db, file_id=file_id)
     document = documents_crud.read(db=db, id=file.document_id)
     if not projects_crud.verify_password(db=db, id=document.project_id, password=password):
@@ -107,10 +107,23 @@ def download(db: Session, file_id: UUID, password: str) -> StreamingResponse:
             detail="Document integrity verification failed"
         )
     
+    # Determine headers based on stream parameter
+    if stream:
+        headers = {
+            "Content-Disposition": "inline",
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0"
+        }
+    else:
+        headers = {
+            "Content-Disposition": f"attachment; filename={file.filename}"
+        }
+    
     return StreamingResponse(
         content=io.BytesIO(decrypted_data),
-        media_type="application/pdf",
-        headers={ "Content-Disposition": f"attachment; filename={file.filename}" }
+        media_type=file.mime_type,
+        headers=headers
     )
 
 

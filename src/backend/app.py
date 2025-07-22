@@ -1,6 +1,8 @@
 from fastapi import FastAPI, Request, status
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+from pathlib import Path
 from contextlib import asynccontextmanager
 from sqlalchemy.exc import DatabaseError
 from loguru import logger
@@ -64,3 +66,18 @@ async def generic_error_handler(request: Request, exc: Exception):
 app.include_router(projects_router.router, prefix="/api/projects", tags=["projects"])
 app.include_router(documents_router.router, prefix="/api/documents", tags=["documents"])
 app.include_router(files_router.router, prefix="/api/files", tags=["files"])
+
+static_dir = Path(__file__).parent / "static"
+static_dir.mkdir(parents=True, exist_ok=True)
+(static_dir / "assets").mkdir(parents=True, exist_ok=True)
+
+app.mount("/assets", StaticFiles(directory=static_dir / "assets"), name="assets")
+
+
+@app.get("/")
+@app.get("/{path:path}")
+async def serve_frontend(path: str = ""):    
+    index_file = static_dir / "index.html"
+    if index_file.exists():
+        return FileResponse(index_file)
+    return JSONResponse({"error": "Frontend not built"}, status_code=404)

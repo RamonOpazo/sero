@@ -36,7 +36,7 @@ export function DocumentsView() {
   }, [projectId])
 
   const filteredDocuments = documents.filter(doc =>
-    doc.title.toLowerCase().includes(search.toLowerCase())
+    (doc.description || '').toLowerCase().includes(search.toLowerCase())
   )
 
   const paginatedDocuments = filteredDocuments.slice(
@@ -47,11 +47,11 @@ export function DocumentsView() {
   const totalPages = Math.ceil(filteredDocuments.length / documentsPerPage)
 
   const getDocumentStatus = (doc: Document): DocumentStatus => {
-    if (!doc.files.some(f => f.is_original)) return 'failed'
+    if (!doc.original_file) return 'failed'
     return doc.status
   }
 
-  const hasOriginalFile = (doc: Document) => doc.files.some(f => f.is_original)
+  const hasOriginalFile = (doc: Document) => !!doc.original_file
 
   return (
     <div className="h-full flex flex-col">
@@ -88,8 +88,9 @@ export function DocumentsView() {
         {paginatedDocuments.map(document => {
           const status = getDocumentStatus(document)
           const StatusIcon = statusConfig[status].icon
-          const selectionsCount = document.selections?.length || 0
-          const promptsCount = document.prompts?.length || 0
+          // Get selections and prompts from original file
+          const selectionsCount = document.original_file?.selections?.length || 0
+          const promptsCount = document.original_file?.prompts?.length || 0
 
           return (
             <Card key={document.id} className="hover:shadow-md transition-shadow">
@@ -105,7 +106,7 @@ export function DocumentsView() {
                 </div>
                 
                 <h3 className="font-semibold text-sm mb-2 line-clamp-2">
-                  {document.title}
+                  {document.original_file?.filename || document.description || 'Untitled Document'}
                 </h3>
                 
                 <div className="flex items-center gap-4 text-xs text-muted-foreground mb-3">

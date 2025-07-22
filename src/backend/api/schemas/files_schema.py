@@ -13,7 +13,7 @@ class File(BaseModel):
     updated_at: AwareDatetime | None
     filename: str
     mime_type: str
-    data: bytes = Field(exclude=True)
+    data: bytes
     size: int  # instead of data, which can be really huge
     salt: bytes
     file_hash: str
