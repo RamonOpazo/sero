@@ -1,6 +1,6 @@
 [project]
 name = "sero"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Sero Evelishly Redacts and Obfuscates - Medical document privacy protection platform"
 readme = "README.md"
 authors = [
@@ -38,8 +38,11 @@ sero-db-init = "sero:db_init"
 sero-version = "sero:version"
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "vcs"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -78,7 +81,6 @@ omit = [
 ]
 
 [tool.semantic_release]
-version_toml = ["pyproject.toml:project.version"]
 build_command = "uv build"
 major_on_zero = true
 tag_format = "v{version}"
