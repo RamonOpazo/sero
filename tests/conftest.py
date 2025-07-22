@@ -9,10 +9,10 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from httpx import AsyncClient
 
-from sero.app import app
-from sero.core.database import get_db_session
-from sero.db.models import Base
-from sero.core.config import settings
+from backend.app import app
+from backend.core.database import get_db_session
+from backend.db.models import Base
+from backend.core.config import settings
 
 
 @pytest.fixture(scope="session")

@@ -30,12 +30,12 @@ dev = [
 ]
 
 [project.scripts]
-sero = "sero:main"
-sero-dev = "sero:dev"
-sero-test = "sero:test"
-sero-test-cov = "sero:test_cov"
-sero-db-init = "sero:db_init"
-sero-version = "sero:version"
+sero = "backend:main"
+sero-dev = "backend:dev"
+sero-test = "backend:test"
+sero-test-cov = "backend:test_cov"
+sero-db-init = "backend:db_init"
+sero-version = "backend:version"
 
 [build-system]
 requires = ["hatchling", "hatch-vcs"]
@@ -43,6 +43,9 @@ build-backend = "hatchling.build"
 
 [tool.hatch.version]
 source = "vcs"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/backend"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -72,12 +75,13 @@ filterwarnings = [
 directory = ".coverage_html"
 
 [tool.coverage.run]
-source = ["src/sero"]
+source = ["src/backend"]
 omit = [
     "*/tests/*",
     "*/__pycache__/*",
     "*/venv/*",
     "*/.venv/*",
+    "src/frontend/*",
 ]
 
 [tool.semantic_release]
