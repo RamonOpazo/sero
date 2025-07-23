@@ -3,7 +3,7 @@ import { ThemeProvider } from './components/ThemeProvider'
 import { Layout } from './components/Layout'
 import { ProjectsView } from './components/ProjectsView'
 import { DocumentsView } from './components/DocumentsView'
-import { DocumentEditor } from './components/DocumentEditor'
+import { FileViewer } from './components/FileViewer'
 
 function App() {
   return (
@@ -13,7 +13,8 @@ function App() {
           <Routes>
             <Route path="/" element={<ProjectsView />} />
             <Route path="/project/:projectId" element={<DocumentsView />} />
-            <Route path="/project/:projectId/document/:documentId" element={<DocumentEditor />} />
+            <Route path="/project/:projectId/document/:documentId" element={<FileViewer />} />
+            <Route path="/project/:projectId/document/:documentId/file/:fileId" element={<FileViewer />} />
           </Routes>
         </Layout>
       </Router>

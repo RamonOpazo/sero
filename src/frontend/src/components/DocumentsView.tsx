@@ -1,25 +1,23 @@
-import { useEffect, useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
-import { Card, CardContent } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
+import { useCallback, useEffect, useState } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
+import { Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { FileText, MapPin, MessageSquare, CheckCircle, Clock, XCircle } from 'lucide-react'
-import type { Document, Project, DocumentStatus } from '@/types'
-
-const statusConfig = {
-  pending: { icon: Clock, color: 'bg-yellow-500', label: 'Pending' },
-  processed: { icon: CheckCircle, color: 'bg-green-500', label: 'Processed' },
-  failed: { icon: XCircle, color: 'bg-red-500', label: 'Failed' }
-}
+import { DataTable } from '@/components/DataTable';
+import { createDocumentsColumns } from '@/components/columns/documents-columns';
+import { EmptyState } from '@/components/EmptyState'
+import { PasswordDialog } from '@/components/PasswordDialog'
+import type { Document, Project } from '@/types'
 
 export function DocumentsView() {
   const { projectId } = useParams<{ projectId: string }>()
+  const navigate = useNavigate()
   const [project, setProject] = useState<Project | null>(null)
   const [documents, setDocuments] = useState<Document[]>([])
-  const [search, setSearch] = useState('')
-  const [currentPage, setCurrentPage] = useState(1)
-  const documentsPerPage = 20
+  const [selectedDocuments, setSelectedDocuments] = useState<Document[]>([])
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false)
+  const [pendingViewFile, setPendingViewFile] = useState<{ document: Document; fileType: 'original' | 'obfuscated' } | null>(null)
+  const [passwordError, setPasswordError] = useState<string | null>(null)
+  const [isValidatingPassword, setIsValidatingPassword] = useState(false)
 
   useEffect(() => {
     if (!projectId) return
@@ -35,147 +33,125 @@ export function DocumentsView() {
       .then(data => setDocuments(data))
   }, [projectId])
 
-  const filteredDocuments = documents.filter(doc =>
-    (doc.description || '').toLowerCase().includes(search.toLowerCase())
-  )
+  const handleSelectionChange = useCallback((selectedRows: Document[]) => {
+    setSelectedDocuments(selectedRows)
+  }, [])
 
-  const paginatedDocuments = filteredDocuments.slice(
-    (currentPage - 1) * documentsPerPage,
-    currentPage * documentsPerPage
-  )
+  const handleViewFile = useCallback((document: Document, fileType: 'original' | 'obfuscated') => {
+    // For now, let's assume all files require a password
+    // In a real implementation, you might check if the file is password-protected first
+    setPendingViewFile({ document, fileType })
+    setIsPasswordDialogOpen(true)
+  }, [])
 
-  const totalPages = Math.ceil(filteredDocuments.length / documentsPerPage)
+  const handlePasswordConfirm = useCallback(async (password: string) => {
+    if (!pendingViewFile || !projectId) return
+    
+    const { document, fileType } = pendingViewFile
+    const file = fileType === 'original' ? document.original_file : document.obfuscated_file
+    
+    if (!file) return
+    
+    setIsValidatingPassword(true)
+    setPasswordError(null)
+    
+    try {
+      // Validate password by attempting to access the file with a small range
+      const response = await fetch(`/api/files/id/${file.id}/download?stream=true&password=${encodeURIComponent(password)}`, {
+        method: 'GET',
+        headers: {
+          'Range': 'bytes=0-0' // Request only the first byte to minimize data transfer
+        }
+      })
+      
+      if (response.ok || response.status === 206) {
+        // Password is correct (200 OK or 206 Partial Content for range requests), navigate to file viewer
+        navigate(`/project/${projectId}/document/${document.id}/file/${file.id}?password=${encodeURIComponent(password)}`)
+        setIsPasswordDialogOpen(false)
+        setPendingViewFile(null)
+        setPasswordError(null)
+      } else if (response.status === 401) {
+        // Password is incorrect
+        setPasswordError('Incorrect password. Please try again.')
+      } else if (response.status === 500) {
+        // Server error retrieving file
+        setPasswordError('Server error accessing file. Please try again later.')
+      } else {
+        // Other error
+        setPasswordError(`Error accessing file (${response.status}). Please try again.`)
+      }
+    } catch (error) {
+      console.error('Password validation error:', error)
+      setPasswordError('Network error. Please try again.')
+    } finally {
+      setIsValidatingPassword(false)
+    }
+  }, [pendingViewFile, projectId, navigate])
 
-  const getDocumentStatus = (doc: Document): DocumentStatus => {
-    if (!doc.original_file) return 'failed'
-    return doc.status
-  }
+  const handlePasswordCancel = useCallback(() => {
+    setIsPasswordDialogOpen(false)
+    setPendingViewFile(null)
+    setPasswordError(null)
+  }, [])
 
-  const hasOriginalFile = (doc: Document) => !!doc.original_file
+  const documentsColumns = createDocumentsColumns(handleViewFile)
 
   return (
-    <div className="h-full flex flex-col">
-      {/* Header */}
-      <div className="flex-shrink-0 p-6 border-b">
-        <div className="mb-4">
-          <h2 className="text-2xl font-semibold mb-2">{project?.name}</h2>
-          <p className="text-muted-foreground">{project?.description}</p>
-        </div>
-
-        {/* Search and Actions */}
-        <div className="flex items-center justify-between">
-          <Input
-            placeholder="Search documents..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-96"
-          />
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm">
-              <FileText className="h-4 w-4 mr-2" />
-              Filter
-            </Button>
-            <Button>
-              + New Document
-            </Button>
+    <div className="h-full flex flex-col overflow-hidden">
+      {/* Project Title Section */}
+      <div className="flex-shrink-0 px-6 py-4 border-b">
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold mb-2">{project?.name || 'Loading...'}</h1>
+            {project?.description && (
+              <p className="text-muted-foreground">{project.description}</p>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Documents Grid */}
-      <div className="flex-1 overflow-auto p-6">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-        {paginatedDocuments.map(document => {
-          const status = getDocumentStatus(document)
-          const StatusIcon = statusConfig[status].icon
-          // Get selections and prompts from original file
-          const selectionsCount = document.original_file?.selections?.length || 0
-          const promptsCount = document.original_file?.prompts?.length || 0
-
-          return (
-            <Card key={document.id} className="hover:shadow-md transition-shadow">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <Badge variant="secondary" className="flex items-center gap-1">
-                    <StatusIcon className="h-3 w-3" />
-                    {statusConfig[status].label}
-                  </Badge>
-                  {hasOriginalFile(document) && (
-                    <FileText className="h-4 w-4 text-muted-foreground" />
-                  )}
-                </div>
-                
-                <h3 className="font-semibold text-sm mb-2 line-clamp-2">
-                  {document.original_file?.filename || document.description || 'Untitled Document'}
-                </h3>
-                
-                <div className="flex items-center gap-4 text-xs text-muted-foreground mb-3">
-                  <div className="flex items-center gap-1">
-                    <MapPin className="h-3 w-3" />
-                    <span>{selectionsCount}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <MessageSquare className="h-3 w-3" />
-                    <span>{promptsCount}</span>
-                  </div>
-                </div>
-
-                {hasOriginalFile(document) ? (
-                  <Link to={`/project/${projectId}/document/${document.id}`}>
-                    <Button variant="outline" size="sm" className="w-full">
-                      Open
-                    </Button>
-                  </Link>
-                ) : (
-                  <Button variant="outline" size="sm" className="w-full" disabled>
-                    No Original File
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-          )
-        })}
-        </div>
-      </div>
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 mt-6">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-            disabled={currentPage === 1}
-          >
-            Previous
-          </Button>
-          
-          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-            const page = i + 1
-            return (
-              <Button
-                key={page}
-                variant={currentPage === page ? "default" : "outline"}
-                size="sm"
-                onClick={() => setCurrentPage(page)}
-              >
-                {page}
-              </Button>
-            )
-          })}
-          
-          {totalPages > 5 && <span className="text-muted-foreground">...</span>}
-          
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-            disabled={currentPage === totalPages}
-          >
-            Next
-          </Button>
+      {/* Selection Actions */}
+      {selectedDocuments.length > 0 && (
+        <div className="flex-shrink-0 px-6 py-3 bg-muted/20 border-b">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">
+              {selectedDocuments.length} document{selectedDocuments.length !== 1 ? 's' : ''} selected
+            </span>
+            <Button variant="destructive" size="sm">
+              Delete Selected
+            </Button>
+          </div>
         </div>
       )}
+
+      {/* Documents Data Table */}
+      <div className="flex-1 overflow-hidden px-6">
+        {documents.length > 0 ? (
+          <DataTable
+            columns={documentsColumns}
+            data={documents}
+            searchKey="filename"
+            searchPlaceholder="Search documents..."
+            onRowSelectionChange={handleSelectionChange}
+            pageSize={20}
+          />
+        ) : (
+          <EmptyState
+            message="No documents found"
+            buttonText="Upload Documents"
+            buttonIcon={<Upload className="h-4 w-4" />}
+            onButtonClick={() => console.log('Upload documents clicked')}
+          />
+        )}
+      </div>
+      
+      <PasswordDialog
+        isOpen={isPasswordDialogOpen}
+        onClose={handlePasswordCancel}
+        onConfirm={handlePasswordConfirm}
+        error={passwordError}
+        isLoading={isValidatingPassword}
+      />
     </div>
   )
 }

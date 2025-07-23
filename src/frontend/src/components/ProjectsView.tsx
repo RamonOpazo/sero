@@ -1,13 +1,14 @@
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Card } from '@/components/ui/card';
+import { useCallback, useEffect, useState } from 'react';
+import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { DataTable } from '@/components/DataTable';
+import { projectColumns } from '@/components/columns/projects-columns';
+import { EmptyState } from '@/components/EmptyState';
 import type { Project } from '@/types';
 
 export function ProjectsView() {
   const [projects, setProjects] = useState<Project[]>([]);
-  const [search, setSearch] = useState('');
+  const [selectedProjects, setSelectedProjects] = useState<Project[]>([]);
 
   useEffect(() => {
     // Fetch projects from backend
@@ -27,56 +28,51 @@ export function ProjectsView() {
       });
   }, []);
 
-  const filteredProjects = projects.filter(project =>
-    project.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const handleSelectionChange = useCallback((selectedRows: Project[]) => {
+    setSelectedProjects(selectedRows);
+  }, []);
 
   return (
-    <div className="h-full flex flex-col">
-      {/* Header */}
-      <div className="flex-shrink-0 p-6 border-b">
+    <div className="h-full flex flex-col overflow-hidden">
+      {/* Projects Title Section */}
+      <div className="flex-shrink-0 px-6 py-4 border-b">
         <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-semibold">Projects</h2>
-          <div className="flex items-center gap-2">
-            <Input
-              placeholder="Search projects..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-80"
-            />
-            <Button>+ New Project</Button>
-          </div>
+          <h1 className="text-2xl font-semibold">Projects</h1>
         </div>
       </div>
-      
-      {/* Projects Grid */}
-      <div className="flex-1 overflow-auto p-6">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filteredProjects.map(project => (
-            <Card key={project.id} className="p-4 hover:shadow-md transition-shadow">
-              <h3 className="font-semibold mb-2">{project.name}</h3>
-              <p className="text-muted-foreground text-sm mb-3 line-clamp-2">
-                {project.description || 'No description'}
-              </p>
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">
-                  {project.documents?.length || 0} documents
-                </span>
-                <Link to={`/project/${project.id}`}>
-                  <Button size="sm">
-                    Open
-                  </Button>
-                </Link>
-              </div>
-            </Card>
-          ))}
-        </div>
-        
-        {filteredProjects.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground mb-4">No projects found</p>
-            <Button>Create your first project</Button>
+
+      {/* Selection Actions */}
+      {selectedProjects.length > 0 && (
+        <div className="flex-shrink-0 px-6 py-3 bg-muted/20 border-b">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">
+              {selectedProjects.length} project{selectedProjects.length !== 1 ? 's' : ''} selected
+            </span>
+            <Button variant="destructive" size="sm">
+              Delete Selected
+            </Button>
           </div>
+        </div>
+      )}
+      
+      {/* Projects Data Table */}
+      <div className="flex-1 overflow-hidden px-6">
+        {projects.length > 0 ? (
+          <DataTable
+            columns={projectColumns}
+            data={projects}
+            searchKey="name"
+            searchPlaceholder="Search projects..."
+            onRowSelectionChange={handleSelectionChange}
+            pageSize={10}
+          />
+        ) : (
+          <EmptyState
+            message="No projects found"
+            buttonText="Create your first project"
+            buttonIcon={<Plus className="h-4 w-4" />}
+            onButtonClick={() => console.log('Create project clicked')}
+          />
         )}
       </div>
     </div>
