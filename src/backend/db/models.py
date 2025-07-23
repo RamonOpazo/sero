@@ -128,7 +128,7 @@ class Selection(Base):
 def enforce_max_files_per_document(session: Session, _flush_context, _instances) -> None:
     for obj in session.new:
         if isinstance(obj, File) and obj.document:
-            obj.document.validate_max_files()
+            obj.document._validate_max_files()
 
 
 @event.listens_for(File, "after_insert")

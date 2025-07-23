@@ -102,9 +102,9 @@ export function DocumentsView() {
       <div className="flex-shrink-0 px-6 py-4 border-b">
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-2xl font-semibold mb-2">{project?.name || 'Loading...'}</h1>
+            <h1 className="text-2xl font-semibold mb-2 truncate w-[20em]">{project?.name || 'Loading...'}</h1>
             {project?.description && (
-              <p className="text-muted-foreground">{project.description}</p>
+              <p className="text-muted-foreground truncate w-[50em]">{project.description}</p>
             )}
           </div>
         </div>

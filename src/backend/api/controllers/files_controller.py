@@ -142,5 +142,4 @@ def list_prompts(db: Session, file_id: UUID, skip: int, limit: int) -> list[prom
 
 def update_prompts(db: Session, file_id: UUID, prompts_data: list[prompts_schema.PromptCreate]) -> list[prompts_schema.Prompt]:
     prompts_crud.delete_by_file(db=db, file_id=file_id)
-    prompts = prompts_crud.create_in_bulk(db=db, file_id=file_id, prompts_data=prompts_data)
-    return [ prompts_schema.Prompt.model_validate(i) for i in prompts ]
+    return prompts_crud.create_in_bulk(db=db, file_id=file_id, prompts_data=prompts_data)

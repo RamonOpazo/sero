@@ -41,7 +41,7 @@ class _DatabaseManager:
 
     def get_session(self) -> Session:
         if self._SessionLocal is None:
-            raise RuntimeError("Database not initialized. Call `init()` first.")
+            raise RuntimeError("Database not initialized: call 'self.init()' first.")
         return self._SessionLocal()
 
     def close(self):
@@ -60,10 +60,10 @@ class _DatabaseManager:
         try:
             yield session
             session.commit()
-        except Exception as e:
-            logger.error(f"Database transaction error: {e}")
+        except Exception as err:
+            logger.error(f"Database transaction error: {err}")
             session.rollback()
-            raise
+            raise err
         finally:
             session.close()
 

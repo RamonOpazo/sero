@@ -1,11 +1,10 @@
 import {
   ZoomIn,
   ZoomOut,
-  RotateCw,
   Download,
   ChevronLeft,
   ChevronRight,
-  Square
+  Trash
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -13,12 +12,9 @@ interface FileControlsProps {
   currentPage: number
   numPages: number
   scale: number
-  isSelecting: boolean
   onPageChange: (page: number) => void
   onZoomIn: () => void
   onZoomOut: () => void
-  onRotate: () => void
-  onToggleSelection: () => void
   onDownload: () => void
 }
 
@@ -26,12 +22,9 @@ export function FileControls({
   currentPage,
   numPages,
   scale,
-  isSelecting,
   onPageChange,
   onZoomIn,
   onZoomOut,
-  onRotate,
-  onToggleSelection,
   onDownload
 }: FileControlsProps) {
   return (
@@ -42,20 +35,19 @@ export function FileControls({
       <div className="space-y-4">
         <div>
           <label className="text-xs text-muted-foreground mb-2 block">Page Navigation</label>
-          <div className="flex items-center gap-2">
+          <div className="grid grid-cols-3 gap-2">
             <Button
               variant="outline"
               size="sm"
               onClick={() => onPageChange(currentPage - 1)}
               disabled={currentPage <= 1}
-              className="flex-1"
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
             
-            <div className="flex items-center gap-1 px-3 py-1 bg-muted rounded text-sm">
+            <div className="flex items-center justify-center px-3 py-1 bg-muted rounded text-sm">
               <span className="font-medium">{currentPage}</span>
-              <span className="text-muted-foreground">of</span>
+              <span className="text-muted-foreground mx-1">of</span>
               <span className="font-medium">{numPages}</span>
             </div>
 
@@ -64,7 +56,6 @@ export function FileControls({
               size="sm"
               onClick={() => onPageChange(currentPage + 1)}
               disabled={currentPage >= numPages}
-              className="flex-1"
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
@@ -74,7 +65,7 @@ export function FileControls({
         {/* Zoom Controls */}
         <div>
           <label className="text-xs text-muted-foreground mb-2 block">Zoom Level</label>
-          <div className="flex items-center gap-2">
+          <div className="grid grid-cols-3 gap-2">
             <Button
               variant="outline"
               size="sm"
@@ -84,7 +75,7 @@ export function FileControls({
               <ZoomOut className="h-4 w-4" />
             </Button>
             
-            <div className="flex-1 text-center px-2 py-1 bg-muted rounded text-sm font-medium">
+            <div className="flex items-center justify-center px-3 py-1 bg-muted rounded text-sm font-medium">
               {Math.round(scale * 100)}%
             </div>
 
@@ -99,38 +90,31 @@ export function FileControls({
           </div>
         </div>
 
-        {/* Other Controls */}
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onRotate}
-            className="flex-1"
-          >
-            <RotateCw className="h-4 w-4 mr-2" />
-            Rotate
-          </Button>
+        {/* Action Buttons */}
+        <div className="flex flex-1 flex-col">
+          <label className="text-xs text-muted-foreground mb-2 block">Actions</label>
+          <div className="flex flex-col items-center gap-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onDownload}
+              className="w-full"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Download
+            </Button>
 
-          <Button
-            variant={isSelecting ? "default" : "outline"}
-            size="sm"
-            onClick={onToggleSelection}
-            className="flex-1"
-          >
-            <Square className="h-4 w-4 mr-2" />
-            Select
-          </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => console.log("CHANGE ME")}
+              className="w-full"
+            >
+              <Trash className="h-4 w-4 mr-2" />
+              Delete
+            </Button>
+          </div>
         </div>
-
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onDownload}
-          className="w-full"
-        >
-          <Download className="h-4 w-4 mr-2" />
-          Download
-        </Button>
       </div>
     </div>
   )

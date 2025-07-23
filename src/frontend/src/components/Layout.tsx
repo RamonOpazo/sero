@@ -1,34 +1,35 @@
 import type { ReactNode } from 'react'
-import { useLocation, Link } from 'react-router-dom'
-import { Home, Settings } from 'lucide-react'
+// import { useLocation, Link } from 'react-router-dom'
+// import { Home, Settings } from 'lucide-react'
 import { ThemeToggle } from '@/components/ThemeToggle'
+import { SettingsToggle } from '@/components/SettingsToggle'
 import { Breadcrumbs } from '@/components/Breadcrumbs'
-import { cn } from '@/lib/utils'
+// import { cn } from '@/lib/utils'
 
 interface LayoutProps {
   children: ReactNode
 }
 
-const navigation = [
-  { name: 'Projects', href: '/', icon: Home },
-  { name: 'Settings', href: '#', icon: Settings },
-]
+// const navigation = [
+//   { name: 'Projects', href: '/', icon: Home },
+//   { name: 'Settings', href: '#', icon: Settings },
+// ]
 
 export function Layout({ children }: LayoutProps) {
-  const location = useLocation()
+  // const location = useLocation()
 
   return (
     <div className="h-screen w-screen overflow-hidden flex bg-background">
       {/* Sidebar - Fixed width */}
-      <aside className="w-64 flex-shrink-0 border-r bg-muted/10 flex flex-col">
+      {/* <aside className="w-64 flex-shrink-0 border-r bg-muted/10 flex flex-col"> */}
         {/* Logo/Header */}
-        <div className="flex h-14 items-center justify-between border-b px-4 flex-shrink-0">
+        {/* <div className="flex h-14 items-center justify-between border-b px-4 flex-shrink-0">
           <h1 className="text-xl font-semibold">SERO</h1>
           <ThemeToggle />
-        </div>
+        </div> */}
 
         {/* Navigation */}
-        <nav className="flex-1 space-y-1 p-4 overflow-y-auto">
+        {/* <nav className="flex-1 space-y-1 p-4 overflow-y-auto">
           {navigation.map((item) => {
             const isActive = location.pathname === item.href
             return (
@@ -47,10 +48,10 @@ export function Layout({ children }: LayoutProps) {
               </Link>
             )
           })}
-        </nav>
+        </nav> */}
 
         {/* Footer/User section */}
-        <div className="border-t p-4 flex-shrink-0">
+        {/* <div className="border-t p-4 flex-shrink-0">
           <div className="flex items-center gap-3 text-sm">
             <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
               <Settings className="h-4 w-4" />
@@ -61,13 +62,18 @@ export function Layout({ children }: LayoutProps) {
             </div>
           </div>
         </div>
-      </aside>
+      </aside> */}
 
       {/* Right Area with Navigation Bar */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Navigation Bar with Breadcrumbs - Same height as SERO logo section */}
         <div className="h-14 flex-shrink-0 border-b bg-background flex items-center px-6">
+          <h1 className="text-xl font-semibold pr-5">SERO //</h1>
           <Breadcrumbs />
+          <div className="flex-1 text-right">
+            <ThemeToggle />
+            <SettingsToggle />
+          </div>
         </div>
 
         {/* Main Content */}

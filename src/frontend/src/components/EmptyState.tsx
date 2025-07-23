@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
+import { Ghost } from 'lucide-react'
 
 interface EmptyStateProps {
   message: string
@@ -11,7 +12,8 @@ interface EmptyStateProps {
 export function EmptyState({ message, buttonText, buttonIcon, onButtonClick }: EmptyStateProps) {
   return (
     <div className="h-full w-full flex flex-col items-center justify-center">
-      <div className="text-center max-w-md px-4">
+      <div className="flex flex-col justify-center items-center">
+        <Ghost size={150} strokeWidth={1} className="animate-bounce text-purple-500"/>
         <p className="text-muted-foreground mb-6 text-lg leading-relaxed">
           {message}
         </p>

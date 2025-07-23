@@ -28,6 +28,24 @@ export function ProjectsView() {
       });
   }, []);
 
+  const easterEggPhrases: string[] = [
+    "There is no place like ████████…",
+    "It's not a bug. It's an undocumented redaction…",
+    "You shall not pass… this security boundary…",
+    "sudo hide the evidence…",
+    "Welcome, agent. This message will self-destruct…",
+    "Compiling plausible deniability…",
+    "01101100 01101111 01101100 — nothing to see here…",
+    "The classified is a lie…",
+    "Fetching metadata from /dev/null…",
+    "All your docs are belong to us…"
+  ];
+  
+  function getRandomEasterEgg(): string {
+    const index = Math.floor(Math.random() * easterEggPhrases.length);
+    return easterEggPhrases[index];
+  }
+
   const handleSelectionChange = useCallback((selectedRows: Project[]) => {
     setSelectedProjects(selectedRows);
   }, []);
@@ -37,7 +55,10 @@ export function ProjectsView() {
       {/* Projects Title Section */}
       <div className="flex-shrink-0 px-6 py-4 border-b">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold">Projects</h1>
+          <div>
+            <h1 className="text-2xl font-semibold mb-2">Projects {`(${projects?.length})` || 'Loading...'}</h1>
+            <p className="text-muted-foreground">{getRandomEasterEgg()}</p>
+          </div>
         </div>
       </div>
 

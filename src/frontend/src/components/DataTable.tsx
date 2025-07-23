@@ -128,7 +128,7 @@ export function DataTable<TData, TValue>({
   }, [rowSelection, onRowSelectionChange, enableRowSelection])
 
   return (
-    <div className="w-full space-y-4">
+    <div className="w-full space-y-4 pt-4">
       {/* Controls */}
       <div className="flex items-center justify-between">
         {/* Search */}

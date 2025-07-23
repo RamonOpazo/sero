@@ -11,7 +11,7 @@ import type { Document as DocumentType } from '@/types'
 // Import sub-components
 import { FileHeader } from './file-viewer/FileHeader'
 import { FileControls } from './file-viewer/FileControls'
-import { FileSelectionInfo } from './file-viewer/FileSelectionInfo'
+import { FileEditing } from './file-viewer/FileEditing'
 import { FilePDFViewer } from './file-viewer/FilePDFViewer'
 
 // Configure PDF.js worker
@@ -35,15 +35,18 @@ export function FileViewer() {
   const [numPages, setNumPages] = useState<number>(0)
   const [currentPage, setCurrentPage] = useState<number>(1)
   const [scale, setScale] = useState<number>(1.2)
-  const [rotation, setRotation] = useState<number>(0)
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
   const [selections, setSelections] = useState<Selection[]>([])
-  const [isSelecting, setIsSelecting] = useState<boolean>(false)
   const password = searchParams.get('password') || ''
   
   // Get view mode from URL params, default to 'original'
   const viewMode = (searchParams.get('view') as 'original' | 'obfuscated') || 'original'
+  
+  // Determine if current file is the original (editable) version
+  const isOriginalFile = fileId 
+    ? documentData?.original_file?.id === fileId 
+    : viewMode === 'original'
 
   // Load document data
   useEffect(() => {
@@ -116,10 +119,6 @@ export function FileViewer() {
     setScale(prev => Math.max(prev / 1.2, 0.5))
   }, [])
 
-  const handleRotate = useCallback(() => {
-    setRotation(prev => (prev + 90) % 360)
-  }, [])
-
   const handlePageChange = useCallback((page: number) => {
     setCurrentPage(Math.max(1, Math.min(page, numPages)))
   }, [numPages])
@@ -133,10 +132,6 @@ export function FileViewer() {
     }
   }, [fileUrl, file])
 
-  const toggleSelectionMode = useCallback(() => {
-    setIsSelecting(prev => !prev)
-  }, [])
-
   const onDocumentLoadError = useCallback((error: Error) => {
     setError(error.message)
     setIsLoading(false)
@@ -144,6 +139,24 @@ export function FileViewer() {
 
   const handleClearSelections = useCallback(() => {
     setSelections([])
+  }, [])
+
+  const handleSelectionCreate = useCallback((selection: Omit<Selection, 'id'>) => {
+    const newSelection: Selection = {
+      ...selection,
+      id: crypto.randomUUID()
+    }
+    setSelections(prev => [...prev, newSelection])
+  }, [])
+
+  const handleSelectionEdit = useCallback((id: string, updates: Partial<Selection>) => {
+    setSelections(prev => prev.map(sel => 
+      sel.id === id ? { ...sel, ...updates } : sel
+    ))
+  }, [])
+
+  const handleSelectionDelete = useCallback((id: string) => {
+    setSelections(prev => prev.filter(sel => sel.id !== id))
   }, [])
 
   // Keyboard navigation
@@ -173,17 +186,12 @@ export function FileViewer() {
           event.preventDefault()
           handleZoomOut()
           break
-        case 'r':
-        case 'R':
-          event.preventDefault()
-          handleRotate()
-          break
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [currentPage, handlePageChange, handleZoomIn, handleZoomOut, handleRotate])
+  }, [currentPage, handlePageChange, handleZoomIn, handleZoomOut])
 
   // Document loading state
   if (isDocumentLoading) {
@@ -280,7 +288,7 @@ export function FileViewer() {
   return (
     <div className="flex h-full bg-background overflow-hidden">
       {/* Left Panel - Document Info and Tools */}
-      <div className="w-80 flex-shrink-0 border-r bg-muted/10 flex flex-col">
+      <div className="w-96 flex-shrink-0 border-r bg-muted/10 flex flex-col">
         <FileHeader
           documentData={documentData}
           viewMode={viewMode}
@@ -291,21 +299,19 @@ export function FileViewer() {
           currentPage={currentPage}
           numPages={numPages}
           scale={scale}
-          isSelecting={isSelecting}
           onPageChange={handlePageChange}
           onZoomIn={handleZoomIn}
           onZoomOut={handleZoomOut}
-          onRotate={handleRotate}
-          onToggleSelection={toggleSelectionMode}
           onDownload={handleDownload}
         />
 
-        <FileSelectionInfo
+        <FileEditing
           selections={selections}
+          isOriginalFile={isOriginalFile}
           onClearSelections={handleClearSelections}
+          onSelectionDelete={handleSelectionDelete}
+          onPageChange={handlePageChange}
         />
-
-        <div className="flex-1" /> {/* Spacer */}
       </div>
 
       {/* Right Panel - PDF Viewer */}
@@ -314,12 +320,14 @@ export function FileViewer() {
           fileUrl={fileUrl}
           currentPage={currentPage}
           scale={scale}
-          rotation={rotation}
           isLoading={isLoading}
           error={error}
-          isSelecting={isSelecting}
+          isSelecting={isOriginalFile}
+          selections={selections}
           onLoadSuccess={onDocumentLoadSuccess}
           onLoadError={onDocumentLoadError}
+          onSelectionCreate={isOriginalFile ? handleSelectionCreate : undefined}
+          onSelectionEdit={isOriginalFile ? handleSelectionEdit : undefined}
         />
       </div>
     </div>
