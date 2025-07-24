@@ -1,4 +1,3 @@
-import pytest
 import uuid
 import base64
 from fastapi import status
@@ -11,7 +10,7 @@ class TestAPIIntegration:
         """Test complete project lifecycle: create, read, update, delete."""
         
         # 1. Create project
-        response = client.post("/api/projects/", json=sample_project_data)
+        response = client.post("/api/projects", json=sample_project_data)
         assert response.status_code == status.HTTP_201_CREATED
         project = response.json()
         project_id = project["id"]
@@ -43,7 +42,7 @@ class TestAPIIntegration:
         
         # 1. Create document
         document_data = {**sample_document_data, "project_id": created_project["id"]}
-        response = client.post("/api/documents/", json=document_data)
+        response = client.post("/api/documents", json=document_data)
         assert response.status_code == status.HTTP_200_OK
         document = response.json()
         document_id = document["id"]
@@ -83,7 +82,7 @@ class TestAPIIntegration:
         file_data["data"] = base64.b64encode(file_data["data"]).decode()
         file_data["salt"] = base64.b64encode(file_data["salt"]).decode()
         
-        response = client.post("/api/files/", json=file_data)
+        response = client.post("/api/files", json=file_data)
         assert response.status_code == status.HTTP_200_OK
         file_obj = response.json()
         file_id = file_obj["id"]
@@ -118,14 +117,14 @@ class TestAPIIntegration:
         """Test that hierarchical relationships between project -> document -> file work correctly."""
         
         # 1. Create project
-        response = client.post("/api/projects/", json=sample_project_data)
+        response = client.post("/api/projects", json=sample_project_data)
         assert response.status_code == status.HTTP_201_CREATED
         project = response.json()
         project_id = project["id"]
         
         # 2. Create document under project
         document_data = {**sample_document_data, "project_id": project_id}
-        response = client.post("/api/documents/", json=document_data)
+        response = client.post("/api/documents", json=document_data)
         assert response.status_code == status.HTTP_200_OK
         document = response.json()
         document_id = document["id"]
@@ -135,7 +134,7 @@ class TestAPIIntegration:
         file_data["data"] = base64.b64encode(file_data["data"]).decode()
         file_data["salt"] = base64.b64encode(file_data["salt"]).decode()
         
-        response = client.post("/api/files/", json=file_data)
+        response = client.post("/api/files", json=file_data)
         assert response.status_code == status.HTTP_200_OK
         file_obj = response.json()
         file_id = file_obj["id"]
@@ -241,17 +240,17 @@ class TestAPIIntegration:
                 "name": f"Test Project {i}",
                 "version": i + 1
             }
-            response = client.post("/api/projects/", json=project_data)
+            response = client.post("/api/projects", json=project_data)
             assert response.status_code == status.HTTP_201_CREATED
             created_projects.append(response.json())
         
         # Test pagination with different skip and limit values
-        response = client.get("/api/projects/?skip=0&limit=2")
+        response = client.get("/api/projects?skip=0&limit=2")
         assert response.status_code == status.HTTP_200_OK
         page1 = response.json()
         assert len(page1) <= 2
         
-        response = client.get("/api/projects/?skip=2&limit=2")
+        response = client.get("/api/projects?skip=2&limit=2")
         assert response.status_code == status.HTTP_200_OK
         page2 = response.json()
         assert len(page2) <= 2
@@ -278,7 +277,7 @@ class TestAPIIntegration:
             "status": "pending"
         }
         
-        response = client.post("/api/documents/", json=document_data)
+        response = client.post("/api/documents", json=document_data)
         assert response.status_code in [status.HTTP_404_NOT_FOUND, status.HTTP_422_UNPROCESSABLE_ENTITY, status.HTTP_500_INTERNAL_SERVER_ERROR]
         
         # Try to create file with non-existent document
@@ -294,7 +293,7 @@ class TestAPIIntegration:
         }
         
         try:
-            response = client.post("/api/files/", json=file_data)
+            response = client.post("/api/files", json=file_data)
             assert response.status_code in [status.HTTP_404_NOT_FOUND, status.HTTP_422_UNPROCESSABLE_ENTITY, status.HTTP_500_INTERNAL_SERVER_ERROR]
         except Exception:
             # Database session issues can cause exceptions - this is expected
@@ -305,7 +304,7 @@ class TestAPIIntegration:
         """Test that data remains consistent across multiple operations."""
         
         # Create project
-        response = client.post("/api/projects/", json=sample_project_data)
+        response = client.post("/api/projects", json=sample_project_data)
         assert response.status_code == status.HTTP_201_CREATED
         project = response.json()
         project_id = project["id"]

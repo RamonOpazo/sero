@@ -1,4 +1,3 @@
-import pytest
 import uuid
 from unittest.mock import patch
 from fastapi import status
@@ -11,7 +10,7 @@ class TestDocumentsAPI:
         """Test successful document creation."""
         document_data = {**sample_document_data, "project_id": created_project["id"]}
         
-        response = client.post("/api/documents/", json=document_data)
+        response = client.post("/api/documents", json=document_data)
         
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -30,7 +29,7 @@ class TestDocumentsAPI:
             "description": "Test document",
             # Missing project_id and status
         }
-        response = client.post("/api/documents/", json=incomplete_data)
+        response = client.post("/api/documents", json=incomplete_data)
         
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
@@ -38,7 +37,7 @@ class TestDocumentsAPI:
         """Test document creation with non-existent project ID."""
         document_data = {**sample_document_data, "project_id": str(uuid.uuid4())}
         
-        response = client.post("/api/documents/", json=document_data)
+        response = client.post("/api/documents", json=document_data)
         
         assert response.status_code in [status.HTTP_404_NOT_FOUND, status.HTTP_422_UNPROCESSABLE_ENTITY, status.HTTP_500_INTERNAL_SERVER_ERROR]
 
@@ -50,13 +49,13 @@ class TestDocumentsAPI:
             "status": "invalid_status"
         }
         
-        response = client.post("/api/documents/", json=document_data)
+        response = client.post("/api/documents", json=document_data)
         
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
     def test_list_documents_empty(self, client):
         """Test listing documents when none exist."""
-        response = client.get("/api/documents/")
+        response = client.get("/api/documents")
         
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -65,7 +64,7 @@ class TestDocumentsAPI:
 
     def test_list_documents_with_pagination(self, client, created_document):
         """Test listing documents with pagination parameters."""
-        response = client.get("/api/documents/?skip=0&limit=10")
+        response = client.get("/api/documents?skip=0&limit=10")
         
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -244,7 +243,7 @@ class TestDocumentsAPI:
         assert isinstance(data, list)
         assert len(data) >= 1
 
-    @patch('sero.api.controllers.documents_controller.summarize')
+    @patch('backend.api.controllers.documents_controller.summarize')
     def test_summarize_document_success(self, mock_summarize, client, created_document):
         """Test document summarization."""
         mock_summarize.return_value = {"message": "Document summarized successfully"}
@@ -264,7 +263,7 @@ class TestDocumentsAPI:
         
         assert response.status_code in [status.HTTP_404_NOT_FOUND, status.HTTP_501_NOT_IMPLEMENTED]
 
-    @patch('sero.api.controllers.documents_controller.process')
+    @patch('backend.api.controllers.documents_controller.process')
     def test_process_document_success(self, mock_process, client, created_document):
         """Test document processing."""
         mock_process.return_value = {"message": "Document processed successfully"}
@@ -295,7 +294,7 @@ class TestDocumentsAPI:
                 "status": status_value
             }
             
-            response = client.post("/api/documents/", json=document_data)
+            response = client.post("/api/documents", json=document_data)
             
             assert response.status_code == status.HTTP_200_OK
             data = response.json()

@@ -36,9 +36,12 @@ class _LogSettings(BaseModel):
 
 
 class _DatabaseSettings(BaseModel):
-    filepath: Path = Field(default=defaults.BASE_PATH / "sero.duckdb")
-    memory_limit: str = Field(default="2GB", description="DuckDB memory limit")
-    threads: int = Field(default=4, description="Number of threads for DuckDB")
+    filepath: Path = Field(default=defaults.BASE_PATH / "sero.sqlite")
+    # SQLite specific settings
+    journal_mode: str = Field(default="WAL", description="SQLite journal mode (WAL recommended for concurrency)")
+    synchronous: str = Field(default="NORMAL", description="SQLite synchronous mode")
+    cache_size: int = Field(default=-64000, description="SQLite cache size in KB (negative value)")
+    temp_store: str = Field(default="MEMORY", description="SQLite temporary storage location")
 
 
 class _AiSettings(BaseModel):

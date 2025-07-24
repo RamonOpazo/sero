@@ -1,7 +1,6 @@
-import pytest
 from unittest.mock import patch
 from fastapi import status
-from sqlalchemy.exc import DatabaseError, IntegrityError
+from sqlalchemy.exc import DatabaseError
 
 
 class TestAPIErrorHandling:
@@ -9,10 +8,10 @@ class TestAPIErrorHandling:
 
     def test_database_error_handler(self, client):
         """Test that database errors are properly handled."""
-        with patch('sero.api.controllers.projects_controller.get_list') as mock_get_list:
+        with patch('backend.api.controllers.projects_controller.get_list') as mock_get_list:
             mock_get_list.side_effect = DatabaseError("Database connection failed", None, None)
             
-            response = client.get("/api/projects/")
+            response = client.get("/api/projects")
             
             assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
             data = response.json()
@@ -22,11 +21,11 @@ class TestAPIErrorHandling:
 
     def test_generic_error_handler(self, client):
         """Test that generic errors are properly handled."""
-        with patch('sero.api.controllers.projects_controller.get_list') as mock_get_list:
+        with patch('backend.api.controllers.projects_controller.get_list') as mock_get_list:
             mock_get_list.side_effect = Exception("Unexpected error")
             
             try:
-                response = client.get("/api/projects/")
+                response = client.get("/api/projects")
                 # If the exception is caught and handled by the app
                 assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
                 data = response.json()
@@ -40,7 +39,7 @@ class TestAPIErrorHandling:
 
     def test_cors_headers(self, client):
         """Test that CORS headers are properly set."""
-        response = client.get("/api/projects/")
+        response = client.get("/api/projects")
         
         # CORS headers may not be available in test client environment
         # Check if they're present, but don't fail if they're not
@@ -56,7 +55,7 @@ class TestAPIErrorHandling:
         """Test handling of invalid JSON payloads."""
         # Send invalid JSON
         response = client.post(
-            "/api/projects/",
+            "/api/projects",
             data="invalid json",
             headers={"Content-Type": "application/json"}
         )
@@ -66,7 +65,7 @@ class TestAPIErrorHandling:
     def test_missing_content_type(self, client, sample_project_data):
         """Test handling of requests with missing content type."""
         response = client.post(
-            "/api/projects/",
+            "/api/projects",
             json=sample_project_data,
             headers={"Content-Type": "text/plain"}
         )
@@ -86,7 +85,7 @@ class TestAPIErrorHandling:
             "password": "TestPassword123!"
         }
         
-        response = client.post("/api/projects/", json=large_data)
+        response = client.post("/api/projects", json=large_data)
         
         # Should be rejected due to validation constraints
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
@@ -116,7 +115,7 @@ class TestAPIErrorHandling:
                     **sample_project_data,
                     "name": f"Concurrent Test {time.time()}"
                 }
-                response = client.post("/api/projects/", json=unique_data)
+                response = client.post("/api/projects", json=unique_data)
                 results.append(response.status_code)
             except Exception as e:
                 results.append(str(e))
@@ -153,14 +152,14 @@ class TestAPIErrorHandling:
 
     def test_negative_pagination_values(self, client):
         """Test handling of negative pagination values."""
-        response = client.get("/api/projects/?skip=-1&limit=-10")
+        response = client.get("/api/projects?skip=-1&limit=-10")
         
         # Should handle gracefully or return validation error
         assert response.status_code in [status.HTTP_200_OK, status.HTTP_422_UNPROCESSABLE_ENTITY, status.HTTP_500_INTERNAL_SERVER_ERROR]
 
     def test_extremely_large_pagination_values(self, client):
         """Test handling of extremely large pagination values."""
-        response = client.get("/api/projects/?skip=999999&limit=999999")
+        response = client.get("/api/projects?skip=999999&limit=999999")
         
         # Should handle gracefully
         assert response.status_code == status.HTTP_200_OK
@@ -175,7 +174,7 @@ class TestAPIErrorHandling:
             "status": "invalid_status_value"
         }
         
-        response = client.post("/api/documents/", json=document_data)
+        response = client.post("/api/documents", json=document_data)
         
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
@@ -189,7 +188,7 @@ class TestAPIErrorHandling:
             "password": "TestPassword123!"
         }
         
-        response = client.post("/api/projects/", json=project_data)
+        response = client.post("/api/projects", json=project_data)
         
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
@@ -203,7 +202,7 @@ class TestAPIErrorHandling:
             "password": "TestPassword123!"
         }
         
-        response = client.post("/api/projects/", json=project_data)
+        response = client.post("/api/projects", json=project_data)
         
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
@@ -218,7 +217,7 @@ class TestAPIErrorHandling:
             "password": "TestPassword123!"
         }
         
-        response = client.post("/api/projects/", json=project_data)
+        response = client.post("/api/projects", json=project_data)
         
         assert response.status_code == status.HTTP_201_CREATED
         data = response.json()
@@ -237,7 +236,7 @@ class TestAPIErrorHandling:
             "password": "TestPassword123!"
         }
         
-        response = client.post("/api/projects/", json=project_data)
+        response = client.post("/api/projects", json=project_data)
         
         # Should handle gracefully - may accept or reject based on business rules
         assert response.status_code in [status.HTTP_201_CREATED, status.HTTP_422_UNPROCESSABLE_ENTITY]
@@ -253,14 +252,14 @@ class TestAPIErrorHandling:
             "password": "AnotherPassword123!"
         }
         
-        response = client.post("/api/projects/", json=duplicate_data)
+        response = client.post("/api/projects", json=duplicate_data)
         
         # Should handle uniqueness constraint
         assert response.status_code in [status.HTTP_422_UNPROCESSABLE_ENTITY, status.HTTP_400_BAD_REQUEST, status.HTTP_500_INTERNAL_SERVER_ERROR]
 
     def test_timeout_handling(self, client):
         """Test handling of request timeouts."""
-        with patch('sero.api.controllers.projects_controller.get_list') as mock_get_list:
+        with patch('backend.api.controllers.projects_controller.get_list') as mock_get_list:
             import time
             def slow_function(*args, **kwargs):
                 time.sleep(2)  # Simulate slow operation
@@ -269,7 +268,7 @@ class TestAPIErrorHandling:
             mock_get_list.side_effect = slow_function
             
             # This test depends on the server configuration for timeouts
-            response = client.get("/api/projects/")
+            response = client.get("/api/projects")
             
             # Should complete eventually or timeout gracefully
             assert response.status_code in [status.HTTP_200_OK, status.HTTP_408_REQUEST_TIMEOUT, status.HTTP_500_INTERNAL_SERVER_ERROR]

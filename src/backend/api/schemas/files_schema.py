@@ -1,6 +1,6 @@
 import base64
 from typing import Annotated
-from pydantic import BaseModel, UUID4, AwareDatetime, Field, field_serializer, BeforeValidator
+from pydantic import BaseModel, UUID4, AwareDatetime, Field, field_serializer, BeforeValidator, computed_field
 from fastapi import UploadFile
 
 from backend.api.schemas.selections_schema import Selection
@@ -22,13 +22,19 @@ class File(BaseModel):
     prompts: Annotated[list[Prompt], BeforeValidator(lambda x: [] if x is None else x)]
     selections: Annotated[list[Selection], BeforeValidator(lambda x: [] if x is None else x)]
 
+    @computed_field
+    @property
+    def prompt_count(self) -> int:
+        return len(self.prompts)
+    
+    @computed_field
+    @property
+    def selection_count(self) -> int:
+        return len(self.selections)
+
     @field_serializer("data")
     def serialize_data(self, value: bytes, _info):
         return f"{value[:min(8, len(value))]}..."
-
-    # @field_serializer("size")
-    # def serialize_created_at(self, value: int, _info):
-    #     return f"{value / (1024*1024):.1f} MB"
 
     @field_serializer("salt")
     def serialize_salt(self, value: bytes, _info):

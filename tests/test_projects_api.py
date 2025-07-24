@@ -1,4 +1,3 @@
-import pytest
 import uuid
 from unittest.mock import patch
 from fastapi import status
@@ -10,7 +9,7 @@ class TestProjectsAPI:
 
     def test_create_project_success(self, client, sample_project_data, mock_security_manager):
         """Test successful project creation."""
-        response = client.post("/api/projects/", json=sample_project_data)
+        response = client.post("/api/projects", json=sample_project_data)
         
         assert response.status_code == status.HTTP_201_CREATED
         data = response.json()
@@ -27,9 +26,9 @@ class TestProjectsAPI:
 
     def test_create_project_weak_password(self, client, sample_project_data):
         """Test project creation with weak password."""
-        with patch('sero.core.security.security_manager.is_strong_password', return_value=False):
+        with patch('backend.core.security.security_manager.is_strong_password', return_value=False):
             weak_password_data = {**sample_project_data, "password": "weak"}
-            response = client.post("/api/projects/", json=weak_password_data)
+            response = client.post("/api/projects", json=weak_password_data)
             
             assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
@@ -39,21 +38,21 @@ class TestProjectsAPI:
             "name": "Test Project",
             # Missing other required fields
         }
-        response = client.post("/api/projects/", json=incomplete_data)
+        response = client.post("/api/projects", json=incomplete_data)
         
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
     def test_create_project_invalid_email(self, client, sample_project_data, mock_security_manager):
         """Test project creation with invalid email format."""
         invalid_email_data = {**sample_project_data, "contact_email": "invalid-email"}
-        response = client.post("/api/projects/", json=invalid_email_data)
+        response = client.post("/api/projects", json=invalid_email_data)
         
         # Note: This test assumes email validation exists. Adjust if not implemented
         assert response.status_code in [status.HTTP_422_UNPROCESSABLE_ENTITY, status.HTTP_201_CREATED]
 
     def test_list_projects_empty(self, client):
         """Test listing projects when none exist."""
-        response = client.get("/api/projects/")
+        response = client.get("/api/projects")
         
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -62,7 +61,7 @@ class TestProjectsAPI:
 
     def test_list_projects_with_pagination(self, client, created_project):
         """Test listing projects with pagination parameters."""
-        response = client.get("/api/projects/?skip=0&limit=10")
+        response = client.get("/api/projects?skip=0&limit=10")
         
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -184,7 +183,7 @@ class TestProjectsAPI:
         assert isinstance(data, list)
         assert len(data) == 0
 
-    @patch('sero.api.controllers.projects_controller.summarize')
+    @patch('backend.api.controllers.projects_controller.summarize')
     def test_summarize_project_success(self, mock_summarize, client, created_project):
         """Test project summarization."""
         mock_summarize.return_value = {"message": "Project summarized successfully"}
@@ -205,7 +204,7 @@ class TestProjectsAPI:
         # May return 501 Not Implemented instead of 404 for non-existent resources
         assert response.status_code in [status.HTTP_404_NOT_FOUND, status.HTTP_501_NOT_IMPLEMENTED]
 
-    @patch('sero.api.controllers.projects_controller.bulk_upload_files')
+    @patch('backend.api.controllers.projects_controller.bulk_upload_files')
     def test_bulk_upload_files_success(self, mock_upload, client, created_project):
         """Test bulk file upload to project."""
         mock_upload.return_value = {"message": "Files uploaded successfully"}

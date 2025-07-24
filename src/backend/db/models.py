@@ -1,8 +1,12 @@
 import uuid
+import json
 from datetime import datetime, timezone
-from sqlalchemy import Text, DateTime, ForeignKey, BLOB, String, Integer, Float, Uuid, ARRAY, Boolean, event
+from typing import Any
+from sqlalchemy import Text, DateTime, ForeignKey, BLOB, String, Integer, Float, Boolean, event
 from sqlalchemy.orm import Session, Mapped, declarative_base, mapped_column, relationship
 from sqlalchemy.engine import Connection
+
+from backend.db.types import UUIDBytes, JSONList, TimezoneAwareDateTime
 
 
 Base = declarative_base()
@@ -11,9 +15,9 @@ Base = declarative_base()
 class Project(Base):
     __tablename__ = "projects"
     
-    id: Mapped[Uuid] = mapped_column(Uuid, primary_key=True, default=lambda: uuid.uuid4())
-    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    updated_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=True)
+    id: Mapped[uuid.UUID] = mapped_column(UUIDBytes, primary_key=True, default=lambda: uuid.uuid4())
+    created_at: Mapped[datetime] = mapped_column(TimezoneAwareDateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at: Mapped[datetime] = mapped_column(TimezoneAwareDateTime, nullable=True)
     name: Mapped[str] = mapped_column(String(100), nullable=False, unique=True)
     description: Mapped[str] = mapped_column(Text, nullable=True)
     version: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -27,13 +31,13 @@ class Project(Base):
 class Document(Base):
     __tablename__ = "documents"
 
-    id: Mapped[Uuid] = mapped_column(Uuid, primary_key=True, default=lambda: uuid.uuid4())
-    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    updated_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=True)
+    id: Mapped[uuid.UUID] = mapped_column(UUIDBytes, primary_key=True, default=lambda: uuid.uuid4())
+    created_at: Mapped[datetime] = mapped_column(TimezoneAwareDateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at: Mapped[datetime] = mapped_column(TimezoneAwareDateTime, nullable=True)
     description: Mapped[str] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
 
-    project_id: Mapped[Uuid] = mapped_column(ForeignKey("projects.id"), nullable=False)
+    project_id: Mapped[uuid.UUID] = mapped_column(UUIDBytes, ForeignKey("projects.id"), nullable=False)
 
     project: Mapped["Project"] = relationship("Project", back_populates="documents")
     files: Mapped[list["File"]] = relationship("File", back_populates="document", cascade="all, delete-orphan", order_by="File.created_at")
@@ -55,9 +59,9 @@ class Document(Base):
 class File(Base):
     __tablename__ = "files"
 
-    id: Mapped[Uuid] = mapped_column(Uuid, primary_key=True, default=lambda: uuid.uuid4())
-    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    updated_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=True)
+    id: Mapped[uuid.UUID] = mapped_column(UUIDBytes, primary_key=True, default=lambda: uuid.uuid4())
+    created_at: Mapped[datetime] = mapped_column(TimezoneAwareDateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at: Mapped[datetime] = mapped_column(TimezoneAwareDateTime, nullable=True)
     filename: Mapped[str] = mapped_column(String(255), nullable=True)
     mime_type: Mapped[str] = mapped_column(String(100), nullable=False)
     data: Mapped[bytes] = mapped_column(BLOB, nullable=False)
@@ -65,7 +69,7 @@ class File(Base):
     salt: Mapped[bytes] = mapped_column(BLOB, nullable=False)
     file_hash: Mapped[str] = mapped_column(String(64), nullable=False)  # SHA-256
 
-    document_id: Mapped[Uuid] = mapped_column(ForeignKey("documents.id"), nullable=False)
+    document_id: Mapped[uuid.UUID] = mapped_column(UUIDBytes, ForeignKey("documents.id"), nullable=False)
 
     document: Mapped["Document"] = relationship("Document", back_populates="files")
     selections: Mapped[list["Selection"]] = relationship("Selection", back_populates="file")
@@ -88,15 +92,15 @@ class File(Base):
 class Prompt(Base):
     __tablename__ = "prompts"
 
-    id: Mapped[Uuid] = mapped_column(Uuid, primary_key=True, default=lambda: uuid.uuid4())
-    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    updated_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=True)
+    id: Mapped[uuid.UUID] = mapped_column(UUIDBytes, primary_key=True, default=lambda: uuid.uuid4())
+    created_at: Mapped[datetime] = mapped_column(TimezoneAwareDateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at: Mapped[datetime] = mapped_column(TimezoneAwareDateTime, nullable=True)
     label: Mapped[str] = mapped_column(String(100), nullable=True)  # User-defined label
     text: Mapped[str] = mapped_column(Text, nullable=False)
-    languages: Mapped[list[str]] = mapped_column(ARRAY(String(20)), nullable=False)
+    languages: Mapped[list[str]] = mapped_column(JSONList, nullable=False)
     temperature: Mapped[float] = mapped_column(Float, nullable=False)
 
-    file_id: Mapped[Uuid] = mapped_column(ForeignKey("files.id"), nullable=True)
+    file_id: Mapped[uuid.UUID] = mapped_column(UUIDBytes, ForeignKey("files.id"), nullable=True)
 
     file: Mapped["File"] = relationship("File", back_populates="prompts")
 
@@ -104,9 +108,9 @@ class Prompt(Base):
 class Selection(Base):
     __tablename__ = "selections"
     
-    id: Mapped[Uuid] = mapped_column(Uuid, primary_key=True, default=lambda: uuid.uuid4())
-    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    updated_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=True)
+    id: Mapped[uuid.UUID] = mapped_column(UUIDBytes, primary_key=True, default=lambda: uuid.uuid4())
+    created_at: Mapped[datetime] = mapped_column(TimezoneAwareDateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at: Mapped[datetime] = mapped_column(TimezoneAwareDateTime, nullable=True)
     label: Mapped[str] = mapped_column(String(100), nullable=True)  # User-defined label
     page_number: Mapped[int] = mapped_column(Integer, nullable=True)  # null for all pages
     x: Mapped[float] = mapped_column(Float, nullable=False)  # X coordinate (0-1 normalized)
@@ -115,7 +119,7 @@ class Selection(Base):
     height: Mapped[float] = mapped_column(Float, nullable=False)  # Height (0-1 normalized)
     confidence: Mapped[float] = mapped_column(Float, nullable=True)  # AI confidence score (1 if user source)
 
-    file_id: Mapped[Uuid] = mapped_column(ForeignKey("files.id"), nullable=True)
+    file_id: Mapped[uuid.UUID] = mapped_column(UUIDBytes, ForeignKey("files.id"), nullable=True)
 
     file: Mapped["File"] = relationship("File", back_populates="selections")
 

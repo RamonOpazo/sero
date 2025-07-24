@@ -14,7 +14,7 @@ class _DatabaseManager:
         self._SessionLocal = None
 
     def get_url(self) -> str:
-        return f"duckdb:///{settings.db.filepath.absolute()}"
+        return f"sqlite:///{settings.db.filepath.absolute()}"
 
     def init(self):
         if self._engine is not None:
@@ -22,22 +22,46 @@ class _DatabaseManager:
             return
 
         db_url = self.get_url()
-        logger.info(f"Initializing DuckDB database: {db_url}")
+        logger.info(f"Initializing SQLite database: {db_url}")
+
+        # Ensure the database directory exists
+        settings.db.filepath.parent.mkdir(parents=True, exist_ok=True)
 
         self._engine = create_engine(
             db_url,
             echo=settings.is_debug_mode,
-            poolclass=None,
+            # SQLite specific pool settings
+            pool_pre_ping=True,
+            pool_recycle=3600,
             connect_args={
-                "config": {
-                    "memory_limit": settings.db.memory_limit,
-                    "threads": settings.db.threads,
-                }
+                "check_same_thread": False,  # Allow sharing connections between threads
+                "timeout": 30,  # Connection timeout in seconds
             }
         )
+        
+        # Configure SQLite pragmas for optimal performance
+        from sqlalchemy import event
+        
+        @event.listens_for(self._engine, "connect")
+        def set_sqlite_pragma(dbapi_connection, connection_record):
+            cursor = dbapi_connection.cursor()
+            # Enable WAL mode for better concurrency
+            cursor.execute(f"PRAGMA journal_mode={settings.db.journal_mode}")
+            # Set synchronous mode
+            cursor.execute(f"PRAGMA synchronous={settings.db.synchronous}")
+            # Set cache size (negative value means KB)
+            cursor.execute(f"PRAGMA cache_size={settings.db.cache_size}")
+            # Store temporary tables in memory
+            cursor.execute(f"PRAGMA temp_store={settings.db.temp_store}")
+            # Enable foreign key constraints
+            cursor.execute("PRAGMA foreign_keys=ON")
+            # Optimize for better performance
+            cursor.execute("PRAGMA optimize")
+            cursor.close()
+        
         self._SessionLocal = sessionmaker(bind=self._engine, autocommit=False, autoflush=False)
         Base.metadata.create_all(bind=self._engine)
-        logger.info("DuckDB database tables created successfully")
+        logger.info("SQLite database tables created successfully")
 
     def get_session(self) -> Session:
         if self._SessionLocal is None:
@@ -47,7 +71,7 @@ class _DatabaseManager:
     def close(self):
         if self._engine:
             self._engine.dispose()
-            logger.info("DuckDB database connections closed")
+            logger.info("SQLite database connections closed")
 
     def execute_raw(self, sql: str, params: dict | None = None):
         with self.session_scope() as db:

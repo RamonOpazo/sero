@@ -1,4 +1,3 @@
-import pytest
 import uuid
 import base64
 from unittest.mock import patch
@@ -16,7 +15,7 @@ class TestFilesAPI:
         file_data["data"] = base64.b64encode(file_data["data"]).decode()
         file_data["salt"] = base64.b64encode(file_data["salt"]).decode()
         
-        response = client.post("/api/files/", json=file_data)
+        response = client.post("/api/files", json=file_data)
         
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -37,7 +36,7 @@ class TestFilesAPI:
             "filename": "test.pdf",
             # Missing other required fields
         }
-        response = client.post("/api/files/", json=incomplete_data)
+        response = client.post("/api/files", json=incomplete_data)
         
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
@@ -49,13 +48,13 @@ class TestFilesAPI:
         file_data["data"] = base64.b64encode(file_data["data"]).decode()
         file_data["salt"] = base64.b64encode(file_data["salt"]).decode()
         
-        response = client.post("/api/files/", json=file_data)
+        response = client.post("/api/files", json=file_data)
         
         assert response.status_code in [status.HTTP_404_NOT_FOUND, status.HTTP_422_UNPROCESSABLE_ENTITY, status.HTTP_500_INTERNAL_SERVER_ERROR]
 
     def test_list_files_empty(self, client):
         """Test listing files when none exist."""
-        response = client.get("/api/files/")
+        response = client.get("/api/files")
         
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -64,7 +63,7 @@ class TestFilesAPI:
 
     def test_list_files_with_pagination(self, client, created_file):
         """Test listing files with pagination parameters."""
-        response = client.get("/api/files/?skip=0&limit=10")
+        response = client.get("/api/files?skip=0&limit=10")
         
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -214,7 +213,7 @@ class TestFilesAPI:
         
         assert response.status_code in [status.HTTP_404_NOT_FOUND, status.HTTP_501_NOT_IMPLEMENTED]
 
-    @patch('sero.api.controllers.files_controller.download')
+    @patch('backend.api.controllers.files_controller.download')
     def test_download_file_success(self, mock_download, client, created_file):
         """Test file download."""
         from fastapi.responses import StreamingResponse
@@ -229,13 +228,13 @@ class TestFilesAPI:
         )
         file_id = created_file["id"]
         
-        response = client.get(f"/api/files/id/{file_id}/download")
+        response = client.get(f"/api/files/id/{file_id}/download?password=testpassword")
         
         assert response.status_code == status.HTTP_200_OK
         assert response.headers["content-type"] == "application/pdf"
         assert "attachment" in response.headers.get("content-disposition", "")
 
-    @patch('sero.api.controllers.files_controller.download')
+    @patch('backend.api.controllers.files_controller.download')
     def test_download_file_with_password(self, mock_download, client, created_file):
         """Test file download with password."""
         from fastapi.responses import StreamingResponse
@@ -261,7 +260,7 @@ class TestFilesAPI:
         """Test downloading a non-existent file."""
         non_existent_id = str(uuid.uuid4())
         
-        response = client.get(f"/api/files/id/{non_existent_id}/download")
+        response = client.get(f"/api/files/id/{non_existent_id}/download?password=testpassword")
         
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
@@ -294,7 +293,7 @@ class TestFilesAPI:
         
         assert response.status_code in [status.HTTP_404_NOT_FOUND, status.HTTP_200_OK]  # May return empty list
 
-    @patch('sero.api.controllers.files_controller.update_prompts')
+    @patch('backend.api.controllers.files_controller.update_prompts')
     def test_add_prompts_success(self, mock_update_prompts, client, created_file):
         """Test adding prompts to a file."""
         mock_prompts = [
@@ -379,7 +378,7 @@ class TestFilesAPI:
             assert isinstance(data, list)
             assert len(data) == 0
 
-    @patch('sero.api.controllers.files_controller.update_selections')
+    @patch('backend.api.controllers.files_controller.update_selections')
     def test_add_selections_success(self, mock_update_selections, client, created_file):
         """Test adding selections to a file."""
         mock_selections = [
@@ -450,9 +449,9 @@ class TestFilesAPI:
         # Data should be truncated in serialization
         assert "data" not in data or "..." in str(data.get("data", ""))
         
-        # Size should be formatted as MB
+        # Size should be an integer (bytes)
         assert "size" in data
-        assert "MB" in data["size"]
+        assert isinstance(data["size"], int)
         
         # Salt should be base64 encoded
         assert "salt" in data

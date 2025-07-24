@@ -45,11 +45,17 @@ def test_cov() -> None:
 
 
 def db_init() -> None:
-    """Initialize the database with tables."""
+    """Initialize the SQLite database with tables."""
     try:
-        from backend.core.database import init_db
-        init_db()
-        print("Database initialized successfully.")
+        from backend.core.database import db_manager
+        from backend.core.config import settings
+        
+        print(f"Initializing SQLite database at: {settings.db.filepath}")
+        db_manager.init()
+        print("Database initialized successfully")
+        print(f"Database location: {settings.db.filepath.absolute()}")
+        print(f"Database engine: SQLite with WAL mode")
+        
     except Exception as e:
         print(f"Error initializing database: {e}")
         sys.exit(1)

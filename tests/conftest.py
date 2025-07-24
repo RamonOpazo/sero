@@ -3,7 +3,7 @@ import asyncio
 import tempfile
 import uuid
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -12,7 +12,6 @@ from httpx import AsyncClient
 from backend.app import app
 from backend.core.database import get_db_session
 from backend.db.models import Base
-from backend.core.config import settings
 
 
 @pytest.fixture(scope="session")
@@ -27,9 +26,9 @@ def event_loop():
 def temp_db_path():
     """Create a temporary database file path."""
     import os
-    fd, path = tempfile.mkstemp(suffix=".duckdb")
+    fd, path = tempfile.mkstemp(suffix=".sqlite")
     os.close(fd)  # Close the file descriptor immediately
-    os.unlink(path)  # Remove the empty file so DuckDB can create it properly
+    os.unlink(path)  # Remove the empty file so SQLite can create it properly
     yield Path(path)
     Path(path).unlink(missing_ok=True)
 
@@ -37,8 +36,22 @@ def temp_db_path():
 @pytest.fixture
 def test_engine(temp_db_path):
     """Create a test database engine."""
-    test_db_url = f"duckdb:///{temp_db_path}"
-    engine = create_engine(test_db_url, echo=False)
+    test_db_url = f"sqlite:///{temp_db_path}"
+    engine = create_engine(
+        test_db_url,
+        echo=False,
+        connect_args={"check_same_thread": False}
+    )
+    
+    # Configure SQLite pragmas for testing
+    from sqlalchemy import event
+    @event.listens_for(engine, "connect")
+    def set_sqlite_pragma(dbapi_connection, connection_record):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.close()
+    
     Base.metadata.create_all(bind=engine)
     yield engine
     engine.dispose()
@@ -121,7 +134,7 @@ def sample_file_data():
 @pytest.fixture
 def mock_security_manager():
     """Mock the security manager for testing."""
-    with patch('sero.core.security.security_manager') as mock:
+    with patch('backend.core.security.security_manager') as mock:
         mock.is_strong_password.return_value = True
         mock.hash_password.return_value = b"hashed_password"
         mock.verify_password.return_value = True
@@ -131,14 +144,14 @@ def mock_security_manager():
 @pytest.fixture
 def mock_db_manager():
     """Mock the database manager for testing."""
-    with patch('sero.core.database.db_manager') as mock:
+    with patch('backend.core.database.db_manager') as mock:
         yield mock
 
 
 @pytest.fixture
 def created_project(client, sample_project_data, mock_security_manager):
     """Create a project for testing and return its data."""
-    response = client.post("/api/projects/", json=sample_project_data)
+    response = client.post("/api/projects", json=sample_project_data)
     assert response.status_code == 201
     return response.json()
 
@@ -147,7 +160,7 @@ def created_project(client, sample_project_data, mock_security_manager):
 def created_document(client, created_project, sample_document_data):
     """Create a document for testing and return its data."""
     document_data = {**sample_document_data, "project_id": created_project["id"]}
-    response = client.post("/api/documents/", json=document_data)
+    response = client.post("/api/documents", json=document_data)
     assert response.status_code == 200
     return response.json()
 
@@ -161,6 +174,6 @@ def created_file(client, created_document, sample_file_data):
     file_data["data"] = base64.b64encode(file_data["data"]).decode()
     file_data["salt"] = base64.b64encode(file_data["salt"]).decode()
     
-    response = client.post("/api/files/", json=file_data)
+    response = client.post("/api/files", json=file_data)
     assert response.status_code == 200
     return response.json()

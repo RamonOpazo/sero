@@ -63,20 +63,33 @@ async def generic_error_handler(request: Request, exc: Exception):
     )
 
 
+# Include API routers FIRST before catch-all routes
 app.include_router(projects_router.router, prefix="/api/projects", tags=["projects"])
 app.include_router(documents_router.router, prefix="/api/documents", tags=["documents"])
 app.include_router(files_router.router, prefix="/api/files", tags=["files"])
 
+# Static files setup
 static_dir = Path(__file__).parent / "static"
 static_dir.mkdir(parents=True, exist_ok=True)
 (static_dir / "assets").mkdir(parents=True, exist_ok=True)
 
 app.mount("/assets", StaticFiles(directory=static_dir / "assets"), name="assets")
 
-
+# Frontend routes - THESE MUST BE LAST to avoid intercepting API routes
 @app.get("/")
+async def serve_frontend_root():    
+    index_file = static_dir / "index.html"
+    if index_file.exists():
+        return FileResponse(index_file)
+    return JSONResponse({"error": "Frontend not built"}, status_code=404)
+
+# Catch-all for frontend routes - exclude API paths
 @app.get("/{path:path}")
-async def serve_frontend(path: str = ""):    
+async def serve_frontend(path: str = ""):
+    # Don't serve frontend for API routes - let them return 404 naturally
+    if path.startswith("api/"):
+        return JSONResponse({"error": "API endpoint not found"}, status_code=404)
+    
     index_file = static_dir / "index.html"
     if index_file.exists():
         return FileResponse(index_file)
