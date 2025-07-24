@@ -50,6 +50,8 @@ export const createDocumentsColumns = (
   {
     accessorFn: (row) => row.original_file?.filename || row.description || 'Untitled Document',
     id: "filename",
+    size: 250,
+    minSize: 200,
     header: ({ column }) => {
       return (
         <Button
@@ -66,9 +68,9 @@ export const createDocumentsColumns = (
       const filename = document.original_file?.filename || document.description || 'Untitled Document'
       
       return (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 min-w-0">
           <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-          <span className="font-medium truncate max-w-sm">{filename}</span>
+          <span className="font-medium truncate" title={filename}>{filename}</span>
         </div>
       )
     },
@@ -86,6 +88,8 @@ export const createDocumentsColumns = (
       return getStatusPriority(getDocumentStatus(row));
     },
     id: "status",
+    size: 120,
+    minSize: 100,
     header: ({ column }) => {
       return (
         <div className="text-center">
@@ -118,12 +122,14 @@ export const createDocumentsColumns = (
   {
     accessorKey: "description",
     header: "Description",
+    size: 300,
+    minSize: 200,
     cell: ({ row }) => {
       const document = row.original
       const description = document.description
       
       return (
-        <div className="max-w-xs truncate text-muted-foreground">
+        <div className="truncate text-muted-foreground" title={description || "No description"}>
           {description || "No description"}
         </div>
       )
@@ -132,6 +138,8 @@ export const createDocumentsColumns = (
   {
     accessorFn: (row) => row.original_file?.selection_count || 0,
     id: "selections",
+    size: 100,
+    minSize: 80,
     header: ({ column }) => {
       return (
         <div className="text-center">
@@ -160,6 +168,8 @@ export const createDocumentsColumns = (
   {
     accessorFn: (row) => row.original_file?.prompt_count || 0,
     id: "prompts",
+    size: 100,
+    minSize: 80,
     header: ({ column }) => {
       return (
         <div className="text-center">
@@ -188,6 +198,8 @@ export const createDocumentsColumns = (
   {
     accessorFn: (row) => row.original_file?.size || 0,
     id: "size",
+    size: 100,
+    minSize: 80,
     header: ({ column }) => {
       return (
         <Button

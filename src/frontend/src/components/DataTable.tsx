@@ -13,7 +13,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { ChevronDown } from "lucide-react"
+import { ChevronDown, ChevronLeft, ChevronRight, MoreHorizontal } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -64,6 +64,10 @@ export function DataTable<TData, TValue>({
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = React.useState({})
+  
+  // Column navigation state
+  const [visibleColumnStart, setVisibleColumnStart] = React.useState(0)
+  const columnsPerPage = 4 // Adjust based on your needs
 
   // Add selection column if row selection is enabled
   const tableColumns = React.useMemo(() => {
@@ -119,13 +123,48 @@ export function DataTable<TData, TValue>({
     },
   })
 
+  // Get visible columns with navigation logic
+  const getVisibleColumns = React.useCallback(() => {
+    const allHeaders = table.getHeaderGroups()[0]?.headers || []
+    const selectColumn = allHeaders.find(h => h.column.id === 'select')
+    const actionsColumn = allHeaders.find(h => h.column.id === 'actions')
+    const regularColumns = allHeaders.filter(h => h.column.id !== 'select' && h.column.id !== 'actions')
+    
+    const visibleRegularColumns = regularColumns.slice(visibleColumnStart, visibleColumnStart + columnsPerPage)
+    const needsNavigation = regularColumns.length > columnsPerPage
+    const canGoLeft = visibleColumnStart > 0
+    const canGoRight = visibleColumnStart + columnsPerPage < regularColumns.length
+    
+    return {
+      selectColumn,
+      visibleRegularColumns,
+      actionsColumn,
+      needsNavigation,
+      canGoLeft,
+      canGoRight,
+      totalRegularColumns: regularColumns.length
+    }
+  }, [table, visibleColumnStart, columnsPerPage])
+  
+  const navigateColumns = React.useCallback((direction: 'left' | 'right') => {
+    const allHeaders = table.getHeaderGroups()[0]?.headers || []
+    const regularColumns = allHeaders.filter(h => h.column.id !== 'select' && h.column.id !== 'actions')
+    const totalRegularColumns = regularColumns.length
+    
+    if (direction === 'left' && visibleColumnStart > 0) {
+      setVisibleColumnStart(Math.max(0, visibleColumnStart - 1))
+    } else if (direction === 'right' && visibleColumnStart + columnsPerPage < totalRegularColumns) {
+      setVisibleColumnStart(Math.min(totalRegularColumns - columnsPerPage, visibleColumnStart + 1))
+    }
+  }, [table, visibleColumnStart, columnsPerPage])
+
   // Call the callback when row selection changes
   React.useEffect(() => {
     if (onRowSelectionChange && enableRowSelection) {
       const selectedRows = table.getFilteredSelectedRowModel().rows.map(row => row.original)
       onRowSelectionChange(selectedRows)
     }
-  }, [rowSelection, onRowSelectionChange, enableRowSelection])
+  }, [rowSelection, onRowSelectionChange, enableRowSelection, table])
 
   return (
     <div className="w-full space-y-4 pt-4">
@@ -174,49 +213,127 @@ export function DataTable<TData, TValue>({
         )}
       </div>
 
-      {/* Table */}
-      <div className="overflow-hidden rounded-md border">
+      {/* Table with Column Pagination */}
+      <div className="rounded-md border">
         <Table>
           <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
-                  return (
-                    <TableHead key={header.id}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
+            {table.getHeaderGroups().map((headerGroup) => {
+              const { selectColumn, visibleRegularColumns, actionsColumn, needsNavigation, canGoLeft, canGoRight } = getVisibleColumns()
+              
+              return (
+                <TableRow key={headerGroup.id}>
+                  {/* Selection column (sticky left) */}
+                  {selectColumn && (
+                    <TableHead 
+                      className="sticky left-0 bg-background shadow-[2px_0_4px_rgba(0,0,0,0.1)] dark:shadow-[2px_0_4px_rgba(255,255,255,0.1)] z-20"
+                      style={{ minWidth: '60px' }}
+                    >
+                      {flexRender(selectColumn.column.columnDef.header, selectColumn.getContext())}
                     </TableHead>
-                  )
-                })}
-              </TableRow>
-            ))}
+                  )}
+                  
+                  {/* Visible regular columns */}
+                  {visibleRegularColumns.map((header) => (
+                    <TableHead 
+                      key={header.id}
+                      style={{ minWidth: '150px' }}
+                    >
+                      {flexRender(header.column.columnDef.header, header.getContext())}
+                    </TableHead>
+                  ))}
+                  
+                  {/* Navigation column (if needed) */}
+                  {needsNavigation && (
+                    <TableHead className="w-24 text-center" style={{ width: '96px', minWidth: '96px', maxWidth: '96px' }}>
+                      <div className="flex items-center justify-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0"
+                          onClick={() => navigateColumns('left')}
+                          disabled={!canGoLeft}
+                        >
+                          <ChevronLeft className="h-3 w-3" />
+                        </Button>
+                        <MoreHorizontal className="h-3 w-3 text-muted-foreground" />
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0"
+                          onClick={() => navigateColumns('right')}
+                          disabled={!canGoRight}
+                        >
+                          <ChevronRight className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </TableHead>
+                  )}
+                  
+                  {/* Actions column (sticky right) */}
+                  {actionsColumn && (
+                    <TableHead 
+                      className="sticky right-0 bg-background shadow-[-2px_0_4px_rgba(0,0,0,0.1)] dark:shadow-[-2px_0_4px_rgba(255,255,255,0.1)] z-20"
+                      style={{ width: '120px', minWidth: '120px', maxWidth: '120px' }}
+                    >
+                      {flexRender(actionsColumn.column.columnDef.header, actionsColumn.getContext())}
+                    </TableHead>
+                  )}
+                </TableRow>
+              )
+            })}
           </TableHeader>
           <TableBody>
             {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                  className="hover:bg-muted/50 transition-colors"
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
+              table.getRowModel().rows.map((row) => {
+                const { needsNavigation } = getVisibleColumns()
+                const selectCell = row.getVisibleCells().find(c => c.column.id === 'select')
+                const actionsCell = row.getVisibleCells().find(c => c.column.id === 'actions')
+                const regularCells = row.getVisibleCells().filter(c => c.column.id !== 'select' && c.column.id !== 'actions')
+                const visibleRegularCells = regularCells.slice(visibleColumnStart, visibleColumnStart + columnsPerPage)
+                
+                return (
+                  <TableRow
+                    key={row.id}
+                    data-state={row.getIsSelected() && "selected"}
+                    className="hover:bg-muted/50 transition-colors"
+                  >
+                    {/* Selection cell (sticky left) */}
+                    {selectCell && (
+                      <TableCell className="sticky left-0 bg-background shadow-[2px_0_4px_rgba(0,0,0,0.1)] dark:shadow-[2px_0_4px_rgba(255,255,255,0.1)] z-10">
+                        {flexRender(selectCell.column.columnDef.cell, selectCell.getContext())}
+                      </TableCell>
+                    )}
+                    
+                    {/* Visible regular cells */}
+                    {visibleRegularCells.map((cell) => (
+                      <TableCell key={cell.id}>
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    ))}
+                    
+                    {/* Navigation cell placeholder */}
+                    {needsNavigation && (
+                      <TableCell 
+                        className="text-center text-muted-foreground" 
+                        style={{ width: '96px', minWidth: '96px', maxWidth: '96px' }}
+                      >
+                        {/* Empty cell for alignment */}
+                      </TableCell>
+                    )}
+                    
+                    {/* Actions cell (sticky right) */}
+                    {actionsCell && (
+                      <TableCell className="sticky right-0 bg-background shadow-[-2px_0_4px_rgba(0,0,0,0.1)] dark:shadow-[-2px_0_4px_rgba(255,255,255,0.1)] z-10">
+                        {flexRender(actionsCell.column.columnDef.cell, actionsCell.getContext())}
+                      </TableCell>
+                    )}
+                  </TableRow>
+                )
+              })
             ) : (
               <TableRow>
                 <TableCell
-                  colSpan={tableColumns.length}
+                  colSpan={999} // Large number to span all columns
                   className="h-24 text-center"
                 >
                   No results.
