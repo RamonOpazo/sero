@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
@@ -12,8 +12,9 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet'
-import { X, Plus, List, MessageSquare } from 'lucide-react'
+import { X, Plus, List, MessageSquare, Save } from 'lucide-react'
 import { AddPromptDialog } from './AddPromptDialog'
+import { ConfirmationDialog } from '../ConfirmationDialog'
 
 type Selection = {
   id: string
@@ -28,51 +29,61 @@ type Selection = {
 type Prompt = {
   id: string
   text: string
-  pageNumber?: number
+  label?: string
+  languages: string[]
+  temperature: number
   createdAt: string
+  updatedAt?: string
 }
 
 type FileEditingProps = {
   selections: Selection[]
+  prompts: Prompt[]
   isOriginalFile: boolean
+  fileId?: string
+  isLoadingFileData?: boolean
+  backendSelectionsCount?: number
+  backendPromptsCount?: number
+  activeSelectionId?: string | null
   onClearSelections: () => void
   onSelectionDelete?: (id: string) => void
+  onSelectionActivate?: (id: string) => void
   onPageChange?: (page: number) => void
 }
 
 export function FileEditing({ 
   selections, 
+  prompts: initialPrompts,
   isOriginalFile, 
+  fileId,
+  isLoadingFileData,
+  backendSelectionsCount,
+  backendPromptsCount,
+  activeSelectionId,
   onClearSelections, 
   onSelectionDelete,
+  onSelectionActivate
 }: FileEditingProps) {
-  const [prompts, setPrompts] = useState<Prompt[]>([
-    {
-      id: '1',
-      text: 'Extract all monetary amounts mentioned in this document',
-      pageNumber: 1,
-      createdAt: '2024-01-15T10:30:00Z'
-    },
-    {
-      id: '2', 
-      text: 'Identify any person names or organization names',
-      createdAt: '2024-01-15T11:15:00Z'
-    },
-    {
-      id: '3',
-      text: 'List all dates mentioned in chronological order',
-      pageNumber: 3,
-      createdAt: '2024-01-15T14:45:00Z'
-    }
-  ])
+  // Local prompts state initialized from props
+  const [prompts, setPrompts] = useState<Prompt[]>(initialPrompts)
+
+  // Update local prompts when props change
+  useEffect(() => {
+    setPrompts(initialPrompts)
+  }, [initialPrompts])
   const [isPromptDialogOpen, setIsPromptDialogOpen] = useState(false)
   const [isSelectionsSheetOpen, setIsSelectionsSheetOpen] = useState(false)
   const [isPromptsSheetOpen, setIsPromptsSheetOpen] = useState(false)
+  const [isClearPromptsDialogOpen, setIsClearPromptsDialogOpen] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
 
   const handleAddPrompt = (text: string) => {
     const newPrompt: Prompt = {
       id: Date.now().toString(),
       text,
+      label: undefined,
+      languages: ['english'],
+      temperature: 0.7,
       createdAt: new Date().toISOString()
     }
     setPrompts(prev => [...prev, newPrompt])
@@ -80,6 +91,72 @@ export function FileEditing({
 
   const handlePromptDelete = (id: string) => {
     setPrompts(prev => prev.filter(prompt => prompt.id !== id))
+  }
+
+  const handleClearAllPrompts = async () => {
+    // TODO: Implement actual API call to clear prompts
+    setPrompts([])
+  }
+
+  const handleSaveChanges = async () => {
+    if (!isOriginalFile || !fileId) return
+    
+    setIsSaving(true)
+    try {
+      // Save selections if any
+      if (selections.length > 0) {
+        // Selections coordinates are already normalized (0-1 range) from FilePDFViewer
+        const selectionsPayload = selections.map(selection => ({
+          label: selection.text || null,
+          page_number: selection.pageNumber,
+          x: selection.x, // Normalized coordinate (0-1)
+          y: selection.y, // Normalized coordinate (0-1)
+          width: selection.width, // Normalized dimension (0-1)
+          height: selection.height, // Normalized dimension (0-1)
+          confidence: null // Not used in frontend selections
+        }))
+
+        const selectionsResponse = await fetch(`/api/files/id/${fileId}/selections`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(selectionsPayload)
+        })
+
+        if (!selectionsResponse.ok) {
+          throw new Error(`Failed to save selections: ${selectionsResponse.statusText}`)
+        }
+      }
+
+      // Save prompts if any
+      if (prompts.length > 0) {
+        const promptsPayload = prompts.map(prompt => ({
+          label: null,
+          text: prompt.text,
+          languages: ['english'], // Default to English
+          temperature: 0.7 // Default temperature
+        }))
+
+        const promptsResponse = await fetch(`/api/files/id/${fileId}/prompts`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(promptsPayload)
+        })
+
+        if (!promptsResponse.ok) {
+          throw new Error(`Failed to save prompts: ${promptsResponse.statusText}`)
+        }
+      }
+      
+    } catch (error) {
+      console.error('Error saving changes:', error)
+      // TODO: Show error toast notification
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   return (
@@ -93,6 +170,9 @@ export function FileEditing({
             <Button variant="outline" className="w-full justify-start">
               <List className="h-4 w-4 mr-2" />
               Open Selections ({selections.length})
+              {isLoadingFileData && selections.length === 0 && backendSelectionsCount !== undefined && backendSelectionsCount > 0 && (
+                <span className="ml-1 text-muted-foreground">({backendSelectionsCount})</span>
+              )}
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="w-96 sm:w-[540px]">
@@ -108,7 +188,11 @@ export function FileEditing({
                 <div className="space-y-3 pr-4 ml-4">
                   {selections.length > 0 ? (
                     selections.map((selection, index) => (
-                      <div key={selection.id} className="p-3 bg-muted/50 rounded border">
+                      <div 
+                        key={selection.id} 
+                        className={`p-3 rounded border cursor-pointer hover:bg-muted/70 transition-colors ${selection.id === activeSelectionId ? 'bg-orange-50 border-orange-300 dark:bg-orange-950 dark:border-orange-700' : 'bg-muted/50'}`}
+                        onClick={() => onSelectionActivate ? onSelectionActivate(selection.id) : null}
+                      >
                         <div className="flex justify-between items-start mb-2">
                           <div>
                             <span className="font-medium text-sm">Selection {index + 1}</span>
@@ -121,7 +205,10 @@ export function FileEditing({
                               size="sm"
                               variant="ghost"
                               className="h-6 w-6 p-0 text-destructive"
-                              onClick={() => onSelectionDelete(selection.id)}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                onSelectionDelete(selection.id)
+                              }}
                             >
                               <X className="h-3 w-3" />
                             </Button>
@@ -131,8 +218,8 @@ export function FileEditing({
                           <p className="text-muted-foreground text-xs mb-2">{selection.text}</p>
                         )}
                         <div className="text-xs text-muted-foreground">
-                          Position: ({Math.round(selection.x)}, {Math.round(selection.y)})
-                          Size: {Math.round(selection.width)} × {Math.round(selection.height)}
+                          Position: ({Math.round(selection.x * 100)}%, {Math.round(selection.y * 100)}%)
+                          Size: {Math.round(selection.width * 100)}% × {Math.round(selection.height * 100)}%
                         </div>
                       </div>
                     ))
@@ -172,6 +259,9 @@ export function FileEditing({
             <Button variant="outline" className="w-full justify-start">
               <MessageSquare className="h-4 w-4 mr-2" />
               Open Prompts ({prompts.length})
+              {isLoadingFileData && prompts.length === 0 && backendPromptsCount !== undefined && backendPromptsCount > 0 && (
+                <span className="ml-1 text-muted-foreground">({backendPromptsCount})</span>
+              )}
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="w-96 sm:w-[540px]">
@@ -201,9 +291,9 @@ export function FileEditing({
                         <p className="text-sm mb-2 pr-8">{prompt.text}</p>
                         <div className="flex justify-between text-xs text-muted-foreground">
                           <span>{new Date(prompt.createdAt).toLocaleDateString()}</span>
-                          {prompt.pageNumber && (
+                          {prompt.label && (
                             <Badge variant="outline" className="text-xs">
-                              Page {prompt.pageNumber}
+                              {prompt.label}
                             </Badge>
                           )}
                         </div>
@@ -234,10 +324,7 @@ export function FileEditing({
                   <Button 
                     variant="destructive" 
                     size="sm"
-                    onClick={() => {
-                      setPrompts([])
-                      setIsPromptsSheetOpen(false)
-                    }}
+                    onClick={() => setIsClearPromptsDialogOpen(true)}
                   >
                     Clear All Prompts
                   </Button>
@@ -250,12 +337,47 @@ export function FileEditing({
             )}
           </SheetContent>
         </Sheet>
+
+        {/* Save Changes Button */}
+        {isOriginalFile && (selections.length > 0 || prompts.length > 0) && (
+          <Button 
+            onClick={handleSaveChanges}
+            disabled={isSaving}
+            className="w-full"
+          >
+            {isSaving ? (
+              <>
+                <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4 mr-2" />
+                Save Changes
+              </>
+            )}
+          </Button>
+        )}
       </div>
       
       <AddPromptDialog 
         open={isPromptDialogOpen}
         onOpenChange={setIsPromptDialogOpen}
         onAddPrompt={handleAddPrompt}
+      />
+      
+      <ConfirmationDialog
+        isOpen={isClearPromptsDialogOpen}
+        onClose={() => setIsClearPromptsDialogOpen(false)}
+        onConfirm={async () => {
+          await handleClearAllPrompts()
+          setIsPromptsSheetOpen(false)
+        }}
+        title="Clear All Prompts"
+        description="This action will permanently delete all prompts for this document. This cannot be undone."
+        confirmationText="clear prompts"
+        confirmButtonText="Clear All Prompts"
+        variant="destructive"
       />
     </div>
   )

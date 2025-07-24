@@ -21,6 +21,7 @@ interface FilePDFViewerProps {
   error: string | null
   isSelecting: boolean
   selections: Selection[]
+  activeSelectionId?: string | null
   onLoadSuccess: ({ numPages }: { numPages: number }) => void
   onLoadError: (error: Error) => void
   onSelectionCreate?: (selection: Omit<Selection, 'id'>) => void
@@ -37,6 +38,7 @@ export function FilePDFViewer({
   error,
   isSelecting,
   selections,
+  activeSelectionId,
   onLoadSuccess,
   onLoadError,
   onSelectionCreate,
@@ -54,6 +56,37 @@ export function FilePDFViewer({
   const [resizeHandle, setResizeHandle] = useState<ResizeHandle | null>(null)
   const [resizeStartPoint, setResizeStartPoint] = useState<{ x: number, y: number } | null>(null)
   const [originalSelection, setOriginalSelection] = useState<Selection | null>(null)
+  const [pageDimensions, setPageDimensions] = useState<{ width: number, height: number } | null>(null)
+
+  // Helper functions for coordinate conversion
+  const pixelToNormalized = useCallback((pixelCoords: { x: number, y: number, width: number, height: number }) => {
+    if (!pageDimensions) return pixelCoords
+    return {
+      x: pixelCoords.x / pageDimensions.width,
+      y: pixelCoords.y / pageDimensions.height,
+      width: pixelCoords.width / pageDimensions.width,
+      height: pixelCoords.height / pageDimensions.height
+    }
+  }, [pageDimensions])
+
+  const normalizedToPixel = useCallback((normalizedCoords: { x: number, y: number, width: number, height: number }) => {
+    if (!pageDimensions) return normalizedCoords
+    return {
+      x: normalizedCoords.x * pageDimensions.width,
+      y: normalizedCoords.y * pageDimensions.height,
+      width: normalizedCoords.width * pageDimensions.width,
+      height: normalizedCoords.height * pageDimensions.height
+    }
+  }, [pageDimensions])
+
+  // Update page dimensions when page loads
+  const handlePageLoadSuccess = useCallback((page: any) => {
+    const viewport = page.getViewport({ scale: 1 }) // Get unscaled dimensions
+    setPageDimensions({
+      width: viewport.width,
+      height: viewport.height
+    })
+  }, [])
 
   // Handle mouse events for selection creation
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -142,12 +175,14 @@ export function FilePDFViewer({
     if (isDrawing && currentSelection && onSelectionCreate) {
       // Only create selection if it has meaningful size
       if (currentSelection.width > 10 && currentSelection.height > 10) {
+        // Convert pixel coordinates to normalized coordinates
+        const normalizedSelection = pixelToNormalized(currentSelection)
         onSelectionCreate({
           pageNumber: currentPage,
-          x: currentSelection.x,
-          y: currentSelection.y,
-          width: currentSelection.width,
-          height: currentSelection.height
+          x: normalizedSelection.x,
+          y: normalizedSelection.y,
+          width: normalizedSelection.width,
+          height: normalizedSelection.height
         })
       }
       
@@ -161,7 +196,7 @@ export function FilePDFViewer({
       setResizeStartPoint(null)
       setOriginalSelection(null)
     }
-  }, [isDrawing, currentSelection, onSelectionCreate, currentPage, isResizing])
+  }, [isDrawing, currentSelection, onSelectionCreate, currentPage, isResizing, pixelToNormalized])
 
   // Handle resize start
   const handleResizeMouseDown = useCallback((e: React.MouseEvent, selectionId: string, handle: ResizeHandle) => {
@@ -330,85 +365,97 @@ export function FilePDFViewer({
                     className="pdf-page shadow-lg"
                     canvasBackground="white"
                     renderTextLayer={!isSelecting}
+                    onLoadSuccess={handlePageLoadSuccess}
                   />
                 </PDFDocument>
 
                 {/* Existing selections */}
-                {currentPageSelections.map((selection) => (
-                  <div
-                    key={selection.id}
-                    className="absolute border-2 border-blue-500 bg-blue-500/20"
-                    style={{
-                      left: `${selection.x * scale}px`,
-                      top: `${selection.y * scale}px`,
-                      width: `${selection.width * scale}px`,
-                      height: `${selection.height * scale}px`,
-                      pointerEvents: onSelectionEdit ? 'auto' : 'none',
-                      zIndex: 10
-                    }}
-                  >
-                    {/* Corner handles */}
-                    {onSelectionEdit && (
-                      <>
-                        {/* Top-left handle */}
-                        <div
-                          className="absolute bg-blue-600 border-2 border-white cursor-nw-resize hover:bg-blue-700 rounded-sm"
-                          style={{
-                            left: '-6px',
-                            top: '-6px',
-                            width: '12px',
-                            height: '12px',
-                            pointerEvents: 'auto',
-                            zIndex: 20
-                          }}
-                          onMouseDown={(e) => handleResizeMouseDown(e, selection.id, 'top-left')}
-                        />
-                        
-                        {/* Top-right handle */}
-                        <div
-                          className="absolute bg-blue-600 border-2 border-white cursor-ne-resize hover:bg-blue-700 rounded-sm"
-                          style={{
-                            right: '-6px',
-                            top: '-6px',
-                            width: '12px',
-                            height: '12px',
-                            pointerEvents: 'auto',
-                            zIndex: 20
-                          }}
-                          onMouseDown={(e) => handleResizeMouseDown(e, selection.id, 'top-right')}
-                        />
-                        
-                        {/* Bottom-left handle */}
-                        <div
-                          className="absolute bg-blue-600 border-2 border-white cursor-sw-resize hover:bg-blue-700 rounded-sm"
-                          style={{
-                            left: '-6px',
-                            bottom: '-6px',
-                            width: '12px',
-                            height: '12px',
-                            pointerEvents: 'auto',
-                            zIndex: 20
-                          }}
-                          onMouseDown={(e) => handleResizeMouseDown(e, selection.id, 'bottom-left')}
-                        />
-                        
-                        {/* Bottom-right handle */}
-                        <div
-                          className="absolute bg-blue-600 border-2 border-white cursor-se-resize hover:bg-blue-700 rounded-sm"
-                          style={{
-                            right: '-6px',
-                            bottom: '-6px',
-                            width: '12px',
-                            height: '12px',
-                            pointerEvents: 'auto',
-                            zIndex: 20
-                          }}
-                          onMouseDown={(e) => handleResizeMouseDown(e, selection.id, 'bottom-right')}
-                        />
-                      </>
-                    )}
-                  </div>
-                ))}
+                {currentPageSelections.map((selection) => {
+                  const isActive = selection.id === activeSelectionId
+                  const borderColor = isActive ? 'border-orange-500' : 'border-blue-500'
+                  const bgColor = isActive ? 'bg-orange-500/20' : 'bg-blue-500/20'
+                  const handleColor = isActive ? 'bg-orange-600' : 'bg-blue-600'
+                  const handleHoverColor = isActive ? 'hover:bg-orange-700' : 'hover:bg-blue-700'
+                  
+                  // Convert normalized coordinates to pixel coordinates for display
+                  const pixelCoords = normalizedToPixel(selection)
+                  
+                  return (
+                    <div
+                      key={selection.id}
+                      className={`absolute border-2 ${borderColor} ${bgColor}`}
+                      style={{
+                        left: `${pixelCoords.x * scale}px`,
+                        top: `${pixelCoords.y * scale}px`,
+                        width: `${pixelCoords.width * scale}px`,
+                        height: `${pixelCoords.height * scale}px`,
+                        pointerEvents: onSelectionEdit ? 'auto' : 'none',
+                        zIndex: isActive ? 15 : 10
+                      }}
+                    >
+                      {/* Corner handles - now square */}
+                      {onSelectionEdit && (
+                        <>
+                          {/* Top-left handle */}
+                          <div
+                            className={`absolute ${handleColor} border-2 border-white cursor-nw-resize ${handleHoverColor} transition-colors`}
+                            style={{
+                              left: '-6px',
+                              top: '-6px',
+                              width: '12px',
+                              height: '12px',
+                              pointerEvents: 'auto',
+                              zIndex: 25
+                            }}
+                            onMouseDown={(e) => handleResizeMouseDown(e, selection.id, 'top-left')}
+                          />
+                          
+                          {/* Top-right handle */}
+                          <div
+                            className={`absolute ${handleColor} border-2 border-white cursor-ne-resize ${handleHoverColor} transition-colors`}
+                            style={{
+                              right: '-6px',
+                              top: '-6px',
+                              width: '12px',
+                              height: '12px',
+                              pointerEvents: 'auto',
+                              zIndex: 25
+                            }}
+                            onMouseDown={(e) => handleResizeMouseDown(e, selection.id, 'top-right')}
+                          />
+                          
+                          {/* Bottom-left handle */}
+                          <div
+                            className={`absolute ${handleColor} border-2 border-white cursor-sw-resize ${handleHoverColor} transition-colors`}
+                            style={{
+                              left: '-6px',
+                              bottom: '-6px',
+                              width: '12px',
+                              height: '12px',
+                              pointerEvents: 'auto',
+                              zIndex: 25
+                            }}
+                            onMouseDown={(e) => handleResizeMouseDown(e, selection.id, 'bottom-left')}
+                          />
+                          
+                          {/* Bottom-right handle */}
+                          <div
+                            className={`absolute ${handleColor} border-2 border-white cursor-se-resize ${handleHoverColor} transition-colors`}
+                            style={{
+                              right: '-6px',
+                              bottom: '-6px',
+                              width: '12px',
+                              height: '12px',
+                              pointerEvents: 'auto',
+                              zIndex: 25
+                            }}
+                            onMouseDown={(e) => handleResizeMouseDown(e, selection.id, 'bottom-right')}
+                          />
+                        </>
+                      )}
+                    </div>
+                  )
+                })}
 
                 {/* Current selection being drawn */}
                 {currentSelection && (

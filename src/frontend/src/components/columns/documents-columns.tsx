@@ -130,7 +130,7 @@ export const createDocumentsColumns = (
     },
   },
   {
-    accessorFn: (row) => row.original_file?.selections?.length || 0,
+    accessorFn: (row) => row.original_file?.selection_count || 0,
     id: "selections",
     header: ({ column }) => {
       return (
@@ -148,7 +148,7 @@ export const createDocumentsColumns = (
     },
     cell: ({ row }) => {
       const document = row.original
-      const selectionsCount = document.original_file?.selections?.length || 0
+      const selectionsCount = document.original_file?.selection_count || 0
       
       return (
         <div className="text-center">
@@ -158,7 +158,7 @@ export const createDocumentsColumns = (
     },
   },
   {
-    accessorFn: (row) => row.original_file?.prompts?.length || 0,
+    accessorFn: (row) => row.original_file?.prompt_count || 0,
     id: "prompts",
     header: ({ column }) => {
       return (
@@ -176,7 +176,7 @@ export const createDocumentsColumns = (
     },
     cell: ({ row }) => {
       const document = row.original
-      const promptsCount = document.original_file?.prompts?.length || 0
+      const promptsCount = document.original_file?.prompt_count || 0
       
       return (
         <div className="text-center">

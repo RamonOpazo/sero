@@ -6,6 +6,9 @@ import { pdfjs } from 'react-pdf'
 import { FileText, Loader2, Eye, EyeOff } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { ConfirmationDialog } from './ConfirmationDialog'
+import { getPassword, extendPasswordExpiry, cleanupExpiredPasswords } from '@/utils/passwordManager'
+import { throttle } from '@/utils/functions'
 import type { Document as DocumentType } from '@/types'
 
 // Import sub-components
@@ -27,6 +30,16 @@ interface Selection {
   text?: string
 }
 
+interface Prompt {
+  id: string
+  text: string
+  label?: string
+  languages: string[]
+  temperature: number
+  createdAt: string
+  updatedAt?: string
+}
+
 export function FileViewer() {
   const { documentId, fileId } = useParams<{ projectId: string; documentId: string; fileId?: string }>()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -38,10 +51,26 @@ export function FileViewer() {
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
   const [selections, setSelections] = useState<Selection[]>([])
-  const password = searchParams.get('password') || ''
+  const [prompts, setPrompts] = useState<Prompt[]>([])
+  const [isLoadingFileData, setIsLoadingFileData] = useState(false)
+  const [activeSelectionId, setActiveSelectionId] = useState<string | null>(null)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   
   // Get view mode from URL params, default to 'original'
   const viewMode = (searchParams.get('view') as 'original' | 'obfuscated') || 'original'
+  
+  // Get password from secure storage instead of URL parameters
+  const getSecurePassword = useCallback((fileId?: string) => {
+    if (!documentId || !fileId) return ''
+    return getPassword(documentId, fileId) || ''
+  }, [documentId])
+  
+  // Get the appropriate file based on fileId parameter or view mode
+  const file = fileId 
+    ? (documentData?.original_file?.id === fileId ? documentData.original_file : documentData?.obfuscated_file)
+    : (viewMode === 'obfuscated' && documentData?.obfuscated_file 
+        ? documentData.obfuscated_file 
+        : documentData?.original_file)
   
   // Determine if current file is the original (editable) version
   const isOriginalFile = fileId 
@@ -52,6 +81,9 @@ export function FileViewer() {
   useEffect(() => {
     if (!documentId) return
 
+    // Clean up expired passwords on component mount
+    cleanupExpiredPasswords()
+    
     setIsDocumentLoading(true)
     fetch(`/api/documents/id/${documentId}`)
       .then(res => {
@@ -63,16 +95,35 @@ export function FileViewer() {
       .then(data => {
         setDocumentData(data)
         setIsDocumentLoading(false)
-        // Load existing selections
-        if (data.original_file?.selections) {
-          setSelections(data.original_file.selections)
-        }
       })
       .catch(err => {
         console.error('Error fetching document:', err)
         setIsDocumentLoading(false)
       })
   }, [documentId])
+  
+  // Extend password expiry when user is actively using the document
+  useEffect(() => {
+    if (!documentId || !file?.id || !getSecurePassword(file.id)) return
+    
+    const extendPassword = () => {
+      extendPasswordExpiry(documentId, file.id, 30) // Extend by 30 minutes
+    }
+    
+    // Extend password on various user interactions
+    const events = ['mousedown', 'keydown', 'scroll', 'touchstart']
+    const throttledExtend = throttle(extendPassword, 5 * 60 * 1000) // Throttle to once every 5 minutes
+    
+    events.forEach(event => {
+      document.addEventListener(event, throttledExtend)
+    })
+    
+    return () => {
+      events.forEach(event => {
+        document.removeEventListener(event, throttledExtend)
+      })
+    }
+  }, [documentId, file?.id, getSecurePassword])
 
   const handleViewModeChange = (mode: 'original' | 'obfuscated') => {
     if (mode === 'original') {
@@ -83,25 +134,86 @@ export function FileViewer() {
     setSearchParams(searchParams)
   }
 
-  // Get the appropriate file based on fileId parameter or view mode
-  const file = fileId 
-    ? (documentData?.original_file?.id === fileId ? documentData.original_file : documentData?.obfuscated_file)
-    : (viewMode === 'obfuscated' && documentData?.obfuscated_file 
-        ? documentData.obfuscated_file 
-        : documentData?.original_file)
+  // Load file data (selections and prompts) when file changes
+  useEffect(() => {
+    const loadFileData = async () => {
+      if (!file?.id || !isOriginalFile) {
+        setSelections([])
+        setPrompts([])
+        return
+      }
 
-  // Create file URL with streaming and password
+      setIsLoadingFileData(true)
+      
+      try {
+        // Always load both selections and prompts when file changes
+        const [selectionsResponse, promptsResponse] = await Promise.all([
+          fetch(`/api/files/id/${file.id}/selections`),
+          fetch(`/api/files/id/${file.id}/prompts`)
+        ])
+
+        if (selectionsResponse.ok) {
+          const selectionsData = await selectionsResponse.json()
+          // Transform backend selection format to frontend format (coordinates are already normalized)
+          const transformedSelections = selectionsData.map((sel: any) => ({
+            id: sel.id,
+            pageNumber: sel.page_number || 1,
+            x: sel.x, // Already normalized (0-1)
+            y: sel.y, // Already normalized (0-1)
+            width: sel.width, // Already normalized (0-1)
+            height: sel.height, // Already normalized (0-1)
+            text: sel.label
+          }))
+          setSelections(transformedSelections)
+        } else {
+          console.warn('Failed to load selections:', selectionsResponse.statusText)
+          setSelections([])
+        }
+
+        if (promptsResponse.ok) {
+          const promptsData = await promptsResponse.json()
+          // Transform backend prompt format to frontend format
+          const transformedPrompts = promptsData.map((prompt: any) => ({
+            id: prompt.id,
+            text: prompt.text,
+            label: prompt.label,
+            languages: prompt.languages,
+            temperature: prompt.temperature,
+            createdAt: prompt.created_at,
+            updatedAt: prompt.updated_at
+          }))
+          setPrompts(transformedPrompts)
+        } else {
+          console.warn('Failed to load prompts:', promptsResponse.statusText)
+          setPrompts([])
+        }
+      } catch (error) {
+        console.error('Error loading file data:', error)
+        setSelections([])
+        setPrompts([])
+      } finally {
+        setIsLoadingFileData(false)
+      }
+    }
+
+    loadFileData()
+  }, [file?.id, isOriginalFile])
+
+  // Create file URL with streaming and password from secure storage
   const createFileUrl = useCallback(() => {
     if (!file) return null
     // Use fileId if provided, otherwise use file.id
     const actualFileId = fileId || file.id
     const url = new URL(`/api/files/id/${actualFileId}/download`, window.location.origin)
     url.searchParams.set('stream', 'true')
+    
+    // Get password from secure storage
+    const password = getSecurePassword(actualFileId)
     if (password.trim()) {
       url.searchParams.set('password', password)
     }
     return url.toString()
-  }, [file, fileId, password])
+  }, [file, fileId, getSecurePassword])
 
   const fileUrl = createFileUrl()
 
@@ -147,6 +259,8 @@ export function FileViewer() {
       id: crypto.randomUUID()
     }
     setSelections(prev => [...prev, newSelection])
+    // Set the newly created selection as active
+    setActiveSelectionId(newSelection.id)
   }, [])
 
   const handleSelectionEdit = useCallback((id: string, updates: Partial<Selection>) => {
@@ -157,7 +271,68 @@ export function FileViewer() {
 
   const handleSelectionDelete = useCallback((id: string) => {
     setSelections(prev => prev.filter(sel => sel.id !== id))
+    // Clear active selection if we're deleting the active one
+    if (activeSelectionId === id) {
+      setActiveSelectionId(null)
+    }
+  }, [activeSelectionId])
+
+  const handleSelectionActivate = useCallback((selectionId: string) => {
+    setActiveSelectionId(selectionId)
+    
+    // Find the selection and navigate to its page
+    const selection = selections.find(sel => sel.id === selectionId)
+    if (selection && selection.pageNumber !== currentPage) {
+      handlePageChange(selection.pageNumber)
+    }
+  }, [selections, currentPage, handlePageChange])
+
+  const handleObfuscate = useCallback(() => {
+    // TODO: Implement obfuscation logic
+    console.log('Obfuscate file requested')
   }, [])
+
+  const handleDelete = useCallback(() => {
+    setIsDeleteDialogOpen(true)
+  }, [])
+
+  const handleConfirmDelete = useCallback(async () => {
+    if (!documentData || !documentId) return
+
+    try {
+      if (isOriginalFile) {
+        // Delete the entire document (both files)
+        const response = await fetch(`/api/documents/id/${documentId}`, {
+          method: 'DELETE'
+        })
+        
+        if (!response.ok) {
+          throw new Error(`Failed to delete document: ${response.statusText}`)
+        }
+        
+        // Navigate back to documents list
+        window.location.href = '/'
+      } else {
+        // Delete only the obfuscated file
+        const response = await fetch(`/api/files/id/${file?.id}`, {
+          method: 'DELETE'
+        })
+        
+        if (!response.ok) {
+          throw new Error(`Failed to delete obfuscated file: ${response.statusText}`)
+        }
+        
+        // Switch to original view since obfuscated file is deleted
+        handleViewModeChange('original')
+      }
+    } catch (error) {
+      console.error('Error deleting:', error)
+      // TODO: Show error toast notification
+    }
+  }, [documentData, documentId, isOriginalFile, file?.id, handleViewModeChange])
+
+  // Determine if obfuscation is possible
+  const canObfuscate = isOriginalFile && documentData?.status === 'processed'
 
   // Keyboard navigation
   useEffect(() => {
@@ -299,17 +474,28 @@ export function FileViewer() {
           currentPage={currentPage}
           numPages={numPages}
           scale={scale}
+          isOriginalFile={isOriginalFile}
+          canObfuscate={canObfuscate}
           onPageChange={handlePageChange}
           onZoomIn={handleZoomIn}
           onZoomOut={handleZoomOut}
           onDownload={handleDownload}
+          onObfuscate={handleObfuscate}
+          onDelete={handleDelete}
         />
 
         <FileEditing
           selections={selections}
+          prompts={prompts}
           isOriginalFile={isOriginalFile}
+          fileId={file?.id}
+          isLoadingFileData={isLoadingFileData}
+          backendSelectionsCount={file?.selection_count}
+          backendPromptsCount={file?.prompt_count}
+          activeSelectionId={activeSelectionId}
           onClearSelections={handleClearSelections}
           onSelectionDelete={handleSelectionDelete}
+          onSelectionActivate={handleSelectionActivate}
           onPageChange={handlePageChange}
         />
       </div>
@@ -324,12 +510,28 @@ export function FileViewer() {
           error={error}
           isSelecting={isOriginalFile}
           selections={selections}
+          activeSelectionId={activeSelectionId}
           onLoadSuccess={onDocumentLoadSuccess}
           onLoadError={onDocumentLoadError}
           onSelectionCreate={isOriginalFile ? handleSelectionCreate : undefined}
           onSelectionEdit={isOriginalFile ? handleSelectionEdit : undefined}
         />
       </div>
+      
+      {/* Delete Confirmation Dialog */}
+      <ConfirmationDialog
+        isOpen={isDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        onConfirm={handleConfirmDelete}
+        title={isOriginalFile ? "Delete Document" : "Delete Obfuscated File"}
+        description={isOriginalFile 
+          ? "This action will permanently delete the entire document including both original and obfuscated files. This cannot be undone."
+          : "This action will permanently delete the obfuscated file. The original file will remain. This cannot be undone."
+        }
+        confirmationText="delete"
+        confirmButtonText={isOriginalFile ? "Delete Document" : "Delete Obfuscated File"}
+        variant="destructive"
+      />
     </div>
   )
 }

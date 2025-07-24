@@ -4,7 +4,8 @@ import {
   Download,
   ChevronLeft,
   ChevronRight,
-  Trash
+  Trash,
+  Zap
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -12,20 +13,28 @@ interface FileControlsProps {
   currentPage: number
   numPages: number
   scale: number
+  isOriginalFile: boolean
+  canObfuscate: boolean
   onPageChange: (page: number) => void
   onZoomIn: () => void
   onZoomOut: () => void
   onDownload: () => void
+  onObfuscate: () => void
+  onDelete: () => void
 }
 
 export function FileControls({
   currentPage,
   numPages,
   scale,
+  isOriginalFile,
+  canObfuscate,
   onPageChange,
   onZoomIn,
   onZoomOut,
-  onDownload
+  onDownload,
+  onObfuscate,
+  onDelete
 }: FileControlsProps) {
   return (
     <div className="flex-shrink-0 p-6 border-b">
@@ -104,10 +113,23 @@ export function FileControls({
               Download
             </Button>
 
+            {isOriginalFile && (
+              <Button
+                variant="default"
+                size="sm"
+                onClick={onObfuscate}
+                disabled={!canObfuscate}
+                className="w-full"
+              >
+                <Zap className="h-4 w-4 mr-2" />
+                Obfuscate
+              </Button>
+            )}
+
             <Button
               variant="destructive"
               size="sm"
-              onClick={() => console.log("CHANGE ME")}
+              onClick={onDelete}
               className="w-full"
             >
               <Trash className="h-4 w-4 mr-2" />

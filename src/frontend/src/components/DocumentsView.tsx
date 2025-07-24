@@ -10,6 +10,7 @@ import { PasswordDialog } from '@/components/PasswordDialog'
 import { ConfirmationDialog } from '@/components/ConfirmationDialog'
 import { CreateDocumentDialog } from '@/components/CreateDocumentDialog'
 import { EditDocumentDialog } from '@/components/EditDocumentDialog'
+import { storePassword } from '@/utils/passwordManager'
 import type { Document, Project, DocumentUpload } from '@/types'
 
 export function DocumentsView() {
@@ -100,8 +101,10 @@ export function DocumentsView() {
       })
       
       if (response.ok || response.status === 206) {
-        // Password is correct (200 OK or 206 Partial Content for range requests), navigate to file viewer
-        navigate(`/project/${projectId}/document/${document.id}/file/${file.id}?password=${encodeURIComponent(password)}`)
+        // Password is correct (200 OK or 206 Partial Content for range requests)
+        // Store password securely and navigate to file viewer without password in URL
+        storePassword(document.id, file.id, password)
+        navigate(`/project/${projectId}/document/${document.id}/file/${file.id}`)
         setIsPasswordDialogOpen(false)
         setPendingViewFile(null)
         setPasswordError(null)

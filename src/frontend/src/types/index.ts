@@ -63,6 +63,8 @@ export interface File {
   is_original_file: boolean
   selections: Selection[]
   prompts: Prompt[]
+  selection_count: number
+  prompt_count: number
 }
 
 export interface Selection {
@@ -70,13 +72,13 @@ export interface Selection {
   created_at: string
   updated_at: string | null
   file_id: string
-  label: string
-  page_number: number
+  label: string | null
+  page_number: number | null
   x: number
   y: number
   width: number
   height: number
-  confidence: number
+  confidence: number | null
   is_ai_generated: boolean
 }
 
@@ -85,7 +87,7 @@ export interface Prompt {
   created_at: string
   updated_at: string | null
   file_id: string
-  label: string
+  label: string | null
   text: string
   languages: PromptLanguage[]
   temperature: number
