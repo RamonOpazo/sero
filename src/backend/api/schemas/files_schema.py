@@ -26,9 +26,9 @@ class File(BaseModel):
     def serialize_data(self, value: bytes, _info):
         return f"{value[:min(8, len(value))]}..."
 
-    @field_serializer("size")
-    def serialize_created_at(self, value: int, _info):
-        return f"{value / (1024*1024):.1f} MB"
+    # @field_serializer("size")
+    # def serialize_created_at(self, value: int, _info):
+    #     return f"{value / (1024*1024):.1f} MB"
 
     @field_serializer("salt")
     def serialize_salt(self, value: bytes, _info):

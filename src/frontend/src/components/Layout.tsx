@@ -4,6 +4,7 @@ import type { ReactNode } from 'react'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { SettingsToggle } from '@/components/SettingsToggle'
 import { Breadcrumbs } from '@/components/Breadcrumbs'
+import { Toaster } from '@/components/ui/sonner'
 // import { cn } from '@/lib/utils'
 
 interface LayoutProps {
@@ -81,6 +82,7 @@ export function Layout({ children }: LayoutProps) {
           {children}
         </main>
       </div>
+      <Toaster />
     </div>
   )
 }

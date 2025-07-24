@@ -10,6 +10,8 @@ export interface Project {
   password_hash: string
   documents: Document[]
   document_count: number
+  obfuscated_count: number
+  status: 'awaiting' | 'in_progress' | 'completed'
 }
 
 export interface ProjectCreate {
@@ -41,6 +43,13 @@ export interface DocumentCreate {
   description?: string
 }
 
+export interface DocumentUpload {
+  project_id: string
+  files: FileList
+  description?: string
+  password: string
+}
+
 export interface File {
   id: string
   created_at: string
@@ -48,7 +57,7 @@ export interface File {
   document_id: string
   filename: string
   mime_type: string
-  size: string
+  size: number
   salt: string
   file_hash: string
   is_original_file: boolean

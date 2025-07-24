@@ -1,8 +1,9 @@
 from typing import Annotated
-from pydantic import BaseModel, Field, field_validator, UUID4, AwareDatetime, BeforeValidator
+from pydantic import BaseModel, Field, field_validator, UUID4, AwareDatetime, BeforeValidator, computed_field
 
 from backend.core.security import security_manager
 from backend.api.schemas.documents_schema import Document
+from backend.api.enums import ProjectStatus
 
 
 class Project(BaseModel):
@@ -17,9 +18,24 @@ class Project(BaseModel):
     password_hash: str
     documents: Annotated[list[Document], BeforeValidator(lambda x: [] if x is None else x)]
 
+    @computed_field
     @property
     def document_count(self) -> int:
         return len(self.documents)
+    
+    @computed_field
+    @property
+    def obfuscated_count(self) -> int:
+        return len([ i for i in self.documents if i.obfuscated_file is not None ])
+    
+    @computed_field
+    @property
+    def status(self) -> ProjectStatus:
+        if self.document_count == 0:
+            return ProjectStatus.AWAITING
+        if self.document_count > self.obfuscated_count:
+            return ProjectStatus.IN_PROGRESS
+        return ProjectStatus.COMPLETED
 
     class Config:
         from_attributes = True

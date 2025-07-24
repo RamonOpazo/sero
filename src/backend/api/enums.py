@@ -1,6 +1,12 @@
 from enum import StrEnum, auto
 
 
+class ProjectStatus(StrEnum):
+    AWAITING = auto()
+    IN_PROGRESS = auto()
+    COMPLETED = auto()
+
+
 class DocumentStatus(StrEnum):
     PENDING = auto()
     PROCESSED = auto()
