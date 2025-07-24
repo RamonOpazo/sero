@@ -25,7 +25,7 @@ export function DocumentsView() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [documentToEdit, setDocumentToEdit] = useState<Document | null>(null)
-  const [pendingViewFile, setPendingViewFile] = useState<{ document: Document; fileType: 'original' | 'obfuscated' } | null>(null)
+  const [pendingViewFile, setPendingViewFile] = useState<{ document: Document; fileType: 'original' | 'obfuscated'; action: 'view' | 'download' } | null>(null)
   const [documentToDelete, setDocumentToDelete] = useState<Document | null>(null)
   const [passwordError, setPasswordError] = useState<string | null>(null)
   const [isValidatingPassword, setIsValidatingPassword] = useState(false)
@@ -76,14 +76,14 @@ export function DocumentsView() {
   const handleViewFile = useCallback((document: Document, fileType: 'original' | 'obfuscated') => {
     // For now, let's assume all files require a password
     // In a real implementation, you might check if the file is password-protected first
-    setPendingViewFile({ document, fileType })
+    setPendingViewFile({ document, fileType, action: 'view' })
     setIsPasswordDialogOpen(true)
   }, [])
 
   const handlePasswordConfirm = useCallback(async (password: string) => {
     if (!pendingViewFile || !projectId) return
     
-    const { document, fileType } = pendingViewFile
+    const { document, fileType, action } = pendingViewFile
     const file = fileType === 'original' ? document.original_file : document.obfuscated_file
     
     if (!file) return
@@ -102,9 +102,24 @@ export function DocumentsView() {
       
       if (response.ok || response.status === 206) {
         // Password is correct (200 OK or 206 Partial Content for range requests)
-        // Store password securely and navigate to file viewer without password in URL
-        storePassword(document.id, file.id, password)
-        navigate(`/project/${projectId}/document/${document.id}/file/${file.id}`)
+        if (action === 'view') {
+          // Store password securely and navigate to file viewer without password in URL
+          storePassword(document.id, file.id, password)
+          navigate(`/project/${projectId}/document/${document.id}/file/${file.id}`)
+        } else if (action === 'download') {
+          // Trigger file download
+          const downloadUrl = `/api/files/id/${file.id}/download?password=${encodeURIComponent(password)}`
+          const link = window.document.createElement('a')
+          link.href = downloadUrl
+          link.download = file.filename || 'document.pdf'
+          link.click()
+          
+          const fileTypeLabel = fileType === 'original' ? 'original' : 'obfuscated'
+          toast.success(`Download started`, {
+            description: `Downloading ${fileTypeLabel} file: ${file.filename || 'document.pdf'}`
+          })
+        }
+        
         setIsPasswordDialogOpen(false)
         setPendingViewFile(null)
         setPasswordError(null)
@@ -239,6 +254,12 @@ export function DocumentsView() {
     }
   }, [documentToEdit, projectId]);
 
+  const handleDownloadFile = useCallback((document: Document, fileType: 'original' | 'obfuscated') => {
+    // Similar to view file, we need a password for downloading
+    setPendingViewFile({ document, fileType, action: 'download' })
+    setIsPasswordDialogOpen(true)
+  }, [])
+
   const handleDeleteSingle = useCallback((document: Document) => {
     setDocumentToDelete(document)
     setIsSingleDeleteDialogOpen(true)
@@ -318,7 +339,7 @@ export function DocumentsView() {
     }
   }, [selectedDocuments, projectId]);
 
-  const documentsColumns = createDocumentsColumns(handleViewFile, handleDeleteSingle, handleEditDocument)
+  const documentsColumns = createDocumentsColumns(handleViewFile, handleDeleteSingle, handleEditDocument, handleDownloadFile)
 
   return (
     <div className="h-full flex flex-col overflow-hidden">

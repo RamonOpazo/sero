@@ -41,11 +41,13 @@ const formatFileSize = (bytes: number): string => {
 type ViewFileCallback = (document: Document, fileType: 'original' | 'obfuscated') => void
 type DeleteDocumentCallback = (document: Document) => void
 type EditDocumentCallback = (document: Document) => void
+type DownloadFileCallback = (document: Document, fileType: 'original' | 'obfuscated') => void
 
 export const createDocumentsColumns = (
   onViewFile: ViewFileCallback,
   onDeleteDocument?: DeleteDocumentCallback,
-  onEditDocument?: EditDocumentCallback
+  onEditDocument?: EditDocumentCallback,
+  onDownloadFile?: DownloadFileCallback
 ): ColumnDef<Document>[] => [
   {
     accessorFn: (row) => row.original_file?.filename || row.description || 'Untitled Document',
@@ -280,13 +282,26 @@ export const createDocumentsColumns = (
                   <Eye className="h-4 w-4 mr-2" />
                   View obfuscated file
                 </DropdownMenuItem>
-                <DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.preventDefault()
+                    if (onDownloadFile) {
+                      onDownloadFile(document, 'original')
+                    }
+                  }}
+                >
                   <Download className="h-4 w-4 mr-2" />
                   Download original file
                 </DropdownMenuItem>
                 <DropdownMenuItem 
                   disabled={!document.obfuscated_file}
                   className={!document.obfuscated_file ? "text-muted-foreground" : ""}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    if (document.obfuscated_file && onDownloadFile) {
+                      onDownloadFile(document, 'obfuscated')
+                    }
+                  }}
                 >
                   <Download className="h-4 w-4 mr-2" />
                   Download obfuscated file

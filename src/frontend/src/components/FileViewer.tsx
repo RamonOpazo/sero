@@ -296,8 +296,14 @@ export function FileViewer() {
     try {
       console.log('Starting document obfuscation...')
       
-      // Call the document processing API
-      const response = await fetch(`/api/documents/id/${documentId}/process`, {
+      // Get password from secure storage
+      const password = getSecurePassword(file?.id)
+      if (!password) {
+        throw new Error('Password not found. Please refresh the page and try again.')
+      }
+      
+      // Call the document processing API with password
+      const response = await fetch(`/api/documents/id/${documentId}/process?password=${encodeURIComponent(password)}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -335,7 +341,7 @@ export function FileViewer() {
     } finally {
       setIsObfuscating(false)
     }
-  }, [documentId, documentData, handleViewModeChange, isObfuscating])
+  }, [documentId, documentData, handleViewModeChange, isObfuscating, file?.id, getSecurePassword])
 
   const handleDelete = useCallback(() => {
     setIsDeleteDialogOpen(true)
