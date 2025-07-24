@@ -55,6 +55,7 @@ export function FileViewer() {
   const [isLoadingFileData, setIsLoadingFileData] = useState(false)
   const [activeSelectionId, setActiveSelectionId] = useState<string | null>(null)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [isObfuscating, setIsObfuscating] = useState(false)
   
   // Get view mode from URL params, default to 'original'
   const viewMode = (searchParams.get('view') as 'original' | 'obfuscated') || 'original'
@@ -287,10 +288,54 @@ export function FileViewer() {
     }
   }, [selections, currentPage, handlePageChange])
 
-  const handleObfuscate = useCallback(() => {
-    // TODO: Implement obfuscation logic
-    console.log('Obfuscate file requested')
-  }, [])
+  const handleObfuscate = useCallback(async () => {
+    if (!documentId || !documentData || isObfuscating) return
+    
+    setIsObfuscating(true)
+    
+    try {
+      console.log('Starting document obfuscation...')
+      
+      // Call the document processing API
+      const response = await fetch(`/api/documents/id/${documentId}/process`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }))
+        throw new Error(errorData.detail || `HTTP error! status: ${response.status}`)
+      }
+      
+      const result = await response.json()
+      console.log('Document processing completed:', result)
+      
+      // Refresh document data to get the new obfuscated file
+      const documentResponse = await fetch(`/api/documents/id/${documentId}`)
+      if (documentResponse.ok) {
+        const updatedDocument = await documentResponse.json()
+        setDocumentData(updatedDocument)
+        
+        // Automatically switch to obfuscated view if processing was successful
+        if (updatedDocument.obfuscated_file) {
+          handleViewModeChange('obfuscated')
+        }
+      }
+      
+      // TODO: Show success toast notification
+      console.log('Document obfuscation completed successfully')
+      
+    } catch (error) {
+      console.error('Error obfuscating document:', error)
+      // TODO: Show error toast notification
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+      alert(`Failed to obfuscate document: ${errorMessage}`)
+    } finally {
+      setIsObfuscating(false)
+    }
+  }, [documentId, documentData, handleViewModeChange, isObfuscating])
 
   const handleDelete = useCallback(() => {
     setIsDeleteDialogOpen(true)
@@ -332,7 +377,8 @@ export function FileViewer() {
   }, [documentData, documentId, isOriginalFile, file?.id, handleViewModeChange])
 
   // Determine if obfuscation is possible
-  const canObfuscate = isOriginalFile && documentData?.status === 'processed'
+  // Button should be enabled if viewing original file and there are selections to process
+  const canObfuscate = isOriginalFile && selections.length > 0
 
   // Keyboard navigation
   useEffect(() => {
@@ -476,6 +522,7 @@ export function FileViewer() {
           scale={scale}
           isOriginalFile={isOriginalFile}
           canObfuscate={canObfuscate}
+          isObfuscating={isObfuscating}
           onPageChange={handlePageChange}
           onZoomIn={handleZoomIn}
           onZoomOut={handleZoomOut}

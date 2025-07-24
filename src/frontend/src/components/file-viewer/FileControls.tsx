@@ -5,7 +5,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Trash,
-  Zap
+  Zap,
+  Loader2
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -15,6 +16,7 @@ interface FileControlsProps {
   scale: number
   isOriginalFile: boolean
   canObfuscate: boolean
+  isObfuscating?: boolean
   onPageChange: (page: number) => void
   onZoomIn: () => void
   onZoomOut: () => void
@@ -29,6 +31,7 @@ export function FileControls({
   scale,
   isOriginalFile,
   canObfuscate,
+  isObfuscating = false,
   onPageChange,
   onZoomIn,
   onZoomOut,
@@ -118,11 +121,20 @@ export function FileControls({
                 variant="default"
                 size="sm"
                 onClick={onObfuscate}
-                disabled={!canObfuscate}
+                disabled={!canObfuscate || isObfuscating}
                 className="w-full"
               >
-                <Zap className="h-4 w-4 mr-2" />
-                Obfuscate
+                {isObfuscating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <Zap className="h-4 w-4 mr-2" />
+                    Obfuscate
+                  </>
+                )}
               </Button>
             )}
 
