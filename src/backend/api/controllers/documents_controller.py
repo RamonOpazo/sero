@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from loguru import logger
 import pymupdf
 
-from backend.crud import documents_crud, files_crud
+from backend.crud import documents_crud, files_crud, projects_crud
 from backend.api.schemas import documents_schema, generics_schema, files_schema
 from backend.api.enums import DocumentStatus
 from backend.core.redactor import PDFRedactor, RedactionConfig, CropBorder, PDFRedactionError
@@ -70,7 +70,7 @@ def summarize(db: Session, document_id: UUID) -> generics_schema.Success:
     raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED)
 
 
-def process(db: Session, document_id: UUID) -> generics_schema.Success:
+def process(db: Session, document_id: UUID, password: str) -> generics_schema.Success:
     """
     Process a document by applying redactions based on selections and creating an obfuscated file.
     
@@ -102,12 +102,38 @@ def process(db: Session, document_id: UUID) -> generics_schema.Success:
                 detail=f"Document with ID {str(document_id)!r} not found"
             )
         
+        # Verify password for the project
+        if not projects_crud.verify_password(db=db, id=document.project_id, password=password):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid project password"
+            )
+        
         # Get the original file
         original_file = document.original_file
         if original_file is None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Document {str(document_id)!r} has no original file to process"
+            )
+        
+        # Decrypt the original file data
+        decrypted_pdf_data = security_manager.decrypt_data(
+            encrypted_data=original_file.data, 
+            password=password, 
+            salt=original_file.salt
+        )
+        if decrypted_pdf_data is None:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to decrypt original file data"
+            )
+        
+        # Verify file integrity
+        if security_manager.generate_file_hash(decrypted_pdf_data) != original_file.file_hash:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Original file integrity verification failed"
             )
         
         # Check if obfuscated file already exists
@@ -129,21 +155,24 @@ def process(db: Session, document_id: UUID) -> generics_schema.Success:
         
         # Convert selections to redaction areas and apply redactions
         redacted_pdf_data, extracted_text, redaction_uuid = _apply_selection_based_redactions(
-            original_file.data, selections, original_file.filename or f"{document_id}.pdf"
+            decrypted_pdf_data, selections, original_file.filename or f"{document_id}.pdf"
         )
         
         # Create obfuscated file with redacted PDF
         obfuscated_filename = _generate_obfuscated_filename(original_file.filename, redaction_uuid)
         file_hash = security_manager.generate_file_hash(redacted_pdf_data)
         
+        # Encrypt the redacted PDF data using the same password and salt
+        encrypted_redacted_data = security_manager.encrypt_data(data=redacted_pdf_data, password=password)[0]
+        
         # Create file data for the obfuscated file
         obfuscated_file_data = files_schema.FileCreate(
             filename=obfuscated_filename,
             mime_type=original_file.mime_type,
-            data=redacted_pdf_data,
+            data=encrypted_redacted_data,  # Store encrypted data
             is_original_file=False,  # This is the obfuscated file
             salt=original_file.salt,  # Reuse the same salt
-            file_hash=file_hash,
+            file_hash=file_hash,  # Hash of unencrypted data for integrity check
             document_id=document_id
         )
         

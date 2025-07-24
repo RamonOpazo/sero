@@ -50,9 +50,10 @@ async def summarize_document(
 @router.post("/id/{document_id}/process", response_model=generics_schema.Success)
 async def process_document(
     document_id: UUID,
+    password: str,
     db: Session = Depends(get_db_session)
 ):
-    return documents_controller.process(db=db, document_id=document_id)
+    return documents_controller.process(db=db, document_id=document_id, password=password)
 
 
 @router.patch("/id/{document_id}/status", response_model=documents_schema.Document)
