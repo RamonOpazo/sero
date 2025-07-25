@@ -26,13 +26,12 @@ async def search_documents(
     skip: int = 0,
     limit: int = 100,
     name: str | None = None,
-    status: DocumentStatus | None = None,
     project_id: UUID | None = None,
     db: Session = Depends(get_db_session)
 ):
     """Search documents with filters."""
     return documents_controller.search_list(
-        db=db, skip=skip, limit=limit, name=name, status=status, project_id=project_id
+        db=db, skip=skip, limit=limit, name=name, project_id=project_id
     )
 
 

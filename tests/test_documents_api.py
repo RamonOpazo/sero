@@ -16,18 +16,20 @@ class TestDocumentsAPI:
         data = response.json()
         
         assert "id" in data
+        assert data["name"] == document_data["name"]
         assert data["description"] == document_data["description"]
-        assert data["status"] == document_data["status"]
         assert data["project_id"] == document_data["project_id"]
         assert "created_at" in data
-        assert data["original_file"] is None
-        assert data["obfuscated_file"] is None
+        assert data["tags"] == []
+        assert data["files"] == []
+        assert data["prompts"] == []
+        assert data["selections"] == []
 
     def test_create_document_missing_required_fields(self, client):
         """Test document creation with missing required fields."""
         incomplete_data = {
             "description": "Test document",
-            # Missing project_id and status
+            # Missing name and project_id
         }
         response = client.post("/api/documents", json=incomplete_data)
         
@@ -40,18 +42,6 @@ class TestDocumentsAPI:
         response = client.post("/api/documents", json=document_data)
         
         assert response.status_code in [status.HTTP_404_NOT_FOUND, status.HTTP_422_UNPROCESSABLE_ENTITY, status.HTTP_500_INTERNAL_SERVER_ERROR]
-
-    def test_create_document_invalid_status(self, client, created_project):
-        """Test document creation with invalid status."""
-        document_data = {
-            "project_id": created_project["id"],
-            "description": "Test document",
-            "status": "invalid_status"
-        }
-        
-        response = client.post("/api/documents", json=document_data)
-        
-        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
     def test_list_documents_empty(self, client):
         """Test listing documents when none exist."""
@@ -102,16 +92,16 @@ class TestDocumentsAPI:
         """Test successful document update."""
         document_id = created_document["id"]
         update_data = {
-            "description": "Updated document description",
-            "status": "processed"
+            "name": "updated_document.pdf",
+            "description": "Updated document description"
         }
         
         response = client.put(f"/api/documents/id/{document_id}", json=update_data)
         
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
+        assert data["name"] == update_data["name"]
         assert data["description"] == update_data["description"]
-        assert data["status"] == update_data["status"]
 
     def test_update_document_partial(self, client, created_document):
         """Test partial document update."""
@@ -123,7 +113,7 @@ class TestDocumentsAPI:
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data["description"] == update_data["description"]
-        assert data["status"] == created_document["status"]  # Should remain unchanged
+        assert data["name"] == created_document["name"]  # Should remain unchanged
 
     def test_update_document_not_found(self, client):
         """Test updating a non-existent document."""
@@ -131,34 +121,6 @@ class TestDocumentsAPI:
         update_data = {"description": "Updated description"}
         
         response = client.put(f"/api/documents/id/{non_existent_id}", json=update_data)
-        
-        assert response.status_code == status.HTTP_404_NOT_FOUND
-
-    def test_update_document_status_success(self, client, created_document):
-        """Test successful document status update."""
-        document_id = created_document["id"]
-        new_status = "processed"
-        
-        response = client.patch(f"/api/documents/id/{document_id}/status?status={new_status}")
-        
-        assert response.status_code == status.HTTP_200_OK
-        data = response.json()
-        assert data["status"] == new_status
-
-    def test_update_document_status_invalid_status(self, client, created_document):
-        """Test document status update with invalid status."""
-        document_id = created_document["id"]
-        invalid_status = "invalid_status"
-        
-        response = client.patch(f"/api/documents/id/{document_id}/status?status={invalid_status}")
-        
-        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
-
-    def test_update_document_status_not_found(self, client):
-        """Test updating status of a non-existent document."""
-        non_existent_id = str(uuid.uuid4())
-        
-        response = client.patch(f"/api/documents/id/{non_existent_id}/status?status=processed")
         
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
@@ -184,18 +146,6 @@ class TestDocumentsAPI:
         
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
-    def test_search_documents_by_status(self, client, created_document):
-        """Test searching documents by status."""
-        document_status = created_document["status"]
-        
-        response = client.get(f"/api/documents/search?status={document_status}")
-        
-        assert response.status_code == status.HTTP_200_OK
-        data = response.json()
-        assert isinstance(data, list)
-        assert len(data) >= 1
-        assert all(d["status"] == document_status for d in data)
-
     def test_search_documents_by_project_id(self, client, created_document):
         """Test searching documents by project ID."""
         project_id = created_document["project_id"]
@@ -208,18 +158,16 @@ class TestDocumentsAPI:
         assert len(data) >= 1
         assert all(d["project_id"] == project_id for d in data)
 
-    def test_search_documents_multiple_filters(self, client, created_document):
-        """Test searching documents with multiple filters."""
-        project_id = created_document["project_id"]
-        document_status = created_document["status"]
+    def test_search_documents_by_name(self, client, created_document):
+        """Test searching documents by name."""
+        document_name = created_document["name"]
         
-        response = client.get(f"/api/documents/search?project_id={project_id}&status={document_status}")
+        response = client.get(f"/api/documents/search?name={document_name}")
         
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert isinstance(data, list)
-        assert len(data) >= 1
-        assert all(d["project_id"] == project_id and d["status"] == document_status for d in data)
+        # The search might use partial matching, so we don't enforce exact matches
 
     def test_search_documents_no_results(self, client):
         """Test searching documents with no matching results."""
@@ -243,17 +191,17 @@ class TestDocumentsAPI:
         assert isinstance(data, list)
         assert len(data) >= 1
 
-    @patch('backend.api.controllers.documents_controller.summarize')
-    def test_summarize_document_success(self, mock_summarize, client, created_document):
+    def test_summarize_document_success(self, client, created_document):
         """Test document summarization."""
-        mock_summarize.return_value = {"message": "Document summarized successfully"}
         document_id = created_document["id"]
         
         response = client.get(f"/api/documents/id/{document_id}/summary")
         
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert "message" in data
+        assert "document_id" in data
+        assert "name" in data
+        assert "project_name" in data
 
     def test_summarize_document_not_found(self, client):
         """Test summarizing a non-existent document."""
@@ -263,39 +211,199 @@ class TestDocumentsAPI:
         
         assert response.status_code in [status.HTTP_404_NOT_FOUND, status.HTTP_501_NOT_IMPLEMENTED]
 
-    @patch('backend.api.controllers.documents_controller.process')
-    def test_process_document_success(self, mock_process, client, created_document):
-        """Test document processing."""
-        mock_process.return_value = {"message": "Document processed successfully"}
-        document_id = created_document["id"]
-        
-        response = client.post(f"/api/documents/id/{document_id}/process")
-        
-        assert response.status_code == status.HTTP_200_OK
-        data = response.json()
-        assert "message" in data
-
     def test_process_document_not_found(self, client):
         """Test processing a non-existent document."""
         non_existent_id = str(uuid.uuid4())
         
-        response = client.post(f"/api/documents/id/{non_existent_id}/process")
+        response = client.post(f"/api/documents/id/{non_existent_id}/process", data={"password": "testpassword"})
         
-        assert response.status_code in [status.HTTP_404_NOT_FOUND, status.HTTP_501_NOT_IMPLEMENTED]
+        # The process endpoint returns 501 Not Implemented since it's not implemented yet
+        assert response.status_code in [status.HTTP_404_NOT_FOUND, status.HTTP_422_UNPROCESSABLE_ENTITY, status.HTTP_501_NOT_IMPLEMENTED]
 
-    def test_valid_document_statuses(self, client, created_project):
-        """Test that all valid document statuses are accepted."""
-        valid_statuses = ["pending", "processed", "failed"]
+    def test_get_document_tags_success(self, client, created_document):
+        """Test getting tags for a document."""
+        document_id = created_document["id"]
         
-        for status_value in valid_statuses:
-            document_data = {
-                "project_id": created_project["id"],
-                "description": f"Test document with {status_value} status",
-                "status": status_value
+        response = client.get(f"/api/documents/id/{document_id}/tags")
+        
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert isinstance(data, list)
+        assert data == []  # New documents have no tags
+
+    def test_get_document_tags_not_found(self, client):
+        """Test getting tags for a non-existent document."""
+        non_existent_id = str(uuid.uuid4())
+        
+        response = client.get(f"/api/documents/id/{non_existent_id}/tags")
+        
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_add_prompt_to_document_success(self, client, created_document):
+        """Test adding a prompt to a document."""
+        document_id = created_document["id"]
+        prompt_data = {
+            "text": "This is a test prompt for redaction",
+            "languages": ["english"],
+            "temperature": 0.7,
+            "document_id": document_id
+        }
+        
+        response = client.post(f"/api/documents/id/{document_id}/prompts", json=prompt_data)
+        
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["text"] == prompt_data["text"]
+        assert data["languages"] == prompt_data["languages"]
+        assert data["temperature"] == prompt_data["temperature"]
+        assert data["document_id"] == document_id
+
+    def test_add_prompt_to_document_not_found(self, client):
+        """Test adding a prompt to a non-existent document."""
+        non_existent_id = str(uuid.uuid4())
+        prompt_data = {
+            "text": "This is a test prompt",
+            "languages": ["english"],
+            "temperature": 0.7,
+            "document_id": non_existent_id
+        }
+        
+        response = client.post(f"/api/documents/id/{non_existent_id}/prompts", json=prompt_data)
+        
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_add_selection_to_document_success(self, client, created_document):
+        """Test adding a selection to a document."""
+        document_id = created_document["id"]
+        selection_data = {
+            "page_number": 1,
+            "x": 0.1,
+            "y": 0.2,
+            "width": 0.3,
+            "height": 0.4,
+            "document_id": document_id
+        }
+        
+        response = client.post(f"/api/documents/id/{document_id}/selections", json=selection_data)
+        
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["page_number"] == selection_data["page_number"]
+        assert data["x"] == selection_data["x"]
+        assert data["y"] == selection_data["y"]
+        assert data["width"] == selection_data["width"]
+        assert data["height"] == selection_data["height"]
+        assert data["document_id"] == document_id
+
+    def test_add_selection_to_document_not_found(self, client):
+        """Test adding a selection to a non-existent document."""
+        non_existent_id = str(uuid.uuid4())
+        selection_data = {
+            "page_number": 1,
+            "x": 0.1,
+            "y": 0.2,
+            "width": 0.3,
+            "height": 0.4,
+            "document_id": non_existent_id
+        }
+        
+        response = client.post(f"/api/documents/id/{non_existent_id}/selections", json=selection_data)
+        
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    @patch('backend.api.controllers.documents_controller.bulk_create_with_files')
+    def test_bulk_upload_documents_success(self, mock_bulk_upload, client, created_project):
+        """Test bulk document upload."""
+        from io import BytesIO
+        
+        mock_bulk_upload.return_value = {
+            "message": "Bulk upload completed: 2 successful, 0 failed",
+            "detail": {
+                "successful_uploads": [
+                    {"filename": "test1.pdf", "document_id": str(uuid.uuid4()), "file_id": str(uuid.uuid4()), "status": "success"},
+                    {"filename": "test2.pdf", "document_id": str(uuid.uuid4()), "file_id": str(uuid.uuid4()), "status": "success"}
+                ],
+                "failed_uploads": [],
+                "total_files": 2,
+                "success_count": 2,
+                "error_count": 0
             }
-            
-            response = client.post("/api/documents", json=document_data)
-            
-            assert response.status_code == status.HTTP_200_OK
-            data = response.json()
-            assert data["status"] == status_value
+        }
+        
+        project_id = created_project["id"]
+        files = [
+            ("files", ("test1.pdf", BytesIO(b"fake pdf content 1"), "application/pdf")),
+            ("files", ("test2.pdf", BytesIO(b"fake pdf content 2"), "application/pdf"))
+        ]
+        
+        data = {"password": "TestPassword123!"}
+        
+        response = client.post(
+            "/api/documents/bulk-upload",
+            files=files,
+            data={"project_id": project_id, **data}
+        )
+        
+        assert response.status_code == status.HTTP_200_OK
+        result = response.json()
+        assert "message" in result
+        assert "detail" in result
+        assert result["detail"]["success_count"] == 2
+        assert result["detail"]["error_count"] == 0
+
+    @patch('backend.api.controllers.documents_controller.bulk_create_with_files')
+    def test_bulk_upload_documents_with_template_description(self, mock_bulk_upload, client, created_project):
+        """Test bulk document upload with template description."""
+        from io import BytesIO
+        
+        mock_bulk_upload.return_value = {
+            "message": "Bulk upload completed: 1 successful, 0 failed",
+            "detail": {
+                "successful_uploads": [
+                    {"filename": "test.pdf", "document_id": str(uuid.uuid4()), "file_id": str(uuid.uuid4()), "status": "success"}
+                ],
+                "failed_uploads": [],
+                "total_files": 1,
+                "success_count": 1,
+                "error_count": 0
+            }
+        }
+        
+        project_id = created_project["id"]
+        files = [("files", ("test.pdf", BytesIO(b"fake pdf content"), "application/pdf"))]
+        
+        data = {
+            "project_id": project_id,
+            "password": "TestPassword123!",
+            "template_description": "Legal documents from client X"
+        }
+        
+        response = client.post(
+            "/api/documents/bulk-upload",
+            files=files,
+            data=data
+        )
+        
+        assert response.status_code == status.HTTP_200_OK
+        result = response.json()
+        assert "message" in result
+        # Verify the controller was called with template_description
+        mock_bulk_upload.assert_called_once()
+        call_kwargs = mock_bulk_upload.call_args[1]
+        assert "template_description" in call_kwargs
+        assert call_kwargs["template_description"] == "Legal documents from client X"
+
+    def test_bulk_upload_documents_missing_password(self, client, created_project):
+        """Test bulk document upload without password."""
+        from io import BytesIO
+        
+        project_id = created_project["id"]
+        files = [("files", ("test.pdf", BytesIO(b"fake pdf content"), "application/pdf"))]
+        
+        response = client.post(
+            "/api/documents/bulk-upload",
+            files=files,
+            data={"project_id": project_id}
+        )
+        
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY

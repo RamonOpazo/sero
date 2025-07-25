@@ -7,7 +7,7 @@ from backend.core.security import security_manager
 from backend.db.models import Document as DocumentModel
 from backend.crud import documents_crud, prompts_crud, selections_crud, projects_crud
 from backend.api.schemas import documents_schema, generics_schema, files_schema, prompts_schema, selections_schema
-from backend.api.enums import DocumentStatus, FileType
+from backend.api.enums import FileType
 
 
 def _raise_not_found(callback: Callable[..., DocumentModel | None], db: Session, id: UUID, **kwargs) -> DocumentModel:
@@ -71,14 +71,13 @@ def get_list(db: Session, skip: int, limit: int) -> list[documents_schema.Docume
     return [ documents_schema.Document.model_validate(i) for i in documents ]
 
 
-def search_list(db: Session, skip: int, limit: int, name: str | None, status: DocumentStatus | None, project_id: UUID | None) -> list[documents_schema.Document]:
+def search_list(db: Session, skip: int, limit: int, name: str | None, project_id: UUID | None) -> list[documents_schema.Document]:
     documents = documents_crud.search(
         db=db,
         skip=skip,
         limit=limit,
         order_by=[("name", "asc"), ("created_at", "desc")],
         join_with=["files", "prompts", "selections"],
-        status=status,
         project_id=project_id,
         **({"name": ("like", name.replace("*", "%"))} if name is not None else {})  # dismiss name field filter if name is None, else, replace wildcard
     )

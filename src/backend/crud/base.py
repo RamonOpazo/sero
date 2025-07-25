@@ -18,6 +18,26 @@ type _operation = Literal["eq", "neq", "gt", "ge", "lt", "le", "like", "not-like
 class BaseCrud(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
     def __init__(self, model: Type[ModelType]) -> None:
         self.model = model
+    
+    def _resolve_join_path(self, field: str):
+        """Handle nested joins like 'documents.files'."""
+        parts = field.split('.')
+        if len(parts) == 1:
+            return joinedload(getattr(self.model, parts[0]))
+        
+        # Build nested joinedload for multi-level relationships
+        current_attr = getattr(self.model, parts[0])
+        join_options = joinedload(current_attr)
+        
+        # Get the related model class for subsequent joins
+        current_model = current_attr.property.mapper.class_
+        
+        for part in parts[1:]:
+            next_attr = getattr(current_model, part)
+            join_options = join_options.joinedload(next_attr)
+            current_model = next_attr.property.mapper.class_
+        
+        return join_options
 
 
     def _resolve_filter_operation(self, field: str, data: tuple[_operation, Any] | str):
@@ -60,7 +80,7 @@ class BaseCrud(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
     
     def read(self, db: Session, id: UUID, join_with: list[str] | None = None) -> ModelType | None:
         _sanitized_joining = (
-            joinedload(getattr(self.model, field))
+            self._resolve_join_path(field)
             for field in join_with or []
         )
         
@@ -91,13 +111,14 @@ class BaseCrud(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             for field, direction in order_by or []
         )
         _sanitized_joining = (
-            joinedload(getattr(self.model, field))
+            self._resolve_join_path(field)
             for field in join_with or []
         )
         _sanitized_filters = (
             self._resolve_filter_operation(field=field, data=data)
             for field, data in kwargs.items()
-        )        
+            if data is not None  # Skip None values to avoid IS NULL filtering
+        )
         these = (
             db.query(self.model)
             .filter(*_sanitized_filters)

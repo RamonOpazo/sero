@@ -2,6 +2,7 @@ import uuid
 from sqlalchemy import text
 from backend.db.models import Project, Document, File, Prompt, Selection
 from backend.db.types import UUIDBytes
+from backend.api.enums import FileType
 
 
 def test_uuidbytes_type():
@@ -28,29 +29,27 @@ def test_sqlite_database(temp_db_path, test_engine, test_session):
         password_hash=b"hash"
     )
     document = Document(
-        project=project,
+        name="Test Document",
         description="Document description",
-        status="active"
+        tags=["test", "sqlite"],
+        project=project
     )
     file = File(
         document=document,
-        filename="example.pdf",
+        file_type=FileType.ORIGINAL,
         mime_type="application/pdf",
         data=b"PDF data",
-        is_original_file=True,
         salt=b"salty",
         file_hash="examplehash"
     )
     prompt = Prompt(
-        file=file,
-        label="Prompt",
+        document=document,
         text="Translate",
         languages=["en"],
         temperature=0.9
     )
     selection = Selection(
-        file=file,
-        label="Selection",
+        document=document,
         page_number=1,
         x=0.1,
         y=0.2,
@@ -77,7 +76,7 @@ def test_sqlite_database(temp_db_path, test_engine, test_session):
     # Ensure relationships
     assert document in fetched_project.documents
     assert file in document.files
-    assert prompt in file.prompts
-    assert selection in file.selections
+    assert prompt in document.prompts
+    assert selection in document.selections
     assert prompt.languages == ["en"]
 
