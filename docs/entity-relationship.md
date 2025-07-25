@@ -19,80 +19,57 @@ erDiagram
         uuid id PK
         dt created_at
         dt updated_at
-        str original_filename
+        str docname
         str description
-        str status
-        bool is_project_template
+        List[str] tags
         uuid project_id FK
         Prj project
         List[File] files
-    }
-
-    "file (original)" {
-        uuid id PK
-        dt created_at
-        dt updated_at
-        str filename
-        str mime_type
-        blob data
-        blob salt
-        str file_hash
-        bool is_original_file "= true"
-        uuid document_id FK
-        Doc document
-        List[Sel] selection
+        List[Sel] selections
         List[Prm] prompts
     }
 
-    "file (obfuscated)" {
+    file {
         uuid id PK
         dt created_at
         dt updated_at
-        str filename
+        str file_hash
+        enum file_type
         str mime_type
         blob data
         blob salt
-        str file_hash
-        bool is_original_file "= false"
-        uuid document_id FK
-        Doc document
-        List[Sel] selection
-        List[Prm] prompts
     }
 
     selection {
         uuid id PK
         dt created_at
         dt updated_at
-        str label
         int page_number
         float x
         float y
         float width
         float height
         float confidence
-        uuid file_id FK
-        File file
+        uuid document_id FK
+        Doc document
     }
 
     prompt {
         uuid id PK
         dt created_at
         dt updated_at
-        str label
         str text
         List[str] languages
         float temperature
-        uuid file_id FK
-        File file
+        uuid document_id FK
+        Doc document
     }
 
     DB ||--|{ project : "comprised of"
     project ||--|{ document : references
-    document ||--|| "file (original)" : references
-    document ||--O| "file (obfuscated)" : references
-    "file (original)" ||--O{ selection : references
-    "file (original)" ||--O{ prompt : references
-    prompt ||..O| selection : generates
-    selection }|..|| "file (obfuscated)" : generate
+    file ||--|| document : references
+    document||--O{ selection : references
+    document ||--O{ prompt : references
+    prompt ||..|{ selection : generates
+    selection }|..|| file : generate
 ```

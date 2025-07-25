@@ -13,7 +13,6 @@ class PromptCrud(BaseCrud[Prompt, prompts_schema.PromptCreate, prompts_schema.Pr
             db.query(Prompt)
             .filter(Prompt.id == prompt_id)
             .options(
-                joinedload(Prompt.project),
                 joinedload(Prompt.document)
             )
             .first()
@@ -21,12 +20,11 @@ class PromptCrud(BaseCrud[Prompt, prompts_schema.PromptCreate, prompts_schema.Pr
         return prompt
 
 
-    def read_list_with_backrefs(self, db: Session, owner_id: UUID | None = None, owner: Literal["project", "document"] | None = None, skip: int = 0, limit: int = 100) -> list[Prompt]:
+    def read_list_with_backrefs(self, db: Session, owner_id: UUID | None = None, owner: Literal["document"] | None = None, skip: int = 0, limit: int = 100) -> list[Prompt]:
         prompts = (
             db.query(Prompt)
             .filter(getattr(Prompt, f"{owner}_id") == owner_id if owner_id is not None else Prompt.id.is_not(None))
             .options(
-                joinedload(Prompt.project),
                 joinedload(Prompt.document)
             )
             .order_by(Prompt.created_at.desc())
@@ -37,10 +35,10 @@ class PromptCrud(BaseCrud[Prompt, prompts_schema.PromptCreate, prompts_schema.Pr
         return prompts
     
 
-    def read_list_by_file(self, db: Session, file_id: UUID, skip: int, limit: int) -> list[Prompt]:
+    def read_list_by_document(self, db: Session, document_id: UUID, skip: int = 0, limit: int = 100) -> list[Prompt]:
         prompts = (
             db.query(Prompt)
-            .filter(Prompt.file_id == file_id)
+            .filter(Prompt.document_id == document_id)
             .order_by(Prompt.created_at.desc())
             .offset(skip)
             .limit(limit)
@@ -49,19 +47,29 @@ class PromptCrud(BaseCrud[Prompt, prompts_schema.PromptCreate, prompts_schema.Pr
         return prompts
 
 
-    def delete_by_file(self, db: Session, file_id: UUID) -> list[Prompt]:
-        prompts = (
+    def delete_by_document(self, db: Session, document_id: UUID) -> int:
+        deleted_count = (
             db.query(Prompt)
-            .filter(Prompt.file_id == file_id)
+            .filter(Prompt.document_id == document_id)
             .delete()
         )
         db.commit()
-        return prompts
+        return deleted_count
 
 
-    def create_in_bulk(self, db: Session, file_id: UUID, prompts_data: list[prompts_schema.PromptCreate]) -> list[Prompt]:
-        prompt_models = [ Prompt(**i.model_dump(exclude_unset=True), file_id=file_id ) for i in prompts_data ]
+    def create_in_bulk(self, db: Session, document_id: UUID, prompts_data: list[prompts_schema.PromptCreate]) -> list[Prompt]:
+        prompt_models = [ Prompt(**i.model_dump(exclude_unset=True), document_id=document_id ) for i in prompts_data ]
         db.add_all(prompt_models)
         db.commit()
         [ db.refresh(i) for i in prompt_models ]
         return prompt_models
+
+    def read_list(self, db: Session, skip: int = 0, limit: int = 100) -> list[Prompt]:
+        prompts = (
+            db.query(Prompt)
+            .order_by(Prompt.created_at.desc())
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
+        return prompts

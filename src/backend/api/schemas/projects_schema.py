@@ -1,5 +1,6 @@
+import base64
 from typing import Annotated
-from pydantic import BaseModel, Field, field_validator, UUID4, AwareDatetime, BeforeValidator, computed_field
+from pydantic import BaseModel, Field, field_validator, field_serializer, UUID4, AwareDatetime, BeforeValidator, computed_field
 
 from backend.core.security import security_manager
 from backend.api.schemas.documents_schema import Document
@@ -15,7 +16,7 @@ class Project(BaseModel):
     version: int
     contact_name: str
     contact_email: str
-    password_hash: str
+    password_hash: bytes
     documents: Annotated[list[Document], BeforeValidator(lambda x: [] if x is None else x)]
 
     @computed_field
@@ -25,17 +26,15 @@ class Project(BaseModel):
     
     @computed_field
     @property
-    def obfuscated_count(self) -> int:
-        return len([ i for i in self.documents if i.obfuscated_file is not None ])
-    
-    @computed_field
-    @property
     def status(self) -> ProjectStatus:
         if self.document_count == 0:
             return ProjectStatus.AWAITING
-        if self.document_count > self.obfuscated_count:
-            return ProjectStatus.IN_PROGRESS
-        return ProjectStatus.COMPLETED
+        # Add your custom logic here for determining status
+        return ProjectStatus.IN_PROGRESS
+
+    @field_serializer("password_hash")
+    def serialize_password_hash(self, value: bytes, _info):
+        return base64.b64encode(value).decode("utf-8")
 
     class Config:
         from_attributes = True
@@ -52,7 +51,7 @@ class ProjectCreate(BaseModel):
     @field_validator("password")
     def validate_password(cls, value: str):
         if not security_manager.is_strong_password(value):
-            raise ValueError('Password must contain at least 8 characters with uppercase, lowercase, digits, and special characters')
+            raise ValueError("Password must contain at least 8 characters with uppercase, lowercase, digits, and special characters")
         return value
 
 
@@ -62,3 +61,48 @@ class ProjectUpdate(BaseModel):
     version: int | None = Field(None)
     contact_name: str | None = Field(None, min_length=1, max_length=100)
     contact_email: str | None = Field(None, min_length=1, max_length=100)
+
+
+class ProjectSummary(BaseModel):
+    """Comprehensive summary of a project including all documents and processing analytics."""
+    project_id: UUID4
+    name: str
+    description: str | None
+    version: int
+    contact_name: str
+    contact_email: str
+    created_at: AwareDatetime
+    updated_at: AwareDatetime | None
+    status: ProjectStatus
+    
+    # Document statistics
+    document_count: int
+    documents_with_original_files: int
+    documents_with_redacted_files: int
+    processed_documents_count: int
+    
+    # File statistics
+    total_original_files_size: int
+    total_redacted_files_size: int
+    total_files_size: int
+    
+    # Processing components statistics
+    total_prompts: int
+    total_selections: int
+    total_tags: int
+    total_ai_selections: int
+    total_manual_selections: int
+    
+    # Language analysis
+    unique_languages: list[str]
+    average_temperature: float | None
+    
+    # Document processing timeline
+    oldest_document_date: AwareDatetime | None
+    newest_document_date: AwareDatetime | None
+    
+    # Top tags
+    most_common_tags: list[tuple[str, int]]  # (tag_label, count)
+    
+    class Config:
+        from_attributes = True
