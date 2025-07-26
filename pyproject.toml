@@ -86,7 +86,7 @@ omit = [
 ]
 
 [tool.semantic_release]
-build_command = "uv build"
+build_command = false
 major_on_zero = true
 tag_format = "v{version}"
 commit_message = "chore(release): v{version} [skip ci]"
