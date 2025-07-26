@@ -1,6 +1,6 @@
 from uuid import UUID
 from typing import override
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session
 
 from backend.core.security import security_manager
 from backend.api.schemas import projects_schema
@@ -28,44 +28,6 @@ class ProjectCrud(BaseCrud[Project, projects_schema.ProjectCreate, projects_sche
             .first()
         )
         return project
-
-
-    def read_with_backrefs(self, db: Session, id: UUID) -> Project | None:
-        project = (
-            db.query(Project)
-            .filter(Project.id == id)
-            .options(joinedload(Project.documents))
-            .first()
-        )
-        return project
-    
-
-    def read_list_with_backrefs(self, db: Session, skip: int, limit: int) -> list[Project]:
-        projects = (
-            db.query(Project)
-            .options(joinedload(Project.documents))
-            .order_by(Project.name)
-            .offset(skip)
-            .limit(limit)
-            .all()
-        )
-        return projects
-    
-
-    def search_list(self, db: Session, skip: int, limit: int, name: str | None, version: int | None) -> list[Project]:
-        files = (
-            db.query(Project)
-            .order_by(Project.name)
-            .options(joinedload(Project.documents))
-            .filter(
-                Project.name.like(name.replace("*", "%")) if name else True,
-                Project.version == version if version else True
-            )
-            .offset(skip)
-            .limit(limit)
-            .all()
-        )
-        return files
 
 
     def exist_with_name(self, db: Session, name: str, exclude_id: UUID | None = None) -> bool:

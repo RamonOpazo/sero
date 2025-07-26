@@ -17,3 +17,8 @@ class PromptLanguage(StrEnum):
     CATALONIAN = auto()
     CASTILLIAN = auto()
     ENGLISH = auto()
+
+
+class FileType(StrEnum):
+    ORIGINAL = auto()
+    REDACTED = auto()

@@ -889,7 +889,7 @@ wheels = [
 
 [[package]]
 name = "sero"
-version = "0.1.1.dev9+g9d38e82.d20250724"
+version = "0.1.1.dev12+ge1286e9.d20250725"
 source = { editable = "." }
 dependencies = [
     { name = "cryptography" },

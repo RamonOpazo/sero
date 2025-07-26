@@ -10,7 +10,13 @@ from loguru import logger
 from backend.core.config import settings
 from backend.core.logging import init_logging
 from backend.core.database import db_manager
-from backend.api.routers import projects_router, documents_router, files_router
+from backend.api.routers import (
+    projects_router,
+    documents_router,
+    files_router,
+    prompts_router,
+    selections_router
+)
 
 
 @asynccontextmanager
@@ -67,6 +73,9 @@ async def generic_error_handler(request: Request, exc: Exception):
 app.include_router(projects_router.router, prefix="/api/projects", tags=["projects"])
 app.include_router(documents_router.router, prefix="/api/documents", tags=["documents"])
 app.include_router(files_router.router, prefix="/api/files", tags=["files"])
+app.include_router(prompts_router.router, prefix="/api/prompts", tags=["prompts"])
+app.include_router(selections_router.router, prefix="/api/selections", tags=["selections"])
+
 
 # Static files setup
 static_dir = Path(__file__).parent / "static"

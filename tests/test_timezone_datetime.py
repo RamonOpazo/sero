@@ -6,18 +6,18 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from backend.db.models import Base, Project
-from backend.db.types import TimezoneAwareDateTime
+from backend.db.types import AwareDateTime
 
 
 def test_timezone_aware_datetime_type():
     """Test that TimezoneAwareDateTime correctly handles timezone conversion."""
-    from backend.db.types import TimezoneAwareDateTime
+    from backend.db.types import AwareDateTime
     from sqlalchemy.engine import create_engine
     
     # Create an in-memory SQLite database for testing
     engine = create_engine("sqlite:///:memory:")
     
-    tz_type = TimezoneAwareDateTime()
+    tz_type = AwareDateTime()
     
     # Test timezone-aware datetime (should be converted to naive UTC for storage)
     eastern = timezone(timedelta(hours=-5))  # EST
@@ -36,11 +36,11 @@ def test_timezone_aware_datetime_type():
 
 def test_timezone_naive_datetime_handling():
     """Test that naive datetimes are assumed to be UTC."""
-    from backend.db.types import TimezoneAwareDateTime
+    from backend.db.types import AwareDateTime
     from sqlalchemy.engine import create_engine
     
     engine = create_engine("sqlite:///:memory:")
-    tz_type = TimezoneAwareDateTime()
+    tz_type = AwareDateTime()
     
     # Test naive datetime (should be assumed to be UTC)
     naive_dt = datetime(2023, 1, 1, 12, 0, 0)

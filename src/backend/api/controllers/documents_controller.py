@@ -1,35 +1,93 @@
 from uuid import UUID
+from typing import Callable
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
-from loguru import logger
-import pymupdf
 
-from backend.crud import documents_crud, files_crud, projects_crud
-from backend.api.schemas import documents_schema, generics_schema, files_schema
-from backend.api.enums import DocumentStatus
-from backend.core.redactor import PDFRedactor, RedactionConfig, CropBorder, PDFRedactionError
 from backend.core.security import security_manager
+from backend.db.models import Document as DocumentModel
+from backend.crud import documents_crud, prompts_crud, selections_crud, projects_crud
+from backend.api.schemas import documents_schema, generics_schema, files_schema, prompts_schema, selections_schema
+from backend.api.enums import FileType
+
+
+def _raise_not_found(callback: Callable[..., DocumentModel | None], db: Session, id: UUID, **kwargs) -> DocumentModel:
+    maybe_document = callback(db=db, id=id, **kwargs)
+    if maybe_document is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Document with ID {str(id)!r} not found",
+        )
+    
+    return maybe_document
+
+
+def _process_upload(db: Session, project_id: UUID, upload_data: files_schema.FileUpload, password: str) -> tuple[str, str] | documents_schema.DocumentBulkUpload:
+    existing_filenames = set(documents_crud.get_existing_filenames_in_project(db=db, project_id=project_id))
+
+    try:
+        file_blob = upload_data.file.file.read()
+        safe_filename = security_manager.sanitize_filename(upload_data.file.filename)
+        if not security_manager.validate_file_size(file_size=len(file_blob)):
+            return upload_data.file.filename, "File too large"
+    
+        if not security_manager.validate_file_type(mime_type=upload_data.file.content_type, file_data=file_blob):
+            return upload_data.file.filename, "Invalid PDF; only PDFs allowed"
+    
+        if safe_filename in existing_filenames:
+            return upload_data.file.filename, "Filename already exists in project"
+    
+        encrypted_data, salt = security_manager.encrypt_data(data=file_blob, password=password)
+        file_hash = security_manager.generate_file_hash(file_data=file_blob)
+        file_data = files_schema.FileCreate(
+            file_hash=file_hash, mime_type=upload_data.file.content_type,
+            data=encrypted_data, salt=salt, file_type=FileType.ORIGINAL,
+            document_id=None  # Placeholder for bulk operation
+        )
+        document_data = documents_schema.DocumentCreate(name=safe_filename, project_id=project_id, description=upload_data.description)
+    
+    except Exception as err:
+        return upload_data.file.filename, f"Error: {str(err)}"
+
+    return documents_schema.DocumentBulkUpload(document_data=document_data, file_data=file_data)
 
 
 def get(db: Session, document_id: UUID) -> documents_schema.Document:
-    document = documents_crud.read_with_backrefs(db=db, document_id=document_id)
-    if document is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Document with ID {str(document_id)!r} not found",
-        )
-    
+    document = _raise_not_found(
+        documents_crud.read, 
+        db=db, 
+        id=document_id, 
+        join_with=["files", "prompts", "selections"]
+    )
     return documents_schema.Document.model_validate(document)
 
 
 def get_list(db: Session, skip: int, limit: int) -> list[documents_schema.Document]:
-    documents = documents_crud.search_list(db=db, skip=skip, limit=limit, status=None, project_id=None)
+    documents = documents_crud.search(
+        db=db,
+        skip=skip,
+        limit=limit,
+        join_with=["files", "prompts", "selections"]
+    )
     return [ documents_schema.Document.model_validate(i) for i in documents ]
 
 
-def search_list(db: Session, skip: int, limit: int, status: DocumentStatus | None, project_id: UUID | None) -> list[documents_schema.Document]:
-    documents = documents_crud.search_list(db=db, skip=skip, limit=limit, status=status, project_id=project_id)
+def search_list(db: Session, skip: int, limit: int, name: str | None, project_id: UUID | None) -> list[documents_schema.Document]:
+    documents = documents_crud.search(
+        db=db,
+        skip=skip,
+        limit=limit,
+        order_by=[("name", "asc"), ("created_at", "desc")],
+        join_with=["files", "prompts", "selections"],
+        project_id=project_id,
+        **({"name": ("like", name.replace("*", "%"))} if name is not None else {})  # dismiss name field filter if name is None, else, replace wildcard
+    )
     return [ documents_schema.Document.model_validate(i) for i in documents ]
+
+
+def get_tags(db: Session, document_id: UUID) -> list[str]:
+    """Get tags for a document."""
+    document = _raise_not_found(documents_crud.read, db=db, id=document_id)
+    return list(set(document.tags))
 
 
 def create(db: Session, document_data: documents_schema.DocumentCreate) -> documents_schema.Document:
@@ -37,306 +95,241 @@ def create(db: Session, document_data: documents_schema.DocumentCreate) -> docum
     return documents_schema.Document.model_validate(document)
 
 
-def update(db: Session, document_id: UUID, document_data: documents_schema.DocumentUpdate) -> documents_schema.Document:
-    document = documents_crud.read(db=db, id=document_id)
-    if document is None:
+def create_with_file(db: Session, upload_data: files_schema.FileUpload, password: str) -> documents_schema.Document:
+    """Create a document with an associated original PDF file using bulk creation infrastructure."""
+    # Verify project password first
+    if not projects_crud.verify_password(db=db, id=upload_data.project_id, password=password):
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Document with ID {str(document_id)!r} not found",
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid project password"
+        )
+    
+    # Use the existing processing logic
+    result = _process_upload(db=db, project_id=upload_data.project_id, upload_data=upload_data, password=password)
+    
+    # Handle processing errors
+    if isinstance(result, tuple):
+        filename, error_msg = result
+        if "File too large" in error_msg:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail=f"File too large; maximum size: {security_manager.settings.processing.max_file_size / (1024*1024):.1f} MB"
+            )
+        elif "Invalid PDF" in error_msg:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid PDF file; only PDF files are allowed"
+            )
+        elif "Filename already exists" in error_msg:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"A document with filename '{filename}' already exists in this project"
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to upload document: {error_msg}"
+            )
+    
+    # Use bulk creation for consistency and transaction safety
+    try:
+        created_documents = documents_crud.bulk_create_with_files(db=db, bulk_data=[result])
+        # Return the single created document with joined data
+        document = _raise_not_found(
+            documents_crud.read, 
+            db=db, 
+            id=created_documents[0].id, 
+            join_with=["files", "prompts", "selections"]
+        )
+        return documents_schema.Document.model_validate(document)
+        
+    except Exception as err:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to upload document: {str(err)}"
         )
 
-    updated_document = documents_crud.update(db=db, id=document_id, data=document_data)
-    return documents_schema.Document.model_validate(updated_document)
+
+def bulk_create_with_files(db: Session, uploads_data: list[files_schema.FileUpload], password: str, template_description: str | None = None) -> generics_schema.Success:
+    # Validate inputs and password
+    if not uploads_data:
+        return generics_schema.Success(
+            message="No files provided for upload",
+            detail={
+                "successful_uploads": [],
+                "failed_uploads": [],
+                "total_files": 0,
+                "success_count": 0,
+                "error_count": 0
+            }
+        )
+    
+    project_id = uploads_data[0].project_id
+    if not projects_crud.verify_password(db=db, id=project_id, password=password):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid project password")
+    
+    if any(upload.project_id != project_id for upload in uploads_data):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="All files must belong to the same project")
+
+    # Run processing logic and filter out failed results
+    results = list(map(lambda x: _process_upload(db=db, project_id=project_id, upload_data=x, password=password), uploads_data))
+    successes = [ data for data in results if isinstance(data, documents_schema.DocumentBulkUpload) ]
+    errors = [ error for error in results if isinstance(error, tuple) ]
+    
+    # Apply template description to successful results if provided
+    if template_description:
+        for success in successes:
+            formatted_description = f"[bulk upload] {template_description}"
+            success.document_data.description = formatted_description
+
+    # Perform bulk creation
+    try:
+        created_documents = documents_crud.bulk_create_with_files(db=db, bulk_data=successes)
+        successful_uploads = [{
+            "filename": doc.name,
+            "document_id": str(doc.id),
+            "file_id": str(doc.files[0].id),
+            "status": "success"
+        } for doc in created_documents]
+
+    except Exception as bulk_err:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Bulk creation failed: {str(bulk_err)}")
+
+    # Create error details for the failed uploads
+    failed_uploads = [{
+        "filename": name,
+        "error": err,
+        "status": "failed"
+    } for name, err in errors]
+
+    return generics_schema.Success(
+        message=f"Bulk upload completed: {len(successful_uploads)} successful, {len(failed_uploads)} failed",
+        detail={
+            "successful_uploads": successful_uploads,
+            "failed_uploads": failed_uploads,
+            "total_files": len(uploads_data),
+            "success_count": len(successful_uploads),
+            "error_count": len(failed_uploads)
+        }
+    )
 
 
-def update_status(db: Session, document_id: UUID, status: DocumentStatus) -> documents_schema.Document:
-    document_data = documents_schema.DocumentUpdate(status=status)
-    document = update(db=db, document_id=document_id, document_data=document_data)
-    return document
-
-
-def delete(db: Session, document_id: UUID) -> generics_schema.Success:
+def add_prompt(db: Session, document_id: UUID, prompt_data: prompts_schema.PromptCreate) -> prompts_schema.Prompt:
+    """Add a prompt to a document."""
+    # Verify document exists
     if not documents_crud.exist(db=db, id=document_id):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Document with ID {str(document_id)!r} not found",
+            detail=f"Document with ID {str(document_id)!r} not found"
         )
+    
+    # Set document_id and create prompt
+    prompt_data.document_id = document_id
+    prompt = prompts_crud.create(db=db, data=prompt_data)
+    return prompts_schema.Prompt.model_validate(prompt)
 
-    documents_crud.delete(db, id=document_id)
+
+def add_selection(db: Session, document_id: UUID, selection_data: selections_schema.SelectionCreate) -> selections_schema.Selection:
+    """Add a selection to a document."""
+    # Verify document exists
+    if not documents_crud.exist(db=db, id=document_id):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Document with ID {str(document_id)!r} not found"
+        )
+    
+    # Set document_id and create selection
+    selection_data.document_id = document_id
+    selection = selections_crud.create(db=db, data=selection_data)
+    return selections_schema.Selection.model_validate(selection)
+
+
+
+
+def update(db: Session, document_id: UUID, document_data: documents_schema.DocumentUpdate) -> documents_schema.Document:
+    document = _raise_not_found(documents_crud.update, db=db, id=document_id, data=document_data)
+    return documents_schema.Document.model_validate(document)
+
+
+def delete(db: Session, document_id: UUID) -> generics_schema.Success:
+    _raise_not_found(documents_crud.delete, db=db, id=document_id)
     return generics_schema.Success(message=f"Document with ID {str(document_id)!r} deleted successfully")
 
 
-def summarize(db: Session, document_id: UUID) -> generics_schema.Success:
-    raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED)
+def summarize(db: Session, document_id: UUID) -> documents_schema.DocumentSummary:
+    """Generate a comprehensive summary of a document including all its components."""
+    # Get document with all related data
+    document = _raise_not_found(
+        documents_crud.read, 
+        db=db, 
+        id=document_id, 
+        join_with=["files", "prompts", "selections", "project"]
+    )
+    
+    # File analysis
+    original_file = document.original_file
+    redacted_file = document.redacted_file
+    
+    has_original_file = original_file is not None
+    has_redacted_file = redacted_file is not None
+    original_file_size = original_file.file_size if original_file else None
+    redacted_file_size = redacted_file.file_size if redacted_file else None
+    total_file_size = (original_file_size or 0) + (redacted_file_size or 0)
+        
+    # Selection analysis
+    ai_selections_count = sum(1 for s in document.selections if s.is_ai_generated)
+    manual_selections_count = len(document.selections) - ai_selections_count
+    
+    # Prompt analysis
+    all_languages = []
+    temperatures = []
+    
+    for prompt in document.prompts:
+        all_languages.extend(prompt.languages)
+        temperatures.append(prompt.temperature)
+    
+    prompt_languages = list(set(all_languages))  # Unique languages
+    average_temperature = sum(temperatures) / len(temperatures) if temperatures else None
+    
+    return documents_schema.DocumentSummary(
+        document_id=document.id,
+        name=document.name,
+        description=document.description,
+        created_at=document.created_at,
+        updated_at=document.updated_at,
+        project_name=document.project.name,
+        project_id=document.project_id,
+        has_original_file=has_original_file,
+        has_redacted_file=has_redacted_file,
+        original_file_size=original_file_size,
+        redacted_file_size=redacted_file_size,
+        total_file_size=total_file_size,
+        prompt_count=len(document.prompts),
+        selection_count=len(document.selections),
+        tag_count=len(list(set(document.tags))),
+        tags=list(set(document.tags)),
+        is_processed=has_redacted_file,
+        ai_selections_count=ai_selections_count,
+        manual_selections_count=manual_selections_count,
+        prompt_languages=prompt_languages,
+        average_temperature=average_temperature
+    )
 
 
 def process(db: Session, document_id: UUID, password: str) -> generics_schema.Success:
-    """
-    Process a document by applying redactions based on selections and creating an obfuscated file.
+    """Process a document to generate a redacted version.
     
-    This function:
-    1. Retrieves the document and its original file
-    2. Gets all selections associated with the original file
-    3. Converts selections to PDF redaction areas
-    4. Creates a redacted PDF using the PDF redactor
-    5. Saves the redacted PDF as an obfuscated file
-    
-    Args:
-        db: Database session
-        document_id: UUID of the document to process
-        
-    Returns:
-        Success message with processing details
-        
-    Raises:
-        HTTPException: If document not found, no original file, or processing fails
+    This method will:
+    1. Decrypt the original file using the password
+    2. Apply redaction based on prompts and selections
+    3. Generate a redacted PDF file (not encrypted)
+    4. Store the redacted file with salt=None
     """
-    try:
-        logger.info(f"Starting document processing for document ID: {document_id}")
-        
-        # Get the document with all related data
-        document = documents_crud.read_with_backrefs(db=db, document_id=document_id)
-        if document is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Document with ID {str(document_id)!r} not found"
-            )
-        
-        # Verify password for the project
-        if not projects_crud.verify_password(db=db, id=document.project_id, password=password):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid project password"
-            )
-        
-        # Get the original file
-        original_file = document.original_file
-        if original_file is None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Document {str(document_id)!r} has no original file to process"
-            )
-        
-        # Decrypt the original file data
-        decrypted_pdf_data = security_manager.decrypt_data(
-            encrypted_data=original_file.data, 
-            password=password, 
-            salt=original_file.salt
-        )
-        if decrypted_pdf_data is None:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to decrypt original file data"
-            )
-        
-        # Verify file integrity
-        if security_manager.generate_file_hash(decrypted_pdf_data) != original_file.file_hash:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Original file integrity verification failed"
-            )
-        
-        # Check if obfuscated file already exists
-        existing_obfuscated = document.obfuscated_file
-        if existing_obfuscated is not None:
-            logger.warning(f"Document {document_id} already has an obfuscated file. Recreating.")
-            # Delete existing obfuscated file
-            files_crud.delete(db=db, id=existing_obfuscated.id)
-        
-        # Get all selections associated with the original file
-        selections = original_file.selections
-        if not selections:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Document {str(document_id)!r} has no selections to process"
-            )
-        
-        logger.info(f"Found {len(selections)} selections to process for document {document_id}")
-        
-        # Convert selections to redaction areas and apply redactions
-        redacted_pdf_data, extracted_text, redaction_uuid = _apply_selection_based_redactions(
-            decrypted_pdf_data, selections, original_file.filename or f"{document_id}.pdf"
-        )
-        
-        # Create obfuscated file with redacted PDF
-        obfuscated_filename = _generate_obfuscated_filename(original_file.filename, redaction_uuid)
-        file_hash = security_manager.generate_file_hash(redacted_pdf_data)
-        
-        # Encrypt the redacted PDF data using the same password and salt
-        encrypted_redacted_data = security_manager.encrypt_data(data=redacted_pdf_data, password=password)[0]
-        
-        # Create file data for the obfuscated file
-        obfuscated_file_data = files_schema.FileCreate(
-            filename=obfuscated_filename,
-            mime_type=original_file.mime_type,
-            data=encrypted_redacted_data,  # Store encrypted data
-            is_original_file=False,  # This is the obfuscated file
-            salt=original_file.salt,  # Reuse the same salt
-            file_hash=file_hash,  # Hash of unencrypted data for integrity check
-            document_id=document_id
-        )
-        
-        # Save the obfuscated file
-        obfuscated_file = files_crud.create(db=db, data=obfuscated_file_data)
-        
-        # Update document status to processed
-        update_status(db=db, document_id=document_id, status=DocumentStatus.PROCESSED)
-        
-        logger.info(f"Document processing completed successfully for document {document_id}. "
-                   f"Created obfuscated file {obfuscated_file.id} with redaction UUID {redaction_uuid}")
-        
-        return generics_schema.Success(
-            message=f"Document processed successfully",
-            detail={
-                "document_id": str(document_id),
-                "original_file_id": str(original_file.id),
-                "obfuscated_file_id": str(obfuscated_file.id),
-                "redaction_uuid": str(redaction_uuid),
-                "selections_processed": len(selections),
-                "extracted_text_length": len(extracted_text),
-                "status": "processed"
-            }
-        )
-        
-    except HTTPException:
-        # Re-raise HTTP exceptions
-        raise
-    except Exception as e:
-        logger.error(f"Failed to process document {document_id}: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Document processing failed: {str(e)}"
-        )
-
-
-def _apply_selection_based_redactions(pdf_data: bytes, selections: list, filename: str) -> tuple[bytes, str, UUID]:
-    """
-    Apply redactions to a PDF based on selection areas.
-    
-    Args:
-        pdf_data: Original PDF data as bytes
-        selections: List of Selection objects defining areas to redact
-        filename: Original filename for logging
-        
-    Returns:
-        Tuple of (redacted_pdf_data, extracted_text, redaction_uuid)
-        
-    Raises:
-        PDFRedactionError: If redaction fails
-    """
-    try:
-        logger.info(f"Applying selection-based redactions to {filename}")
-        
-        # Open the PDF to get page dimensions for coordinate conversion
-        doc = pymupdf.open("pdf", pdf_data)
-        
-        if doc.page_count == 0:
-            raise PDFRedactionError("PDF contains no pages")
-        
-        # Extract text from all selection areas before redaction
-        extracted_text_parts = []
-        
-        # Group selections by page for efficient processing
-        selections_by_page = {}
-        for selection in selections:
-            page_num = selection.page_number or 1  # Default to page 1 if None
-            if page_num not in selections_by_page:
-                selections_by_page[page_num] = []
-            selections_by_page[page_num].append(selection)
-        
-        # Generate unique redaction UUID
-        from uuid import uuid4
-        redaction_uuid = uuid4()
-        
-        # Process each page with selections
-        total_redacted_areas = 0
-        
-        for page_num, page_selections in selections_by_page.items():
-            if page_num > doc.page_count:
-                logger.warning(f"Selection references page {page_num} but PDF only has {doc.page_count} pages")
-                continue
-                
-            page = doc.load_page(page_num - 1)  # Convert to 0-based indexing
-            page_rect = page.rect
-            
-            logger.debug(f"Processing {len(page_selections)} selections on page {page_num}")
-            
-            for selection in page_selections:
-                # Convert normalized coordinates (0-1) to actual PDF coordinates
-                rect = _convert_selection_to_pdf_rect(selection, page_rect)
-                
-                # Extract text from this area before redaction
-                text = page.get_text("text", clip=rect)
-                if text.strip():
-                    extracted_text_parts.append(f"[Page {page_num}] {text.strip()}")
-                
-                # Add redaction annotation
-                page.add_redact_annot(rect)
-                total_redacted_areas += 1
-            
-            # Apply redactions to this page
-            page.apply_redactions()
-            
-            # Insert redaction marker
-            marker_text = f"SERO REDACTED: {redaction_uuid}"
-            page.insert_text(
-                (50, 50),  # Position for marker
-                marker_text,
-                fontsize=10,
-                color=(1.0, 0.0, 0.0)  # Red color
-            )
-        
-        # Get the redacted PDF data
-        redacted_pdf_data = doc.write()
-        doc.close()
-        
-        # Combine extracted text
-        extracted_text = "\n".join(extracted_text_parts)
-        
-        logger.info(f"Successfully applied {total_redacted_areas} redactions to {filename}. "
-                   f"Redaction UUID: {redaction_uuid}")
-        
-        return redacted_pdf_data, extracted_text, redaction_uuid
-        
-    except Exception as e:
-        logger.error(f"Failed to apply redactions to {filename}: {str(e)}")
-        raise PDFRedactionError(f"Redaction failed: {str(e)}")
-
-
-def _convert_selection_to_pdf_rect(selection, page_rect: pymupdf.Rect) -> pymupdf.Rect:
-    """
-    Convert a normalized selection (0-1 coordinates) to actual PDF rectangle.
-    
-    Args:
-        selection: Selection object with normalized coordinates (0-1)
-        page_rect: PyMuPDF page rectangle with actual dimensions
-        
-    Returns:
-        PyMuPDF Rect object with actual PDF coordinates
-    """
-    # Convert normalized coordinates to actual PDF coordinates
-    x0 = page_rect.x0 + (selection.x * page_rect.width)
-    y0 = page_rect.y0 + (selection.y * page_rect.height)
-    x1 = x0 + (selection.width * page_rect.width)
-    y1 = y0 + (selection.height * page_rect.height)
-    
-    return pymupdf.Rect(x0, y0, x1, y1)
-
-
-def _generate_obfuscated_filename(original_filename: str | None, redaction_uuid: UUID) -> str:
-    """
-    Generate filename for obfuscated file.
-    
-    Args:
-        original_filename: Original file name (may be None)
-        redaction_uuid: UUID of the redaction operation
-        
-    Returns:
-        Generated filename for obfuscated file
-    """
-    if original_filename:
-        # Remove extension and add redaction suffix
-        name_part = original_filename.rsplit('.', 1)[0]
-        return f"{name_part}_redacted_{str(redaction_uuid)[:8]}.pdf"
-    else:
-        return f"redacted_{str(redaction_uuid)[:8]}.pdf"
+    # TODO: Implement the processing pipeline
+    # - Verify document exists and has original file
+    # - Decrypt original file using password
+    # - Apply AI-based redaction using prompts
+    # - Apply manual redaction using selections
+    # - Generate redacted PDF
+    # - Store redacted file with salt=None (unencrypted)
+    raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED)

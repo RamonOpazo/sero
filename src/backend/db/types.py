@@ -82,7 +82,7 @@ class JSONList(TypeDecorator):
         raise ValueError(f"Expected string, got {type(value)}")
 
 
-class TimezoneAwareDateTime(TypeDecorator):
+class AwareDateTime(TypeDecorator):
     impl = DateTime
     cache_ok = True
     
