@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v0.3.0 (2025-07-26)
+
+### Features
+
+- **ci**: Disable build and publish steps in release workflow
+  ([`10aad44`](https://github.com/RamonOpazo/sero/commit/10aad4454d9d84e843a47a20233137cea59f10a4))
+
+Commented out the 'Build package' and 'Publish to PyPI' steps in the release workflow as they are
+  not currently needed and were causing errors.
+
+
 ## v0.2.0 (2025-07-26)
 
 ### Bug Fixes
@@ -14,6 +25,11 @@
 The 'uv' command was not found in the semantic-release action's environment, causing the release
   workflow to fail. This change disables the build step within semantic-release, as the build is
   already handled by a separate step in the 'release.yml' workflow.
+
+### Chores
+
+- **release**: V0.2.0 [skip ci]
+  ([`c7ea276`](https://github.com/RamonOpazo/sero/commit/c7ea2764736b0e146e5d7af213aecd6e59cfefb5))
 
 ### Documentation
 
