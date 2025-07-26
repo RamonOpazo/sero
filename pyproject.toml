@@ -86,7 +86,10 @@ omit = [
 ]
 
 [tool.semantic_release]
-build_command = false
+# Configuration for PyPI publishing:
+# If python-semantic-release is used to publish to PyPI, uncomment and configure the following:
+# build_command = "uv build"
+# upload_to_pypi = true
 major_on_zero = true
 tag_format = "v{version}"
 commit_message = "chore(release): v{version} [skip ci]"
