@@ -28,8 +28,6 @@ class DocumentCrud(BaseCrud[Document, documents_schema.DocumentCreate, documents
         documents = []
         
         try:
-            db.begin()
-            
             for data in bulk_data:
                 # Create document
                 document = self.create(db=db, data=data.document_data)
@@ -43,9 +41,7 @@ class DocumentCrud(BaseCrud[Document, documents_schema.DocumentCreate, documents
                 
                 documents.append(document)
             
-            db.commit()
             return documents
             
         except Exception as err:
-            db.rollback()
             raise Exception(f"Bulk creation failed: {str(err)}")

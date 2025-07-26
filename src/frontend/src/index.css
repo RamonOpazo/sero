@@ -110,16 +110,6 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
-/* Hide scrollbar for custom scrollable areas */
-.scrollbar-none {
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* Internet Explorer 10+ */
-}
-
-.scrollbar-none::-webkit-scrollbar {
-  display: none; /* Safari and Chrome */
-}
-
 @layer base {
   * {
     @apply border-border outline-ring/50;
