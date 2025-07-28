@@ -3,11 +3,8 @@
 import * as React from "react"
 import {
   CircleSlash2,
-  AudioWaveform,
   BookOpen,
   Bot,
-  Command,
-  GalleryVerticalEnd,
   Network,
   SquareTerminal,
 } from "lucide-react"
@@ -15,39 +12,19 @@ import {
 import { NavMain } from "@/components/views/NavMain"
 import { NavApi } from "@/components/views/NavApi"
 import { NavUser } from "@/components/views/NavUser"
-import { TeamSwitcher } from "@/components/views/TeamSwitcher"
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
   SidebarRail,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
 } from "@/components/ui/sidebar"
 
 const data = {
   user: { name: "example", email: "m@example.com", avatar: "/avatars/shadcn.jpg", },
-  teams: [
-    {
-      name: "SERO",
-      logo: CircleSlash2,
-      plan: "Evelishly Redacts and Obfuscates",
-    },
-    {
-      name: "Acme Inc",
-      logo: GalleryVerticalEnd,
-      plan: "Enterprise",
-    },
-    {
-      name: "Acme Corp.",
-      logo: AudioWaveform,
-      plan: "Startup",
-    },
-    {
-      name: "Evil Corp.",
-      logo: Command,
-      plan: "Free",
-    },
-  ],
   navMain: [
     {
       title: "Playground",
@@ -92,7 +69,25 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <TeamSwitcher teams={data.teams} />
+      <SidebarMenu>
+      <SidebarMenuItem>
+        <SidebarMenuButton
+          size="lg"
+          className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+        >
+          <div className="text-purple-500 border-2 border-purple-800 flex aspect-square size-8 items-center justify-center rounded-lg">
+            <CircleSlash2
+              className="size-4"
+              strokeWidth={3}
+            />
+          </div>
+          <div className="grid flex-1 text-left text-sm leading-tight">
+            <span className="truncate font-semibold tracking-wider">SERO</span>
+            <span className="truncate text-xs text-muted-foreground">Evelishly Redacts and ██████████</span>
+          </div>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />

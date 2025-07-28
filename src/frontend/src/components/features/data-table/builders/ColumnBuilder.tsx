@@ -146,13 +146,13 @@ class ColumnBuilder<TData, TValue = unknown> {
     return this
   }
 
-  truncate(maxWidth = 'max-w-md'): this {
+  truncate(maxWidth = '15ch'): this {
     const originalCell = this.columnDef.cell
     this.columnDef.cell = originalCell ?
-      (props) => <div className={`${maxWidth} truncate text-muted-foreground`}>{(originalCell as any)(props) || 'No description'}</div> :
+      (props) => <div className={`max-w-[${maxWidth}] text-muted-foreground`} style={{overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>{(originalCell as any)(props) || 'No description'}</div> :
       ({ row }) => {
         const value = row.getValue(this.columnDef.accessorKey as string) as string
-        return <div className={`${maxWidth} truncate text-muted-foreground`}>{value || 'No description'}</div>
+        return <div className={`max-w-[${maxWidth}] text-muted-foreground`} style={{overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>{value || 'No description'}</div>
       }
     return this
   }

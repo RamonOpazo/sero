@@ -1,11 +1,24 @@
 import { cn } from "@/lib/utils"
 
-export function Widget({ className, ...props }: React.ComponentProps<"div">) {
+export function WidgetContainer({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="widget-container"
+      className={cn(
+        "h-full flex flex-1 gap-4 overflow-hidden",
+        className
+      )}
+      {...props}
+    />
+  )
+}
+
+export function Widget({ expanded = false, className, ...props }: React.ComponentProps<"div"> & { expanded?: boolean }) {
   return (
     <div
       data-slot="widget"
       className={cn(
-        "bg-muted/50 flex flex-col gap-4 rounded-md py-4",
+        `bg-muted/50 flex ${expanded ? "flex-1" : "flex-shrink-0"} flex-col gap-4 rounded-md py-4`,
         className
       )}
       {...props}

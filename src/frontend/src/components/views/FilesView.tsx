@@ -6,6 +6,14 @@ import { getPassword } from '@/utils/passwordManager'
 import { FileController } from '@/components/features/file-controller'
 import { FileViewer } from '@/components/features/file-viewer'
 import type { Document as DocumentType } from '@/types'
+import {
+  Widget,
+  WidgetContainer,
+  WidgetContent,
+  // WidgetDescription,
+  // WidgetHeader,
+  // WidgetTitle,
+} from "@/components/atomic/Widget"
 
 interface Selection {
   id: string
@@ -234,46 +242,54 @@ export function FilesView() {
   }
 
   return (
-    <div className="h-full flex overflow-hidden">
-      <FileController
-        documentData={documentData}
-        viewMode={viewMode}
-        isOriginalFile={isOriginalFile}
-        fileId={currentFile?.id}
-        currentPage={currentPage}
-        numPages={numPages}
-        scale={scale}
-        selections={selections}
-        prompts={prompts}
-        canObfuscate={canObfuscate}
-        activeSelectionId={activeSelectionId}
-        onViewModeChange={handleViewModeChange}
-        onPageChange={handlePageChange}
-        onZoomIn={handleZoomIn}
-        onZoomOut={handleZoomOut}
-        onDownload={handleDownload}
-        onObfuscate={handleObfuscate}
-        onDelete={handleDelete}
-        onClearSelections={handleClearSelections}
-        onSelectionDelete={handleSelectionDelete}
-        onSelectionActivate={handleSelectionActivate}
-      />
+    <WidgetContainer>
+      <Widget expanded className="justify-center">
+        <WidgetContent>
+          <FileViewer
+            fileUrl={fileUrl}
+            currentPage={currentPage}
+            scale={scale}
+            isLoading={!fileUrl}
+            error={pdfError}
+            isSelecting={isSelecting}
+            selections={selections}
+            activeSelectionId={activeSelectionId}
+            onLoadSuccess={handleLoadSuccess}
+            onLoadError={handleLoadError}
+            onAutoFitScale={handleAutoFitScale}
+            onSelectionCreate={handleSelectionCreate}
+            onSelectionEdit={handleSelectionEdit}
+          />
+        </WidgetContent>
+      </Widget>
       
-      <FileViewer
-        fileUrl={fileUrl}
-        currentPage={currentPage}
-        scale={scale}
-        isLoading={!fileUrl}
-        error={pdfError}
-        isSelecting={isSelecting}
-        selections={selections}
-        activeSelectionId={activeSelectionId}
-        onLoadSuccess={handleLoadSuccess}
-        onLoadError={handleLoadError}
-        onAutoFitScale={handleAutoFitScale}
-        onSelectionCreate={handleSelectionCreate}
-        onSelectionEdit={handleSelectionEdit}
-      />
-    </div>
+      <Widget>
+        <WidgetContent>
+          <FileController
+            documentData={documentData}
+            viewMode={viewMode}
+            isOriginalFile={isOriginalFile}
+            fileId={currentFile?.id}
+            currentPage={currentPage}
+            numPages={numPages}
+            scale={scale}
+            selections={selections}
+            prompts={prompts}
+            canObfuscate={canObfuscate}
+            activeSelectionId={activeSelectionId}
+            onViewModeChange={handleViewModeChange}
+            onPageChange={handlePageChange}
+            onZoomIn={handleZoomIn}
+            onZoomOut={handleZoomOut}
+            onDownload={handleDownload}
+            onObfuscate={handleObfuscate}
+            onDelete={handleDelete}
+            onClearSelections={handleClearSelections}
+            onSelectionDelete={handleSelectionDelete}
+            onSelectionActivate={handleSelectionActivate}
+          />
+        </WidgetContent>
+      </Widget>
+    </WidgetContainer>
   )
 }

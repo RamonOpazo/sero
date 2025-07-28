@@ -331,11 +331,11 @@ export function Renderer({
   // const currentPageSelections = selections.filter(s => s.pageNumber === currentPage)
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden bg-muted/50">
+    <div className="flex-1 flex flex-col overflow-hidden">
       <ScrollArea className="flex-1">
         <div 
           ref={containerRef}
-          className="flex justify-center items-start p-6 h-full"
+          className="flex justify-center items-start h-full"
         >
           {error ? (
             <div className="flex items-center justify-center h-64">

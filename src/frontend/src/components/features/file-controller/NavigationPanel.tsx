@@ -40,7 +40,7 @@ export function NavigationPanel({
   onDelete
 }: NavigationPanelProps) {
   return (
-    <div className="flex-shrink-0 p-6 border-b">
+    <div className="flex-shrink-0">
       <h3 className="text-sm font-medium mb-4">Document Controls</h3>
       
       {/* Navigation */}

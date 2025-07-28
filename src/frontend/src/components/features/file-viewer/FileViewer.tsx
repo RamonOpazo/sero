@@ -42,22 +42,20 @@ export function FileViewer({
   onSelectionEdit
 }: FileViewerProps) {
   return (
-    <div className="flex-1 flex flex-col overflow-hidden">
-      <Renderer
-        fileUrl={fileUrl}
-        currentPage={currentPage}
-        scale={scale}
-        isLoading={isLoading}
-        error={error}
-        isSelecting={isSelecting}
-        selections={selections}
-        activeSelectionId={activeSelectionId}
-        onLoadSuccess={onLoadSuccess}
-        onLoadError={onLoadError}
-        onAutoFitScale={onAutoFitScale}
-        onSelectionCreate={onSelectionCreate}
-        onSelectionEdit={onSelectionEdit}
-      />
-    </div>
+    <Renderer
+      fileUrl={fileUrl}
+      currentPage={currentPage}
+      scale={scale}
+      isLoading={isLoading}
+      error={error}
+      isSelecting={isSelecting}
+      selections={selections}
+      activeSelectionId={activeSelectionId}
+      onLoadSuccess={onLoadSuccess}
+      onLoadError={onLoadError}
+      onAutoFitScale={onAutoFitScale}
+      onSelectionCreate={onSelectionCreate}
+      onSelectionEdit={onSelectionEdit}
+    />
   )
 }

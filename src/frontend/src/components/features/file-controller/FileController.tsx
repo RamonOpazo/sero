@@ -2,6 +2,7 @@ import type { Document as DocumentType } from '@/types'
 import { DocumentHeader } from './DocumentHeader'
 import { NavigationPanel } from './NavigationPanel'
 import { EditingPanel } from './EditingPanel'
+import { Separator } from '@/components/ui/separator'
 
 interface Selection {
   id: string
@@ -88,12 +89,14 @@ export function FileController({
   onSelectionActivate
 }: FileControllerProps) {
   return (
-    <div className="w-96 flex-shrink-0 border-r bg-muted/10 flex flex-col">
+    <div className="flex flex-col gap-4 flex-shrink-0 h-full w-(--sidebar-width)">
       <DocumentHeader
         documentData={documentData}
         viewMode={viewMode}
         onViewModeChange={onViewModeChange}
       />
+
+      <Separator/ >
 
       <NavigationPanel
         currentPage={currentPage}
@@ -109,6 +112,8 @@ export function FileController({
         onObfuscate={onObfuscate}
         onDelete={onDelete}
       />
+
+      <Separator/ >
 
       <EditingPanel
         selections={selections}

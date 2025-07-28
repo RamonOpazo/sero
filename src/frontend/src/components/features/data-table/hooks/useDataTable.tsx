@@ -15,14 +15,19 @@ import { Checkbox } from '@/components/ui/checkbox'
 export interface UseDataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
+  selection: TData[]
   searchKey?: string
   searchPlaceholder?: string
   onRowSelectionChange?: (selectedRows: TData[]) => void
+  onDeleteSelection?: () => void
+  onCreateEntries?: () => void
   enableRowSelection?: boolean
   enableColumnVisibility?: boolean
   enableSorting?: boolean
   enableFiltering?: boolean
   enablePagination?: boolean
+  enableDeleteSelection?: boolean
+  enableCreateEntries?: boolean
   pageSize?: number
 }
 

@@ -160,7 +160,7 @@ export function EditingPanel({
   }
 
   return (
-    <div className="flex-1 flex flex-col p-6">
+    <div className="flex-1 flex flex-col">
       <h3 className="text-sm font-medium mb-4">Document Editing</h3>
 
       <div className="space-y-4">
@@ -179,7 +179,7 @@ export function EditingPanel({
             <SheetHeader>
               <SheetTitle>Selections ({selections.length})</SheetTitle>
               <SheetDescription>
-                Manage your document selections
+                Manage your area selections
               </SheetDescription>
             </SheetHeader>
             

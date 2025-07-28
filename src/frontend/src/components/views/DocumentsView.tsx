@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState, useMemo } from 'react'
 import { useParams } from 'react-router-dom'
-import { Trash2, Plus, Eye, Download } from 'lucide-react'
+// import { Trash2, Plus, Eye, Download } from 'lucide-react'
+import { Plus, Eye, Download } from 'lucide-react'
 import { toast } from 'sonner'
-import { Button } from '@/components/ui/button'
+// import { Button } from '@/components/ui/button'
 import { DataTable, Column, Actions } from '@/components/features/data-table'
 import { EmptyState } from '@/components/atomic/EmptyState'
 import { PasswordDialog } from '@/components/dialogs/PasswordDialog'
@@ -11,6 +12,14 @@ import { EditDocumentDialog } from '@/components/dialogs/EditDocumentDialog'
 import { ConfirmationDialog } from '@/components/dialogs/ConfirmationDialog'
 import { usePasswordProtectedFile } from '@/hooks/usePasswordProtectedFile'
 import type { Document, Project, DocumentBulkUploadRequest } from '@/types'
+import {
+  Widget,
+  // WidgetContent,
+  WidgetDescription,
+  WidgetHeader,
+  WidgetTitle,
+} from "@/components/atomic/Widget"
+import { getRandomEasterEgg } from '@/utils/content'
 
 export function DocumentsView() {
   const { projectId } = useParams<{ projectId: string }>()
@@ -89,21 +98,21 @@ export function DocumentsView() {
   const handleCreateDocuments = useCallback(async (uploadData: DocumentBulkUploadRequest) => {
     try {
       const formData = new FormData()
-      
+
       // Add project_id
       formData.append('project_id', uploadData.project_id)
-      
+
       // Add all files to the form data
       Array.from(uploadData.files as FileList).forEach(file => {
         formData.append('files', file)
       })
-      
+
       // Add other fields
       formData.append('password', uploadData.password)
       if (uploadData.template_description) {
         formData.append('template_description', uploadData.template_description)
       }
-      
+
       const response = await fetch(`/api/documents/bulk-upload`, {
         method: 'POST',
         body: formData,
@@ -115,11 +124,11 @@ export function DocumentsView() {
         if (documentsResponse.ok) {
           const data = await documentsResponse.json()
           setDocuments(data)
-          
+
           const fileCount = uploadData.files.length
           toast.success(`Successfully uploaded ${fileCount} document${fileCount !== 1 ? 's' : ''}`, {
-            description: fileCount === 1 ? 
-              `Uploaded "${uploadData.files[0].name}"` : 
+            description: fileCount === 1 ?
+              `Uploaded "${uploadData.files[0].name}"` :
               `Uploaded ${fileCount} documents`
           })
         } else {
@@ -145,7 +154,7 @@ export function DocumentsView() {
 
   const handleEditSubmit = useCallback(async (documentData: { description?: string }) => {
     if (!documentToEdit) return
-    
+
     try {
       const response = await fetch(`/api/documents/id/${documentToEdit.id}`, {
         method: 'PUT',
@@ -156,14 +165,14 @@ export function DocumentsView() {
           description: documentData.description
         }),
       })
-      
+
       if (response.ok) {
         // Refresh the documents list
         const documentsResponse = await fetch(`/api/documents/search?project_id=${projectId}`)
         if (documentsResponse.ok) {
           const data = await documentsResponse.json()
           setDocuments(data)
-          
+
           toast.success('Document updated successfully', {
             description: `Updated "${documentToEdit.name || documentToEdit.description || 'Document'}"`
           })
@@ -190,19 +199,19 @@ export function DocumentsView() {
 
   const handleConfirmSingleDelete = useCallback(async () => {
     if (!documentToDelete) return
-    
+
     try {
       const response = await fetch(`/api/documents/id/${documentToDelete.id}`, {
         method: 'DELETE',
       })
-      
+
       if (response.ok) {
         // Refresh the documents list
         const documentsResponse = await fetch(`/api/documents/search?project_id=${projectId}`)
         if (documentsResponse.ok) {
           const data = await documentsResponse.json()
           setDocuments(data)
-          
+
           toast.success('Document deleted successfully', {
             description: `Deleted "${documentToDelete.name || documentToDelete.description || 'Document'}"`
           })
@@ -225,23 +234,23 @@ export function DocumentsView() {
   const handleConfirmBatchDelete = useCallback(async () => {
     const documentCount = selectedDocuments.length
     const documentNames = selectedDocuments.map(d => d.name || d.description || 'Untitled').join(', ')
-    
+
     try {
-      const deletePromises = selectedDocuments.map(document => 
+      const deletePromises = selectedDocuments.map(document =>
         fetch(`/api/documents/id/${document.id}`, {
           method: 'DELETE',
         })
       )
-      
+
       await Promise.all(deletePromises)
-      
+
       // Refresh the documents list
       const response = await fetch(`/api/documents/search?project_id=${projectId}`)
       if (response.ok) {
         const data = await response.json()
         setDocuments(data)
         setSelectedDocuments([])
-        
+
         toast.success(`Successfully deleted ${documentCount} document${documentCount !== 1 ? 's' : ''}`, {
           description: documentCount === 1 ? `Deleted "${documentNames}"` : `Deleted ${documentCount} documents`
         })
@@ -258,7 +267,7 @@ export function DocumentsView() {
   }, [selectedDocuments, projectId])
 
   const columns = useMemo(() => [
-    Column.text<Document>('name').sortable().build(),
+    Column.text<Document>('name').sortable().withClass("font-medium").truncate().build(),
     Column.text<Document>('description').header('Description').truncate().build(),
     Column.date<Document>('created_at').sortable('Created').build(),
     Column.date<Document>('updated_at').sortable('Updated').build(),
@@ -266,9 +275,9 @@ export function DocumentsView() {
       .copy(
         (document) => document.id,
         'Copy document ID',
-        (id) => ({ 
-          title: 'Document ID copied to clipboard', 
-          description: `ID: ${id}` 
+        (id) => ({
+          title: 'Document ID copied to clipboard',
+          description: `ID: ${id}`
         })
       )
       .separator()
@@ -288,54 +297,63 @@ export function DocumentsView() {
   ], [viewFile, downloadFile, handleEditDocument, handleDeleteSingle])
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
-      {/* Project Title Section */}
-      <div className="flex-shrink-0 px-6 py-4 border-b">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold mb-2 truncate">{project?.name || 'Loading...'}</h1>
-            {project?.description && (
-              <p className="text-muted-foreground">{project.description}</p>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="destructive"
-              onClick={handleDeleteSelected}
-              disabled={selectedDocuments.length === 0}
-              className="gap-2"
-            >
-              <Trash2 className="h-4 w-4" />
-              Delete Selected ({selectedDocuments.length})
-            </Button>
-            <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-2">
-              <Plus className="h-4 w-4" />
-              Upload Documents
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* Documents Data Table */}
-      <div className="flex-1 overflow-hidden px-6">
-        {documents.length > 0 ? (
-          <DataTable
-            columns={columns}
-            data={documents}
-            searchKey="name"
-            searchPlaceholder="Search documents..."
-            onRowSelectionChange={handleSelectionChange}
-            pageSize={20}
-          />
-        ) : (
-          <EmptyState
-            message="No documents found"
-            buttonText="Upload your first document"
-            buttonIcon={<Plus className="h-4 w-4" />}
-            onButtonClick={() => setIsCreateDialogOpen(true)}
-          />
-        )}
-      </div>
+    // <div className="h-full flex flex-col overflow-hidden">
+    //   {/* Project Title Section */}
+    //   <div className="flex-shrink-0 px-6 py-4 border-b">
+    //     <div className="flex items-center justify-between">
+    //       <div>
+    //         <h1 className="text-2xl font-semibold mb-2 truncate">{project?.name || 'Loading...'}</h1>
+    //         {project?.description && (
+    //           <p className="text-muted-foreground">{project.description}</p>
+    //         )}
+    //       </div>
+    //       <div className="flex items-center gap-2">
+    //         <Button
+    //           variant="destructive"
+    //           onClick={handleDeleteSelected}
+    //           disabled={selectedDocuments.length === 0}
+    //           className="gap-2"
+    //         >
+    //           <Trash2 className="h-4 w-4" />
+    //           Delete Selected ({selectedDocuments.length})
+    //         </Button>
+    //         <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-2">
+    //           <Plus className="h-4 w-4" />
+    //           Upload Documents
+    //         </Button>
+    //       </div>
+    //     </div>
+    //   </div>
+    <>
+      <Widget>
+        <WidgetHeader>
+          <WidgetTitle>{project?.name || 'Loading...'}</WidgetTitle>
+          <WidgetDescription>
+            {project?.description ? project.description : getRandomEasterEgg()}
+          </WidgetDescription>
+        </WidgetHeader>
+      </Widget>
+      
+      {documents.length > 0 ? (
+        <DataTable
+          columns={columns}
+          data={documents}
+          selection={selectedDocuments}
+          searchKey="name"
+          searchPlaceholder="Search documents..."
+          onRowSelectionChange={handleSelectionChange}
+          onDeleteSelection={handleDeleteSelected}
+          onCreateEntries={() => setIsCreateDialogOpen(true)}
+          pageSize={20}
+        />
+      ) : (
+        <EmptyState
+          message="No documents found"
+          buttonText="Upload your first document"
+          buttonIcon={<Plus className="h-4 w-4" />}
+          onButtonClick={() => setIsCreateDialogOpen(true)}
+        />
+      )}
 
       <CreateDocumentDialog
         isOpen={isCreateDialogOpen}
@@ -361,7 +379,7 @@ export function DocumentsView() {
         error={passwordError}
         isLoading={isValidatingPassword}
       />
-      
+
       <ConfirmationDialog
         isOpen={isSingleDeleteDialogOpen}
         onClose={() => {
@@ -375,7 +393,7 @@ export function DocumentsView() {
         confirmButtonText="Delete"
         variant="destructive"
       />
-      
+
       <ConfirmationDialog
         isOpen={isDeleteDialogOpen}
         onClose={() => setIsDeleteDialogOpen(false)}
@@ -386,6 +404,6 @@ export function DocumentsView() {
         confirmButtonText="Delete All"
         variant="destructive"
       />
-    </div>
+    </>
   )
 }

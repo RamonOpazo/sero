@@ -54,10 +54,10 @@ export function ProjectsView() {
     setSelectedProjects(selectedRows)
   }, [])
 
-  // const handleDeleteSelected = useCallback(() => {
-  //   if (selectedProjects.length === 0) return
-  //   setIsDeleteDialogOpen(true)
-  // }, [selectedProjects])
+  const handleDeleteSelected = useCallback(() => {
+    if (selectedProjects.length === 0) return
+    setIsDeleteDialogOpen(true)
+  }, [selectedProjects])
 
   const handleConfirmDelete = useCallback(async () => {
     const projectCount = selectedProjects.length
@@ -321,13 +321,17 @@ export function ProjectsView() {
           </div> */}
         </WidgetHeader>
       </Widget>
+      
       {projects.length > 0 ? (
         <DataTable
           columns={columns}
           data={projects}
+          selection={selectedProjects}
           searchKey="name"
           searchPlaceholder="Search projects..."
           onRowSelectionChange={handleSelectionChange}
+          onDeleteSelection={handleDeleteSelected}
+          onCreateEntries={() => setIsCreateDialogOpen(true)}
           pageSize={10}
         />
       ) : (

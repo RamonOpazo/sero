@@ -11,26 +11,24 @@ interface DocumentHeaderProps {
 
 export function DocumentHeader({ documentData, viewMode, onViewModeChange }: DocumentHeaderProps) {
   return (
-    <div className="flex-shrink-0 p-6 border-b">
+    <div className="flex flex-col gap-2 flex-shrink-0 ">
       {/* Status badge above title */}
-      <div className="mb-2">
-        <Badge 
-          variant={documentData.redacted_file ? 'default' : 'secondary'}
-        >
-          {documentData.redacted_file ? 'Processed' : 'Pending'}
-        </Badge>
-      </div>
+      <Badge 
+        variant={documentData.redacted_file ? 'default' : 'secondary'}
+      >
+        {documentData.redacted_file ? 'Processed' : 'Pending'}
+      </Badge>
       
-      <h1 className="text-xl font-semibold mb-2 truncate">
+      <h1 className="font-semibold truncate">
         {documentData.name || documentData.description || 'Untitled Document'}
       </h1>
       
       {documentData.description && (
-        <p className="text-muted-foreground text-sm mb-4">{documentData.description}</p>
+        <p className="text-muted-foreground text-sm truncate">{documentData.description}</p>
       )}
       
       {/* View mode switcher */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 mt-2">
         <Button
           variant={viewMode === 'original' ? 'default' : 'outline'}
           size="sm"
