@@ -6,3 +6,5 @@ export * from './features'
 
 // Providers - Infrastructure and context providers
 export * from './providers'
+
+export * from './views/AppSidebar'

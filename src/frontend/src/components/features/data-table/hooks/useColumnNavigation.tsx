@@ -6,7 +6,7 @@ export interface UseColumnNavigationProps {
 }
 
 export function useColumnNavigation<TData>({ 
-  columnsPerPage = 4 
+  columnsPerPage = 5
 }: UseColumnNavigationProps = {}) {
   const [visibleColumnStart, setVisibleColumnStart] = useState(0)
 

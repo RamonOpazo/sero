@@ -1,9 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { ThemeProvider } from './components/providers'
 import { Layout } from './components/views/Layout'
-import { ProjectsView } from './components/views/ProjectsView'
-import { DocumentsView } from './components/views/DocumentsView'
-import { FilesView } from './components/views/FilesView'
+import { HomeView, ProjectsView, DocumentsView, FilesView } from './components/views'
 
 function App() {
   return (
@@ -11,10 +9,11 @@ function App() {
       <Router>
         <Layout>
           <Routes>
-            <Route path="/" element={<ProjectsView />} />
-            <Route path="/project/:projectId" element={<DocumentsView />} />
-            <Route path="/project/:projectId/document/:documentId" element={<FilesView />} />
-            <Route path="/project/:projectId/document/:documentId/file/:fileId" element={<FilesView />} />
+            <Route path="/" element={<HomeView />} />
+            <Route path="/projects" element={<ProjectsView />} />
+            <Route path="/projects/:projectId/documents" element={<DocumentsView />} />
+            <Route path="/projects/:projectId/documents/:documentId/files" element={<FilesView />} />
+            <Route path="/projects/:projectId/documents/:documentId/files/:fileId" element={<FilesView />} />
           </Routes>
         </Layout>
       </Router>

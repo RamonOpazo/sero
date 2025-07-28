@@ -33,7 +33,7 @@ export function DataTable<TData, TValue>(props: UseDataTableProps<TData, TValue>
   })
 
   return (
-    <div className="w-full space-y-4 pt-4">
+    <div className="w-full space-y-4">
       <DataTableToolbar<TData> 
         table={table} 
         searchKey={searchKey}

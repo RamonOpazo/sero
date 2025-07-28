@@ -55,7 +55,7 @@ export function usePasswordProtectedFile(projectId?: string) {
         if (action === 'view') {
           // Store password securely and navigate to file viewer
           storePassword(document.id, file.id, password)
-          navigate(`/project/${projectId}/document/${document.id}/file/${file.id}`)
+          navigate(`/projects/${projectId}/documents/${document.id}/files/${file.id}`)
         } else if (action === 'download') {
           // Trigger file download
           const downloadUrl = `/api/files/id/${file.id}/download?password=${encodeURIComponent(password)}`
