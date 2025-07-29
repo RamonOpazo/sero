@@ -13,6 +13,7 @@ export const PromptSchema = z.object({
 });
 
 export const PromptCreateSchema = z.object({
+  id: UUIDSchema.optional(),
   text: z.string(),
   languages: z.array(z.string()),
   temperature: z.number().min(0).max(1),

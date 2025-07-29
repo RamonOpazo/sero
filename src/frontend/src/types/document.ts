@@ -22,6 +22,7 @@ export const DocumentSchema = z.object({
 });
 
 export const DocumentCreateSchema = z.object({
+  id: UUIDSchema,
   name: z.string().min(1).max(100),
   description: z.string().optional(),
   project_id: UUIDSchema,

@@ -17,6 +17,7 @@ export const SelectionSchema = z.object({
 });
 
 export const SelectionCreateSchema = z.object({
+  id: UUIDSchema.optional(),
   page_number: z.number().int().nullable().optional(),
   x: z.number().min(0).max(1),
   y: z.number().min(0).max(1),

@@ -3,7 +3,6 @@ from fastapi import APIRouter, Depends, File, UploadFile, Form
 from sqlalchemy.orm import Session
 
 from backend.core.database import get_db_session
-from backend.api.enums import DocumentStatus
 from backend.api.schemas import documents_schema, generics_schema, files_schema, prompts_schema, selections_schema
 from backend.api.controllers import documents_controller
 
