@@ -2,12 +2,16 @@ import {
   createContext,
   useContext,
   useRef,
+  useState,
+  useCallback,
   type ReactNode,
 } from "react";
 
 type PDFContextType = {
   pageRefs: React.RefObject<Map<number, HTMLElement>>;
   registerPage: (el: HTMLElement | null, index: number) => void;
+  isRendered: boolean;
+  setIsRendered: (isRendered: boolean) => void;
 };
 
 const PDFContext = createContext<PDFContextType | undefined>(undefined);
@@ -22,17 +26,20 @@ export const usePDFContext = () => {
 
 export const PDFProvider = ({ children }: { children: ReactNode }) => {
   const pageRefs = useRef<Map<number, HTMLElement>>(new Map());
+  const [isRendered, setIsRendered] = useState(false);
+  const [, forceUpdate] = useState(0);
 
-  const registerPage = (el: HTMLElement | null, index: number) => {
+  const registerPage = useCallback((el: HTMLElement | null, index: number) => {
     if (el) {
       pageRefs.current.set(index, el);
     } else {
       pageRefs.current.delete(index);
     }
-  };
+    forceUpdate(v => v + 1);
+  }, []);
 
   return (
-    <PDFContext.Provider value={{ pageRefs, registerPage }}>
+    <PDFContext.Provider value={{ pageRefs, registerPage, isRendered, setIsRendered }}>
       {children}
     </PDFContext.Provider>
   );

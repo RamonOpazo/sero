@@ -8,8 +8,7 @@ import type { Document as DocumentType, SelectionCreate as SelectionCreateType }
 type Props = { document: DocumentType };
 
 export default function SelectionsLayer({ document }: Props) {
-  const { pageRefs } = usePDFContext();
-  // const { mode, currentPage } = useDocumentViewerContext();
+  const { pageRefs, isRendered } = usePDFContext();
   const { mode } = useDocumentViewerContext();
   const {
     newSelections,
@@ -19,16 +18,6 @@ export default function SelectionsLayer({ document }: Props) {
     endDraw,
     deleteNewSelection,
   } = useSelection(document.id);
-
-  // const [boundingBox, setBoundingBox] = useState<DOMRect | null>(null);
-
-  // useEffect(() => {
-  //   const el = pageRefs.current[currentPage];
-  //   if (!el) return;
-  
-  //   const rect = el.getBoundingClientRect();
-  //   setBoundingBox(rect);
-  // }, [currentPage, pageRefs.current[currentPage], document.selections.length]);
   
 
   const renderBox = (
@@ -70,7 +59,7 @@ export default function SelectionsLayer({ document }: Props) {
       id="__selection_layer__"
       className="fixed inset-0 z-50 pointer-events-none"
     >
-      {Array.from(pageRefs.current.entries()).map(([pageIndex, ref]) => {
+      {isRendered && Array.from(pageRefs.current.entries()).map(([pageIndex, ref]) => {
         if (!ref) return null;
 
         const pageExisting = document.selections.filter(

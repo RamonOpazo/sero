@@ -20,7 +20,7 @@ export default function DocumentLayer({ file }: Props) {
     setNumPages,
   } = useDocumentViewerContext();
 
-  const { registerPage } = usePDFContext();
+  const { registerPage, setIsRendered } = usePDFContext();
 
   const [blob, setBlob] = useState<Blob | null>(null);
   const [loading, setLoading] = useState(false);
@@ -49,6 +49,7 @@ export default function DocumentLayer({ file }: Props) {
     }
 
     const fetchBlob = async () => {
+      setIsRendered(false);
       const password = getPassword(file.document_id, file.id);
       if (!password) {
         toast.error("Missing password for file access");
@@ -81,6 +82,15 @@ export default function DocumentLayer({ file }: Props) {
     setCurrentPage(0);
   };
 
+  const handlePageRenderSuccess = () => {
+    setIsRendered(true);
+  };
+
+  // When the current page changes, we are no longer "rendered" until the new page is done.
+  useEffect(() => {
+    setIsRendered(false);
+  }, [currentPage]);
+
   if (!file) return <div className="text-red-500">No file selected</div>;
   if (loading) return <div className="text-yellow-500">Loading PDF...</div>;
   if (!blob) return <div className="text-red-500">Unable to load file</div>;
@@ -106,6 +116,7 @@ export default function DocumentLayer({ file }: Props) {
             <Page
               pageNumber={currentPage + 1}
               height={pageHeight * zoom}
+              onRenderSuccess={handlePageRenderSuccess}
             />
           </PageWrapper>
         </Document>
