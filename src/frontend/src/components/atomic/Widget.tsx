@@ -69,7 +69,7 @@ export function WidgetContent({ className, ...props }: React.ComponentProps<"div
   return (
     <div
       data-slot="widget-content"
-      className={cn("flex flex-row gap-4 px-4", className)}
+      className={cn("flex flex-row flex-1 gap-4 px-4", className)}
       {...props}
     />
   )
