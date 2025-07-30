@@ -23,6 +23,7 @@ class Selection(BaseModel):
 
 
 class SelectionCreate(BaseModel):
+    id : UUID4 | None = Field(None)
     page_number: int | None = Field(None)  # no page number applies selection to whole document
     x: float = Field(..., ge=0, le=1)
     y: float = Field(..., ge=0, le=1)

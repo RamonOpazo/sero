@@ -66,7 +66,7 @@ class ColumnBuilder<TData, TValue = unknown> {
     builder.columnDef.cell = ({ row }) => {
       const value = row.getValue(accessor) as string
       return (
-        <div className="text-center">
+        <div className="text-left">
           <Badge variant="secondary">{value || 0}</Badge>
         </div>
       )
@@ -119,37 +119,40 @@ class ColumnBuilder<TData, TValue = unknown> {
   sortable(title?: string): this {
     const headerTitle = title || (this.columnDef.accessorKey as string)
     this.columnDef.header = ({ column }) => (
-      <Button
-        variant="ghost"
-        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-      >
+      <div className="flex items-center">
         {headerTitle.charAt(0).toUpperCase() + headerTitle.slice(1)}
-        <ArrowUpDown className="ml-2 h-4 w-4" />
-      </Button>
+        <Button
+          className="h-6 w-6 ml-2 p-2"
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        >
+          <ArrowUpDown className="h-4 w-4" />
+        </Button>
+      </div>
     )
     return this
   }
 
-  centered(): this {
+  align(position: "left" | "center" | "right" = "left"): this {
     const originalCell = this.columnDef.cell
     this.columnDef.cell = originalCell ? 
-      (props) => <div className="text-center">{(originalCell as any)(props)}</div> :
-      ({ row }) => <div className="text-center">{row.getValue(this.columnDef.accessorKey as string)}</div>
+      (props) => <div className={`text-${position}`}>{(originalCell as any)(props)}</div> :
+      ({ row }) => <div className={`text-${position}`}>{row.getValue(this.columnDef.accessorKey as string)}</div>
     
     const originalHeader = this.columnDef.header
     if (typeof originalHeader === 'string') {
-      this.columnDef.header = () => <div className="text-center">{originalHeader}</div>
+      this.columnDef.header = () => <div className={`text-${position}`}>{originalHeader}</div>
     }
     return this
   }
 
-  truncate(maxWidth = 'max-w-md'): this {
+  truncate(maxWidth = '15ch'): this {
     const originalCell = this.columnDef.cell
     this.columnDef.cell = originalCell ?
-      (props) => <div className={`${maxWidth} truncate text-muted-foreground`}>{(originalCell as any)(props) || 'No description'}</div> :
+      (props) => <div className={`max-w-[${maxWidth}] text-muted-foreground`} style={{overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>{(originalCell as any)(props) || 'No description'}</div> :
       ({ row }) => {
         const value = row.getValue(this.columnDef.accessorKey as string) as string
-        return <div className={`${maxWidth} truncate text-muted-foreground`}>{value || 'No description'}</div>
+        return <div className={`max-w-[${maxWidth}] text-muted-foreground`} style={{overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>{value || 'No description'}</div>
       }
     return this
   }
@@ -158,6 +161,14 @@ class ColumnBuilder<TData, TValue = unknown> {
     this.columnDef.cell = ({ row }) => {
       const value = row.getValue(this.columnDef.accessorKey as string) as TValue
       return formatter(value)
+    }
+    return this
+  }
+
+  withClass(className: string | undefined = undefined): this {
+    this.columnDef.cell = ({ row }) => {
+      const value = row.getValue(this.columnDef.accessorKey as string) as string
+      return <div className={className}>{value}</div>
     }
     return this
   }

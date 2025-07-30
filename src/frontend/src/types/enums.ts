@@ -1,13 +1,13 @@
 import { z } from 'zod';
 
 // Enums - matching backend exactly
-export const ProjectStatusSchema = z.enum(['awaiting', 'in_progress', 'completed']);
-export const DocumentStatusSchema = z.enum(['pending', 'processed', 'failed']);
-export const PromptLanguageSchema = z.enum(['catalonian', 'castillian', 'english']);
-export const FileTypeSchema = z.enum(['original', 'redacted']);
+export const ProjectStatusEnumSchema = z.enum(['awaiting', 'in_progress', 'completed']);
+export const DocumentStatusEnumSchema = z.enum(['pending', 'processed', 'failed']);
+export const PromptLanguageEnumSchema = z.enum(['catalonian', 'castillian', 'english']);
+export const FileTypeEnumSchema = z.enum(['original', 'redacted']);
 
 // Types
-export type ProjectStatus = z.infer<typeof ProjectStatusSchema>;
-export type DocumentStatus = z.infer<typeof DocumentStatusSchema>;
-export type PromptLanguage = z.infer<typeof PromptLanguageSchema>;
-export type FileType = z.infer<typeof FileTypeSchema>;
+export type ProjectStatusEnum = z.infer<typeof ProjectStatusEnumSchema>;
+export type DocumentStatusEnum = z.infer<typeof DocumentStatusEnumSchema>;
+export type PromptLanguageEnum = z.infer<typeof PromptLanguageEnumSchema>;
+export type FileTypeEnum = z.infer<typeof FileTypeEnumSchema>;

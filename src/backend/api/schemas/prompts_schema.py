@@ -15,6 +15,7 @@ class Prompt(BaseModel):
 
 
 class PromptCreate(BaseModel):
+    id : UUID4 | None = Field(None)
     text: str
     languages: list[str]
     temperature: float = Field(..., ge=0, le=1)

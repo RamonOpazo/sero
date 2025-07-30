@@ -21,7 +21,22 @@ export const DocumentSchema = z.object({
   redacted_file: z.lazy(() => FileSchema).nullable(), // computed field
 });
 
+export const DocumentShallowSchema = z.object({
+  id: UUIDSchema,
+  created_at: ISO8601DateTimeSchema,
+  updated_at: ISO8601DateTimeSchema.nullable(),
+  name: z.string(),
+  description: z.string().nullable(),
+  project_id: UUIDSchema,
+  tags: z.array(z.string()),
+  prompt_ids: z.array(UUIDSchema),
+  selection_ids: z.array(UUIDSchema),
+  original_file_id: UUIDSchema, // computed field
+  redacted_file_id: UUIDSchema, // computed field
+});
+
 export const DocumentCreateSchema = z.object({
+  id: UUIDSchema,
   name: z.string().min(1).max(100),
   description: z.string().optional(),
   project_id: UUIDSchema,
@@ -99,11 +114,12 @@ export const DocumentSearchParamsSchema = PaginationParamsSchema.extend({
 });
 
 // Types
-export type Document = z.infer<typeof DocumentSchema>;
-export type DocumentCreate = z.infer<typeof DocumentCreateSchema>;
-export type DocumentUpdate = z.infer<typeof DocumentUpdateSchema>;
-export type DocumentSummary = z.infer<typeof DocumentSummarySchema>;
-export type DocumentBulkUpload = z.infer<typeof DocumentBulkUploadSchema>;
-export type DocumentUploadRequest = z.infer<typeof DocumentUploadRequestSchema>;
-export type DocumentBulkUploadRequest = z.infer<typeof DocumentBulkUploadRequestSchema>;
-export type DocumentSearchParams = z.infer<typeof DocumentSearchParamsSchema>;
+export type DocumentType = z.infer<typeof DocumentSchema>;
+export type DocumentShallowType = z.infer<typeof DocumentShallowSchema>;
+export type DocumentCreateType = z.infer<typeof DocumentCreateSchema>;
+export type DocumentUpdateType = z.infer<typeof DocumentUpdateSchema>;
+export type DocumentSummaryType = z.infer<typeof DocumentSummarySchema>;
+export type DocumentBulkUploadType = z.infer<typeof DocumentBulkUploadSchema>;
+export type DocumentUploadRequestType = z.infer<typeof DocumentUploadRequestSchema>;
+export type DocumentBulkUploadRequestType = z.infer<typeof DocumentBulkUploadRequestSchema>;
+export type DocumentSearchParamsType = z.infer<typeof DocumentSearchParamsSchema>;

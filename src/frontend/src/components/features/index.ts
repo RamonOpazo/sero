@@ -1,5 +1,3 @@
-export * from './file-controller'
-export * from './file-viewer'
-
-export { Breadcrumbs } from './Breadcrumbs';
-export * from './data-table'
+export * from "./breadcrumbs";
+export * from "./data-table";
+export * from "./document-viewer";

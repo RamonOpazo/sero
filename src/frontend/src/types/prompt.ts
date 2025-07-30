@@ -13,6 +13,7 @@ export const PromptSchema = z.object({
 });
 
 export const PromptCreateSchema = z.object({
+  id: UUIDSchema.optional(),
   text: z.string(),
   languages: z.array(z.string()),
   temperature: z.number().min(0).max(1),
@@ -26,6 +27,6 @@ export const PromptUpdateSchema = z.object({
 });
 
 // Types
-export type Prompt = z.infer<typeof PromptSchema>;
-export type PromptCreate = z.infer<typeof PromptCreateSchema>;
-export type PromptUpdate = z.infer<typeof PromptUpdateSchema>;
+export type PromptType = z.infer<typeof PromptSchema>;
+export type PromptCreateType = z.infer<typeof PromptCreateSchema>;
+export type PromptUpdateType = z.infer<typeof PromptUpdateSchema>;

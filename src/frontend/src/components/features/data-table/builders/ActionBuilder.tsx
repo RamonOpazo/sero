@@ -1,5 +1,5 @@
 import { type ColumnDef } from '@tanstack/react-table'
-import { MoreHorizontal, Edit, Trash2, Download, Copy, Eye } from 'lucide-react'
+import { MoreVertical, Edit, Trash2, Download, Copy, Eye } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
@@ -110,7 +110,7 @@ class ActionBuilder<TData> {
   build(): ColumnDef<TData, unknown> {
     return {
       id: 'actions',
-      header: () => <div className="text-center">Actions</div>,
+      header: () => null,
       enableHiding: false,
       cell: ({ row }) => {
         const item = row.original
@@ -121,7 +121,7 @@ class ActionBuilder<TData> {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="h-8 w-8 p-0">
                   <span className="sr-only">Open menu</span>
-                  <MoreHorizontal className="h-4 w-4" />
+                  <MoreVertical className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">

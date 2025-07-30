@@ -17,6 +17,7 @@ export const SelectionSchema = z.object({
 });
 
 export const SelectionCreateSchema = z.object({
+  id: UUIDSchema.optional(),
   page_number: z.number().int().nullable().optional(),
   x: z.number().min(0).max(1),
   y: z.number().min(0).max(1),
@@ -36,6 +37,6 @@ export const SelectionUpdateSchema = z.object({
 });
 
 // Types
-export type Selection = z.infer<typeof SelectionSchema>;
-export type SelectionCreate = z.infer<typeof SelectionCreateSchema>;
-export type SelectionUpdate = z.infer<typeof SelectionUpdateSchema>;
+export type SelectionType = z.infer<typeof SelectionSchema>;
+export type SelectionCreateType = z.infer<typeof SelectionCreateSchema>;
+export type SelectionUpdateType = z.infer<typeof SelectionUpdateSchema>;

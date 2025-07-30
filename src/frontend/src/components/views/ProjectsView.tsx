@@ -1,24 +1,30 @@
 import { useCallback, useEffect, useState, useMemo } from 'react'
-import { Plus, Trash2, Eye } from 'lucide-react'
+import { Plus, Eye } from 'lucide-react'
 import { toast } from 'sonner'
-import { Button } from '@/components/ui/button'
 import { DataTable, Column, Actions } from '@/components/features/data-table'
 import { EmptyState } from '@/components/atomic/EmptyState'
 import { CreateProjectDialog } from '@/components/dialogs/CreateProjectDialog'
 import { EditProjectDialog } from '@/components/dialogs/EditProjectDialog'
 import { ConfirmationDialog } from '@/components/dialogs/ConfirmationDialog'
 import { getRandomEasterEgg } from '@/utils/content'
-import type { Project, ProjectCreate } from '@/types'
+import type { ProjectType, ProjectCreateType } from '@/types'
+import {
+  Widget,
+  WidgetContainer,
+  WidgetDescription,
+  WidgetHeader,
+  WidgetTitle,
+} from "@/components/atomic/Widget"
 
 export function ProjectsView() {
-  const [projects, setProjects] = useState<Project[]>([])
-  const [selectedProjects, setSelectedProjects] = useState<Project[]>([])
+  const [projects, setProjects] = useState<ProjectType[]>([])
+  const [selectedProjects, setSelectedProjects] = useState<ProjectType[]>([])
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [isSingleDeleteDialogOpen, setIsSingleDeleteDialogOpen] = useState(false)
-  const [projectToDelete, setProjectToDelete] = useState<Project | null>(null)
-  const [projectToEdit, setProjectToEdit] = useState<Project | null>(null)
+  const [projectToDelete, setProjectToDelete] = useState<ProjectType | null>(null)
+  const [projectToEdit, setProjectToEdit] = useState<ProjectType | null>(null)
 
   useEffect(() => {
     // Fetch projects from backend
@@ -42,7 +48,7 @@ export function ProjectsView() {
   }, [])
 
 
-  const handleSelectionChange = useCallback((selectedRows: Project[]) => {
+  const handleSelectionChange = useCallback((selectedRows: ProjectType[]) => {
     setSelectedProjects(selectedRows)
   }, [])
 
@@ -54,23 +60,23 @@ export function ProjectsView() {
   const handleConfirmDelete = useCallback(async () => {
     const projectCount = selectedProjects.length
     const projectNames = selectedProjects.map(p => p.name).join(', ')
-    
+
     try {
-      const deletePromises = selectedProjects.map(project => 
+      const deletePromises = selectedProjects.map(project =>
         fetch(`/api/projects/id/${project.id}`, {
           method: 'DELETE',
         })
       )
-      
+
       await Promise.all(deletePromises)
-      
+
       // Refresh the projects list
       const response = await fetch('/api/projects')
       if (response.ok) {
         const data = await response.json()
         setProjects(data)
         setSelectedProjects([])
-        
+
         toast.success(`Successfully deleted ${projectCount} project${projectCount !== 1 ? 's' : ''}`, {
           description: projectCount === 1 ? `Deleted "${projectNames}"` : `Deleted ${projectCount} projects`
         })
@@ -86,7 +92,7 @@ export function ProjectsView() {
     }
   }, [selectedProjects])
 
-  const handleCreateProject = useCallback(async (projectData: ProjectCreate) => {
+  const handleCreateProject = useCallback(async (projectData: ProjectCreateType) => {
     try {
       const response = await fetch('/api/projects', {
         method: 'POST',
@@ -95,14 +101,14 @@ export function ProjectsView() {
         },
         body: JSON.stringify(projectData),
       })
-      
+
       if (response.ok) {
         // Refresh the projects list
         const projectsResponse = await fetch('/api/projects')
         if (projectsResponse.ok) {
           const data = await projectsResponse.json()
           setProjects(data)
-          
+
           toast.success('Project created successfully', {
             description: `Created "${projectData.name}"`
           })
@@ -122,26 +128,26 @@ export function ProjectsView() {
     }
   }, [])
 
-  const handleDeleteSingleProject = useCallback((project: Project) => {
+  const handleDeleteSingleProject = useCallback((project: ProjectType) => {
     setProjectToDelete(project)
     setIsSingleDeleteDialogOpen(true)
   }, [])
 
   const handleConfirmSingleDelete = useCallback(async () => {
     if (!projectToDelete) return
-    
+
     try {
       const response = await fetch(`/api/projects/id/${projectToDelete.id}`, {
         method: 'DELETE',
       })
-      
+
       if (response.ok) {
         // Refresh the projects list
         const projectsResponse = await fetch('/api/projects')
         if (projectsResponse.ok) {
           const data = await projectsResponse.json()
           setProjects(data)
-          
+
           toast.success('Project deleted successfully', {
             description: `Deleted "${projectToDelete.name}"`
           })
@@ -161,14 +167,14 @@ export function ProjectsView() {
     }
   }, [projectToDelete])
 
-  const handleEditProject = useCallback((project: Project) => {
+  const handleEditProject = useCallback((project: ProjectType) => {
     setProjectToEdit(project)
     setIsEditDialogOpen(true)
   }, [])
 
   const handleEditProjectSubmit = useCallback(async (projectData: { name: string; description: string }) => {
     if (!projectToEdit) return
-    
+
     try {
       const response = await fetch(`/api/projects/id/${projectToEdit.id}`, {
         method: 'PUT',
@@ -180,14 +186,14 @@ export function ProjectsView() {
           description: projectData.description.trim(),
         }),
       })
-      
+
       if (response.ok) {
         // Refresh the projects list
         const projectsResponse = await fetch('/api/projects')
         if (projectsResponse.ok) {
           const data = await projectsResponse.json()
           setProjects(data)
-          
+
           toast.success('Project updated successfully', {
             description: `Updated "${projectData.name}"`
           })
@@ -207,25 +213,25 @@ export function ProjectsView() {
     }
   }, [projectToEdit])
 
-  const handleDownloadObfuscatedFiles = useCallback(async (project: Project) => {
+  const handleDownloadObfuscatedFiles = useCallback(async (project: ProjectType) => {
     // Check if there are any obfuscated files to download
     const obfuscatedCount = (project as any).obfuscated_count || 0
-    
+
     if (obfuscatedCount === 0) {
       toast.error('No obfuscated files available', {
         description: 'This project has no obfuscated files to download.'
       })
       return
     }
-    
+
     // Show loading toast
     const loadingToast = toast.loading('Preparing download...', {
       description: `Collecting ${obfuscatedCount} obfuscated file${obfuscatedCount !== 1 ? 's' : ''}`
     })
-    
+
     try {
       const response = await fetch(`/api/projects/id/${project.id}/files/obfuscated/download`)
-      
+
       if (response.ok) {
         // Create a blob from the response
         const blob = await response.blob()
@@ -237,7 +243,7 @@ export function ProjectsView() {
         a.click()
         window.URL.revokeObjectURL(url)
         document.body.removeChild(a)
-        
+
         // Success toast
         toast.success('Download started successfully', {
           id: loadingToast,
@@ -258,30 +264,28 @@ export function ProjectsView() {
 
   // Define columns using our new column builders
   const columns = useMemo(() => [
-    Column.text<Project>('name').sortable().format((name) => (
-      <div className="font-medium">{name}</div>
-    )).build(),
-    Column.text<Project>('description').header('Description').truncate().build(),
-    Column.badge<Project>('document_count').sortable('Documents').centered().build(),
-    Column.badge<Project>('obfuscated_count').sortable('Obfuscated').centered().build(),
-    Column.status<Project>('status').sortable().build(),
-    Column.date<Project>('created_at').sortable('Created').build(),
-    Column.date<Project>('updated_at').sortable('Updated').build(),
-    Actions.create<Project>()
+    Column.text<ProjectType>('name').sortable().withClass("font-medium").build(),
+    Column.text<ProjectType>('description').header('Description').truncate().build(),
+    Column.badge<ProjectType>('document_count').sortable('Documents').build(),
+    Column.badge<ProjectType>('obfuscated_count').sortable('Obfuscated').build(),
+    Column.status<ProjectType>('status').sortable().build(),
+    Column.date<ProjectType>('created_at').sortable('Created').build(),
+    Column.date<ProjectType>('updated_at').sortable('Updated').build(),
+    Actions.create<ProjectType>()
       .copy(
         (project) => project.id,
         'Copy project ID',
-        (id) => ({ 
-          title: 'Project ID copied to clipboard', 
-          description: `ID: ${id}` 
+        (id) => ({
+          title: 'Project ID copied to clipboard',
+          description: `ID: ${id}`
         })
       )
       .separator()
-        .custom({
+      .custom({
         label: 'View Documents',
         icon: Eye,
         onClick: (project) => {
-          window.location.href = `/project/${project.id}`
+          window.location.href = `/projects/${project.id}/documents`
         }
       })
       .download(handleDownloadObfuscatedFiles, 'Download obfuscated files')
@@ -291,59 +295,43 @@ export function ProjectsView() {
   ], [handleEditProject, handleDeleteSingleProject, handleDownloadObfuscatedFiles])
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
-      {/* Projects Title Section */}
-      <div className="flex-shrink-0 px-6 py-4 border-b">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold mb-2">Projects {`(${projects?.length})` || 'Loading...'}</h1>
-            <p className="text-muted-foreground">{getRandomEasterEgg()}</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button 
-              variant="destructive" 
-              onClick={handleDeleteSelected}
-              disabled={selectedProjects.length === 0}
-              className="gap-2"
-            >
-              <Trash2 className="h-4 w-4" />
-              Delete Selected ({selectedProjects.length})
-            </Button>
-            <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-2">
-              <Plus className="h-4 w-4" />
-              Create Project
-            </Button>
-          </div>
-        </div>
-      </div>
+    <WidgetContainer expanded>
+      <Widget>
+        <WidgetHeader>
+          <WidgetTitle>Projects {`(${projects?.length})` || 'Loading...'}</WidgetTitle>
+          <WidgetDescription>
+            <span>{getRandomEasterEgg()}</span>
+          </WidgetDescription>
+        </WidgetHeader>
+      </Widget>
 
-      {/* Projects Data Table */}
-      <div className="flex-1 overflow-hidden px-6">
-        {projects.length > 0 ? (
-          <DataTable
-            columns={columns}
-            data={projects}
-            searchKey="name"
-            searchPlaceholder="Search projects..."
-            onRowSelectionChange={handleSelectionChange}
-            pageSize={10}
-          />
-        ) : (
-          <EmptyState
-            message="No projects found"
-            buttonText="Create your first project"
-            buttonIcon={<Plus className="h-4 w-4" />}
-            onButtonClick={() => setIsCreateDialogOpen(true)}
-          />
-        )}
-      </div>
-      
+      {projects.length > 0 ? (
+        <DataTable
+          columns={columns}
+          data={projects}
+          selection={selectedProjects}
+          searchKey="name"
+          searchPlaceholder="Search projects..."
+          onRowSelectionChange={handleSelectionChange}
+          onDeleteSelection={handleDeleteSelected}
+          onCreateEntries={() => setIsCreateDialogOpen(true)}
+          pageSize={10}
+        />
+      ) : (
+        <EmptyState
+          message="No projects found"
+          buttonText="Create your first project"
+          buttonIcon={<Plus className="h-4 w-4" />}
+          onButtonClick={() => setIsCreateDialogOpen(true)}
+        />
+      )}
+
       <CreateProjectDialog
         isOpen={isCreateDialogOpen}
         onClose={() => setIsCreateDialogOpen(false)}
         onSubmit={handleCreateProject}
       />
-      
+
       <EditProjectDialog
         isOpen={isEditDialogOpen}
         onClose={() => {
@@ -353,7 +341,7 @@ export function ProjectsView() {
         onSubmit={handleEditProjectSubmit}
         project={projectToEdit}
       />
-      
+
       <ConfirmationDialog
         isOpen={isDeleteDialogOpen}
         onClose={() => setIsDeleteDialogOpen(false)}
@@ -364,7 +352,7 @@ export function ProjectsView() {
         confirmButtonText="Delete Forever"
         variant="destructive"
       />
-      
+
       <ConfirmationDialog
         isOpen={isSingleDeleteDialogOpen}
         onClose={() => {
@@ -378,6 +366,6 @@ export function ProjectsView() {
         confirmButtonText="Delete Forever"
         variant="destructive"
       />
-    </div>
+    </WidgetContainer>
   )
 }
