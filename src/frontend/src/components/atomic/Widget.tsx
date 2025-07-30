@@ -1,11 +1,15 @@
 import { cn } from "@/lib/utils"
 
-export function WidgetContainer({ className, ...props }: React.ComponentProps<"div">) {
+type WidgeExtraProps = { expanded?: boolean, orthocentered?: boolean }
+
+export function WidgetContainer({ expanded, orthocentered, className, ...props }: React.ComponentProps<"div"> & WidgeExtraProps) {
   return (
     <div
       data-slot="widget-container"
       className={cn(
-        "h-full flex flex-1 gap-4 overflow-hidden",
+        "flex flex-col gap-4 h-full overflow-hidden",
+        `${expanded && "flex-1 h-full w-full"}`,
+        `${orthocentered && "justify-center items-center"}`,
         className
       )}
       {...props}
@@ -13,12 +17,14 @@ export function WidgetContainer({ className, ...props }: React.ComponentProps<"d
   )
 }
 
-export function Widget({ expanded = false, className, ...props }: React.ComponentProps<"div"> & { expanded?: boolean }) {
+export function Widget({ expanded, orthocentered, className, ...props }: React.ComponentProps<"div"> & WidgeExtraProps) {
   return (
     <div
       data-slot="widget"
       className={cn(
-        `bg-muted/50 flex ${expanded ? "flex-1" : "flex-shrink-0"} flex-col gap-4 rounded-md py-4`,
+        "flex flex-col gap-4 py-4 bg-muted/50 rounded-md",
+        `${expanded && "flex-1 h-full w-full"}`,
+        `${orthocentered && "justify-center items-center"}`,
         className
       )}
       {...props}
@@ -26,12 +32,14 @@ export function Widget({ expanded = false, className, ...props }: React.Componen
   )
 }
 
-export function WidgetHeader({ className, ...props }: React.ComponentProps<"div">) {
+export function WidgetHeader({ expanded, orthocentered, className, ...props }: React.ComponentProps<"div"> & WidgeExtraProps) {
   return (
     <div
       data-slot="widget-header"
       className={cn(
         "flex flex-col gap-1.5 px-4",
+        `${expanded && "flex-1 h-full w-full"}`,
+        `${orthocentered && "justify-center items-center"}`,
         className
       )}
       {...props}
@@ -65,11 +73,16 @@ export function WidgetDescription({ className, ...props }: React.ComponentProps<
   )
 }
 
-export function WidgetContent({ className, ...props }: React.ComponentProps<"div">) {
+export function WidgetBody({ expanded, orthocentered, className, ...props }: React.ComponentProps<"div"> & WidgeExtraProps) {
   return (
     <div
       data-slot="widget-content"
-      className={cn("flex flex-row flex-1 gap-4 px-4", className)}
+      className={cn(
+        "flex flex-col gap-4 px-4",  
+        `${expanded && "flex-1 h-full w-full"}`,
+        `${orthocentered && "justify-center items-center"}`,
+        className
+      )}
       {...props}
     />
   )
@@ -79,7 +92,10 @@ export function WidgetFooter({ className, ...props }: React.ComponentProps<"div"
   return (
     <div
       data-slot="widghet-footer"
-      className={cn("flex flex-row gap-1.5 px-4", className)}
+      className={cn(
+        "flex flex-shrink-0 flex-col gap-1.5 px-4",
+        className
+      )}
       {...props}
     />
   )

@@ -1,22 +1,25 @@
+import { cn } from "@/lib/utils"
 import DocumentLayer from "./DocumentLayer";
 import SelectionsLayer from "./SelectionsLayer";
 import InfoLayer from "./InfoLayer";
 import ActionsLayer from "./ActionsLayer";
-import { type Document as DocumentType } from "@/types";
-import { PDFProvider } from "@/context/PDFContext";
+import type { Document as DocumentType } from "@/types";
 
 type Props = { document: DocumentType };
 
-export default function Renderer({ document }: Props) {
-
+export default function Renderer({ document, className, ...props }: Props & React.ComponentProps<"div">) {
   return (
-    <div className="relative w-full h-full">
-      <PDFProvider>
-        <SelectionsLayer document={document} />
-        <InfoLayer document={document} />
-        <ActionsLayer />
-        <DocumentLayer file={document.original_file} />
-      </PDFProvider>
+    <div
+    data-slot="document-viewer-renderer"
+    className={cn(
+      "flex flex-1 relative h-full w-full justify-center items-center overflow-hidden",
+      className
+    )} {...props}
+  >
+      <DocumentLayer file={document.original_file} />
+      <SelectionsLayer document={document} />
+      <InfoLayer document={document} />
+      <ActionsLayer />
     </div>
   );
 }

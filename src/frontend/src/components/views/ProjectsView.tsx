@@ -10,6 +10,7 @@ import { getRandomEasterEgg } from '@/utils/content'
 import type { Project, ProjectCreate } from '@/types'
 import {
   Widget,
+  WidgetContainer,
   WidgetDescription,
   WidgetHeader,
   WidgetTitle,
@@ -294,31 +295,16 @@ export function ProjectsView() {
   ], [handleEditProject, handleDeleteSingleProject, handleDownloadObfuscatedFiles])
 
   return (
-    <>
+    <WidgetContainer expanded>
       <Widget>
         <WidgetHeader>
           <WidgetTitle>Projects {`(${projects?.length})` || 'Loading...'}</WidgetTitle>
           <WidgetDescription>
             <span>{getRandomEasterEgg()}</span>
           </WidgetDescription>
-          {/* <div className="flex items-center gap-4">
-            <Button
-              variant="destructive"
-              onClick={handleDeleteSelected}
-              disabled={selectedProjects.length === 0}
-              className="gap-2"
-            >
-              <Trash2 className="h-4 w-4" />
-              Delete Selected ({selectedProjects.length})
-            </Button>
-            <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-2">
-              <Plus className="h-4 w-4" />
-              Create Project
-            </Button>
-          </div> */}
         </WidgetHeader>
       </Widget>
-      
+
       {projects.length > 0 ? (
         <DataTable
           columns={columns}
@@ -380,6 +366,6 @@ export function ProjectsView() {
         confirmButtonText="Delete Forever"
         variant="destructive"
       />
-    </>
+    </WidgetContainer>
   )
 }

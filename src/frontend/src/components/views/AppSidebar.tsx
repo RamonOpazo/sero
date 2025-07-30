@@ -69,25 +69,25 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-      <SidebarMenu>
-      <SidebarMenuItem>
-        <SidebarMenuButton
-          size="lg"
-          className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-        >
-          <div className="text-purple-500 border-2 border-purple-800 flex aspect-square size-8 items-center justify-center rounded-lg">
-            <CircleSlash2
-              className="size-4"
-              strokeWidth={3}
-            />
-          </div>
-          <div className="grid flex-1 text-left text-sm leading-tight">
-            <span className="truncate font-semibold tracking-wider">SERO</span>
-            <span className="truncate text-xs text-muted-foreground">Evelishly Redacts and ██████████</span>
-          </div>
-        </SidebarMenuButton>
-      </SidebarMenuItem>
-    </SidebarMenu>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              size="lg"
+              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+            >
+              <div className="text-purple-500 border-2 border-purple-800 flex aspect-square size-8 items-center justify-center rounded-lg">
+                <CircleSlash2
+                  className="size-4"
+                  strokeWidth={3}
+                />
+              </div>
+              <div className="grid flex-1 text-left text-sm leading-tight">
+                <span className="truncate font-semibold tracking-wider">SERO</span>
+                <span className="truncate text-xs text-muted-foreground">Evelishly Redacts and ██████████</span>
+              </div>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />

@@ -2,7 +2,7 @@ import { DocumentViewerProvider } from "@/context/DocumentViewerContext";
 import { PDFProvider } from "@/context/PDFContext";
 import Renderer from "./renderer/Renderer";
 import Controller from "./controller/Controller";
-import { WidgetContainer, Widget, WidgetContent } from "@/components/atomic/Widget";
+import { WidgetContainer, Widget, WidgetBody } from "@/components/atomic/Widget";
 import { type Document } from "@/types";
 
 type DocumentViewerProps = {
@@ -14,16 +14,16 @@ export default function DocumentViewer({ document }: DocumentViewerProps) {
   return (
     <DocumentViewerProvider>
       <PDFProvider>
-        <WidgetContainer>
-          <Widget expanded className="relative items-center">
-            <WidgetContent className="h-full max-h-full items-center">
+        <WidgetContainer expanded className="flex-row">
+          <Widget expanded orthocentered className="relative">
+            <WidgetBody expanded>
               <Renderer document={document} />
-            </WidgetContent>
+            </WidgetBody>
           </Widget>
-          <Widget>
-            <WidgetContent className="w-(--sidebar-width)">
+          <Widget expanded className="max-w-(--sidebar-width)">
+            <WidgetBody expanded>
               <Controller document={document} />
-            </WidgetContent>
+            </WidgetBody>
           </Widget>
         </WidgetContainer>
       </PDFProvider>

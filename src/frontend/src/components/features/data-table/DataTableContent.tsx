@@ -44,7 +44,7 @@ export function DataTableContent<TData>({ table }: DataTableContentProps<TData>)
   }
 
   return (
-    <div ref={containerRef}>
+    <div ref={containerRef} className="mb-4">
       <TableComponent>
         <TableHeader className="bg-muted sticky top-0 z-0">
           {table.getHeaderGroups().map((headerGroup) => (

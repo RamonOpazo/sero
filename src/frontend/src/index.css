@@ -118,3 +118,8 @@
     @apply bg-background text-foreground;
   }
 }
+
+.custom-scroll-area [style="min-width:100%;display:table"] {
+  min-width: auto !important;
+  display: block !important;
+}

@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useState, useMemo } from 'react'
 import { useParams } from 'react-router-dom'
-// import { Trash2, Plus, Eye, Download } from 'lucide-react'
 import { Plus, Eye, Download } from 'lucide-react'
 import { toast } from 'sonner'
-// import { Button } from '@/components/ui/button'
 import { DataTable, Column, Actions } from '@/components/features/data-table'
 import { EmptyState } from '@/components/atomic/EmptyState'
 import { PasswordDialog } from '@/components/dialogs/PasswordDialog'
@@ -13,8 +11,8 @@ import { ConfirmationDialog } from '@/components/dialogs/ConfirmationDialog'
 import { usePasswordProtectedFile } from '@/hooks/usePasswordProtectedFile'
 import type { Document, Project, DocumentBulkUploadRequest } from '@/types'
 import {
+  WidgetContainer,
   Widget,
-  // WidgetContent,
   WidgetDescription,
   WidgetHeader,
   WidgetTitle,
@@ -297,34 +295,7 @@ export function DocumentsView() {
   ], [viewFile, downloadFile, handleEditDocument, handleDeleteSingle])
 
   return (
-    // <div className="h-full flex flex-col overflow-hidden">
-    //   {/* Project Title Section */}
-    //   <div className="flex-shrink-0 px-6 py-4 border-b">
-    //     <div className="flex items-center justify-between">
-    //       <div>
-    //         <h1 className="text-2xl font-semibold mb-2 truncate">{project?.name || 'Loading...'}</h1>
-    //         {project?.description && (
-    //           <p className="text-muted-foreground">{project.description}</p>
-    //         )}
-    //       </div>
-    //       <div className="flex items-center gap-2">
-    //         <Button
-    //           variant="destructive"
-    //           onClick={handleDeleteSelected}
-    //           disabled={selectedDocuments.length === 0}
-    //           className="gap-2"
-    //         >
-    //           <Trash2 className="h-4 w-4" />
-    //           Delete Selected ({selectedDocuments.length})
-    //         </Button>
-    //         <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-2">
-    //           <Plus className="h-4 w-4" />
-    //           Upload Documents
-    //         </Button>
-    //       </div>
-    //     </div>
-    //   </div>
-    <>
+    <WidgetContainer expanded>
       <Widget>
         <WidgetHeader>
           <WidgetTitle>{project?.name || 'Loading...'}</WidgetTitle>
@@ -404,6 +375,6 @@ export function DocumentsView() {
         confirmButtonText="Delete All"
         variant="destructive"
       />
-    </>
+    </WidgetContainer>
   )
 }

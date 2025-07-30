@@ -6,7 +6,7 @@ import { getPassword } from "@/utils/passwordManager";
 import { getFileBlob } from "@/lib/api";
 import { useDocumentViewerContext } from "@/context/DocumentViewerContext";
 import { usePDFContext } from "@/context/PDFContext";
-import { ScrollArea } from "@/components/ui/scroll-area";
+// import { ScrollArea } from "@/components/ui/scroll-area";
 
 type Props = {
   file: FileType | null;
@@ -83,31 +83,31 @@ export default function DocumentLayer({ file }: Props) {
   if (!blob) return <div className="text-red-500">Unable to load file</div>;
 
   return (
-    <div
-      id="__document_layer__"
-      ref={documentRef}
-      className="relative pointer-events-none select-none w-full h-full"
-    >
-      <ScrollArea className="w-full h-full">
-        <Document
-          file={blob}
-          onLoadSuccess={handleLoadSuccess}
-          loading={<div>Loading pages…</div>}
-          error={<div className="text-red-500">Failed to render PDF</div>}
-        >
-          <PageWrapper
-            key={currentPage}
-            index={currentPage}
-            registerPage={registerPage}
+    <div id="__document_layer__" ref={documentRef} className="relative h-full w-full">
+      {/* <ScrollArea ref={documentRef}> */}
+        <div className="absolute top-[50%] left-[50%] -translate-x-1/2 -translate-y-1/2">
+          <Document
+            file={blob}
+            onLoadSuccess={handleLoadSuccess}
+            loading={<div>Loading pages…</div>}
+            error={<div className="text-red-500">Failed to render PDF</div>}
+            className="pdf-document"
           >
-            <Page
-              pageNumber={currentPage + 1}
-              scale={zoom}
-              onRenderSuccess={handlePageRenderSuccess}
-            />
-          </PageWrapper>
-        </Document>
-      </ScrollArea>
+            <PageWrapper
+              key={currentPage}
+              index={currentPage}
+              registerPage={registerPage}
+            >
+              <Page
+                pageIndex={currentPage}
+                scale={zoom}
+                onRenderSuccess={handlePageRenderSuccess}
+                className="pdf-page shadow-lg"
+              />
+            </PageWrapper>
+          </Document>
+        </div>
+      {/* </ScrollArea> */}
     </div>
   );
 }
@@ -128,7 +128,7 @@ function PageWrapper({ children, index, registerPage }: PageWrapperProps) {
   }, [ref.current, index]);
 
   return (
-    <div ref={ref} className="flex justify-center">
+    <div ref={ref}>
       {children}
     </div>
   );

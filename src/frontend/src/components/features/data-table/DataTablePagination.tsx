@@ -30,7 +30,7 @@ export function DataTablePagination<TData>({
   if (!enablePagination) return null
 
   return (
-    <div className="flex items-center justify-between px-4">
+    <div className="flex items-center justify-between">
       {enableRowSelection && (
         <div className="text-muted-foreground hidden flex-1 text-sm lg:flex">
           {table.getFilteredSelectedRowModel().rows.length} of{" "}
