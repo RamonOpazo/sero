@@ -1,7 +1,73 @@
 # CHANGELOG
 
 
+## v0.4.0 (2025-07-30)
+
+### Bug Fixes
+
+- Fixed an issue between the selection layer and the document layer, in which the selections were
+  rendered before the page was rendered, thus producing a race condition that affected the
+  calculation of the selections' size.
+  ([`6ef21ab`](https://github.com/RamonOpazo/sero/commit/6ef21abeee3398b5db0ef8e7cd5cf0e1eaa12808))
+
+- Fixed issue in the document layer in which, upon zooming on a given document, it blew up the its
+  container, overflowing and breaking the view.
+  ([`eb8d757`](https://github.com/RamonOpazo/sero/commit/eb8d757ac11337f1d4eea15a9bb050b17610654d))
+
+### Features
+
+- Enhance DataTable and refine UI/layout
+  ([`eda16a5`](https://github.com/RamonOpazo/sero/commit/eda16a57adb3aeabf66c5f563116ae6455665146))
+
+- Improve selection layer synchronization and visibility
+  ([`7edd7e9`](https://github.com/RamonOpazo/sero/commit/7edd7e99c371e856e511f93016cc0c72845777de))
+
+- Visual improvement and new actions in document viewer.
+  ([`e04d95a`](https://github.com/RamonOpazo/sero/commit/e04d95a084e3c447f965bea74654839a4b4c359d))
+
+- Working panning and zooming, with correct positioning (though a little bit laggy) of the selection
+  layer.
+  ([`77aa204`](https://github.com/RamonOpazo/sero/commit/77aa2044a94f801ad5397b17a8ad94bef992debf))
+
+- **frontend**: Overhaul application layout with responsive sidebar
+  ([`5135021`](https://github.com/RamonOpazo/sero/commit/51350212fe7a81774ac284205b3cf5fc9f41a310))
+
+This commit introduces a complete overhaul of the frontend application layout, replacing the static
+  layout with a modern, responsive, and collapsible sidebar navigation system.
+
+Key changes include: - A new `Sidebar` component, which is collapsible, responsive for mobile, and
+  configurable. - A completely redesigned main `Layout` that integrates the new sidebar. - New UI
+  components such as `Widget`, `Avatar`, `Tooltip`, and `Collapsible` to build a more consistent and
+  polished interface. - Refactored application routing (`App.tsx`) to be more semantic and RESTful
+  (e.g., `/projects/:id/documents`). - An improved `Breadcrumbs` component that dynamically
+  generates paths based on the new routing structure. - A new `HomeView` to serve as the
+  application's landing page. - Enhancements to the `DataTable` component for better alignment and a
+  cleaner look.
+
+### Refactoring
+
+- Added optional ids for selection and prompt creation, and reflected changes on the frontend side.
+  ([`b51c82c`](https://github.com/RamonOpazo/sero/commit/b51c82c7e84201806ad2eeb10e802bf9c94edd1e))
+
+- Better column handling of datatables.
+  ([`adf5112`](https://github.com/RamonOpazo/sero/commit/adf511206da41d57a53178de05ef4c65ea6e8264))
+
+- Complete overhaul of the document-viewer component for propper PDF rendering and selection layer.
+  ([`0b8e147`](https://github.com/RamonOpazo/sero/commit/0b8e147d23aa7779bf2aa41bd4e05091a868edfd))
+
+- Refactored frontend import/exports.
+  ([`9763d29`](https://github.com/RamonOpazo/sero/commit/9763d29204bd5ffb5c265b1c58f3b7e56422ea7c))
+
+- Rename types and resolve map errors
+  ([`562f50f`](https://github.com/RamonOpazo/sero/commit/562f50fdbc52a0fa4bf8052e347c9c98b6415d55))
+
+
 ## v0.3.0 (2025-07-26)
+
+### Chores
+
+- **release**: V0.3.0 [skip ci]
+  ([`48b84ab`](https://github.com/RamonOpazo/sero/commit/48b84ab84fa3fb1916561299f08db7915a44a4f7))
 
 ### Features
 
