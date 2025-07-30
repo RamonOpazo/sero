@@ -23,12 +23,12 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2 } from 'lucide-react';
-import type { DocumentBulkUploadRequest } from '@/types';
+import type { DocumentBulkUploadRequestType } from '@/types';
 
 interface CreateDocumentDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (uploadData: DocumentBulkUploadRequest) => Promise<void>;
+  onSubmit: (uploadData: DocumentBulkUploadRequestType) => Promise<void>;
   projectId: string;
 }
 
@@ -55,7 +55,7 @@ export function CreateDocumentDialog({ isOpen, onClose, onSubmit, projectId }: C
 
   const onFormSubmit = async (data: FormData) => {
     try {
-      const submitData: DocumentBulkUploadRequest = {
+      const submitData: DocumentBulkUploadRequestType = {
         project_id: projectId,
         files: data.files,
         password: data.password.trim(),

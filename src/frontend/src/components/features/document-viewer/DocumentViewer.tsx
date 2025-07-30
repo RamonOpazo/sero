@@ -3,10 +3,10 @@ import { PDFProvider } from "@/context/PDFContext";
 import Renderer from "./renderer/Renderer";
 import Controller from "./controller/Controller";
 import { WidgetContainer, Widget, WidgetBody } from "@/components/atomic/Widget";
-import { type Document } from "@/types";
+import { type DocumentType } from "@/types";
 
 type DocumentViewerProps = {
-  document: Document;
+  document: DocumentType;
 };
 
 export default function DocumentViewer({ document }: DocumentViewerProps) {

@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils"
 import SelectionList from "./SelectionsList";
 import PromptList from "./PromptsList";
 import ControllerButtons from "./ControllerButtons";
-import type { Document as DocumentType } from "@/types";
+import type { DocumentType } from "@/types";
 
 type Props = { document: DocumentType };
 

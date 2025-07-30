@@ -2,7 +2,7 @@ import { usePDFContext } from "@/context/PDFContext";
 import { useDocumentViewerContext } from "@/context/DocumentViewerContext";
 import { useSelection } from "@/hooks/useSelections";
 import { cn } from "@/lib/utils";
-import type { Document as DocumentType, SelectionCreate as SelectionCreateType } from "@/types";
+import type { DocumentType, SelectionCreateType } from "@/types";
 import { useLayoutEffect, useState, useEffect } from "react";
 
 type Props = { document: DocumentType };

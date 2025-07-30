@@ -37,6 +37,6 @@ export const SelectionUpdateSchema = z.object({
 });
 
 // Types
-export type Selection = z.infer<typeof SelectionSchema>;
-export type SelectionCreate = z.infer<typeof SelectionCreateSchema>;
-export type SelectionUpdate = z.infer<typeof SelectionUpdateSchema>;
+export type SelectionType = z.infer<typeof SelectionSchema>;
+export type SelectionCreateType = z.infer<typeof SelectionCreateSchema>;
+export type SelectionUpdateType = z.infer<typeof SelectionUpdateSchema>;

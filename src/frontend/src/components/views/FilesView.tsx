@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { getDocumentById } from "@/lib/api";
 import DocumentViewer from "@/components/features/document-viewer/DocumentViewer";
-import { type Document as DocumentType } from "@/types";
+import { type DocumentType } from "@/types";
 import { toast } from "sonner";
-import { Loader } from "lucide-react"; // Optional: shadcn/ui compatible icon
+import { Loader } from "lucide-react";
 
 export function FilesView() {
   const { documentId } = useParams<{ documentId: string }>();

@@ -9,7 +9,7 @@ import { CreateDocumentDialog } from '@/components/dialogs/CreateDocumentDialog'
 import { EditDocumentDialog } from '@/components/dialogs/EditDocumentDialog'
 import { ConfirmationDialog } from '@/components/dialogs/ConfirmationDialog'
 import { usePasswordProtectedFile } from '@/hooks/usePasswordProtectedFile'
-import type { Document, Project, DocumentBulkUploadRequest } from '@/types'
+import type { DocumentType, ProjectType, DocumentBulkUploadRequestType } from '@/types'
 import {
   WidgetContainer,
   Widget,
@@ -21,15 +21,15 @@ import { getRandomEasterEgg } from '@/utils/content'
 
 export function DocumentsView() {
   const { projectId } = useParams<{ projectId: string }>()
-  const [project, setProject] = useState<Project | null>(null)
-  const [documents, setDocuments] = useState<Document[]>([])
-  const [selectedDocuments, setSelectedDocuments] = useState<Document[]>([])
+  const [project, setProject] = useState<ProjectType | null>(null)
+  const [documents, setDocuments] = useState<DocumentType[]>([])
+  const [selectedDocuments, setSelectedDocuments] = useState<DocumentType[]>([])
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [isSingleDeleteDialogOpen, setIsSingleDeleteDialogOpen] = useState(false)
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
-  const [documentToEdit, setDocumentToEdit] = useState<Document | null>(null)
-  const [documentToDelete, setDocumentToDelete] = useState<Document | null>(null)
+  const [documentToEdit, setDocumentToEdit] = useState<DocumentType | null>(null)
+  const [documentToDelete, setDocumentToDelete] = useState<DocumentType | null>(null)
 
   // Use password-protected file hook
   const {
@@ -84,7 +84,7 @@ export function DocumentsView() {
       })
   }, [projectId])
 
-  const handleSelectionChange = useCallback((selectedRows: Document[]) => {
+  const handleSelectionChange = useCallback((selectedRows: DocumentType[]) => {
     setSelectedDocuments(selectedRows)
   }, [])
 
@@ -93,7 +93,7 @@ export function DocumentsView() {
     setIsDeleteDialogOpen(true)
   }, [selectedDocuments])
 
-  const handleCreateDocuments = useCallback(async (uploadData: DocumentBulkUploadRequest) => {
+  const handleCreateDocuments = useCallback(async (uploadData: DocumentBulkUploadRequestType) => {
     try {
       const formData = new FormData()
 
@@ -145,7 +145,7 @@ export function DocumentsView() {
     }
   }, [projectId])
 
-  const handleEditDocument = useCallback((document: Document) => {
+  const handleEditDocument = useCallback((document: DocumentType) => {
     setDocumentToEdit(document)
     setIsEditDialogOpen(true)
   }, [])
@@ -190,7 +190,7 @@ export function DocumentsView() {
     }
   }, [documentToEdit, projectId])
 
-  const handleDeleteSingle = useCallback((document: Document) => {
+  const handleDeleteSingle = useCallback((document: DocumentType) => {
     setDocumentToDelete(document)
     setIsSingleDeleteDialogOpen(true)
   }, [])
@@ -265,11 +265,11 @@ export function DocumentsView() {
   }, [selectedDocuments, projectId])
 
   const columns = useMemo(() => [
-    Column.text<Document>('name').sortable().withClass("font-medium").truncate().build(),
-    Column.text<Document>('description').header('Description').truncate().build(),
-    Column.date<Document>('created_at').sortable('Created').build(),
-    Column.date<Document>('updated_at').sortable('Updated').build(),
-    Actions.create<Document>()
+    Column.text<DocumentType>('name').sortable().withClass("font-medium").truncate().build(),
+    Column.text<DocumentType>('description').header('Description').truncate().build(),
+    Column.date<DocumentType>('created_at').sortable('Created').build(),
+    Column.date<DocumentType>('updated_at').sortable('Updated').build(),
+    Actions.create<DocumentType>()
       .copy(
         (document) => document.id,
         'Copy document ID',

@@ -1,7 +1,7 @@
-import { type Selection } from "@/types";
+import { type SelectionType } from "@/types";
 import { Button } from "@/components/ui/button";
 
-type Props = { selections: Selection[] };
+type Props = { selections: SelectionType[] };
 
 export default function SelectionList({ selections }: Props) {
   return (

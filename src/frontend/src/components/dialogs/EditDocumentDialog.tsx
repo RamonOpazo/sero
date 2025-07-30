@@ -23,13 +23,13 @@ import {
 } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2 } from 'lucide-react';
-import type { Document } from '@/types';
+import type { DocumentType } from '@/types';
 
 interface EditDocumentDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (documentData: { description?: string }) => Promise<void>;
-  document: Document | null;
+  document: DocumentType | null;
 }
 
 // Create a form schema for editing a document

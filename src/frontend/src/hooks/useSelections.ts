@@ -1,9 +1,9 @@
 import { useState } from "react";
-import type { SelectionCreate } from "@/types";
+import type { SelectionCreateType } from "@/types";
 
 export function useSelection(documentId: string) {
-  const [newSelections, setNewSelections] = useState<SelectionCreate[]>([]);
-  const [drawing, setDrawing] = useState<SelectionCreate | null>(null);
+  const [newSelections, setNewSelections] = useState<SelectionCreateType[]>([]);
+  const [drawing, setDrawing] = useState<SelectionCreateType | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
 
   const startDraw = (

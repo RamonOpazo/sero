@@ -2,10 +2,10 @@ import { useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { storePassword } from '@/utils/passwordManager'
-import type { Document } from '@/types'
+import type { DocumentType } from '@/types'
 
 interface PendingFileAction {
-  document: Document
+  document: DocumentType
   fileType: 'original' | 'obfuscated'
   action: 'view' | 'download'
 }
@@ -18,7 +18,7 @@ export function usePasswordProtectedFile(projectId?: string) {
   const [pendingAction, setPendingAction] = useState<PendingFileAction | null>(null)
 
   const requestFileAccess = useCallback((
-    document: Document, 
+    document: DocumentType, 
     fileType: 'original' | 'obfuscated', 
     action: 'view' | 'download'
   ) => {
@@ -96,11 +96,11 @@ export function usePasswordProtectedFile(projectId?: string) {
   }, [])
 
   // Convenience methods for common actions
-  const viewFile = useCallback((document: Document, fileType: 'original' | 'obfuscated' = 'original') => {
+  const viewFile = useCallback((document: DocumentType, fileType: 'original' | 'obfuscated' = 'original') => {
     requestFileAccess(document, fileType, 'view')
   }, [requestFileAccess])
 
-  const downloadFile = useCallback((document: Document, fileType: 'original' | 'obfuscated' = 'original') => {
+  const downloadFile = useCallback((document: DocumentType, fileType: 'original' | 'obfuscated' = 'original') => {
     requestFileAccess(document, fileType, 'download')
   }, [requestFileAccess])
 

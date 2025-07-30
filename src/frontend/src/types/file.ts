@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { UUIDSchema, ISO8601DateTimeSchema } from './base';
-import { FileTypeSchema } from './enums';
+import { FileTypeEnumSchema } from './enums';
 
 // File schemas
 export const FileSchema = z.object({
@@ -8,7 +8,7 @@ export const FileSchema = z.object({
   created_at: ISO8601DateTimeSchema,
   updated_at: ISO8601DateTimeSchema.nullable(),
   file_hash: z.string(),
-  file_type: FileTypeSchema,
+  file_type: FileTypeEnumSchema,
   file_size: z.number().int(),
   mime_type: z.string(),
   data: z.string(), // serialized as truncated string
@@ -18,7 +18,7 @@ export const FileSchema = z.object({
 
 export const FileCreateSchema = z.object({
   file_hash: z.string().max(64),
-  file_type: FileTypeSchema,
+  file_type: FileTypeEnumSchema,
   mime_type: z.string().max(100),
   data: z.any(), // bytes
   salt: z.any().nullable(), // bytes or null
@@ -27,7 +27,7 @@ export const FileCreateSchema = z.object({
 
 export const FileUpdateSchema = z.object({
   file_hash: z.string().max(64).optional(),
-  file_type: FileTypeSchema.optional(),
+  file_type: FileTypeEnumSchema.optional(),
   mime_type: z.string().max(100).optional(),
   data: z.any().optional(), // bytes
   salt: z.any().nullable().optional(), // bytes or null
@@ -56,9 +56,9 @@ export const FileDownloadRequestSchema = z.object({
 });
 
 // Types
-export type File = z.infer<typeof FileSchema>;
-export type FileCreate = z.infer<typeof FileCreateSchema>;
-export type FileUpdate = z.infer<typeof FileUpdateSchema>;
-export type FileUpload = z.infer<typeof FileUploadSchema>;
-export type FileBulkUpload = z.infer<typeof FileBulkUploadSchema>;
-export type FileDownloadRequest = z.infer<typeof FileDownloadRequestSchema>;
+export type FileType = z.infer<typeof FileSchema>;
+export type FileCreateType = z.infer<typeof FileCreateSchema>;
+export type FileUpdateType = z.infer<typeof FileUpdateSchema>;
+export type FileUploadType = z.infer<typeof FileUploadSchema>;
+export type FileBulkUploadType = z.infer<typeof FileBulkUploadSchema>;
+export type FileDownloadRequestType = z.infer<typeof FileDownloadRequestSchema>;

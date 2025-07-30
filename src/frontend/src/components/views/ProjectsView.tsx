@@ -7,7 +7,7 @@ import { CreateProjectDialog } from '@/components/dialogs/CreateProjectDialog'
 import { EditProjectDialog } from '@/components/dialogs/EditProjectDialog'
 import { ConfirmationDialog } from '@/components/dialogs/ConfirmationDialog'
 import { getRandomEasterEgg } from '@/utils/content'
-import type { Project, ProjectCreate } from '@/types'
+import type { ProjectType, ProjectCreateType } from '@/types'
 import {
   Widget,
   WidgetContainer,
@@ -17,14 +17,14 @@ import {
 } from "@/components/atomic/Widget"
 
 export function ProjectsView() {
-  const [projects, setProjects] = useState<Project[]>([])
-  const [selectedProjects, setSelectedProjects] = useState<Project[]>([])
+  const [projects, setProjects] = useState<ProjectType[]>([])
+  const [selectedProjects, setSelectedProjects] = useState<ProjectType[]>([])
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [isSingleDeleteDialogOpen, setIsSingleDeleteDialogOpen] = useState(false)
-  const [projectToDelete, setProjectToDelete] = useState<Project | null>(null)
-  const [projectToEdit, setProjectToEdit] = useState<Project | null>(null)
+  const [projectToDelete, setProjectToDelete] = useState<ProjectType | null>(null)
+  const [projectToEdit, setProjectToEdit] = useState<ProjectType | null>(null)
 
   useEffect(() => {
     // Fetch projects from backend
@@ -48,7 +48,7 @@ export function ProjectsView() {
   }, [])
 
 
-  const handleSelectionChange = useCallback((selectedRows: Project[]) => {
+  const handleSelectionChange = useCallback((selectedRows: ProjectType[]) => {
     setSelectedProjects(selectedRows)
   }, [])
 
@@ -92,7 +92,7 @@ export function ProjectsView() {
     }
   }, [selectedProjects])
 
-  const handleCreateProject = useCallback(async (projectData: ProjectCreate) => {
+  const handleCreateProject = useCallback(async (projectData: ProjectCreateType) => {
     try {
       const response = await fetch('/api/projects', {
         method: 'POST',
@@ -128,7 +128,7 @@ export function ProjectsView() {
     }
   }, [])
 
-  const handleDeleteSingleProject = useCallback((project: Project) => {
+  const handleDeleteSingleProject = useCallback((project: ProjectType) => {
     setProjectToDelete(project)
     setIsSingleDeleteDialogOpen(true)
   }, [])
@@ -167,7 +167,7 @@ export function ProjectsView() {
     }
   }, [projectToDelete])
 
-  const handleEditProject = useCallback((project: Project) => {
+  const handleEditProject = useCallback((project: ProjectType) => {
     setProjectToEdit(project)
     setIsEditDialogOpen(true)
   }, [])
@@ -213,7 +213,7 @@ export function ProjectsView() {
     }
   }, [projectToEdit])
 
-  const handleDownloadObfuscatedFiles = useCallback(async (project: Project) => {
+  const handleDownloadObfuscatedFiles = useCallback(async (project: ProjectType) => {
     // Check if there are any obfuscated files to download
     const obfuscatedCount = (project as any).obfuscated_count || 0
 
@@ -264,14 +264,14 @@ export function ProjectsView() {
 
   // Define columns using our new column builders
   const columns = useMemo(() => [
-    Column.text<Project>('name').sortable().withClass("font-medium").build(),
-    Column.text<Project>('description').header('Description').truncate().build(),
-    Column.badge<Project>('document_count').sortable('Documents').build(),
-    Column.badge<Project>('obfuscated_count').sortable('Obfuscated').build(),
-    Column.status<Project>('status').sortable().build(),
-    Column.date<Project>('created_at').sortable('Created').build(),
-    Column.date<Project>('updated_at').sortable('Updated').build(),
-    Actions.create<Project>()
+    Column.text<ProjectType>('name').sortable().withClass("font-medium").build(),
+    Column.text<ProjectType>('description').header('Description').truncate().build(),
+    Column.badge<ProjectType>('document_count').sortable('Documents').build(),
+    Column.badge<ProjectType>('obfuscated_count').sortable('Obfuscated').build(),
+    Column.status<ProjectType>('status').sortable().build(),
+    Column.date<ProjectType>('created_at').sortable('Created').build(),
+    Column.date<ProjectType>('updated_at').sortable('Updated').build(),
+    Actions.create<ProjectType>()
       .copy(
         (project) => project.id,
         'Copy project ID',

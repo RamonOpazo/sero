@@ -1,12 +1,11 @@
 import { useEffect, useState, useRef, useLayoutEffect } from "react";
 import { Document, Page } from "react-pdf";
 import { toast } from "sonner";
-import { type File as FileType } from "@/types";
+import { type FileType } from "@/types";
 import { getPassword } from "@/utils/passwordManager";
 import { getFileBlob } from "@/lib/api";
 import { useDocumentViewerContext } from "@/context/DocumentViewerContext";
 import { usePDFContext } from "@/context/PDFContext";
-// import { ScrollArea } from "@/components/ui/scroll-area";
 
 type Props = {
   file: FileType | null;
@@ -180,7 +179,10 @@ export default function DocumentLayer({ file }: Props) {
                 pageIndex={currentPage}
                 scale={zoom}
                 onRenderSuccess={handlePageRenderSuccess}
-                className="pdf-page shadow-lg"
+                className="pdf-page shadow-lg pointer-events-none"
+                renderTextLayer={false}
+                renderAnnotationLayer={false}
+                renderForms={false}
               />
             </PageWrapper>
           </Document>

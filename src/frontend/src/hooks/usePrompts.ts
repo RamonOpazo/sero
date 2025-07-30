@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { type Prompt as PromptType } from "@/types";
+import { type PromptType as PromptType } from "@/types";
 
 export function usePrompts(initialPrompts: PromptType[] = []) {
   const [prompts, setPrompts] = useState(initialPrompts);

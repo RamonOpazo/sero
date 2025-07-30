@@ -23,12 +23,12 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2 } from 'lucide-react';
-import type { ProjectCreate } from '@/types';
+import type { ProjectCreateType } from '@/types';
 
 interface CreateProjectDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (projectData: ProjectCreate) => Promise<void>;
+  onSubmit: (projectData: ProjectCreateType) => Promise<void>;
 }
 
 // Simple form schema that matches what we need
@@ -59,7 +59,7 @@ export function CreateProjectDialog({ isOpen, onClose, onSubmit }: CreateProject
   const onFormSubmit = async (data: ProjectFormData) => {
     try {
       // Clean up the data before submitting
-      const submitData: ProjectCreate = {
+      const submitData: ProjectCreateType = {
         name: data.name.trim(),
         contact_name: data.contact_name.trim(),
         contact_email: data.contact_email.trim(),

@@ -3,7 +3,7 @@ import DocumentLayer from "./DocumentLayer";
 import SelectionsLayer from "./SelectionsLayer";
 import InfoLayer from "./InfoLayer";
 import ActionsLayer from "./ActionsLayer";
-import type { Document as DocumentType } from "@/types";
+import type { DocumentType } from "@/types";
 
 type Props = { document: DocumentType };
 

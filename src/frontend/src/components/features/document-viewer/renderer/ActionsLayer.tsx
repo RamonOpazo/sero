@@ -114,9 +114,7 @@ function ActionsLayerContainer({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div
-      id="__actions_layer__"
-    >
+    <div id="__actions_layer__">
       {/* Toggle Button */}
       <div className="absolute top-0 right-0 z-1000 bg-muted/80 rounded-md shadow-md">
         <Button

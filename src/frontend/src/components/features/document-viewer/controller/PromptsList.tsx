@@ -1,7 +1,7 @@
-import { type Prompt } from "@/types";
+import { type PromptType } from "@/types";
 import { Button } from "@/components/ui/button";
 
-type Props = { prompts: Prompt[] };
+type Props = { prompts: PromptType[] };
 
 export default function PromptList({ prompts }: Props) {
   return (

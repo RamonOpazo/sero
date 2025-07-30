@@ -27,6 +27,6 @@ export const PromptUpdateSchema = z.object({
 });
 
 // Types
-export type Prompt = z.infer<typeof PromptSchema>;
-export type PromptCreate = z.infer<typeof PromptCreateSchema>;
-export type PromptUpdate = z.infer<typeof PromptUpdateSchema>;
+export type PromptType = z.infer<typeof PromptSchema>;
+export type PromptCreateType = z.infer<typeof PromptCreateSchema>;
+export type PromptUpdateType = z.infer<typeof PromptUpdateSchema>;
