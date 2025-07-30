@@ -3,12 +3,18 @@ import { useDocumentViewerContext } from "@/context/DocumentViewerContext";
 import { useSelection } from "@/hooks/useSelections";
 import { cn } from "@/lib/utils";
 import type { Document as DocumentType, SelectionCreate as SelectionCreateType } from "@/types";
+import { useLayoutEffect, useState, useEffect } from "react";
 
 type Props = { document: DocumentType };
 
+interface PageRect {
+  pageIndex: number;
+  rect: DOMRect;
+}
+
 export default function SelectionsLayer({ document }: Props) {
   const { pageRefs, isRendered } = usePDFContext();
-  const { mode } = useDocumentViewerContext();
+  const { mode, isPanning, documentContainer, showSelections } = useDocumentViewerContext();
   const {
     newSelections,
     drawing,
@@ -17,7 +23,46 @@ export default function SelectionsLayer({ document }: Props) {
     endDraw,
     deleteNewSelection,
   } = useSelection(document.id);
-  
+
+  const [pageRects, setPageRects] = useState<PageRect[]>([]);
+
+  useLayoutEffect(() => {
+    if (isRendered && !isPanning && showSelections) {
+      const newRects: PageRect[] = [];
+      pageRefs.current.forEach((ref, pageIndex) => {
+        if (ref) {
+          newRects.push({
+            pageIndex,
+            rect: ref.getBoundingClientRect(),
+          });
+        }
+      });
+      setPageRects(newRects);
+    }
+  }, [isRendered, isPanning, showSelections, pageRefs]);
+
+  useEffect(() => {
+    if (documentContainer) {
+      const handleTransitionEnd = () => {
+        if (!isPanning) {
+          const newRects: PageRect[] = [];
+          pageRefs.current.forEach((ref, pageIndex) => {
+            if (ref) {
+              newRects.push({
+                pageIndex,
+                rect: ref.getBoundingClientRect(),
+              });
+            }
+          });
+          setPageRects(newRects);
+        }
+      };
+      documentContainer.addEventListener("transitionend", handleTransitionEnd);
+      return () => {
+        documentContainer.removeEventListener("transitionend", handleTransitionEnd);
+      };
+    }
+  }, [documentContainer, isPanning, pageRefs]);
 
   const renderBox = (
     sel: SelectionCreateType,
@@ -58,9 +103,7 @@ export default function SelectionsLayer({ document }: Props) {
       id="__selection_layer__"
       className="fixed inset-0 z-50 pointer-events-none"
     >
-      {isRendered && Array.from(pageRefs.current.entries()).map(([pageIndex, ref]) => {
-        if (!ref) return null;
-
+      {isRendered && !isPanning && showSelections && pageRects.map(({ pageIndex, rect }) => {
         const pageExisting = document.selections.filter(
           s => s.page_number === pageIndex + 1
         );
@@ -70,7 +113,8 @@ export default function SelectionsLayer({ document }: Props) {
         const drawingThisPage =
           drawing?.page_number === pageIndex + 1 ? drawing : null;
 
-        const rect = ref.getBoundingClientRect();
+        const ref = pageRefs.current.get(pageIndex);
+        if (!ref) return null; // Should not happen if pageRects is correctly populated
 
         return (
           <div
@@ -80,8 +124,8 @@ export default function SelectionsLayer({ document }: Props) {
               drawingThisPage && "user-select-none"
             )}
             style={{
-              top: rect.top + window.scrollY,
-              left: rect.left + window.scrollX,
+              top: rect.top,
+              left: rect.left,
               width: rect.width,
               height: rect.height,
               pointerEvents: mode === "select" ? "auto" : "none",

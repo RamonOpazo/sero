@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Bolt } from "lucide-react";
-import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Hand, MousePointerClick } from "lucide-react";
+import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Hand, MousePointerClick, Eye, EyeOff } from "lucide-react";
 import { useDocumentViewerContext } from "@/context/DocumentViewerContext";
 
 export default function ActionsLayer() {
@@ -12,7 +12,21 @@ export default function ActionsLayer() {
     setCurrentPage,
     setZoom,
     setMode,
+    showSelections,
+    setShowSelections,
+    // userPreferredShowSelections,
   } = useDocumentViewerContext();
+
+  const handleModeToggle = () => {
+    if (mode === "pan") {
+      setMode("select");
+      setShowSelections(true);
+    } else {
+      setMode("pan");
+      setShowSelections(false);
+    }
+  };
+
   return (
     <ActionsLayerContainer>
       {/* Pagination */}
@@ -56,10 +70,19 @@ export default function ActionsLayer() {
       <Button
         variant="ghost"
         size="icon"
-        onClick={() => setMode(mode === "pan" ? "select" : "pan")}
+        onClick={handleModeToggle}
         className="ml-2"
       >
         {mode === "pan" ? <Hand /> : <MousePointerClick />}
+      </Button>
+
+      {/* Selections visibility toggle */}
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => setShowSelections(prev => !prev)}
+      >
+        {showSelections ? <Eye /> : <EyeOff />}
       </Button>
     </ActionsLayerContainer>
   );

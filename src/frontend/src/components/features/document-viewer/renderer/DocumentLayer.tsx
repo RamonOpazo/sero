@@ -21,6 +21,9 @@ export default function DocumentLayer({ file }: Props) {
     mode,
     pan,
     setPan,
+    isPanning,
+    setIsPanning,
+    setDocumentContainer,
   } = useDocumentViewerContext();
 
   const { registerPage, triggerUpdate, setIsRendered } = usePDFContext();
@@ -30,9 +33,15 @@ export default function DocumentLayer({ file }: Props) {
 
   const documentRef = useRef<HTMLDivElement>(null);
   const animationFrameRef = useRef<number | null>(null);
+  const documentInnerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (documentInnerRef.current) {
+      setDocumentContainer(documentInnerRef.current);
+    }
+  }, [setDocumentContainer]);
 
   // Panning state
-  const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
 
   // Fetch and decrypt the file blob
