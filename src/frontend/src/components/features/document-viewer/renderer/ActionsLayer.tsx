@@ -76,9 +76,11 @@ function ActionsLayerContainer({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <>
+    <div
+      id="__actions_layer__"
+    >
       {/* Toggle Button */}
-      <div className="absolute top-2 right-2 z-10 bg-muted/80 rounded-md shadow-md">
+      <div className="absolute top-2 right-2 z-1000 bg-muted/80 rounded-md shadow-md">
         <Button
           variant="ghost"
           size="icon"
@@ -101,7 +103,7 @@ function ActionsLayerContainer({ children }: { children: React.ReactNode }) {
 
       {/* Actions Panel */}
       <div className={`
-        absolute top-2 left-1/2 -translate-x-1/2 z-20 bg-muted/80 rounded-md
+        absolute top-2 left-1/2 -translate-x-1/2 z-1001 bg-muted/80 rounded-md
         transition-all duration-300 ease-in-out
         ${visible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4 pointer-events-none"}
       `}>
@@ -109,6 +111,6 @@ function ActionsLayerContainer({ children }: { children: React.ReactNode }) {
           {children}
         </div>
       </div>
-    </>
+    </div>
   );
 }

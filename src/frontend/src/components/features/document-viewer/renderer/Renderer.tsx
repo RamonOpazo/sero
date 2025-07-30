@@ -10,11 +10,13 @@ type Props = { document: DocumentType };
 export default function Renderer({ document }: Props) {
 
   return (
-    <PDFProvider>
-      <SelectionsLayer document={document} />
-      <InfoLayer document={document} />
-      <ActionsLayer />
-      <DocumentLayer file={document.original_file} />
-    </PDFProvider>
+    <div className="relative w-full h-full">
+      <PDFProvider>
+        <SelectionsLayer document={document} />
+        <InfoLayer document={document} />
+        <ActionsLayer />
+        <DocumentLayer file={document.original_file} />
+      </PDFProvider>
+    </div>
   );
 }

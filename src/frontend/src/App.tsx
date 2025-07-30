@@ -1,7 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
-import { ThemeProvider } from './components/providers'
-import { Layout } from './components/views/Layout'
-import { HomeView, ProjectsView, DocumentsView, FilesView } from './components/views'
+import { ThemeProvider } from '@/context'
+import { Layout, HomeView, ProjectsView, DocumentsView, FilesView } from './components/views'
 
 function App() {
   return (

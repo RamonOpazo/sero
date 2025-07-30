@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { useColumnNavigation } from './hooks/useColumnNavigation'
+import { useColumnNavigation } from '@/hooks/useColumnNavigation'
 import './data-table.css'
 
 interface DataTableContentProps<TData> {

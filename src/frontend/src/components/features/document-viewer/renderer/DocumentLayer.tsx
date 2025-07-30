@@ -20,26 +20,12 @@ export default function DocumentLayer({ file }: Props) {
     setNumPages,
   } = useDocumentViewerContext();
 
-  const { registerPage, setIsRendered } = usePDFContext();
+  const { registerPage, triggerUpdate, setIsRendered } = usePDFContext();
 
   const [blob, setBlob] = useState<Blob | null>(null);
   const [loading, setLoading] = useState(false);
-  const [pageHeight, setPageHeight] = useState<number>(window.innerHeight);
 
   const documentRef = useRef<HTMLDivElement>(null);
-
-  // Resize logic to calculate page height based on available screen
-  const calculateAvailableHeight = () => {
-    const nav = document.querySelector("header");
-    const navHeight = nav?.offsetHeight || 0;
-    setPageHeight(window.innerHeight - navHeight * 2);
-  };
-
-  useEffect(() => {
-    calculateAvailableHeight();
-    window.addEventListener("resize", calculateAvailableHeight);
-    return () => window.removeEventListener("resize", calculateAvailableHeight);
-  }, []);
 
   // Fetch and decrypt the file blob
   useEffect(() => {
@@ -86,10 +72,11 @@ export default function DocumentLayer({ file }: Props) {
     setIsRendered(true);
   };
 
-  // When the current page changes, we are no longer "rendered" until the new page is done.
+  // When the current page or zoom changes, we are no longer "rendered" until the new page is done.
   useEffect(() => {
     setIsRendered(false);
-  }, [currentPage]);
+    triggerUpdate();
+  }, [currentPage, zoom]);
 
   if (!file) return <div className="text-red-500">No file selected</div>;
   if (loading) return <div className="text-yellow-500">Loading PDF...</div>;
@@ -99,7 +86,7 @@ export default function DocumentLayer({ file }: Props) {
     <div
       id="__document_layer__"
       ref={documentRef}
-      className="relative pointer-events-none select-none"
+      className="relative pointer-events-none select-none w-full h-full"
     >
       <ScrollArea className="w-full h-full">
         <Document
@@ -115,7 +102,7 @@ export default function DocumentLayer({ file }: Props) {
           >
             <Page
               pageNumber={currentPage + 1}
-              height={pageHeight * zoom}
+              scale={zoom}
               onRenderSuccess={handlePageRenderSuccess}
             />
           </PageWrapper>

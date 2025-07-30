@@ -7,7 +7,7 @@ import {
 import { Toaster } from '@/components/ui/sonner'
 import { Separator } from "@/components/ui/separator"
 import { AppSidebar } from "@/components/views/AppSidebar"
-import { Breadcrumbs } from "@/components/features/Breadcrumbs"
+import { Breadcrumbs } from "@/components/features/breadcrumbs/Breadcrumbs"
 import { ThemeToggle } from "../atomic"
 
 interface LayoutProps {

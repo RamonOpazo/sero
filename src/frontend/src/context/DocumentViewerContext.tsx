@@ -1,5 +1,5 @@
 import { createContext, useContext } from "react";
-import { useDocumentViewerState } from "@/components/features/document-viewer/hooks/useDocumentViewerState";
+import { useDocumentViewerState } from "@/hooks/useDocumentViewerState";
 
 const DocumentViewerContext = createContext<ReturnType<typeof useDocumentViewerState> | null>(null);
 
@@ -13,7 +13,7 @@ export const DocumentViewerProvider = ({ children }: { children: React.ReactNode
 };
 
 export const useDocumentViewerContext = () => {
-  const ctx = useContext(DocumentViewerContext);
-  if (!ctx) throw new Error("useDocumentViewerContext must be used within a DocumentViewerProvider");
-  return ctx;
+  const context = useContext(DocumentViewerContext);
+  if (!context) throw new Error("useDocumentViewerContext must be used within a DocumentViewerProvider");
+  return context;
 };

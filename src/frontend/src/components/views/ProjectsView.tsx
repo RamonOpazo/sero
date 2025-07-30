@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useState, useMemo } from 'react'
-// import { Plus, Trash2, Eye } from 'lucide-react'
 import { Plus, Eye } from 'lucide-react'
 import { toast } from 'sonner'
-// import { Button } from '@/components/ui/button'
 import { DataTable, Column, Actions } from '@/components/features/data-table'
 import { EmptyState } from '@/components/atomic/EmptyState'
 import { CreateProjectDialog } from '@/components/dialogs/CreateProjectDialog'
@@ -12,7 +10,6 @@ import { getRandomEasterEgg } from '@/utils/content'
 import type { Project, ProjectCreate } from '@/types'
 import {
   Widget,
-  // WidgetContent,
   WidgetDescription,
   WidgetHeader,
   WidgetTitle,
