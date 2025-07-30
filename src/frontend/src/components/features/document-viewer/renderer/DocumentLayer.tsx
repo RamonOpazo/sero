@@ -18,6 +18,9 @@ export default function DocumentLayer({ file }: Props) {
     currentPage,
     setCurrentPage,
     setNumPages,
+    mode,
+    pan,
+    setPan,
   } = useDocumentViewerContext();
 
   const { registerPage, triggerUpdate, setIsRendered } = usePDFContext();
@@ -26,6 +29,11 @@ export default function DocumentLayer({ file }: Props) {
   const [loading, setLoading] = useState(false);
 
   const documentRef = useRef<HTMLDivElement>(null);
+  const animationFrameRef = useRef<number | null>(null);
+
+  // Panning state
+  const [isPanning, setIsPanning] = useState(false);
+  const [panStart, setPanStart] = useState({ x: 0, y: 0 });
 
   // Fetch and decrypt the file blob
   useEffect(() => {
@@ -33,6 +41,7 @@ export default function DocumentLayer({ file }: Props) {
       setBlob(null);
       return;
     }
+    setPan({ x: 0, y: 0 });
 
     const fetchBlob = async () => {
       setIsRendered(false);
@@ -61,7 +70,7 @@ export default function DocumentLayer({ file }: Props) {
     };
 
     fetchBlob();
-  }, [file]);
+  }, [file, setCurrentPage]);
 
   const handleLoadSuccess = ({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
@@ -76,16 +85,67 @@ export default function DocumentLayer({ file }: Props) {
   useEffect(() => {
     setIsRendered(false);
     triggerUpdate();
-  }, [currentPage, zoom]);
+  }, [currentPage, zoom, triggerUpdate, setIsRendered]);
+
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (mode !== "pan") return;
+    e.preventDefault();
+    setIsPanning(true);
+    setPanStart({
+      x: e.clientX - pan.x,
+      y: e.clientY - pan.y,
+    });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (mode !== "pan" || !isPanning) return;
+    e.preventDefault();
+
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+    }
+
+    animationFrameRef.current = requestAnimationFrame(() => {
+      setPan({
+        x: e.clientX - panStart.x,
+        y: e.clientY - panStart.y,
+      });
+    });
+  };
+
+  const handleMouseUp = () => {
+    if (mode !== "pan") return;
+    setIsPanning(false);
+  };
+
+  const getCursor = () => {
+    if (mode !== 'pan') return 'default';
+    return isPanning ? 'grabbing' : 'grab';
+  }
 
   if (!file) return <div className="text-red-500">No file selected</div>;
   if (loading) return <div className="text-yellow-500">Loading PDF...</div>;
   if (!blob) return <div className="text-red-500">Unable to load file</div>;
 
   return (
-    <div id="__document_layer__" ref={documentRef} className="relative h-full w-full">
+    <div
+      id="__document_layer__"
+      ref={documentRef}
+      className="relative h-full w-full overflow-hidden"
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseUp}
+      style={{ cursor: getCursor() }}
+    >
       {/* <ScrollArea ref={documentRef}> */}
-        <div className="absolute top-[50%] left-[50%] -translate-x-1/2 -translate-y-1/2">
+        <div
+          className="absolute top-[50%] left-[50%]"
+          style={{
+            transform: `translate(-50%, -50%) translate(${pan.x}px, ${pan.y}px)`,
+            transition: isPanning ? 'none' : 'transform 0.1s ease-out',
+          }}
+        >
           <Document
             file={blob}
             onLoadSuccess={handleLoadSuccess}

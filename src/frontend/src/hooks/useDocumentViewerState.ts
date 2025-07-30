@@ -5,6 +5,7 @@ export function useDocumentViewerState() {
   const [currentPage, setCurrentPage] = useState(1);
   const [mode, setMode] = useState<"pan" | "select">("select");
   const [numPages, setNumPages] = useState(0);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
 
   return {
     numPages,
@@ -15,5 +16,7 @@ export function useDocumentViewerState() {
     setZoom,
     mode,
     setMode,
+    pan,
+    setPan,
   };
 }
