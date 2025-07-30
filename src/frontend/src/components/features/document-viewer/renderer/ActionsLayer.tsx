@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Bolt } from "lucide-react";
-import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Hand, MousePointerClick, Eye, EyeOff } from "lucide-react";
+import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Hand, MousePointerClick, Eye, EyeOff, Scan } from "lucide-react";
 import { useDocumentViewerContext } from "@/context/DocumentViewerContext";
 
 export default function ActionsLayer() {
@@ -14,7 +14,7 @@ export default function ActionsLayer() {
     setMode,
     showSelections,
     setShowSelections,
-    // userPreferredShowSelections,
+    resetView,
   } = useDocumentViewerContext();
 
   const handleModeToggle = () => {
@@ -26,6 +26,12 @@ export default function ActionsLayer() {
       setShowSelections(false);
     }
   };
+
+  const handleResetView = () => {
+    resetView()
+    setMode("pan");
+    setShowSelections(false);
+  }
 
   return (
     <ActionsLayerContainer>
@@ -58,6 +64,15 @@ export default function ActionsLayer() {
       >
         <ZoomIn />
       </Button>
+
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={handleResetView}
+      >
+        <Scan />
+      </Button>
+
       <Button
         variant="ghost"
         size="icon"

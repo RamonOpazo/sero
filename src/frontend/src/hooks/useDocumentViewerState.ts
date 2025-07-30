@@ -16,6 +16,11 @@ export function useDocumentViewerState() {
     setUserPreferredShowSelections(value);
   };
 
+  const resetView = () => {
+    setPan({ x: 0, y: 0 });
+    setZoom(1);
+  };
+
   return {
     numPages,
     setNumPages,
@@ -34,5 +39,6 @@ export function useDocumentViewerState() {
     showSelections,
     setShowSelections,
     userPreferredShowSelections,
+    resetView,
   };
 }

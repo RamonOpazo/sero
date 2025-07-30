@@ -147,8 +147,17 @@ export default function DocumentLayer({ file }: Props) {
       onMouseLeave={handleMouseUp}
       style={{ cursor: getCursor() }}
     >
+      <div
+        className="absolute inset-0"
+        style={{
+          background: `radial-gradient(circle at 2px 2px, color-mix(in srgb, var(--ring) 25%, transparent) 2px, transparent 0px)`,
+          backgroundSize: `${25 * zoom}px ${25 * zoom}px`,
+          backgroundPosition: `${pan.x}px ${pan.y}px`,
+        }}
+      />
       {/* <ScrollArea ref={documentRef}> */}
         <div
+          ref={documentInnerRef}
           className="absolute top-[50%] left-[50%]"
           style={{
             transform: `translate(-50%, -50%) translate(${pan.x}px, ${pan.y}px)`,
