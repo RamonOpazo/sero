@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, memo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -129,11 +129,16 @@ export function RefactorFileViewer({ fileType }: RefactorFileViewerProps) {
     setUserCancelledPassword(false);
   }, [userCancelledPassword]);
 
-  // Create a document object compatible with DocumentViewer
+  // Create a document object compatible with DocumentViewer with more stable references
   const documentForViewer = useMemo((): DocumentType | null => {
     if (!document || !currentFileData) {
       return null;
     }
+
+    // Create stable arrays and objects to prevent reference changes
+    const stableFiles = [currentFileData.file];
+    const stablePrompts = currentFileData.prompts || [];
+    const stableSelections = currentFileData.selections || [];
 
     // Create a stable object to avoid unnecessary re-renders
     const viewerDocument: DocumentType = {
@@ -143,15 +148,29 @@ export function RefactorFileViewer({ fileType }: RefactorFileViewerProps) {
       created_at: document.created_at,
       updated_at: document.updated_at,
       user_id: document.user_id,
-      files: [currentFileData.file],
+      files: stableFiles,
       original_file: fileType === 'original' ? currentFileData.file : null,
       redacted_file: fileType === 'redacted' ? currentFileData.file : null,
-      prompts: currentFileData.prompts,
-      selections: currentFileData.selections
+      prompts: stablePrompts,
+      selections: stableSelections
     };
     
     return viewerDocument;
-  }, [document, currentFileData, fileType]);
+  }, [
+    // More specific dependencies
+    document?.id,
+    document?.name, 
+    document?.description,
+    document?.created_at,
+    document?.updated_at,
+    document?.user_id,
+    currentFileData?.file?.id,
+    currentFileData?.file?.file_hash,
+    currentFileData?.file?.file_size,
+    currentFileData?.prompts?.length,
+    currentFileData?.selections?.length,
+    fileType
+  ]);
 
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
@@ -327,7 +346,10 @@ export function RefactorFileViewer({ fileType }: RefactorFileViewerProps) {
               <TabsContent value="preview" className="flex-1 p-0 m-0">
                 {documentForViewer ? (
                   <div className="h-full p-4">
-                    <MemoizedDocumentViewer document={documentForViewer} />
+                    <DocumentViewer 
+                      key={`${documentId}-${fileType}-${currentFileData?.file?.id}`}
+                      document={documentForViewer} 
+                    />
                   </div>
                 ) : (
                   <CardContent className="flex-1 p-0 h-full">
@@ -403,22 +425,3 @@ export function RefactorFileViewer({ fileType }: RefactorFileViewerProps) {
     </div>
   );
 }
-
-// Memoized DocumentViewer to prevent unnecessary re-renders
-const MemoizedDocumentViewer = memo(DocumentViewer, (prevProps, nextProps) => {
-  // Custom comparison function to check if document props are actually different
-  const prevDoc = prevProps.document;
-  const nextDoc = nextProps.document;
-  
-  if (!prevDoc && !nextDoc) return true;
-  if (!prevDoc || !nextDoc) return false;
-  
-  // Compare relevant fields that affect rendering
-  return (
-    prevDoc.id === nextDoc.id &&
-    prevDoc.name === nextDoc.name &&
-    prevDoc.files?.length === nextDoc.files?.length &&
-    prevDoc.files?.[0]?.id === nextDoc.files?.[0]?.id &&
-    prevDoc.files?.[0]?.file_hash === nextDoc.files?.[0]?.file_hash
-  );
-});

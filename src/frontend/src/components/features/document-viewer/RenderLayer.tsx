@@ -35,6 +35,10 @@ export default function DocumentLayer({ document }: Props) {
   const documentRef = useRef<HTMLDivElement>(null);
   const animationFrameRef = useRef<number | null>(null);
   const documentInnerRef = useRef<HTMLDivElement>(null);
+  
+  // Stable reference for the PDF file object to prevent React-PDF warnings
+  const pdfFileRef = useRef<{ data: ArrayBuffer } | null>(null);
+  const lastArrayBufferRef = useRef<ArrayBuffer | null>(null);
 
   useEffect(() => {
     if (documentInnerRef.current) {
@@ -91,7 +95,13 @@ export default function DocumentLayer({ document }: Props) {
     };
 
     fetchBlob();
-  }, [document, isViewingProcessedDocument, setCurrentPage, setPan]);
+  }, [
+    // Only re-run when the actual file changes, not when the document object reference changes
+    isViewingProcessedDocument ? document.redacted_file?.id : document.original_file?.id,
+    isViewingProcessedDocument,
+    setCurrentPage, 
+    setPan
+  ]);
 
   // Convert blob to ArrayBuffer
   useEffect(() => {
@@ -114,10 +124,22 @@ export default function DocumentLayer({ document }: Props) {
     convertBlobToArrayBuffer();
   }, [blob]);
 
-  // Memoize the PDF file object to prevent unnecessary re-renders
+  // Create a stable PDF file object using useRef to prevent React-PDF warnings
+  // This ensures the same object reference is reused when the ArrayBuffer hasn't changed
   const pdfFile = useMemo(() => {
-    if (!arrayBuffer) return null;
-    return { data: arrayBuffer };
+    if (!arrayBuffer) {
+      pdfFileRef.current = null;
+      lastArrayBufferRef.current = null;
+      return null;
+    }
+    
+    // Only create a new file object if the ArrayBuffer has actually changed
+    if (lastArrayBufferRef.current !== arrayBuffer) {
+      pdfFileRef.current = { data: arrayBuffer };
+      lastArrayBufferRef.current = arrayBuffer;
+    }
+    
+    return pdfFileRef.current;
   }, [arrayBuffer]);
 
   const handleLoadSuccess = ({ numPages }: { numPages: number }) => {
