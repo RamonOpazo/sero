@@ -22,15 +22,17 @@ const segmentToLabelMap: { [key: string]: string } = {
   'documents': 'Documents',
   'document': 'Document',
   'files': 'Files',
+  'original-file': 'Original File',
+  'redacted-file': 'Redacted File',
 }
 
-// Define app routes as they are in App.tsx
+// Define app routes as they are in RefactorApp.tsx
 const appRoutes = [
   '/',
   '/projects',
   '/projects/:projectId/documents',
-  '/projects/:projectId/documents/:documentId/files',
-  '/projects/:projectId/documents/:documentId/files/:fileId',
+  '/projects/:projectId/documents/:documentId/original-file',
+  '/projects/:projectId/documents/:documentId/redacted-file',
 ];
 
 export function Breadcrumbs() {
