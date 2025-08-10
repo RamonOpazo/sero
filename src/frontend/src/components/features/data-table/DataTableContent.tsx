@@ -1,5 +1,4 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { type Table, type Cell } from '@tanstack/react-table'
 import { flexRender } from '@tanstack/react-table'
 import { Button } from '@/components/ui/button'
 import {
@@ -11,6 +10,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { useColumnNavigation } from '@/hooks/useColumnNavigation'
+import type { Table, Cell } from '@tanstack/react-table'
 import './data-table.css'
 
 interface DataTableContentProps<TData> {
@@ -50,7 +50,7 @@ export function DataTableContent<TData>({ table }: DataTableContentProps<TData>)
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id}>
               {selectColumn && (
-                <TableHead className="sticky left-0 z-20 w-[2rem] text-center">
+                <TableHead className="sticky left-0 z-20 text-left pl-[1rem]" style={{maxWidth: "2rem", minWidth: "2rem", width: "2rem"}}>
                   {flexRender(selectColumn.column.columnDef.header, selectColumn.getContext())}
                 </TableHead>
               )}
@@ -65,7 +65,7 @@ export function DataTableContent<TData>({ table }: DataTableContentProps<TData>)
               ))}
 
               {(needsNavigation || actionsColumn) && (
-                <TableHead className="sticky right-0 z-20 w-[4rem] text-center">
+                <TableHead className="sticky right-0 z-20 text-right" style={{maxWidth: "4rem", minWidth: "4rem", width: "4rem"}}>
                   {needsNavigation && (
                     <div className="flex items-center justify-center gap-2">
                       <Button
@@ -106,11 +106,11 @@ export function DataTableContent<TData>({ table }: DataTableContentProps<TData>)
               return (
                 <TableRow
                   key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
+                  data-state={hasSelectColumn && row.getIsSelected() && "selected"}
                   className="hover:bg-muted/50 transition-colors"
                 >
                   {selectCell && (
-                    <TableCell className="sticky left-0 z-10 w-[2rem] text-center">
+                    <TableCell className="sticky left-0 z-10 text-left pl-[1rem]" style={{maxWidth: "2rem", minWidth: "2rem", width: "2rem"}}>
                       {flexRender(selectCell.column.columnDef.cell, selectCell.getContext())}
                     </TableCell>
                   )}
@@ -125,7 +125,7 @@ export function DataTableContent<TData>({ table }: DataTableContentProps<TData>)
                   ))}
 
                   {(needsNavigation || actionsCell) && (
-                    <TableCell className="sticky right-0 z-10 w-[4rem] text-center">
+                    <TableCell className="sticky right-0 z-10 text-right" style={{maxWidth: "4rem", minWidth: "4rem", width: "4rem"}}>
                       {actionsCell && (
                         <>
                           {flexRender(actionsCell.column.columnDef.cell, actionsCell.getContext())}

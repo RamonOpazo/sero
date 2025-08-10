@@ -1,7 +1,9 @@
 import { api } from "@/lib/axios"
-import { FileDownloadRequestSchema } from "@/types";
+import { FileDownloadRequestSchema, type ApiResponse } from "@/types";
 import type {
   ProjectType,
+  ProjectCreateType,
+  ProjectUpdateType,
   ProjectShallowType,
   ProjectSummaryType,
   DocumentType,
@@ -9,53 +11,60 @@ import type {
   DocumentSummaryType,
   FileDownloadRequestType,
 } from "@/types";
+import { type Result } from "@/lib/result";
 
-export const getProjectById = async (id: string): Promise<ProjectType> => {
-  const res = await api.get(`/projects/id/summary/${id}`)
-  return res.data as ProjectType
+export const getProjectById = async (id: string): Promise<Result<ProjectType, unknown>> => {
+  return await api.safe.get(`/projects/id/summary/${id}`)
 }
 
-export const getProjectList = async (): Promise<ProjectType[]> => {
-  const res = await api.get(`/projects`)
-  return res.data as ProjectType[]
+export const deleteProjectById = async (id: string): Promise<Result<ApiResponse, unknown>> => {
+  return api.safe.delete(`/projects/id/${id}`)
 }
 
-export const getShallowProjectList = async (): Promise<ProjectShallowType[]> => {
-  const res = await api.get(`/projects/shallow`)
-  return res.data as ProjectShallowType[]
+export const createProject = async (data: ProjectCreateType): Promise<Result<ProjectType, unknown>> => {
+  return api.safe.post(`/projects`, data)
 }
 
-export const getProjectSummary = async (): Promise<ProjectSummaryType[]> => {
-  const res = await api.get(`/projects/summary`)
-  return res.data as ProjectSummaryType[]
+export const updateProject = async (id: string, data: ProjectUpdateType): Promise<Result<ProjectType, unknown>> => {
+  return api.safe.put(`/projects/id/${id}`, data)
 }
 
-export const getDocumentById = async (id: string): Promise<DocumentType> => {
-  const res = await api.get(`/documents/id/${id}`)
-  return res.data as DocumentType
+export const getProjectList = async (): Promise<Result<ProjectType[], unknown>> => {
+  return api.safe.get(`/projects`)
 }
 
-export const getDocumentList = async (): Promise<DocumentType[]> => {
-  const res = await api.get(`/projects`)
-  return res.data as DocumentType[]
+export const getShallowProjectList = async (): Promise<Result<ProjectShallowType[], unknown>> => {
+  return api.safe.get(`/projects/shallow`)
 }
 
-export const getShallowDocumentList = async (): Promise<DocumentShallowType[]> => {
-  const res = await api.get(`/projects/shallow`)
-  return res.data as DocumentShallowType[]
+export const getProjectSummary = async (): Promise<Result<ProjectSummaryType[], unknown>> => {
+  return api.safe.get(`/projects/summary`)
 }
 
-export const getDocumentSummary = async (): Promise<DocumentSummaryType[]> => {
-  const res = await api.get(`/projects/summary`)
-  return res.data as DocumentSummaryType[]
+export const getDocumentById = async (id: string): Promise<Result<DocumentType, unknown>> => {
+  return api.safe.get(`/documents/id/${id}`)
 }
 
-export const getFileBlob = async (input: FileDownloadRequestType): Promise<Blob> => {
+export const getDocumentList = async (): Promise<Result<DocumentType[], unknown>> => {
+  return api.safe.get(`/projects`)
+}
+
+export const getShallowDocumentList = async (): Promise<Result<DocumentShallowType[], unknown>> => {
+  return api.safe.get(`/projects/shallow`)
+}
+
+export const getDocumentSummary = async (): Promise<Result<DocumentSummaryType[], unknown>> => {
+  return api.safe.get(`/projects/summary`)
+}
+
+export const deleteFileById = async (id: string): Promise<Result<ApiResponse, unknown>> => {
+  return api.safe.delete(`/api/files/id/${id}`)
+}
+
+export const getFileBlob = async (input: FileDownloadRequestType): Promise<Result<Blob, unknown>> => {
   const { file_id, password, stream } = FileDownloadRequestSchema.parse(input);
-  const res = await api.get(`/files/id/${file_id}/download`,{
+  return api.safe.get(`/files/id/${file_id}/download`, {
     params: { password, stream },
     responseType: "blob",
   });
-
-  return res.data as Blob
 };

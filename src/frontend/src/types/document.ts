@@ -29,10 +29,14 @@ export const DocumentShallowSchema = z.object({
   description: z.string().nullable(),
   project_id: UUIDSchema,
   tags: z.array(z.string()),
-  prompt_ids: z.array(UUIDSchema),
-  selection_ids: z.array(UUIDSchema),
-  original_file_id: UUIDSchema, // computed field
-  redacted_file_id: UUIDSchema, // computed field
+  
+  // Metadata about next level without loading full data
+  file_count: z.number().int(),
+  prompt_count: z.number().int(),
+  selection_count: z.number().int(),
+  has_original_file: z.boolean(),
+  has_redacted_file: z.boolean(),
+  is_processed: z.boolean(),
 });
 
 export const DocumentCreateSchema = z.object({

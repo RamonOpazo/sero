@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import {
   Dialog,
-  DialogOverlay,
   DialogContent,
   DialogTitle,
   DialogFooter,
@@ -32,6 +31,12 @@ export function PasswordDialog({ isOpen, onClose, onConfirm, error, isLoading }:
     onClose()
   }
 
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      handleClose()
+    }
+  }
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !isLoading) {
       handleConfirm()
@@ -39,8 +44,7 @@ export function PasswordDialog({ isOpen, onClose, onConfirm, error, isLoading }:
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogOverlay />
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent>
         <DialogTitle>Enter Password</DialogTitle>
         <div className="space-y-2">
@@ -51,6 +55,7 @@ export function PasswordDialog({ isOpen, onClose, onConfirm, error, isLoading }:
             onChange={(e) => setPassword(e.target.value)}
             onKeyDown={handleKeyDown}
             disabled={isLoading}
+            autoFocus
           />
           {error && (
             <p className="text-sm text-destructive">{error}</p>

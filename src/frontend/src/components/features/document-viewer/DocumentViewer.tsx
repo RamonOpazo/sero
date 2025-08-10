@@ -1,8 +1,8 @@
 import { DocumentViewerProvider } from "@/context/DocumentViewerContext";
 import { PDFProvider } from "@/context/PDFContext";
-import Renderer from "./renderer/Renderer";
-import Controller from "./controller/Controller";
-import { WidgetContainer, Widget, WidgetBody } from "@/components/atomic/Widget";
+import Renderer from "./Layers";
+import Controller from "./Controls";
+import { WidgetContainer, Widget, WidgetBody } from "@/components/shared/Widget";
 import { type DocumentType } from "@/types";
 
 type DocumentViewerProps = {
@@ -10,6 +10,9 @@ type DocumentViewerProps = {
 };
 
 export default function DocumentViewer({ document }: DocumentViewerProps) {
+  if (!document) {
+    return <div>Document not found</div>;
+  }
 
   return (
     <DocumentViewerProvider>

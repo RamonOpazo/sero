@@ -94,7 +94,7 @@ export function useDataTable<TData, TValue>({
       sorting: enableSorting ? sorting : undefined,
       columnFilters: enableFiltering ? columnFilters : undefined,
       columnVisibility: enableColumnVisibility ? columnVisibility : undefined,
-      rowSelection: enableRowSelection ? rowSelection : undefined,
+      rowSelection: enableRowSelection ? rowSelection : {},
     },
     initialState: {
       pagination: {

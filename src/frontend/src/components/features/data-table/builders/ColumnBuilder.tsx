@@ -5,6 +5,8 @@ import { Badge } from '@/components/ui/badge'
 
 // Utility function for date formatting
 const formatDate = (dateString: string) => {
+  if (!dateString) return "-"
+  
   try {
     const date = new Date(dateString)
     const now = new Date()
@@ -78,6 +80,9 @@ class ColumnBuilder<TData, TValue = unknown> {
     const builder = new ColumnBuilder<TData, string>(accessor)
     builder.columnDef.cell = ({ row }) => {
       const status = row.getValue(accessor) as string
+      if (typeof status !== 'string' || !status) {
+        return <Badge variant="outline">Unknown</Badge>
+      }
       const colorClass = statusColors[status as keyof typeof statusColors] || statusColors.error
       
       return (
@@ -146,15 +151,25 @@ class ColumnBuilder<TData, TValue = unknown> {
     return this
   }
 
-  truncate(maxWidth = '15ch'): this {
-    const originalCell = this.columnDef.cell
-    this.columnDef.cell = originalCell ?
-      (props) => <div className={`max-w-[${maxWidth}] text-muted-foreground`} style={{overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>{(originalCell as any)(props) || 'No description'}</div> :
-      ({ row }) => {
-        const value = row.getValue(this.columnDef.accessorKey as string) as string
-        return <div className={`max-w-[${maxWidth}] text-muted-foreground`} style={{overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>{value || 'No description'}</div>
-      }
-    return this
+  truncate(maxChars = 15): this {
+    const originalCell = this.columnDef.cell;
+    const cellStyle = { maxWidth: `${maxChars}ch` };
+
+    this.columnDef.cell = originalCell
+      ? (props) => (
+          <div className="text-muted-foreground truncate" style={cellStyle}>
+            {(originalCell as any)(props) || 'No description'}
+          </div>
+        )
+      : ({ row }) => {
+          const value = row.getValue(this.columnDef.accessorKey as string) as string;
+          return (
+            <div className="text-muted-foreground truncate" style={cellStyle}>
+              {value || 'No description'}
+            </div>
+          );
+        };
+    return this;
   }
 
   format(formatter: (value: TValue) => React.ReactNode): this {

@@ -6,9 +6,9 @@ import {
 } from '@/components/ui/sidebar'
 import { Toaster } from '@/components/ui/sonner'
 import { Separator } from "@/components/ui/separator"
-import { AppSidebar } from "@/components/views/AppSidebar"
+import { AppSidebar } from "@/views/AppSidebar"
 import { Breadcrumbs } from "@/components/features/breadcrumbs/Breadcrumbs"
-import { ThemeToggle } from "../atomic"
+import { ThemeToggle } from "@/components/shared"
 
 interface LayoutProps {
   children: ReactNode

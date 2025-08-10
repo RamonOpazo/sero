@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { ThemeProvider } from '@/context'
-import { Layout, HomeView, ProjectsView, DocumentsView, FilesView } from './components/views'
+import { Layout, HomeView, ProjectsView, DocumentsView, FilesView } from '@/views'
 
 function App() {
   return (

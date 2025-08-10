@@ -1,17 +1,17 @@
-import { useEffect, useState, useRef, useLayoutEffect } from "react";
+import { useEffect, useState, useRef, useLayoutEffect, useMemo } from "react";
 import { Document, Page } from "react-pdf";
 import { toast } from "sonner";
-import { type FileType } from "@/types";
+import { type DocumentType } from "@/types";
 import { getPassword } from "@/utils/passwordManager";
 import { getFileBlob } from "@/lib/api";
 import { useDocumentViewerContext } from "@/context/DocumentViewerContext";
 import { usePDFContext } from "@/context/PDFContext";
 
 type Props = {
-  file: FileType | null;
+  document: DocumentType;
 };
 
-export default function DocumentLayer({ file }: Props) {
+export default function DocumentLayer({ document }: Props) {
   const {
     zoom,
     currentPage,
@@ -23,11 +23,13 @@ export default function DocumentLayer({ file }: Props) {
     isPanning,
     setIsPanning,
     setDocumentContainer,
+    isViewingProcessedDocument,
   } = useDocumentViewerContext();
 
   const { registerPage, triggerUpdate, setIsRendered } = usePDFContext();
 
   const [blob, setBlob] = useState<Blob | null>(null);
+  const [arrayBuffer, setArrayBuffer] = useState<ArrayBuffer | null>(null);
   const [loading, setLoading] = useState(false);
 
   const documentRef = useRef<HTMLDivElement>(null);
@@ -45,7 +47,9 @@ export default function DocumentLayer({ file }: Props) {
 
   // Fetch and decrypt the file blob
   useEffect(() => {
-    if (!file) {
+    const fileToLoad = isViewingProcessedDocument ? document.redacted_file : document.original_file;
+
+    if (!fileToLoad) {
       setBlob(null);
       return;
     }
@@ -53,7 +57,7 @@ export default function DocumentLayer({ file }: Props) {
 
     const fetchBlob = async () => {
       setIsRendered(false);
-      const password = getPassword(file.document_id, file.id);
+      const password = getPassword(fileToLoad.document_id, fileToLoad.id);
       if (!password) {
         toast.error("Missing password for file access");
         setBlob(null);
@@ -62,14 +66,23 @@ export default function DocumentLayer({ file }: Props) {
 
       try {
         setLoading(true);
-        const blob = await getFileBlob({
-          file_id: file.id,
+        const blobResult = await getFileBlob({
+          file_id: fileToLoad.id,
           password,
           stream: true,
         });
-        setBlob(blob);
+        
+        if (!blobResult.ok) {
+          console.error('Failed to get blob:', blobResult.error);
+          toast.error("Failed to download PDF file");
+          setBlob(null);
+          return;
+        }
+        
+        setBlob(blobResult.value);
         setCurrentPage(0); // reset on new file
       } catch (error) {
+        console.error('Error downloading PDF:', error);
         toast.error("Failed to download PDF file");
         setBlob(null);
       } finally {
@@ -78,7 +91,34 @@ export default function DocumentLayer({ file }: Props) {
     };
 
     fetchBlob();
-  }, [file, setCurrentPage]);
+  }, [document, isViewingProcessedDocument, setCurrentPage, setPan]);
+
+  // Convert blob to ArrayBuffer
+  useEffect(() => {
+    if (!blob) {
+      setArrayBuffer(null);
+      return;
+    }
+
+    const convertBlobToArrayBuffer = async () => {
+      try {
+        const buffer = await blob.arrayBuffer();
+        setArrayBuffer(buffer);
+      } catch (error) {
+        console.error('Failed to convert blob to array buffer:', error);
+        toast.error('Failed to process PDF file');
+        setArrayBuffer(null);
+      }
+    };
+
+    convertBlobToArrayBuffer();
+  }, [blob]);
+
+  // Memoize the PDF file object to prevent unnecessary re-renders
+  const pdfFile = useMemo(() => {
+    if (!arrayBuffer) return null;
+    return { data: arrayBuffer };
+  }, [arrayBuffer]);
 
   const handleLoadSuccess = ({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
@@ -131,9 +171,10 @@ export default function DocumentLayer({ file }: Props) {
     return isPanning ? 'grabbing' : 'grab';
   }
 
-  if (!file) return <div className="text-red-500">No file selected</div>;
+  if (!document) return <div className="text-red-500">No document selected</div>;
   if (loading) return <div className="text-yellow-500">Loading PDF...</div>;
   if (!blob) return <div className="text-red-500">Unable to load file</div>;
+  if (!arrayBuffer || !pdfFile) return <div className="text-yellow-500">Processing PDF...</div>;
 
   return (
     <div
@@ -164,7 +205,7 @@ export default function DocumentLayer({ file }: Props) {
           }}
         >
           <Document
-            file={blob}
+            file={pdfFile}
             onLoadSuccess={handleLoadSuccess}
             loading={<div>Loading pages…</div>}
             error={<div className="text-red-500">Failed to render PDF</div>}

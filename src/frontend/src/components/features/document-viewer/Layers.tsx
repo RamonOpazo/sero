@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils"
-import DocumentLayer from "./DocumentLayer";
+import DocumentLayer from "./RenderLayer";
 import SelectionsLayer from "./SelectionsLayer";
 import InfoLayer from "./InfoLayer";
 import ActionsLayer from "./ActionsLayer";
@@ -16,7 +16,7 @@ export default function Renderer({ document, className, ...props }: Props & Reac
       className
     )} {...props}
   >
-      <DocumentLayer file={document.original_file} />
+      <DocumentLayer document={document} />
       <SelectionsLayer document={document} />
       <InfoLayer document={document} />
       <ActionsLayer />
