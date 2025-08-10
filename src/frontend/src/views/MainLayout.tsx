@@ -1,21 +1,19 @@
-import type { ReactNode } from "react"
-import {
-  SidebarProvider,
-  SidebarInset,
-  SidebarTrigger,
-} from '@/components/ui/sidebar'
-import { Toaster } from '@/components/ui/sonner'
-import { Separator } from "@/components/ui/separator"
-import { AppSidebar } from "@/views/AppSidebar"
-import { Breadcrumbs } from "@/components/features/breadcrumbs/Breadcrumbs"
-import { ThemeToggle } from "@/components/shared"
+import type { ReactNode } from 'react';
+import { Toaster } from '@/components/ui/sonner';
+import { ProjectProvider } from '@/context/ProjectProvider';
+import { ThemeToggle } from '@/components/shared';
+import { Separator } from '@/components/ui/separator';
+import { Breadcrumbs } from '@/components/features/breadcrumbs/Breadcrumbs';
+import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
+import { AppSidebar } from './AppSidebar';
 
 interface LayoutProps {
   children: ReactNode
 }
 
-export function Layout({ children }: LayoutProps) {
+export function MainLayout({ children }: LayoutProps) {
   return (
+    <ProjectProvider>
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
@@ -38,5 +36,6 @@ export function Layout({ children }: LayoutProps) {
       </SidebarInset>
       <Toaster />
     </SidebarProvider>
+    </ProjectProvider>
   )
 }

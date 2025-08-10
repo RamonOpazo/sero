@@ -1,8 +1,8 @@
-import React, { createContext, useContext, useReducer, useCallback, useMemo, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, useReducer, useCallback, useMemo, type ReactNode, useEffect } from 'react';
 import { toast } from 'sonner';
-import { useRefactorProjects } from '@/hooks/useRefactorProjects';
-import { useRefactorDocuments } from '@/hooks/useRefactorDocuments';
-import { useRefactorFiles, type FileWithRelatedData } from '@/hooks/useRefactorFiles';
+import { useProjects } from '@/hooks/useProjects';
+import { useDocuments } from '@/hooks/useDocuments';
+import { useFiles } from '@/hooks/useFiles';
 import type { 
   ProjectShallowType, 
   DocumentShallowType, 
@@ -12,7 +12,7 @@ import type {
 } from '@/types';
 
 // State structure
-interface RefactorProjectState {
+interface ProjectState {
   // Current selections
   currentProject: ProjectShallowType | null;
   currentDocument: DocumentShallowType | null;
@@ -39,7 +39,7 @@ interface RefactorProjectState {
 }
 
 // Action types
-type RefactorProjectAction =
+type ProjectAction =
   | { type: 'SET_LOADING_PROJECTS'; payload: boolean }
   | { type: 'SET_LOADING_DOCUMENTS'; payload: boolean }
   | { type: 'SET_LOADING_FILE'; payload: boolean }
@@ -53,10 +53,10 @@ type RefactorProjectAction =
   | { type: 'SET_FILE_ERROR'; payload: string | null }
   | { type: 'CLEAR_ALL_ERRORS' }
   | { type: 'RESET_STATE' }
-  | { type: 'RESTORE_PERSISTED_STATE'; payload: Partial<RefactorProjectState> };
+  | { type: 'RESTORE_PERSISTED_STATE'; payload: Partial<ProjectState> };
 
 // Initial state
-const initialState: RefactorProjectState = {
+const initialState: ProjectState = {
   currentProject: null,
   currentDocument: null,
   currentFile: null,
@@ -71,7 +71,7 @@ const initialState: RefactorProjectState = {
 };
 
 // Reducer
-function refactorProjectReducer(state: RefactorProjectState, action: RefactorProjectAction): RefactorProjectState {
+function refactorProjectReducer(state: ProjectState, action: ProjectAction): ProjectState {
   switch (action.type) {
     case 'SET_LOADING_PROJECTS':
       return { ...state, isLoadingProjects: action.payload };
@@ -127,7 +127,7 @@ interface PersistedState {
   // Note: we don't persist currentFile as it contains blobs which can't be serialized
 }
 
-function saveStateToStorage(state: RefactorProjectState) {
+function saveStateToStorage(state: ProjectState) {
   try {
     const persistedState: PersistedState = {
       currentProject: state.currentProject,
@@ -160,8 +160,8 @@ function clearStoredState() {
 }
 
 // Context interface
-interface RefactorProjectContextType {
-  state: RefactorProjectState;
+interface ProjectContextType {
+  state: ProjectState;
   
   // Project actions
   loadProjects: () => Promise<void>;
@@ -183,20 +183,20 @@ interface RefactorProjectContextType {
 }
 
 // Create context
-const RefactorProjectContext = createContext<RefactorProjectContextType | undefined>(undefined);
+const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
 
 // Provider component
-interface RefactorProjectProviderProps {
+interface ProjectProviderProps {
   children: ReactNode;
 }
 
-export function RefactorProjectProvider({ children }: RefactorProjectProviderProps) {
+export function ProjectProvider({ children }: ProjectProviderProps) {
   const [state, dispatch] = useReducer(refactorProjectReducer, initialState);
   
   // Use the hooks for API calls
-  const projectsHook = useRefactorProjects();
-  const documentsHook = useRefactorDocuments();
-  const filesHook = useRefactorFiles();
+  const projectsHook = useProjects();
+  const documentsHook = useDocuments();
+  const filesHook = useFiles();
 
   // Initialize state from localStorage on mount
   useEffect(() => {
@@ -317,7 +317,7 @@ export function RefactorProjectProvider({ children }: RefactorProjectProviderPro
     clearStoredState(); // Clear persisted state when resetting
   }, []);
 
-  const contextValue: RefactorProjectContextType = useMemo(() => ({
+  const contextValue: ProjectContextType = useMemo(() => ({
     state,
     loadProjects,
     selectProject,
@@ -344,17 +344,17 @@ export function RefactorProjectProvider({ children }: RefactorProjectProviderPro
   ]);
 
   return (
-    <RefactorProjectContext.Provider value={contextValue}>
+    <ProjectContext.Provider value={contextValue}>
       {children}
-    </RefactorProjectContext.Provider>
+    </ProjectContext.Provider>
   );
 }
 
 // Custom hook to use the context
-export function useRefactorProject() {
-  const context = useContext(RefactorProjectContext);
+export function useProject() {
+  const context = useContext(ProjectContext);
   if (context === undefined) {
-    throw new Error('useRefactorProject must be used within a RefactorProjectProvider');
+    throw new Error('useProject must be used within a ProjectProvider');
   }
   return context;
 }

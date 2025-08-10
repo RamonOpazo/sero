@@ -4,13 +4,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { FolderOpen, FileText, Eye } from 'lucide-react';
-import { useRefactorProject } from '@/context/RefactorProjectProvider';
-import { RefactorProjectsDataTable } from './RefactorProjectsDataTable';
-import { RefactorDocumentsDataTable } from './RefactorDocumentsDataTable';
-import { RefactorFileViewer } from './RefactorFileViewer';
+import { useProject } from '@/context/ProjectProvider';
+import { ProjectsDataTable } from './ProjectsDataTable';
+import { DocumentsDataTable } from './DocumentsDataTable';
+import { FileViewer } from './FileViewer';
 
-export function RefactorMainView() {
-  const { state, loadProjects } = useRefactorProject();
+export function MainView() {
+  const { state, loadProjects } = useProject();
   const [activeTab, setActiveTab] = useState('projects');
 
   // Initialize active tab based on persisted state 
@@ -142,7 +142,7 @@ export function RefactorMainView() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <RefactorProjectsDataTable />
+              <ProjectsDataTable />
             </CardContent>
           </Card>
         </TabsContent>
@@ -173,7 +173,7 @@ export function RefactorMainView() {
             </CardHeader>
             <CardContent>
               {state.currentProject ? (
-                <RefactorDocumentsDataTable />
+                <DocumentsDataTable />
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
                   <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -210,7 +210,7 @@ export function RefactorMainView() {
             </CardHeader>
             <CardContent className="flex-1 p-0">
               {state.currentDocument ? (
-                <RefactorFileViewer />
+                <FileViewer />
               ) : (
                 <div className="flex items-center justify-center h-full text-muted-foreground">
                   <div className="text-center">

@@ -4,7 +4,7 @@ import type { ApiResponse, DocumentShallowType, DocumentCreateType, DocumentUpda
 import { AsyncResultWrapper, type Result } from '@/lib/result'
 import { api } from "@/lib/axios"
 
-export function useRefactorDocuments() {
+export function useDocuments() {
   const [documents, setDocuments] = useState<DocumentShallowType[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<unknown | null>(null);

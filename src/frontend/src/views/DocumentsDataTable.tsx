@@ -1,19 +1,18 @@
 import { useMemo, useCallback } from 'react';
-import { Eye, Plus, FileText, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Eye, Plus, CheckCircle2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
-import { type ColumnDef } from '@tanstack/react-table';
 import { DataTable, Column, Actions } from '@/components/features/data-table';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { Badge } from '@/components/ui/badge';
-import { useRefactorProject } from '@/context/RefactorProjectProvider';
+import { useProject } from '@/context/ProjectProvider';
 import type { DocumentShallowType } from '@/types';
 
-interface RefactorDocumentsDataTableProps {
+interface DocumentsDataTableProps {
   onDocumentSelect?: (document: DocumentShallowType) => void;
 }
 
-export function RefactorDocumentsDataTable({ onDocumentSelect }: RefactorDocumentsDataTableProps) {
-  const { state } = useRefactorProject();
+export function DocumentsDataTable({ onDocumentSelect }: DocumentsDataTableProps) {
+  const { state } = useProject();
   
 
   const handleSelectDocument = useCallback((document: DocumentShallowType) => {

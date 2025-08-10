@@ -3,15 +3,15 @@ import { Eye, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { DataTable, Column, Actions } from '@/components/features/data-table';
 import { EmptyState } from '@/components/shared/EmptyState';
-import { useRefactorProject } from '@/context/RefactorProjectProvider';
+import { useProject } from '@/context/ProjectProvider';
 import type { ProjectShallowType } from '@/types';
 
-interface RefactorProjectsDataTableProps {
+interface ProjectsDataTableProps {
   onProjectSelect?: (project: ProjectShallowType) => void;
 }
 
-export function RefactorProjectsDataTable({ onProjectSelect }: RefactorProjectsDataTableProps) {
-  const { state } = useRefactorProject();
+export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
+  const { state } = useProject();
 
   const handleSelectProject = useCallback(async (project: ProjectShallowType) => {
     if (onProjectSelect) {

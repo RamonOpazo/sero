@@ -4,7 +4,7 @@ import type { ApiResponse, ProjectShallowType, ProjectCreateType, ProjectUpdateT
 import { AsyncResultWrapper, type Result } from '@/lib/result'
 import { api } from "@/lib/axios"
 
-export function useRefactorProjects() {
+export function useProjects() {
   const [projects, setProjects] = useState<ProjectShallowType[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<unknown | null>(null);

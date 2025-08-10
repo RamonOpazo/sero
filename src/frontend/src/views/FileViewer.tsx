@@ -1,25 +1,24 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Separator } from '@/components/ui/separator';
 import { FileText, ArrowLeft, Lock, MessageSquare, Target, Info } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/lib/axios';
 import { PasswordDialog } from '@/components/dialogs/PasswordDialog';
 import DocumentViewer from '@/components/features/document-viewer/DocumentViewer';
 import { storePassword } from '@/utils/passwordManager';
-import { useRefactorFiles } from '@/hooks/useRefactorFiles';
-import type { DocumentType, DocumentShallowType, FileType } from '@/types';
+import { useFiles } from '@/hooks/useFiles';
+import type { DocumentType, DocumentShallowType } from '@/types';
 import { FileTypeEnumSchema } from '@/types/enums';
 
-interface RefactorFileViewerProps {
+interface FileViewerProps {
   fileType: 'original' | 'redacted';
 }
 
-export function RefactorFileViewer({ fileType }: RefactorFileViewerProps) {
+export function FileViewer({ fileType }: FileViewerProps) {
   const { projectId, documentId } = useParams<{ projectId: string; documentId: string }>();
   const navigate = useNavigate();
   
@@ -36,7 +35,7 @@ export function RefactorFileViewer({ fileType }: RefactorFileViewerProps) {
   const [userCancelledPassword, setUserCancelledPassword] = useState(false);
   
   // Use refactor files hook for file loading
-  const { loadFileWithData, currentFileData, loading: fileLoading, error: fileError } = useRefactorFiles();
+  const { loadFileWithData, currentFileData, loading: fileLoading, error: fileError } = useFiles();
 
   // Fetch document data on mount
   useEffect(() => {

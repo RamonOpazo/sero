@@ -11,7 +11,7 @@ export interface FileWithRelatedData {
   selections: SelectionType[];
 }
 
-export function useRefactorFiles() {
+export function useFiles() {
   const [currentFileData, setCurrentFileData] = useState<FileWithRelatedData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<unknown | null>(null);

@@ -26,7 +26,7 @@ const segmentToLabelMap: { [key: string]: string } = {
   'redacted-file': 'Redacted File',
 }
 
-// Define app routes as they are in RefactorApp.tsx
+// Define app routes as they are in App.tsx
 const appRoutes = [
   '/',
   '/projects',
