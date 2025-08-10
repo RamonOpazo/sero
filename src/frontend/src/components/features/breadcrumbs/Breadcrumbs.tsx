@@ -24,6 +24,15 @@ const segmentToLabelMap: { [key: string]: string } = {
   'files': 'Files',
   'original-file': 'Original File',
   'redacted-file': 'Redacted File',
+  'documentation': 'Documentation',
+  'getting-started': 'Getting Started',
+  'api-reference': 'API Reference',
+  'security': 'Security',
+  'troubleshooting': 'Troubleshooting',
+  'developer': 'Developer',
+  'api-swagger': 'API Documentation',
+  'crypto-test': 'Crypto Test',
+  'settings': 'Settings',
 }
 
 // Define app routes as they are in App.tsx
@@ -33,6 +42,11 @@ const appRoutes = [
   '/projects/:projectId/documents',
   '/projects/:projectId/documents/:documentId/original-file',
   '/projects/:projectId/documents/:documentId/redacted-file',
+  '/documentation',
+  '/documentation/:docName',
+  '/developer/api-swagger',
+  '/developer/crypto-test',
+  '/settings',
 ];
 
 export function Breadcrumbs() {
@@ -62,34 +76,51 @@ export function Breadcrumbs() {
     }
 
     if (matchedRoutePattern && matchedRoutePattern !== '/') {
-      const patternParts = matchedRoutePattern.split('/').filter(Boolean);
-      let accumulatedHrefSegments: string[] = []; // To build the href correctly
-      let actualSegmentIndex = 0;
-
-      for (let i = 0; i < patternParts.length; i++) {
-        const patternPart = patternParts[i];
-        const actualSegment = pathSegments[actualSegmentIndex];
-
-        if (patternPart.startsWith(':')) {
-          // This is a path parameter. We don't add it as a breadcrumb label,
-          // but we must include its actual value in the accumulatedHrefSegments
-          // for subsequent breadcrumb links.
-          accumulatedHrefSegments.push(actualSegment);
-          actualSegmentIndex++;
-          continue; // Skip adding this as a breadcrumb item
-        }
-
-        // This is a static segment. Add its label to breadcrumbs.
-        accumulatedHrefSegments.push(actualSegment); // Add to href segments
-        const href = '/' + accumulatedHrefSegments.join('/');
-        const label = segmentToLabelMap[actualSegment] || actualSegment;
-
-        newBreadcrumbs.push({
-          label: label,
-          href: href,
-          isActive: false, // Set to false initially, will be set to true for the last item later
+      // Check if this is a simple static route (no parameters)
+      if (!matchedRoutePattern.includes(':')) {
+        // Simple static route - just build breadcrumbs from the path segments
+        let accumulatedPath = '';
+        pathSegments.forEach((segment, index) => {
+          accumulatedPath += '/' + segment;
+          const label = segmentToLabelMap[segment] || segment;
+          
+          newBreadcrumbs.push({
+            label: label,
+            href: accumulatedPath,
+            isActive: false,
+          });
         });
-        actualSegmentIndex++;
+      } else {
+        // Complex route with parameters - use the existing logic
+        const patternParts = matchedRoutePattern.split('/').filter(Boolean);
+        let accumulatedHrefSegments: string[] = [];
+        let actualSegmentIndex = 0;
+
+        for (let i = 0; i < patternParts.length; i++) {
+          const patternPart = patternParts[i];
+          const actualSegment = pathSegments[actualSegmentIndex];
+
+          if (patternPart.startsWith(':')) {
+            // This is a path parameter. We don't add it as a breadcrumb label,
+            // but we must include its actual value in the accumulatedHrefSegments
+            // for subsequent breadcrumb links.
+            accumulatedHrefSegments.push(actualSegment);
+            actualSegmentIndex++;
+            continue; // Skip adding this as a breadcrumb item
+          }
+
+          // This is a static segment. Add its label to breadcrumbs.
+          accumulatedHrefSegments.push(actualSegment);
+          const href = '/' + accumulatedHrefSegments.join('/');
+          const label = segmentToLabelMap[actualSegment] || actualSegment;
+
+          newBreadcrumbs.push({
+            label: label,
+            href: href,
+            isActive: false,
+          });
+          actualSegmentIndex++;
+        }
       }
     }
 
@@ -97,8 +128,6 @@ export function Breadcrumbs() {
     if (newBreadcrumbs.length > 0) {
       newBreadcrumbs[newBreadcrumbs.length - 1].isActive = true;
     }
-
-    setBreadcrumbs(newBreadcrumbs);
 
     setBreadcrumbs(newBreadcrumbs);
   }, [location.pathname]);

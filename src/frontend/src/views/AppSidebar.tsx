@@ -4,9 +4,12 @@ import * as React from "react"
 import {
   CircleSlash2,
   BookOpen,
-  Bot,
+  Home,
   Network,
   SquareTerminal,
+  Settings,
+  Code,
+  Beaker,
 } from "lucide-react"
 
 import { NavMain } from "@/views/NavMain"
@@ -23,46 +26,56 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
 
+// Helper to determine if we're in development mode
+const isDev = import.meta.env.DEV || window.location.hostname === 'localhost';
+
 const data = {
   user: { name: "example", email: "m@example.com", avatar: "/avatars/shadcn.jpg", },
   navMain: [
     {
-      title: "Playground",
-      url: "#",
-      icon: SquareTerminal,
-      isActive: true,
-      items: [
-        { title: "Dashboard", url: "/", },
-        { title: "Projects", url: "/projects", },
-        { title: "Settings", url: "#", },
-      ],
+      title: "Home",
+      url: "/",
+      icon: Home,
+      isActive: false,
     },
     {
-      title: "Models",
-      url: "#",
-      icon: Bot,
-      items: [
-        { title: "Genesis", url: "#", },
-        { title: "Explorer", url: "#", },
-        { title: "Quantum", url: "#", },
-      ],
+      title: "Projects",
+      url: "/projects",
+      icon: SquareTerminal,
+      isActive: true,
     },
     {
       title: "Documentation",
-      url: "#",
+      url: "/documentation",
       icon: BookOpen,
       items: [
-        { title: "Introduction", url: "#", },
-        { title: "Getting Started", url: "#", },
-        { title: "Project Structure", url: "#", },
-        { title: "Document Redaction", url: "#", },
-        { title: "Document Retrieval", url: "#", },
+        { title: "What's Sero", url: "/documentation/whats-sero" },
+        { title: "Getting Started", url: "/documentation/getting-started" },
+        { title: "Installation", url: "/documentation/installation" },
+        { title: "Project Management", url: "/documentation/project-management" },
+        { title: "Document Redaction", url: "/documentation/document-redaction" },
+        { title: "Document Retrieval", url: "/documentation/document-retrieval" },
       ],
     },
+    {
+      title: "Settings",
+      url: "/settings",
+      icon: Settings,
+      isActive: false,
+    },
   ],
-  navApi: [
-    { name: "Swagger", url: "/docs", icon: Network, },
-  ],
+  // Developer section - only visible in development
+  navDev: isDev ? [
+    {
+      title: "Developer",
+      url: "/dev",
+      icon: Code,
+      items: [
+        { title: "API Swagger", url: "/dev/api-swagger" },
+        { title: "Crypto Test", url: "/dev/crypto-test" },
+      ],
+    },
+  ] : [],
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
@@ -91,7 +104,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
-        <NavApi projects={data.navApi} />
+        {data.navDev.length > 0 && (
+          <NavMain items={data.navDev} />
+        )}
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={data.user} />
