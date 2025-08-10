@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from backend.core.security import security_manager
 from backend.db.models import Document as DocumentModel
-from backend.crud import documents_crud, prompts_crud, selections_crud, projects_crud
+from backend.crud import documents_crud, prompts_crud, selections_crud, projects_crud, files_crud
 from backend.api.schemas import documents_schema, generics_schema, files_schema, prompts_schema, selections_schema
 from backend.api.enums import FileType
 
@@ -71,6 +71,38 @@ def get_list(db: Session, skip: int, limit: int) -> list[documents_schema.Docume
     return [ documents_schema.Document.model_validate(i) for i in documents ]
 
 
+def get_shallow_list(db: Session, skip: int, limit: int) -> list[documents_schema.DocumentShallow]:
+    """Get shallow list of documents without file, prompt, or selection data for efficient listing."""
+    documents_with_counts = documents_crud.search_shallow(
+        db=db,
+        skip=skip,
+        limit=limit,
+        order_by=[("name", "asc"), ("created_at", "desc")]
+    )
+    
+    # Convert to shallow schema with metadata
+    shallow_documents = []
+    for document, file_count, prompt_count, selection_count, has_original, has_redacted in documents_with_counts:
+        shallow_data = {
+            "id": document.id,
+            "created_at": document.created_at,
+            "updated_at": document.updated_at,
+            "name": document.name,
+            "description": document.description,
+            "project_id": document.project_id,
+            "tags": document.tags,
+            "file_count": file_count,
+            "prompt_count": prompt_count,
+            "selection_count": selection_count,
+            "has_original_file": bool(has_original),
+            "has_redacted_file": bool(has_redacted),
+            "is_processed": bool(has_redacted)
+        }
+        shallow_documents.append(documents_schema.DocumentShallow.model_validate(shallow_data))
+    
+    return shallow_documents
+
+
 def search_list(db: Session, skip: int, limit: int, name: str | None, project_id: UUID | None) -> list[documents_schema.Document]:
     documents = documents_crud.search(
         db=db,
@@ -88,6 +120,8 @@ def get_tags(db: Session, document_id: UUID) -> list[str]:
     """Get tags for a document."""
     document = _raise_not_found(documents_crud.read, db=db, id=document_id)
     return list(set(document.tags))
+
+
 
 
 def create(db: Session, document_data: documents_schema.DocumentCreate) -> documents_schema.Document:

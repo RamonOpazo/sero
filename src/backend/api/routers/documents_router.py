@@ -20,6 +20,16 @@ async def list_documents(
     return documents_controller.get_list(db=db, skip=skip, limit=limit)
 
 
+@router.get("/shallow", response_model=list[documents_schema.DocumentShallow])
+async def list_documents_shallow(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db_session)
+):
+    """Get paginated shallow list of documents without file, prompt, or selection data for efficient listing."""
+    return documents_controller.get_shallow_list(db=db, skip=skip, limit=limit)
+
+
 @router.get("/search", response_model=list[documents_schema.Document])
 async def search_documents(
     skip: int = 0,
@@ -129,6 +139,8 @@ async def get_document_tags(
 ):
     """Get tags for a document."""
     return documents_controller.get_tags(db=db, document_id=document_id)
+
+
 
 
 @router.post("/id/{document_id}/prompts", response_model=prompts_schema.Prompt)

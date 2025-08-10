@@ -46,6 +46,28 @@ class DocumentUpdate(BaseModel):
     tags: list[str] | None = Field(None)
 
 
+class DocumentShallow(BaseModel):
+    """Shallow document schema without nested file, prompt, or selection data for efficient listing."""
+    id: UUID4
+    created_at: AwareDatetime
+    updated_at: AwareDatetime | None
+    name: str
+    description: str | None
+    project_id: UUID4
+    tags: list[str]
+    
+    # Metadata about next level without loading full data
+    file_count: int
+    prompt_count: int
+    selection_count: int
+    has_original_file: bool
+    has_redacted_file: bool
+    is_processed: bool
+    
+    class Config:
+        from_attributes = True
+
+
 class DocumentSummary(BaseModel):
     """Summary of a document including all its components and processing status."""
     document_id: UUID4

@@ -51,3 +51,34 @@ class ProjectCrud(BaseCrud[Project, projects_schema.ProjectCreate, projects_sche
             plain_password=password,
             hashed_password=project.password_hash
         )
+    
+    def search_shallow(self, db: Session, skip: int = 0, limit: int = 100, order_by: list[tuple[str, str]] | None = None, **kwargs) -> list[tuple[Project, int]]:
+        """Search projects with document count but without loading document relationships."""
+        from sqlalchemy import func
+        from backend.db.models import Document
+        
+        _sanitized_ordering = (
+            getattr(getattr(self.model, field), direction)()
+            for field, direction in order_by or []
+        )
+        _sanitized_filters = (
+            self._resolve_filter_operation(field=field, data=data)
+            for field, data in kwargs.items()
+            if data is not None
+        )
+        
+        results = (
+            db.query(
+                self.model,
+                func.count(Document.id).label('document_count')
+            )
+            .outerjoin(Document, self.model.id == Document.project_id)
+            .filter(*_sanitized_filters)
+            .group_by(self.model.id)
+            .order_by(*_sanitized_ordering)
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
+        
+        return results
