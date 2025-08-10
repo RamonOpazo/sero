@@ -51,3 +51,10 @@ class FileUpload(BaseModel):
     project_id: UUID4
     file: UploadFile
     description: str | None = Field(None)
+
+
+class EncryptedFileDownloadRequest(BaseModel):
+    """Request model for encrypted file download with ephemeral RSA key"""
+    key_id: str = Field(..., description="ID of the ephemeral key used for encryption")
+    encrypted_password: str = Field(..., description="Base64-encoded RSA-encrypted password")
+    stream: bool = Field(default=False, description="Whether to stream the file or download as attachment")

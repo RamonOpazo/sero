@@ -6,13 +6,26 @@ import SelectionList from "./SelectionsList";
 import PromptList from "./PromptsList";
 import type { DocumentType } from "@/types";
 import { useDocumentViewerContext } from "@/context/DocumentViewerContext";
-import { usePasswordProtectedFile } from "@/hooks/usePasswordProtectedFile";
-
 type Props = { document: DocumentType };
 
 export default function Controller({ document, className, ...props }: Props & React.ComponentProps<"div">) {
   const { isViewingProcessedDocument, setIsViewingProcessedDocument } = useDocumentViewerContext();
-  const { downloadFile } = usePasswordProtectedFile();
+  
+  const handleDownloadFile = () => {
+    // Simple download using the blob from the document
+    const currentFile = isViewingProcessedDocument ? document.redacted_file : document.original_file;
+    if (currentFile && document.files) {
+      const fileWithBlob = document.files.find(f => f.id === currentFile.id);
+      if (fileWithBlob && 'blob' in fileWithBlob && fileWithBlob.blob instanceof Blob) {
+        const url = URL.createObjectURL(fileWithBlob.blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${document.name}_${isViewingProcessedDocument ? 'redacted' : 'original'}.pdf`;
+        link.click();
+        URL.revokeObjectURL(url);
+      }
+    }
+  };
 
   return (
     <div
@@ -37,7 +50,7 @@ export default function Controller({ document, className, ...props }: Props & Re
         <Button variant="outline" size="sm" disabled={isViewingProcessedDocument}>
           <Brain /> Redact File
         </Button>
-        <Button variant="outline" size="sm" onClick={() => downloadFile(document, isViewingProcessedDocument ? "obfuscated" : "original")}>
+        <Button variant="outline" size="sm" onClick={handleDownloadFile}>
           <Download /> Download File
         </Button>
         <Button variant="destructive" size="sm">

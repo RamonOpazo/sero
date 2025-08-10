@@ -4,6 +4,7 @@ import { MainLayout } from '@/views/MainLayout';
 import { ProjectsView } from '@/views/ProjectsView';
 import { DocumentsView } from '@/views/DocumentsView';
 import { FileViewer } from '@/views/FileViewer';
+import { CryptoTest } from '@/components/CryptoTest';
 
 // Redirect component for /projects/:projectId -> /projects/:projectId/documents
 function ProjectRedirect() {
@@ -25,6 +26,9 @@ function App() {
           <Routes>
             <Route path="/" element={<Navigate to="/projects" replace />} />
             <Route path="/projects" element={<ProjectsView />} />
+            
+            {/* Development crypto test route */}
+            <Route path="/crypto-test" element={<CryptoTest />} />
             
             {/* Redirect /projects/:projectId to /projects/:projectId/documents */}
             <Route path="/projects/:projectId" element={<ProjectRedirect />} />

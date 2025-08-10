@@ -9,7 +9,6 @@ import { toast } from 'sonner';
 import { api } from '@/lib/axios';
 import { PasswordDialog } from '@/components/dialogs/PasswordDialog';
 import DocumentViewer from '@/components/features/document-viewer/DocumentViewer';
-import { storePassword } from '@/utils/passwordManager';
 import { useFiles } from '@/hooks/useFiles';
 import type { DocumentType, DocumentShallowType } from '@/types';
 import { FileTypeEnumSchema } from '@/types/enums';
@@ -94,9 +93,6 @@ export function FileViewer({ fileType }: FileViewerProps) {
       await loadFileWithData(targetFile.id, password);
       
       if (!fileError) {
-        // Store the password for the DocumentViewer to use
-        storePassword(document.id, targetFile.id, password);
-        
         // Success - close dialog
         setIsPasswordDialogOpen(false);
         setPasswordError(null);
@@ -135,7 +131,12 @@ export function FileViewer({ fileType }: FileViewerProps) {
     }
 
     // Create stable arrays and objects to prevent reference changes
-    const stableFiles = [currentFileData.file];
+    // Attach the blob to the file for the document viewer to use
+    const fileWithBlob = {
+      ...currentFileData.file,
+      blob: currentFileData.blob
+    };
+    const stableFiles = [fileWithBlob];
     const stablePrompts = currentFileData.prompts || [];
     const stableSelections = currentFileData.selections || [];
 

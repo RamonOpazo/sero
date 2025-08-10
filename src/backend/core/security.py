@@ -4,11 +4,14 @@ import hashlib
 import secrets
 import base64
 from datetime import datetime, timedelta, timezone
+from uuid import uuid4
+from typing import Dict, Optional, Tuple
 from loguru import logger
 
 from cryptography.fernet import Fernet
-from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from passlib.context import CryptContext
 from jose import JWTError, jwt
 from fastapi import HTTPException, status
@@ -19,6 +22,8 @@ from backend.core.config import settings
 class SecurityManager:
     def __init__(self):
         self.context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+        # In-memory storage for ephemeral keys (key_id -> private_key_info)
+        self._ephemeral_keys: Dict[str, Dict] = {}
     
 
     def generate_salt(self) -> bytes:
@@ -134,6 +139,98 @@ class SecurityManager:
             return False
         
         return True
+
+    def generate_ephemeral_rsa_keypair(self) -> Tuple[str, str]:
+        """Generate ephemeral RSA key pair and return (key_id, public_key_pem)"""
+        # Clean up expired keys first
+        self._cleanup_expired_keys()
+        
+        # Generate RSA key pair (2048-bit for good security/performance balance)
+        private_key = rsa.generate_private_key(
+            public_exponent=65537,
+            key_size=2048
+        )
+        public_key = private_key.public_key()
+        
+        # Generate unique key ID
+        key_id = str(uuid4())
+        
+        # Export public key to PEM format for frontend
+        public_pem = public_key.public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo
+        ).decode('utf-8')
+        
+        # Store private key with metadata (TTL: 5 minutes)
+        self._ephemeral_keys[key_id] = {
+            'private_key': private_key,
+            'created_at': datetime.utcnow(),
+            'ttl_seconds': 300  # 5 minutes
+        }
+        
+        logger.debug(f"Generated ephemeral RSA key pair: {key_id}")
+        return key_id, public_pem
+    
+    def decrypt_with_ephemeral_key(self, key_id: str, encrypted_data: bytes) -> Optional[str]:
+        """Decrypt data using ephemeral private key and immediately destroy the key"""
+        key_info = self._ephemeral_keys.get(key_id)
+        
+        if not key_info:
+            logger.warning(f"Ephemeral key not found or expired: {key_id}")
+            return None
+        
+        # Check if key has expired
+        created_at = key_info['created_at']
+        ttl = key_info['ttl_seconds']
+        if datetime.utcnow() > created_at + timedelta(seconds=ttl):
+            logger.warning(f"Ephemeral key expired: {key_id}")
+            self._ephemeral_keys.pop(key_id, None)
+            return None
+        
+        try:
+            # Decrypt the data
+            private_key = key_info['private_key']
+            decrypted_bytes = private_key.decrypt(
+                encrypted_data,
+                padding.OAEP(
+                    mgf=padding.MGF1(algorithm=hashes.SHA256()),
+                    algorithm=hashes.SHA256(),
+                    label=None
+                )
+            )
+            
+            # Convert to string (assuming UTF-8 encoded password)
+            decrypted_password = decrypted_bytes.decode('utf-8')
+            
+            logger.debug(f"Successfully decrypted data with ephemeral key: {key_id}")
+            return decrypted_password
+            
+        except Exception as err:
+            logger.error(f"Failed to decrypt with ephemeral key {key_id}: {err}")
+            return None
+        
+        finally:
+            # IMMEDIATELY destroy the private key for forward secrecy
+            self._ephemeral_keys.pop(key_id, None)
+            logger.debug(f"Destroyed ephemeral key: {key_id}")
+    
+    def _cleanup_expired_keys(self) -> None:
+        """Remove expired ephemeral keys from memory"""
+        now = datetime.utcnow()
+        expired_keys = []
+        
+        for key_id, key_info in self._ephemeral_keys.items():
+            created_at = key_info['created_at']
+            ttl = key_info['ttl_seconds']
+            if now > created_at + timedelta(seconds=ttl):
+                expired_keys.append(key_id)
+        
+        for key_id in expired_keys:
+            self._ephemeral_keys.pop(key_id, None)
+            logger.debug(f"Cleaned up expired ephemeral key: {key_id}")
+        
+        if expired_keys:
+            logger.info(f"Cleaned up {len(expired_keys)} expired ephemeral keys")
 
 
 # Singleton instance

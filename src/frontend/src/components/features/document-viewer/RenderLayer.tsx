@@ -2,8 +2,6 @@ import { useEffect, useState, useRef, useLayoutEffect, useMemo } from "react";
 import { Document, Page } from "react-pdf";
 import { toast } from "sonner";
 import { type DocumentType } from "@/types";
-import { getPassword } from "@/utils/passwordManager";
-import { getFileBlob } from "@/lib/api";
 import { useDocumentViewerContext } from "@/context/DocumentViewerContext";
 import { usePDFContext } from "@/context/PDFContext";
 
@@ -30,7 +28,6 @@ export default function DocumentLayer({ document }: Props) {
 
   const [blob, setBlob] = useState<Blob | null>(null);
   const [arrayBuffer, setArrayBuffer] = useState<ArrayBuffer | null>(null);
-  const [loading, setLoading] = useState(false);
 
   const documentRef = useRef<HTMLDivElement>(null);
   const animationFrameRef = useRef<number | null>(null);
@@ -49,7 +46,7 @@ export default function DocumentLayer({ document }: Props) {
   // Panning state
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
 
-  // Fetch and decrypt the file blob
+  // Use the blob from the document (already loaded and decrypted)
   useEffect(() => {
     const fileToLoad = isViewingProcessedDocument ? document.redacted_file : document.original_file;
 
@@ -58,49 +55,28 @@ export default function DocumentLayer({ document }: Props) {
       return;
     }
     setPan({ x: 0, y: 0 });
-
-    const fetchBlob = async () => {
-      setIsRendered(false);
-      const password = getPassword(fileToLoad.document_id, fileToLoad.id);
-      if (!password) {
-        toast.error("Missing password for file access");
-        setBlob(null);
-        return;
-      }
-
-      try {
-        setLoading(true);
-        const blobResult = await getFileBlob({
-          file_id: fileToLoad.id,
-          password,
-          stream: true,
-        });
-        
-        if (!blobResult.ok) {
-          console.error('Failed to get blob:', blobResult.error);
-          toast.error("Failed to download PDF file");
-          setBlob(null);
-          return;
-        }
-        
-        setBlob(blobResult.value);
-        setCurrentPage(0); // reset on new file
-      } catch (error) {
-        console.error('Error downloading PDF:', error);
-        toast.error("Failed to download PDF file");
-        setBlob(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchBlob();
+    setIsRendered(false);
+    
+    // The document should already contain the decrypted blob from FileViewer
+    // Look for the blob in the files array - each file should have its blob attached
+    const fileWithBlob = document.files?.find(f => f.id === fileToLoad.id);
+    
+    if (fileWithBlob && 'blob' in fileWithBlob && fileWithBlob.blob instanceof Blob) {
+      setBlob(fileWithBlob.blob);
+      setCurrentPage(0); // reset on new file
+    } else {
+      // Fallback: The document viewer might be called with a blob that's stored elsewhere
+      // Check if the document itself has a blob property for this use case
+      console.warn('No blob found in file structure, document may need to be reloaded');
+      setBlob(null);
+    }
   }, [
     // Only re-run when the actual file changes, not when the document object reference changes
     isViewingProcessedDocument ? document.redacted_file?.id : document.original_file?.id,
     isViewingProcessedDocument,
     setCurrentPage, 
-    setPan
+    setPan,
+    setIsRendered
   ]);
 
   // Convert blob to ArrayBuffer
@@ -194,7 +170,6 @@ export default function DocumentLayer({ document }: Props) {
   }
 
   if (!document) return <div className="text-red-500">No document selected</div>;
-  if (loading) return <div className="text-yellow-500">Loading PDF...</div>;
   if (!blob) return <div className="text-red-500">Unable to load file</div>;
   if (!arrayBuffer || !pdfFile) return <div className="text-yellow-500">Processing PDF...</div>;
 
