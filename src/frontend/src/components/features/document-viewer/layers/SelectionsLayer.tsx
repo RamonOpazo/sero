@@ -1,16 +1,11 @@
 import React, { useState, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
-import type { SelectionCreateType } from "@/types";
+import type { SelectionCreateType, SelectionType } from "@/types";
 import { useViewerState } from '../hooks/useViewerState';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Save, Trash2 } from "lucide-react";
+import { api } from "@/lib/axios";
+import { toast } from "sonner";
 
 type Props = { 
   documentSize: { width: number; height: number };
@@ -65,13 +60,186 @@ export default function SelectionsLayer({ documentSize }: Props) {
   // State for context menu
   const [contextMenuOpen, setContextMenuOpen] = useState(false);
   const [contextMenuPosition, setContextMenuPosition] = useState<{ x: number; y: number } | null>(null);
+  
+  // Track which existing selections have been edited (by index)
+  const [editedExistingSelections, setEditedExistingSelections] = useState<Set<number>>(new Set());
 
   // Handle context menu actions
-  const handleSaveSelection = useCallback((sel: SelectionCreateType, type: 'existing' | 'new', index: number) => {
+  const handleSaveSelection = useCallback(async (sel: SelectionCreateType, type: 'existing' | 'new', index: number) => {
     console.log('Save selection:', { sel, type, index });
-    // TODO: Implement save logic - could save to database, export, etc.
+    
+    if (!currentDocument?.id) {
+      console.error('No document ID available for saving selection');
+      toast.error('Cannot save selection: No document loaded');
+      setContextMenuOpen(false);
+      return;
+    }
+
+    try {
+      if (type === 'new') {
+        // Create new selection
+        const selectionData = {
+          page_number: sel.page_number || null,
+          x: sel.x,
+          y: sel.y,
+          width: sel.width,
+          height: sel.height,
+          confidence: null, // Manual selections have no confidence
+          document_id: currentDocument.id,
+        };
+
+        console.log('Creating new selection:', selectionData);
+
+        const result = await api.safe.post(
+          `/documents/id/${currentDocument.id}/selections`,
+          selectionData
+        );
+
+        if (result.ok) {
+          const savedSelection = result.value as SelectionType;
+          
+          // Remove from newSelections
+          dispatch({
+            type: 'DELETE_SELECTION',
+            payload: index
+          });
+          
+          // Add to existingSelections
+          dispatch({
+            type: 'SET_EXISTING_SELECTIONS',
+            payload: [...existingSelections, savedSelection]
+          });
+          
+          setSelectedSelection(null);
+          toast.success('Selection saved successfully');
+          console.log('Selection saved successfully:', savedSelection);
+        } else {
+          throw new Error((result.error as any)?.response?.data?.detail || (result.error as any)?.message || 'Failed to save selection');
+        }
+        
+      } else if (type === 'existing' && editedExistingSelections.has(index)) {
+        // Update existing selection
+        console.log('Attempting to update existing selection at index:', index);
+        console.log('existingSelections array:', existingSelections);
+        console.log('existingSelections length:', existingSelections.length);
+        
+        const existingSelection = existingSelections[index];
+        console.log('existingSelection at index:', existingSelection);
+        
+        if (!existingSelection) {
+          throw new Error(`Cannot update selection: No selection found at index ${index}`);
+        }
+        
+        console.log('existingSelection keys:', Object.keys(existingSelection));
+        console.log('existingSelection.id:', existingSelection.id);
+        
+        if (!existingSelection.id) {
+          // This existing selection doesn't have an ID, which means it wasn't properly loaded from the API
+          // For now, we'll treat this as a new selection and create it instead of updating
+          console.warn('Existing selection has no ID, treating as new selection for creation');
+          
+          const selectionData = {
+            page_number: sel.page_number || null,
+            x: sel.x,
+            y: sel.y,
+            width: sel.width,
+            height: sel.height,
+            confidence: sel.confidence || null,
+            document_id: currentDocument.id,
+          };
+
+          console.log('Creating selection (no ID found):', selectionData);
+
+          const result = await api.safe.post(
+            `/documents/id/${currentDocument.id}/selections`,
+            selectionData
+          );
+
+          if (result.ok) {
+            const savedSelection = result.value as SelectionType;
+            
+            // Replace the selection without ID with the new one that has an ID
+            const updatedExistingSelections = [...existingSelections];
+            updatedExistingSelections[index] = savedSelection;
+            
+            dispatch({
+              type: 'SET_EXISTING_SELECTIONS',
+              payload: updatedExistingSelections
+            });
+            
+            // Remove from edited selections set
+            setEditedExistingSelections(prev => {
+              const newSet = new Set(prev);
+              newSet.delete(index);
+              return newSet;
+            });
+            
+            setSelectedSelection(null);
+            toast.success('Selection saved successfully');
+            console.log('Selection created successfully (no ID case):', savedSelection);
+            setContextMenuOpen(false);
+            return;
+          } else {
+            throw new Error((result.error as any)?.response?.data?.detail || (result.error as any)?.message || 'Failed to save selection');
+          }
+        }
+
+        const updateData = {
+          page_number: sel.page_number || null,
+          x: sel.x,
+          y: sel.y,
+          width: sel.width,
+          height: sel.height,
+          confidence: sel.confidence || null,
+        };
+
+        console.log('Updating existing selection:', { id: existingSelection.id, updateData });
+
+        const result = await api.safe.put(
+          `/selections/id/${existingSelection.id}`,
+          updateData
+        );
+
+        if (result.ok) {
+          const updatedSelection = result.value as SelectionType;
+          
+          // Update the selection in existingSelections
+          const updatedExistingSelections = [...existingSelections];
+          updatedExistingSelections[index] = updatedSelection;
+          
+          dispatch({
+            type: 'SET_EXISTING_SELECTIONS',
+            payload: updatedExistingSelections
+          });
+          
+          // Remove from edited selections set
+          setEditedExistingSelections(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(index);
+            return newSet;
+          });
+          
+          setSelectedSelection(null);
+          toast.success('Selection updated successfully');
+          console.log('Selection updated successfully:', updatedSelection);
+        } else {
+          throw new Error((result.error as any)?.response?.data?.detail || (result.error as any)?.message || 'Failed to update selection');
+        }
+      } else {
+        // Existing selection that hasn't been edited - no need to save
+        setContextMenuOpen(false);
+        return;
+      }
+      
+    } catch (error) {
+      console.error('Error saving selection:', error);
+      toast.error('Failed to save selection', {
+        description: error instanceof Error ? error.message : 'An unexpected error occurred. Please try again.'
+      });
+    }
+    
     setContextMenuOpen(false);
-  }, []);
+  }, [currentDocument, dispatch, existingSelections, api, editedExistingSelections]);
 
   const handleRemoveSelection = useCallback((sel: SelectionCreateType, type: 'existing' | 'new', index: number) => {
     console.log('Remove selection:', { sel, type, index });
@@ -294,6 +462,9 @@ export default function SelectionsLayer({ documentSize }: Props) {
         type: 'UPDATE_EXISTING_SELECTION',
         payload: { index: selectedSelection.index, selection: newSelection }
       });
+      
+      // Mark this existing selection as edited
+      setEditedExistingSelections(prev => new Set(prev).add(selectedSelection.index));
     } else {
       dispatch({
         type: 'UPDATE_NEW_SELECTION',
@@ -403,7 +574,6 @@ export default function SelectionsLayer({ documentSize }: Props) {
     isNew: boolean,
     key: string | number,
     index: number,
-    deletable = true
   ) => {
     // Convert normalized coordinates to pixel coordinates within the document
     const left = sel.x * documentSize.width;
@@ -523,7 +693,7 @@ export default function SelectionsLayer({ documentSize }: Props) {
         {pageNew.map((sel, i) => renderBox(sel, true, `new-${i}`, i))}
         
         {/* Currently drawing selection */}
-        {drawingThisPage && renderBox(drawingThisPage, true, "drawing", -1, false)}
+        {drawingThisPage && renderBox(drawingThisPage, true, "drawing", -1)}
       </div>
 
       {/* Context menu positioned at mouse cursor - using portal to render outside transformed space */}
@@ -536,22 +706,29 @@ export default function SelectionsLayer({ documentSize }: Props) {
           }}
           onClick={(e) => e.stopPropagation()}
         >
-          <div
-            className="relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handleSaveSelection(
-                selectedSelection.selection, 
-                selectedSelection.type, 
-                selectedSelection.index
-              );
-            }}
-          >
-            <Save className="mr-2 h-4 w-4" />
-            Save
-          </div>
-          <div className="bg-border -mx-1 my-1 h-px" />
+          {/* Show Save option for new selections OR edited existing selections */}
+          {(selectedSelection.type === 'new' || 
+            (selectedSelection.type === 'existing' && editedExistingSelections.has(selectedSelection.index))
+          ) && (
+            <>
+              <div
+                className="relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleSaveSelection(
+                    selectedSelection.selection, 
+                    selectedSelection.type, 
+                    selectedSelection.index
+                  );
+                }}
+              >
+                <Save className="mr-2 h-4 w-4" />
+                Save
+              </div>
+              <div className="bg-border -mx-1 my-1 h-px" />
+            </>
+          )}
           <div
             className="relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-destructive/10 hover:text-destructive"
             onClick={(e) => {

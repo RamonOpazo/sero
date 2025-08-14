@@ -209,22 +209,12 @@ function viewerStateReducer(state: ViewerState, action: ViewerAction): ViewerSta
     }
 
     case 'SET_EXISTING_SELECTIONS':
-      // Convert SelectionType from API to SelectionCreateType for rendering
-      const convertedSelections = action.payload.map(sel => ({
-        x: sel.x,
-        y: sel.y,
-        width: sel.width,
-        height: sel.height,
-        page_number: sel.page_number,
-        document_id: sel.document_id,
-        confidence: sel.confidence
-      }));
-      
+      // Keep SelectionType as-is since existingSelections should include id for updates
       return {
         ...state,
         selections: {
           ...state.selections,
-          existingSelections: convertedSelections
+          existingSelections: action.payload
         }
       };
 
@@ -232,7 +222,16 @@ function viewerStateReducer(state: ViewerState, action: ViewerAction): ViewerSta
       const { index, selection } = action.payload;
       const updatedExistingSelections = [...state.selections.existingSelections];
       if (index >= 0 && index < updatedExistingSelections.length) {
-        updatedExistingSelections[index] = selection;
+        // Merge the selection update with existing metadata (preserve id, created_at, etc.)
+        const existingSelection = updatedExistingSelections[index];
+        updatedExistingSelections[index] = {
+          ...existingSelection,
+          ...selection,
+          // Always preserve these metadata fields from the existing selection
+          id: existingSelection.id,
+          created_at: existingSelection.created_at,
+          updated_at: new Date().toISOString(), // Update the timestamp
+        };
       }
       
       return {

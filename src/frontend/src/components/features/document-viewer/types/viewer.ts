@@ -33,9 +33,9 @@ export interface ViewportBounds {
 
 // Selection state
 export interface SelectionState {
-  // Existing selections from the document
-  existingSelections: SelectionCreateType[];
-  // New selections being created/edited
+  // Existing selections from the document (include ID since they're saved)
+  existingSelections: SelectionType[];
+  // New selections being created/edited (no ID yet)
   newSelections: SelectionCreateType[];
   // Currently drawing selection
   drawing: SelectionCreateType | null;
