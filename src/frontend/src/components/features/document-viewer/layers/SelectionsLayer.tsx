@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 import type { SelectionCreateType, SelectionType } from "@/types";
 import { useViewerState } from '../hooks/useViewerState';
-import { Save, Trash2 } from "lucide-react";
+import { Save, Trash2, Globe } from "lucide-react";
 import { api } from "@/lib/axios";
 import { toast } from "sonner";
 
@@ -255,6 +255,43 @@ export default function SelectionsLayer({ documentSize }: Props) {
     setSelectedSelection(null);
     setContextMenuOpen(false);
   }, [deleteSelection, dispatch]);
+
+  const handleMakeSelectionGlobal = useCallback((type: 'existing' | 'new', index: number) => {
+    console.log('Make selection global:', { type, index });
+    
+    if (type === 'new') {
+      // Update new selection to have page_number = 0 (all pages)
+      const updatedSelection = { ...newSelections[index], page_number: 0 };
+      dispatch({
+        type: 'UPDATE_NEW_SELECTION',
+        payload: { index, selection: updatedSelection }
+      });
+    } else {
+      // Update existing selection to have page_number = 0 (all pages)
+      const existingSelection = existingSelections[index];
+      if (existingSelection) {
+        const updatedSelection = { ...existingSelection, page_number: 0 };
+        dispatch({
+          type: 'UPDATE_EXISTING_SELECTION',
+          payload: { index, selection: updatedSelection }
+        });
+        
+        // Mark this existing selection as edited so it can be saved
+        setEditedExistingSelections(prev => new Set(prev).add(index));
+      }
+    }
+    
+    // Update the selected selection state to reflect the change
+    setSelectedSelection(prev => prev ? {
+      ...prev,
+      selection: {
+        ...prev.selection,
+        page_number: 0
+      }
+    } : null);
+    
+    setContextMenuOpen(false);
+  }, [dispatch, newSelections, existingSelections, setEditedExistingSelections]);
 
   // Handle selection click
   const handleSelectionClick = (
@@ -729,6 +766,28 @@ export default function SelectionsLayer({ documentSize }: Props) {
               <div className="bg-border -mx-1 my-1 h-px" />
             </>
           )}
+          
+          {/* Show "Make Global" option if selection is not already global (page_number !== 0) */}
+          {selectedSelection.selection.page_number !== 0 && (
+            <>
+              <div
+                className="relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleMakeSelectionGlobal(
+                    selectedSelection.type, 
+                    selectedSelection.index
+                  );
+                }}
+              >
+                <Globe className="mr-2 h-4 w-4" />
+                Show on All Pages
+              </div>
+              <div className="bg-border -mx-1 my-1 h-px" />
+            </>
+          )}
+          
           <div
             className="relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-destructive/10 hover:text-destructive"
             onClick={(e) => {
