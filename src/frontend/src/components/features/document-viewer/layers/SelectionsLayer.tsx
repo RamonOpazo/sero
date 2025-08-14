@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState, useCallback, useRef } from "react";
 import { cn } from "@/lib/utils";
 import type { SelectionCreateType } from "@/types";
 import { useViewerState } from '../hooks/useViewerState';
@@ -25,6 +25,16 @@ export default function SelectionsLayer({ documentSize }: Props) {
     selection: SelectionCreateType;
   } | null>(null);
 
+  // State for resize dragging
+  const [resizeState, setResizeState] = useState<{
+    isResizing: boolean;
+    corner: string;
+    initialSelection: SelectionCreateType;
+    startMousePos: { x: number; y: number };
+  } | null>(null);
+
+  const isDraggingRef = useRef(false);
+
   // Handle selection click
   const handleSelectionClick = (
     sel: SelectionCreateType,
@@ -34,17 +44,107 @@ export default function SelectionsLayer({ documentSize }: Props) {
     setSelectedSelection({ type, index, selection: sel });
   };
 
-  // Handle resize handle drag (placeholder for now)
-  const handleResizeStart = (_corner: string) => {
-    // TODO: Implement resize logic
-    console.log('Resize started');
-  };
+  // Handle resize handle drag start
+  const handleResizeStart = useCallback((corner: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    
+    if (!selectedSelection) return;
+    
+    const startMousePos = { x: e.clientX, y: e.clientY };
+    setResizeState({
+      isResizing: true,
+      corner,
+      initialSelection: { ...selectedSelection.selection },
+      startMousePos
+    });
+    
+    isDraggingRef.current = true;
+  }, [selectedSelection]);
+
+  // Handle mouse move during resize
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (!resizeState || !selectedSelection || !isDraggingRef.current) return;
+    
+    const { corner, initialSelection, startMousePos } = resizeState;
+    
+    // Calculate mouse movement in document coordinates
+    const deltaX = (e.clientX - startMousePos.x) / documentSize.width;
+    const deltaY = (e.clientY - startMousePos.y) / documentSize.height;
+    
+    let newSelection = { ...initialSelection };
+    
+    // Apply resize based on corner being dragged
+    switch (corner) {
+      case 'nw': // Northwest: move top-left corner
+        newSelection.x = initialSelection.x + deltaX;
+        newSelection.y = initialSelection.y + deltaY;
+        newSelection.width = initialSelection.width - deltaX;
+        newSelection.height = initialSelection.height - deltaY;
+        break;
+      case 'ne': // Northeast: move top-right corner
+        newSelection.y = initialSelection.y + deltaY;
+        newSelection.width = initialSelection.width + deltaX;
+        newSelection.height = initialSelection.height - deltaY;
+        break;
+      case 'sw': // Southwest: move bottom-left corner
+        newSelection.x = initialSelection.x + deltaX;
+        newSelection.width = initialSelection.width - deltaX;
+        newSelection.height = initialSelection.height + deltaY;
+        break;
+      case 'se': // Southeast: move bottom-right corner
+        newSelection.width = initialSelection.width + deltaX;
+        newSelection.height = initialSelection.height + deltaY;
+        break;
+    }
+    
+    // Ensure selection stays within bounds (0-1) and has minimum size
+    const minSize = 0.01; // 1% minimum size
+    newSelection.x = Math.max(0, Math.min(1 - minSize, newSelection.x));
+    newSelection.y = Math.max(0, Math.min(1 - minSize, newSelection.y));
+    newSelection.width = Math.max(minSize, Math.min(1 - newSelection.x, newSelection.width));
+    newSelection.height = Math.max(minSize, Math.min(1 - newSelection.y, newSelection.height));
+    
+    // Update the selected selection
+    setSelectedSelection(prev => prev ? {
+      ...prev,
+      selection: newSelection
+    } : null);
+    
+    // TODO: Update the actual selection in the state (existing or new)
+    // This would require dispatching to the viewer state
+    
+  }, [resizeState, selectedSelection, documentSize]);
+
+  // Handle mouse up to end resize
+  const handleMouseUp = useCallback(() => {
+    if (resizeState && selectedSelection) {
+      // TODO: Save the resized selection to the appropriate state/database
+      console.log('Resize completed:', selectedSelection.selection);
+    }
+    
+    setResizeState(null);
+    isDraggingRef.current = false;
+  }, [resizeState, selectedSelection]);
+
+  // Set up global mouse event listeners for dragging
+  React.useEffect(() => {
+    if (resizeState) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [resizeState, handleMouseMove, handleMouseUp]);
 
   // Render resize handles
   const renderResizeHandles = () => {
     if (!selectedSelection) return null;
 
-    const handleSize = 6; // Size of the square handles
+    const handleSize = 10; // Increased size for better accessibility
     const positions = [
       { name: 'nw', style: { top: -handleSize/2, left: -handleSize/2, cursor: 'nw-resize' } },
       { name: 'ne', style: { top: -handleSize/2, right: -handleSize/2, cursor: 'ne-resize' } },
@@ -55,13 +155,13 @@ export default function SelectionsLayer({ documentSize }: Props) {
     return positions.map(({ name, style }) => (
       <div
         key={name}
-        className="absolute bg-blue-600 border border-white shadow-sm hover:bg-blue-700"
+        className="absolute bg-blue-600 border border-white shadow-md hover:bg-blue-700 transition-colors"
         style={{
           width: handleSize,
           height: handleSize,
           ...style,
         }}
-        onMouseDown={() => handleResizeStart(name)}
+        onMouseDown={(e) => handleResizeStart(name, e)}
       />
     ));
   };
