@@ -33,17 +33,7 @@ const createInitialState = (): ViewerState => ({
   },
   selections: {
     existingSelections: [],
-    newSelections: [
-      // Test selection to verify rendering
-      {
-        x: 0.1, // 10% from left
-        y: 0.1, // 10% from top
-        width: 0.2, // 20% width
-        height: 0.1, // 10% height
-        page_number: 1,
-        document_id: 'test'
-      }
-    ],
+    newSelections: [],
     drawing: null,
     isDrawing: false,
     history: [],
@@ -217,6 +207,26 @@ function viewerStateReducer(state: ViewerState, action: ViewerAction): ViewerSta
         }
       };
     }
+
+    case 'SET_EXISTING_SELECTIONS':
+      // Convert SelectionType from API to SelectionCreateType for rendering
+      const convertedSelections = action.payload.map(sel => ({
+        x: sel.x,
+        y: sel.y,
+        width: sel.width,
+        height: sel.height,
+        page_number: sel.page_number,
+        document_id: sel.document_id,
+        confidence: sel.confidence
+      }));
+      
+      return {
+        ...state,
+        selections: {
+          ...state.selections,
+          existingSelections: convertedSelections
+        }
+      };
 
     case 'START_SELECTION':
       return {

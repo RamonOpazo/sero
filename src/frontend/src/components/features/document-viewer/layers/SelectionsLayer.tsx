@@ -10,6 +10,7 @@ export default function SelectionsLayer({ documentSize }: Props) {
   const {
     isRendered,
     showSelections,
+    existingSelections,
     newSelections,
     drawing,
     deleteSelection,
@@ -61,8 +62,9 @@ export default function SelectionsLayer({ documentSize }: Props) {
 
   // Filter selections for current page
   const currentPageNumber = 1; // TODO: Get from context when multi-page support is added
-  // Note: MinimalDocumentType doesn't include selections - they're fetched on-demand by components that need them
-  const pageExisting: SelectionCreateType[] = []; // TODO: fetch selections if needed for visual overlay
+  const pageExisting = existingSelections.filter(
+    s => s.page_number === currentPageNumber
+  );
   const pageNew = newSelections.filter(
     s => s.page_number === currentPageNumber
   );
@@ -72,11 +74,13 @@ export default function SelectionsLayer({ documentSize }: Props) {
   console.log('[SelectionsLayer Debug]', {
     isRendered,
     showSelections,
+    totalExistingSelections: existingSelections.length,
     pageExisting: pageExisting.length,
     pageNew: pageNew.length,
     drawing: !!drawingThisPage,
     currentPageNumber,
     documentSize,
+    existingSelections,
     newSelections: newSelections.length
   });
 
@@ -96,7 +100,7 @@ export default function SelectionsLayer({ documentSize }: Props) {
           height: documentSize.height,
         }}
       >
-        {/* Existing selections - currently not loaded in MinimalDocumentType */}
+        {/* Existing selections from database */}
         {pageExisting.map((sel, i) => renderBox(sel, false, `existing-${i}`))}
         
         {/* New selections */}

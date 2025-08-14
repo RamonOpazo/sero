@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Hand, MousePointerClick, Eye, EyeOff, Scan, Info, Square } from "lucide-react";
+import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Hand, MousePointerClick, Eye, EyeOff, Scan, Info, Pen, PenOff } from "lucide-react";
 import { useViewerState } from '../hooks/useViewerState';
 
 interface ActionsLayerProps {
@@ -315,7 +315,7 @@ export default function ActionsLayer({ isInfoVisible = false, onToggleInfo }: Ac
             className={showSelections ? 'bg-accent text-accent-foreground' : ''}
             title={showSelections ? "Hide selections" : "Show selections"}
           >
-            <Square />
+            {showSelections ? <Pen /> : <PenOff />}
           </Button>
 
           {/* Info panel toggle */}

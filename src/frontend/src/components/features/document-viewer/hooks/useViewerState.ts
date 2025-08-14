@@ -103,6 +103,7 @@ export function useViewerState() {
     triggerUpdate,
     
     // Selection methods (replaces useSelection)
+    get existingSelections() { return context.state.selections.existingSelections; },
     get newSelections() { return context.state.selections.newSelections; },
     get drawing() { return context.state.selections.drawing; },
     get isDrawing() { return context.state.selections.isDrawing; },
@@ -110,6 +111,7 @@ export function useViewerState() {
     updateDraw: context.updateSelection,
     endDraw: context.endSelection,
     deleteNewSelection: context.deleteSelection,
+    deleteSelection: context.deleteSelection,
   };
 }
 
