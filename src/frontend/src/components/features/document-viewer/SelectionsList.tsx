@@ -1,73 +1,115 @@
 import { Button } from "@/components/ui/button";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Save, X, Loader2 } from "lucide-react";
-import { useDocumentSelections } from "@/hooks/useDocumentData";
+import { Badge } from "@/components/ui/badge";
+import { Widget, WidgetHeader, WidgetTitle, WidgetBody } from "@/components/shared/Widget";
+import { X, Globe, MapPin } from "lucide-react";
+import { useViewerState } from "./hooks/useViewerState";
+import { useMemo } from "react";
 
 type Props = { documentId: string };
 
 export default function SelectionList({ documentId }: Props) {
-  const { selections, loading, error } = useDocumentSelections(documentId);
+  const { existingSelections, newSelections, dispatch } = useViewerState();
 
-  if (loading) {
+  // Combine all selections with type information
+  const allSelections = useMemo(() => {
+    const existing = existingSelections.map((sel, index) => ({
+      ...sel,
+      type: 'existing' as const,
+      index,
+      displayId: sel.id || `existing-${index}`,
+    }));
+    const newOnes = newSelections.map((sel, index) => ({
+      ...sel,
+      type: 'new' as const,
+      index,
+      displayId: `new-${index}`,
+      id: `new-${index}`, // Temporary ID for new selections
+    }));
+    return [...existing, ...newOnes];
+  }, [existingSelections, newSelections]);
+
+  const handleRemoveSelection = (type: 'existing' | 'new', index: number) => {
+    if (type === 'new') {
+      // Remove from new selections
+      const updatedNewSelections = [...newSelections];
+      updatedNewSelections.splice(index, 1);
+      dispatch({
+        type: 'SET_NEW_SELECTIONS',
+        payload: updatedNewSelections
+      });
+    } else {
+      // Remove from existing selections
+      const updatedExistingSelections = [...existingSelections];
+      updatedExistingSelections.splice(index, 1);
+      dispatch({
+        type: 'SET_EXISTING_SELECTIONS',
+        payload: updatedExistingSelections
+      });
+    }
+  };
+
+  if (allSelections.length === 0) {
     return (
-      <div className="flex flex-col gap-2">
-        <h4 className="text-sidebar-foreground/70 ring-sidebar-ring flex h-8 shrink-0 items-center rounded-md text-xs font-medium">Selections</h4>
-        <div className="flex items-center justify-center py-4">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          <span className="ml-2 text-xs text-muted-foreground">Loading selections...</span>
-        </div>
-      </div>
+      <Widget className="py-2">
+        <WidgetHeader className="pb-1">
+          <WidgetTitle className="text-xs">Selection List</WidgetTitle>
+        </WidgetHeader>
+        <WidgetBody className="pt-0">
+          <div className="text-xs text-muted-foreground text-center py-2 border border-dashed rounded">
+            No selections yet
+          </div>
+        </WidgetBody>
+      </Widget>
     );
   }
 
-  if (error) {
-    return (
-      <div className="flex flex-col gap-2">
-        <h4 className="text-sidebar-foreground/70 ring-sidebar-ring flex h-8 shrink-0 items-center rounded-md text-xs font-medium">Selections</h4>
-        <div className="text-xs text-destructive p-2 border border-destructive rounded-md">
-          {error}
-        </div>
-      </div>
-    );
-  }
   return (
-    <Accordion
-      type="single"
-      collapsible
-      className="flex flex-col gap-2 w-full h-full overflow-hidden"
-    // defaultValue="item-1"
-    >
-      <AccordionItem value="item-1">
-        <AccordionTrigger className="text-sidebar-foreground/70 ring-sidebar-ring flex h-8 shrink-0 items-center rounded-md text-xs font-medium">Selections</AccordionTrigger>
-        <div className="grid grid-cols-2 justify-between items-center gap-2 py-2">
-          <Button variant="outline" size="sm">
-            <Save /> Save
-          </Button>
-          <Button variant="destructive" size="sm">
-            Clear All
-          </Button>
-        </div>
-        <AccordionContent>
-          <ScrollArea className="h-[200px] border rounded-md">
-            <div className="flex flex-col justify-between gap-border items-center">
-              {selections.map(sel => (
-                <div key={sel.id} className="flex flex-row w-full hover:bg-muted/50 justify-start items-center">
-                  <span className="text-xs text-sidebar-foreground/70 pl-2">
-                    [p: {sel.page_number}] @ (x={sel.x}, y={sel.y}) {sel.is_ai_generated && `- conf: ${sel.confidence}`}
-                  </span>
-                  <Button size="icon" variant="ghost" className="ml-auto"><X size={5} /></Button>
+    <Widget className="py-2">
+      <WidgetHeader className="pb-1">
+        <WidgetTitle className="text-xs">Selection List</WidgetTitle>
+      </WidgetHeader>
+      <WidgetBody className="pt-0">
+        <div className="space-y-1">
+          {allSelections.slice(0, 8).map((sel) => {
+            const isGlobal = sel.page_number === null || sel.page_number === 0;
+            const pageDisplay = isGlobal ? 'All' : `P${sel.page_number}`;
+            
+            return (
+              <div
+                key={sel.displayId}
+                className="flex items-center gap-2 p-1 rounded border text-xs hover:bg-muted/50 transition-colors"
+              >
+                <Badge variant={sel.type === 'new' ? 'default' : 'secondary'} className="text-xs h-4 px-1">
+                  {sel.type === 'new' ? 'N' : 'S'}
+                </Badge>
+                <div className="flex items-center gap-1 text-muted-foreground min-w-0">
+                  {isGlobal ? (
+                    <><Globe className="h-3 w-3" /> {pageDisplay}</>
+                  ) : (
+                    <><MapPin className="h-3 w-3" /> {pageDisplay}</>
+                  )}
                 </div>
-              ))}
+                <div className="text-muted-foreground font-mono text-xs truncate flex-1">
+                  {sel.x.toFixed(2)},{sel.y.toFixed(2)}
+                </div>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => handleRemoveSelection(sel.type, sel.index)}
+                  className="h-5 w-5 p-0 text-muted-foreground hover:text-destructive"
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            );
+          })}
+          {allSelections.length > 8 && (
+            <div className="text-xs text-muted-foreground text-center py-1 border border-dashed rounded">
+              +{allSelections.length - 8} more selections
             </div>
-          </ScrollArea>
-        </AccordionContent>
-      </AccordionItem>
-    </Accordion>
+          )}
+        </div>
+      </WidgetBody>
+    </Widget>
   );
 }
