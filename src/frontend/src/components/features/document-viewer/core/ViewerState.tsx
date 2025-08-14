@@ -345,6 +345,19 @@ function viewerStateReducer(state: ViewerState, action: ViewerAction): ViewerSta
       };
     }
 
+    case 'REMOVE_EXISTING_SELECTION': {
+      const updatedExistingSelections = [...state.selections.existingSelections];
+      updatedExistingSelections.splice(action.payload.index, 1);
+      
+      return {
+        ...state,
+        selections: {
+          ...state.selections,
+          existingSelections: updatedExistingSelections
+        }
+      };
+    }
+
     case 'RESET_VIEW':
       return {
         ...state,

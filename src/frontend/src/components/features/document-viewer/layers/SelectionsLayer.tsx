@@ -1,7 +1,16 @@
 import React, { useState, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 import type { SelectionCreateType } from "@/types";
 import { useViewerState } from '../hooks/useViewerState';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Save, Trash2 } from "lucide-react";
 
 type Props = { 
   documentSize: { width: number; height: number };
@@ -53,6 +62,32 @@ export default function SelectionsLayer({ documentSize }: Props) {
   const isDraggingRef = useRef(false);
   const rafRef = useRef<number | null>(null);
 
+  // State for context menu
+  const [contextMenuOpen, setContextMenuOpen] = useState(false);
+  const [contextMenuPosition, setContextMenuPosition] = useState<{ x: number; y: number } | null>(null);
+
+  // Handle context menu actions
+  const handleSaveSelection = useCallback((sel: SelectionCreateType, type: 'existing' | 'new', index: number) => {
+    console.log('Save selection:', { sel, type, index });
+    // TODO: Implement save logic - could save to database, export, etc.
+    setContextMenuOpen(false);
+  }, []);
+
+  const handleRemoveSelection = useCallback((sel: SelectionCreateType, type: 'existing' | 'new', index: number) => {
+    console.log('Remove selection:', { sel, type, index });
+    if (type === 'new') {
+      deleteSelection(index);
+    } else {
+      // Remove existing selection
+      dispatch({
+        type: 'REMOVE_EXISTING_SELECTION',
+        payload: { index }
+      });
+    }
+    setSelectedSelection(null);
+    setContextMenuOpen(false);
+  }, [deleteSelection, dispatch]);
+
   // Handle selection click
   const handleSelectionClick = (
     sel: SelectionCreateType,
@@ -64,6 +99,9 @@ export default function SelectionsLayer({ documentSize }: Props) {
 
   // Handle move drag start
   const handleMoveStart = useCallback((e: React.MouseEvent) => {
+    // Only allow left-click dragging (button 0)
+    if (e.button !== 0) return;
+    
     e.stopPropagation();
     e.preventDefault();
     
@@ -81,6 +119,9 @@ export default function SelectionsLayer({ documentSize }: Props) {
 
   // Handle resize handle drag start
   const handleResizeStart = useCallback((corner: string, e: React.MouseEvent) => {
+    // Only allow left-click dragging (button 0)
+    if (e.button !== 0) return;
+    
     e.stopPropagation();
     e.preventDefault();
     
@@ -303,6 +344,24 @@ export default function SelectionsLayer({ documentSize }: Props) {
     }
   }, [resizeState, moveState, creatingState, handleMouseMove, handleMouseUp]);
 
+  // Close context menu on click outside or escape
+  React.useEffect(() => {
+    if (contextMenuOpen) {
+      const handleClickOutside = () => setContextMenuOpen(false);
+      const handleEscape = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') setContextMenuOpen(false);
+      };
+      
+      document.addEventListener('click', handleClickOutside);
+      document.addEventListener('keydown', handleEscape);
+      
+      return () => {
+        document.removeEventListener('click', handleClickOutside);
+        document.removeEventListener('keydown', handleEscape);
+      };
+    }
+  }, [contextMenuOpen]);
+
   // Clean up RAF on unmount
   React.useEffect(() => {
     return () => {
@@ -355,7 +414,7 @@ export default function SelectionsLayer({ documentSize }: Props) {
     const isSelected = selectedSelection?.type === (isNew ? 'new' : 'existing') && 
                       selectedSelection?.index === index;
 
-    return (
+    const selectionElement = (
       <div
         key={key}
         className={cn(
@@ -386,8 +445,8 @@ export default function SelectionsLayer({ documentSize }: Props) {
           handleSelectionClick(sel, isNew ? 'new' : 'existing', index);
         }}
         onMouseDown={(e) => {
-          // Only start move if this selection is selected and we're not clicking on resize handles
-          if (isSelected && !e.defaultPrevented) {
+          // Only start move if this selection is selected, left-click, and we're not clicking on resize handles
+          if (isSelected && e.button === 0 && !e.defaultPrevented) {
             handleMoveStart(e);
           }
         }}
@@ -396,6 +455,25 @@ export default function SelectionsLayer({ documentSize }: Props) {
         {isSelected && renderResizeHandles()}
       </div>
     );
+
+    // Add context menu handler for selected selections
+    if (isSelected) {
+      return (
+        <div
+          key={key}
+          onContextMenu={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setContextMenuPosition({ x: e.clientX, y: e.clientY });
+            setContextMenuOpen(true);
+          }}
+        >
+          {selectionElement}
+        </div>
+      );
+    }
+
+    return selectionElement;
   };
 
   // Filter selections for current page
@@ -432,8 +510,8 @@ export default function SelectionsLayer({ documentSize }: Props) {
         }}
         onClick={() => setSelectedSelection(null)}
         onMouseDown={(e) => {
-          // Only handle mouse down on empty space (not on existing selections)
-          if (e.target === e.currentTarget && mode === 'select') {
+          // Only handle left-click mouse down on empty space (not on existing selections)
+          if (e.target === e.currentTarget && mode === 'select' && e.button === 0) {
             handleCreateStart(e);
           }
         }}
@@ -447,6 +525,51 @@ export default function SelectionsLayer({ documentSize }: Props) {
         {/* Currently drawing selection */}
         {drawingThisPage && renderBox(drawingThisPage, true, "drawing", -1, false)}
       </div>
+
+      {/* Context menu positioned at mouse cursor - using portal to render outside transformed space */}
+      {contextMenuOpen && contextMenuPosition && selectedSelection && createPortal(
+        <div
+          className="fixed z-[1000] bg-popover text-popover-foreground rounded-md border shadow-md min-w-[8rem] p-1"
+          style={{
+            left: contextMenuPosition.x,
+            top: contextMenuPosition.y,
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div
+            className="relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleSaveSelection(
+                selectedSelection.selection, 
+                selectedSelection.type, 
+                selectedSelection.index
+              );
+            }}
+          >
+            <Save className="mr-2 h-4 w-4" />
+            Save
+          </div>
+          <div className="bg-border -mx-1 my-1 h-px" />
+          <div
+            className="relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-destructive/10 hover:text-destructive"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleRemoveSelection(
+                selectedSelection.selection, 
+                selectedSelection.type, 
+                selectedSelection.index
+              );
+            }}
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            Remove
+          </div>
+        </div>,
+        document.body
+      )}
 
       {/* No interaction layer needed - handled by UnifiedEventHandler */}
     </>

@@ -122,6 +122,7 @@ export type ViewerAction =
   | { type: 'REGISTER_PAGE'; payload: { index: number; element: HTMLElement | null } }
   | { type: 'SET_EXISTING_SELECTIONS'; payload: SelectionType[] }
   | { type: 'UPDATE_EXISTING_SELECTION'; payload: { index: number; selection: SelectionCreateType } }
+  | { type: 'REMOVE_EXISTING_SELECTION'; payload: { index: number } }
   | { type: 'UPDATE_NEW_SELECTION'; payload: { index: number; selection: SelectionCreateType } }
   | { type: 'START_SELECTION'; payload: SelectionCreateType }
   | { type: 'UPDATE_SELECTION'; payload: SelectionCreateType }
