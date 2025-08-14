@@ -15,6 +15,7 @@ export default function SelectionsLayer({ documentSize }: Props) {
     newSelections,
     drawing,
     deleteSelection,
+    currentPage,
   } = useViewerState();
 
   // State for selection editing
@@ -124,14 +125,21 @@ export default function SelectionsLayer({ documentSize }: Props) {
   };
 
   // Filter selections for current page
-  const currentPageNumber = 1; // TODO: Get from context when multi-page support is added
+  // Convert from 0-based currentPage to 1-based page_number for comparison
+  const currentPageNumber = currentPage + 1;
+  
+  // Filter existing selections: show if page_number is null/0 (all pages) or matches current page
   const pageExisting = existingSelections.filter(
-    s => s.page_number === currentPageNumber
+    s => s.page_number === null || s.page_number === 0 || s.page_number === currentPageNumber
   );
+  
+  // Filter new selections: show if page_number is null/0 (all pages) or matches current page  
   const pageNew = newSelections.filter(
-    s => s.page_number === currentPageNumber
+    s => s.page_number === null || s.page_number === 0 || s.page_number === currentPageNumber
   );
-  const drawingThisPage = drawing?.page_number === currentPageNumber ? drawing : null;
+  
+  // Drawing selection: show if page_number is null/0 (all pages) or matches current page
+  const drawingThisPage = drawing && (drawing.page_number === null || drawing.page_number === 0 || drawing.page_number === currentPageNumber) ? drawing : null;
 
   if (!isRendered || !showSelections) {
     return null;
