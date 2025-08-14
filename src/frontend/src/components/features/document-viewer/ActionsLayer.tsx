@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Bolt } from "lucide-react";
 import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Hand, MousePointerClick, Eye, EyeOff, Scan, Info } from "lucide-react";
-import { useDocumentViewerContext } from "@/context/DocumentViewerContext";
+import { useViewerState } from './hooks/useViewerState';
 
 interface ActionsLayerProps {
   isInfoVisible?: boolean;
@@ -20,7 +20,7 @@ export default function ActionsLayer({ isInfoVisible = false, onToggleInfo }: Ac
     showSelections,
     setShowSelections,
     resetView,
-  } = useDocumentViewerContext();
+  } = useViewerState();
 
   const handleModeToggle = () => {
     if (mode === "pan") {

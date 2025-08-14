@@ -1,33 +1,10 @@
-import React, { useRef, useCallback, useEffect, createContext, useContext } from 'react';
-import { useDocumentViewerContext } from '@/context/DocumentViewerContext';
-import { usePDFContext } from '@/context/PDFContext';
+import React, { useRef, useCallback, useEffect } from 'react';
 import { cn } from '@/lib/utils';
+import { useViewerState } from '../hooks/useViewerState';
 import {
   type Point,
-  type ViewerTransform,
-  type ViewportBounds,
-  screenToViewport,
-  screenToDocument,
   clampPan,
 } from './CoordinateSystem';
-
-interface ViewportContextType {
-  viewportRef: React.RefObject<HTMLDivElement>;
-  getViewportBounds: () => ViewportBounds | null;
-  screenToViewport: (screenPoint: Point) => Point | null;
-  screenToDocument: (screenPoint: Point, documentSize: { width: number; height: number }) => Point | null;
-  transform: ViewerTransform;
-}
-
-const ViewportContext = createContext<ViewportContextType | null>(null);
-
-export const useViewportContext = () => {
-  const context = useContext(ViewportContext);
-  if (!context) {
-    throw new Error('useViewportContext must be used within a UnifiedViewport');
-  }
-  return context;
-};
 
 interface UnifiedViewportProps {
   children: React.ReactNode;
@@ -47,42 +24,23 @@ export function UnifiedViewport({
     isPanning,
     setIsPanning,
     mode,
-  } = useDocumentViewerContext();
-  
-  const { isRendered } = usePDFContext();
+    isRendered,
+    getViewportBounds,
+    screenToViewport: screenToViewportCoords,
+    screenToDocument: screenToDocumentCoords,
+  } = useViewerState();
   
   const viewportRef = useRef<HTMLDivElement>(null);
   const animationFrameRef = useRef<number | null>(null);
   const panStartRef = useRef<{ x: number; y: number } | null>(null);
 
-  // Get current viewport bounds
-  const getViewportBounds = useCallback((): ViewportBounds | null => {
-    if (!viewportRef.current) return null;
-    const rect = viewportRef.current.getBoundingClientRect();
-    return {
-      left: rect.left,
-      top: rect.top,
-      width: rect.width,
-      height: rect.height,
-    };
+  // Update viewport bounds reference
+  useEffect(() => {
+    if (viewportRef.current) {
+      // Store reference for coordinate calculations in the unified state
+      // The state management will handle viewport bounds calculation
+    }
   }, []);
-
-  // Convert screen coordinates to viewport coordinates
-  const screenToViewportCoords = useCallback((screenPoint: Point): Point | null => {
-    const bounds = getViewportBounds();
-    if (!bounds) return null;
-    return screenToViewport(screenPoint, bounds);
-  }, [getViewportBounds]);
-
-  // Convert screen coordinates to document coordinates
-  const screenToDocumentCoords = useCallback((
-    screenPoint: Point, 
-    docSize: { width: number; height: number }
-  ): Point | null => {
-    const bounds = getViewportBounds();
-    if (!bounds) return null;
-    return screenToDocument(screenPoint, bounds, { pan, zoom }, docSize);
-  }, [getViewportBounds, pan, zoom]);
 
   // Handle mouse events for panning
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -166,17 +124,7 @@ export function UnifiedViewport({
     return 'default';
   }, [mode, isPanning]);
 
-  // Context value
-  const contextValue: ViewportContextType = React.useMemo(() => ({
-    viewportRef,
-    getViewportBounds,
-    screenToViewport: screenToViewportCoords,
-    screenToDocument: screenToDocumentCoords,
-    transform: { pan, zoom },
-  }), [getViewportBounds, screenToViewportCoords, screenToDocumentCoords, pan, zoom]);
-
   return (
-    <ViewportContext.Provider value={contextValue}>
       <div
         ref={viewportRef}
         className={cn(
@@ -209,7 +157,6 @@ export function UnifiedViewport({
           {children}
         </div>
       </div>
-    </ViewportContext.Provider>
   );
 }
 

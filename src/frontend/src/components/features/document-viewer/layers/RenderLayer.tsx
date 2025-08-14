@@ -2,8 +2,7 @@ import { useEffect, useState, useRef, useLayoutEffect, useMemo } from "react";
 import { Document, Page } from "react-pdf";
 import { toast } from "sonner";
 import { type DocumentType } from "@/types";
-import { useDocumentViewerContext } from "@/context/DocumentViewerContext";
-import { usePDFContext } from "@/context/PDFContext";
+import { useViewerState } from '../hooks/useViewerState';
 
 type Props = {
   document: DocumentType;
@@ -17,10 +16,11 @@ export default function RenderLayer({ document, onDocumentSizeChange }: Props) {
     setCurrentPage,
     setNumPages,
     setDocumentContainer,
-    isViewingProcessedDocument,
-  } = useDocumentViewerContext();
-
-  const { registerPage, triggerUpdate, setIsRendered } = usePDFContext();
+    navigation,
+    registerPage,
+    triggerUpdate,
+    setIsRendered,
+  } = useViewerState();
 
   const [blob, setBlob] = useState<Blob | null>(null);
   const [arrayBuffer, setArrayBuffer] = useState<ArrayBuffer | null>(null);
@@ -40,7 +40,7 @@ export default function RenderLayer({ document, onDocumentSizeChange }: Props) {
 
   // Use the blob from the document (already loaded and decrypted)
   useEffect(() => {
-    const fileToLoad = isViewingProcessedDocument ? document.redacted_file : document.original_file;
+    const fileToLoad = navigation.isViewingProcessedDocument ? document.redacted_file : document.original_file;
 
     if (!fileToLoad) {
       setBlob(null);
@@ -64,8 +64,8 @@ export default function RenderLayer({ document, onDocumentSizeChange }: Props) {
     }
   }, [
     // Only re-run when the actual file changes, not when the document object reference changes
-    isViewingProcessedDocument ? document.redacted_file?.id : document.original_file?.id,
-    isViewingProcessedDocument,
+    navigation.isViewingProcessedDocument ? document.redacted_file?.id : document.original_file?.id,
+    navigation.isViewingProcessedDocument,
     setCurrentPage, 
     setIsRendered
   ]);

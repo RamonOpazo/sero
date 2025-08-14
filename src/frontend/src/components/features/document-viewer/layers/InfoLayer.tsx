@@ -16,7 +16,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { type DocumentType } from "@/types";
-import { useDocumentViewerContext } from "@/context/DocumentViewerContext";
+import { useViewerState } from '../hooks/useViewerState';
 
 type Props = { 
   document: DocumentType;
@@ -57,7 +57,7 @@ function InfoSection({ title, icon, children, defaultExpanded = false }: InfoSec
 }
 
 export default function InfoLayer({ document, documentSize, isVisible, onToggleVisibility }: Props) {
-  const { currentPage, numPages, zoom } = useDocumentViewerContext();
+  const { currentPage, numPages, zoom } = useViewerState();
 
   const formatFileSize = useCallback((bytes: number) => {
     if (bytes === 0) return '0 Bytes';

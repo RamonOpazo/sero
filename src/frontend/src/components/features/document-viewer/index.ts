@@ -11,6 +11,9 @@ export * from "./PromptsList";
 // New unified architecture exports
 export * from "./core/UnifiedViewport";
 export * from "./core/CoordinateSystem";
+export * from "./core/ViewerState";
 export * from "./layers/RenderLayer";
 export * from "./layers/SelectionsLayer";
 export * from "./layers/InfoLayer";
+export * from "./hooks/useViewerState";
+export * from "./types/viewer";

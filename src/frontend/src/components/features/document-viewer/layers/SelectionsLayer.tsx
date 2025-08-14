@@ -1,10 +1,7 @@
 import React, { useRef, useCallback, useEffect, useState } from 'react';
-import { usePDFContext } from "@/context/PDFContext";
-import { useDocumentViewerContext } from "@/context/DocumentViewerContext";
-import { useSelection } from "@/hooks/useSelections";
 import { cn } from "@/lib/utils";
 import type { DocumentType, SelectionCreateType } from "@/types";
-import { useViewportContext } from '../core/UnifiedViewport';
+import { useViewerState } from '../hooks/useViewerState';
 
 type Props = { 
   document: DocumentType;
@@ -12,20 +9,21 @@ type Props = {
 };
 
 export default function SelectionsLayer({ document, documentSize }: Props) {
-  const { pageRefs, isRendered } = usePDFContext();
-  const { mode, showSelections } = useDocumentViewerContext();
-  const { screenToDocument } = useViewportContext();
-  
   const {
+    pageRefs,
+    isRendered,
+    mode,
+    showSelections,
+    screenToDocument,
     newSelections,
     drawing,
-    startDraw,
-    updateDraw,
-    endDraw,
-    deleteNewSelection,
-  } = useSelection(document.id);
+    isDrawing,
+    startSelection,
+    updateSelection,
+    endSelection,
+    deleteSelection,
+  } = useViewerState();
 
-  const [isDrawing, setIsDrawing] = useState(false);
   const drawStartRef = useRef<{ pageIndex: number; startPoint: { x: number; y: number } } | null>(null);
 
   // Handle selection drawing with unified coordinates
@@ -40,37 +38,27 @@ export default function SelectionsLayer({ document, documentSize }: Props) {
     const pageRef = pageRefs.current.get(pageIndex);
     if (!pageRef) return;
 
-    // Convert screen coordinates to document coordinates
-    const documentPoint = screenToDocument({ x: e.clientX, y: e.clientY }, documentSize);
-    if (!documentPoint) return;
-
-    drawStartRef.current = { pageIndex, startPoint: documentPoint };
-    setIsDrawing(true);
+    drawStartRef.current = { pageIndex, startPoint: { x: e.clientX, y: e.clientY } };
     
-    // Start the selection drawing
-    startDraw(e, pageIndex, pageRef);
-  }, [mode, screenToDocument, documentSize, pageRefs, startDraw]);
+    // Start the selection drawing using unified state
+    startSelection(e, pageIndex);
+  }, [mode, screenToDocument, documentSize, pageRefs, startSelection]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (mode !== "select" || !isDrawing || !drawStartRef.current) return;
     
     e.preventDefault();
     
-    const pageRef = pageRefs.current.get(drawStartRef.current.pageIndex);
-    if (!pageRef) return;
-
-    // For the selection drawing, we still need to use the page element for relative calculations
-    // This maintains compatibility with the existing selection hook
-    updateDraw(e, pageRef);
-  }, [mode, isDrawing, updateDraw, pageRefs]);
+    // Update the selection drawing using unified state
+    updateSelection(e);
+  }, [mode, isDrawing, updateSelection]);
 
   const handleMouseUp = useCallback(() => {
     if (mode !== "select") return;
     
-    setIsDrawing(false);
     drawStartRef.current = null;
-    endDraw();
-  }, [mode, endDraw]);
+    endSelection();
+  }, [mode, endSelection]);
 
   // Render selection boxes using absolute positioning within the unified transform
   const renderBox = (
@@ -104,7 +92,7 @@ export default function SelectionsLayer({ document, documentSize }: Props) {
         {isNew && deletable && (
           <button
             className="absolute -top-1 -right-1 text-xs bg-red-600 text-white w-5 h-5 rounded-full flex items-center justify-center hover:bg-red-700"
-            onClick={() => deleteNewSelection(key as number)}
+            onClick={() => deleteSelection(key as number)}
           >
             ×
           </button>

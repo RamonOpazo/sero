@@ -5,20 +5,17 @@ import RenderLayer from "./layers/RenderLayer";
 import SelectionsLayer from "./layers/SelectionsLayer";
 import InfoLayer from "./layers/InfoLayer";
 import ActionsLayer from "./ActionsLayer";
+import { useViewerState } from './hooks/useViewerState';
 import type { DocumentType } from "@/types";
 
 type Props = { document: DocumentType };
 
 export default function Renderer({ document, className, ...props }: Props & React.ComponentProps<"div">) {
   const [documentSize, setDocumentSize] = useState({ width: 800, height: 600 });
-  const [isInfoVisible, setIsInfoVisible] = useState(false);
+  const { showInfoPanel, toggleInfoPanel } = useViewerState();
 
   const handleDocumentSizeChange = useCallback((size: { width: number; height: number }) => {
     setDocumentSize(size);
-  }, []);
-
-  const handleToggleInfo = useCallback(() => {
-    setIsInfoVisible(prev => !prev);
   }, []);
 
   return (
@@ -42,15 +39,15 @@ export default function Renderer({ document, className, ...props }: Props & Reac
         <InfoLayer 
           document={document} 
           documentSize={documentSize}
-          isVisible={isInfoVisible}
-          onToggleVisibility={handleToggleInfo}
+          isVisible={showInfoPanel}
+          onToggleVisibility={toggleInfoPanel}
         />
       </UnifiedViewport>
       
       {/* Actions layer stays outside unified transform for fixed positioning */}
       <ActionsLayer 
-        isInfoVisible={isInfoVisible}
-        onToggleInfo={handleToggleInfo}
+        isInfoVisible={showInfoPanel}
+        onToggleInfo={toggleInfoPanel}
       />
     </div>
   );
