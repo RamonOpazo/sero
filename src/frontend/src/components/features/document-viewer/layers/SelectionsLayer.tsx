@@ -59,10 +59,6 @@ export default function SelectionsLayer({ documentSize }: Props) {
     );
   };
 
-  if (!isRendered || !showSelections) {
-    return null;
-  }
-
   // Filter selections for current page
   const currentPageNumber = 1; // TODO: Get from context when multi-page support is added
   // Note: MinimalDocumentType doesn't include selections - they're fetched on-demand by components that need them
@@ -71,6 +67,23 @@ export default function SelectionsLayer({ documentSize }: Props) {
     s => s.page_number === currentPageNumber
   );
   const drawingThisPage = drawing?.page_number === currentPageNumber ? drawing : null;
+
+  // Debug logging to help diagnose selection visibility issues
+  console.log('[SelectionsLayer Debug]', {
+    isRendered,
+    showSelections,
+    pageExisting: pageExisting.length,
+    pageNew: pageNew.length,
+    drawing: !!drawingThisPage,
+    currentPageNumber,
+    documentSize,
+    newSelections: newSelections.length
+  });
+
+  if (!isRendered || !showSelections) {
+    console.log('[SelectionsLayer] Not rendering:', { isRendered, showSelections });
+    return null;
+  }
 
   return (
     <>

@@ -33,7 +33,17 @@ const createInitialState = (): ViewerState => ({
   },
   selections: {
     existingSelections: [],
-    newSelections: [],
+    newSelections: [
+      // Test selection to verify rendering
+      {
+        x: 0.1, // 10% from left
+        y: 0.1, // 10% from top
+        width: 0.2, // 20% width
+        height: 0.1, // 10% height
+        page_number: 1,
+        document_id: 'test'
+      }
+    ],
     drawing: null,
     isDrawing: false,
     history: [],
@@ -63,7 +73,8 @@ function viewerStateReducer(state: ViewerState, action: ViewerAction): ViewerSta
         selections: {
           ...state.selections,
           existingSelections: [], // MinimalDocumentType doesn't have selections
-          newSelections: [],
+          // Keep test selection for debugging - in production this would be []
+          newSelections: state.selections.newSelections.length > 0 ? state.selections.newSelections : [],
           drawing: null,
           isDrawing: false
         },
