@@ -6,9 +6,9 @@ import SelectionsLayer from "./layers/SelectionsLayer";
 import InfoLayer from "./layers/InfoLayer";
 import ActionsLayer from "./ActionsLayer";
 import { useViewerState } from './hooks/useViewerState';
-import type { DocumentType } from "@/types";
+import type { MinimalDocumentType } from "@/types";
 
-type Props = { document: DocumentType };
+type Props = { document: MinimalDocumentType };
 
 export default function Renderer({ document, className, ...props }: Props & React.ComponentProps<"div">) {
   const [documentSize, setDocumentSize] = useState({ width: 800, height: 600 });

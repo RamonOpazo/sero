@@ -4,9 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Brain, FileText, FileWarning, Trash2, Download } from "lucide-react";
 import SelectionList from "./SelectionsList";
 import PromptList from "./PromptsList";
-import type { DocumentType } from "@/types";
+import type { MinimalDocumentType } from "@/types";
 import { useViewerState } from "./hooks/useViewerState";
-type Props = { document: DocumentType };
+type Props = { document: MinimalDocumentType };
 
 export default function Controller({ document, className, ...props }: Props & React.ComponentProps<"div">) {
   const { navigation, dispatch } = useViewerState();
@@ -24,7 +24,7 @@ export default function Controller({ document, className, ...props }: Props & Re
       const fileWithBlob = document.files.find(f => f.id === currentFile.id);
       if (fileWithBlob && 'blob' in fileWithBlob && fileWithBlob.blob instanceof Blob) {
         const url = URL.createObjectURL(fileWithBlob.blob);
-        const link = document.createElement('a');
+        const link = globalThis.document.createElement('a');
         link.href = url;
         link.download = `${document.name}_${isViewingProcessedDocument ? 'redacted' : 'original'}.pdf`;
         link.click();
@@ -63,9 +63,9 @@ export default function Controller({ document, className, ...props }: Props & Re
           <Trash2 /> Delete File
         </Button>
 
-        <SelectionList selections={document.selections} />
+        <SelectionList documentId={document.id} />
 
-        <PromptList prompts={document.prompts} />
+        <PromptList documentId={document.id} />
       </div>
     </div>
   );

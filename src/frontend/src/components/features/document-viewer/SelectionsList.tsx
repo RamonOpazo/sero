@@ -1,4 +1,3 @@
-import { type SelectionType } from "@/types";
 import { Button } from "@/components/ui/button";
 import {
   Accordion,
@@ -7,11 +6,36 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Save, X } from "lucide-react";
+import { Save, X, Loader2 } from "lucide-react";
+import { useDocumentSelections } from "@/hooks/useDocumentData";
 
-type Props = { selections: SelectionType[] };
+type Props = { documentId: string };
 
-export default function SelectionList({ selections }: Props) {
+export default function SelectionList({ documentId }: Props) {
+  const { selections, loading, error } = useDocumentSelections(documentId);
+
+  if (loading) {
+    return (
+      <div className="flex flex-col gap-2">
+        <h4 className="text-sidebar-foreground/70 ring-sidebar-ring flex h-8 shrink-0 items-center rounded-md text-xs font-medium">Selections</h4>
+        <div className="flex items-center justify-center py-4">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span className="ml-2 text-xs text-muted-foreground">Loading selections...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col gap-2">
+        <h4 className="text-sidebar-foreground/70 ring-sidebar-ring flex h-8 shrink-0 items-center rounded-md text-xs font-medium">Selections</h4>
+        <div className="text-xs text-destructive p-2 border border-destructive rounded-md">
+          {error}
+        </div>
+      </div>
+    );
+  }
   return (
     <Accordion
       type="single"

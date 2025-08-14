@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import { PasswordDialog } from '@/components/dialogs/PasswordDialog';
 import DocumentViewer from '@/components/features/document-viewer/DocumentViewer';
 import { useFiles } from '@/hooks/useFiles';
-import type { DocumentType } from '@/types';
+import type { MinimalDocumentType } from '@/types';
 
 interface FileViewerProps {
   fileType: 'original' | 'redacted';
@@ -86,8 +86,8 @@ export function FileViewer({ fileType }: FileViewerProps) {
     setUserCancelledPassword(false);
   }, [userCancelledPassword]);
 
-  // Create a document object compatible with DocumentViewer from loaded file data
-  const documentForViewer = useMemo((): DocumentType | null => {
+  // Create a minimal document object compatible with DocumentViewer from loaded file data
+  const documentForViewer = useMemo((): MinimalDocumentType | null => {
     if (!documentId || !currentFileData) {
       return null;
     }
@@ -99,8 +99,6 @@ export function FileViewer({ fileType }: FileViewerProps) {
       blob: currentFileData.blob
     };
     const stableFiles = [fileWithBlob];
-    const stablePrompts = currentFileData.prompts || [];
-    const stableSelections = currentFileData.selections || [];
 
     // Since DocumentShallowType doesn't have files array, we determine
     // original/redacted files based on the current loaded file and shallow metadata
@@ -108,9 +106,9 @@ export function FileViewer({ fileType }: FileViewerProps) {
     const originalFile = isCurrentFileOriginal ? fileWithBlob : null;
     const redactedFile = !isCurrentFileOriginal ? fileWithBlob : null;
 
-    // Create a stable object to avoid unnecessary re-renders
-    // Use synthetic document data since we don't fetch the document
-    const viewerDocument: DocumentType = {
+    // Create a minimal document object without prompts and selections
+    // These will be fetched on-demand by the components that need them
+    const viewerDocument: MinimalDocumentType = {
       id: documentId,
       name: `Document ${documentId.slice(-8)}`, // Use last 8 chars of ID as fallback name
       description: '',
@@ -121,8 +119,6 @@ export function FileViewer({ fileType }: FileViewerProps) {
       files: stableFiles,
       original_file: originalFile,
       redacted_file: redactedFile,
-      prompts: stablePrompts,
-      selections: stableSelections
     };
 
     return viewerDocument;
@@ -135,8 +131,6 @@ export function FileViewer({ fileType }: FileViewerProps) {
     currentFileData?.file?.file_hash,
     currentFileData?.file?.file_size,
     currentFileData?.file?.file_type,
-    currentFileData?.prompts?.length,
-    currentFileData?.selections?.length,
   ]);
 
   const formatFileSize = (bytes: number) => {

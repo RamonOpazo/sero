@@ -117,8 +117,23 @@ export const DocumentSearchParamsSchema = PaginationParamsSchema.extend({
   created_before: ISO8601DateTimeSchema.optional(),
 });
 
+// Minimal Document schema - for viewers that don't need prompts/selections
+export const MinimalDocumentSchema = z.object({
+  id: UUIDSchema,
+  created_at: ISO8601DateTimeSchema,
+  updated_at: ISO8601DateTimeSchema.nullable(),
+  name: z.string(),
+  description: z.string().nullable(),
+  project_id: UUIDSchema,
+  tags: z.array(z.string()),
+  files: z.array(z.lazy(() => FileSchema)),
+  original_file: z.lazy(() => FileSchema).nullable(), // computed field
+  redacted_file: z.lazy(() => FileSchema).nullable(), // computed field
+});
+
 // Types
 export type DocumentType = z.infer<typeof DocumentSchema>;
+export type MinimalDocumentType = z.infer<typeof MinimalDocumentSchema>;
 export type DocumentShallowType = z.infer<typeof DocumentShallowSchema>;
 export type DocumentCreateType = z.infer<typeof DocumentCreateSchema>;
 export type DocumentUpdateType = z.infer<typeof DocumentUpdateSchema>;

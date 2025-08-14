@@ -4,7 +4,7 @@
  */
 
 import React, { useReducer, useCallback, useMemo, createContext, useContext } from 'react';
-import { type DocumentType } from '@/types';
+import { type MinimalDocumentType } from '@/types';
 import { 
   type ViewerState, 
   type ViewerAction, 
@@ -65,7 +65,7 @@ function viewerStateReducer(state: ViewerState, action: ViewerAction): ViewerSta
         document: action.payload,
         selections: {
           ...state.selections,
-          existingSelections: action.payload.selections || [],
+          existingSelections: [], // MinimalDocumentType doesn't have selections
           newSelections: [],
           drawing: null,
           isDrawing: false
@@ -353,7 +353,7 @@ const ViewerContext = createContext<ViewerContextType | null>(null);
 // Provider component
 interface ViewerProviderProps {
   children: React.ReactNode;
-  document?: DocumentType;
+  document?: MinimalDocumentType;
 }
 
 export function UnifiedViewerProvider({ children, document }: ViewerProviderProps) {

@@ -1,11 +1,11 @@
 import { useEffect, useState, useRef, useLayoutEffect, useMemo } from "react";
 import { Document, Page } from "react-pdf";
 import { toast } from "sonner";
-import { type DocumentType } from "@/types";
+import { type MinimalDocumentType } from "@/types";
 import { useViewerState } from '../hooks/useViewerState';
 
 type Props = {
-  document: DocumentType;
+  document: MinimalDocumentType;
   onDocumentSizeChange?: (size: { width: number; height: number }) => void;
 };
 

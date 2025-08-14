@@ -1,10 +1,10 @@
 import React, { useRef, useCallback, useEffect, useState } from 'react';
 import { cn } from "@/lib/utils";
-import type { DocumentType, SelectionCreateType } from "@/types";
+import type { MinimalDocumentType, SelectionCreateType } from "@/types";
 import { useViewerState } from '../hooks/useViewerState';
 
 type Props = { 
-  document: DocumentType;
+  document: MinimalDocumentType;
   documentSize: { width: number; height: number };
 };
 
@@ -74,9 +74,8 @@ export default function SelectionsLayer({ document, documentSize }: Props) {
 
   // Filter selections for current page
   const currentPageNumber = 1; // TODO: Get from context when multi-page support is added
-  const pageExisting = document.selections.filter(
-    s => s.page_number === currentPageNumber
-  );
+  // Note: MinimalDocumentType doesn't include selections - they're fetched on-demand by components that need them
+  const pageExisting: SelectionCreateType[] = []; // TODO: fetch selections if needed for visual overlay
   const pageNew = newSelections.filter(
     s => s.page_number === currentPageNumber
   );
@@ -93,7 +92,7 @@ export default function SelectionsLayer({ document, documentSize }: Props) {
           height: documentSize.height,
         }}
       >
-        {/* Existing selections */}
+        {/* Existing selections - currently not loaded in MinimalDocumentType */}
         {pageExisting.map((sel, i) => renderBox(sel, false, `existing-${i}`))}
         
         {/* New selections */}

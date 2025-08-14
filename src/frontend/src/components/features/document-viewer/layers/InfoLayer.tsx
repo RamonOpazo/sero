@@ -1,9 +1,9 @@
 import React, { useCallback } from 'react';
-import { type DocumentType } from "@/types";
+import { type MinimalDocumentType } from "@/types";
 import { useViewerState } from '../hooks/useViewerState';
 
 type Props = { 
-  document: DocumentType;
+  document: MinimalDocumentType;
   documentSize: { width: number; height: number };
   isVisible: boolean;
   onToggleVisibility: () => void;
@@ -84,8 +84,9 @@ export default function InfoLayer({ document, documentSize, isVisible, onToggleV
               <div className="space-y-1 pl-2">
                 <div>ID: <span className="text-cyan-400 font-mono">{document.id}</span></div>
                 <div>CREATED: <span className="text-cyan-400">{formatDate(document.created_at)}</span></div>
-                <div>UPDATED: <span className="text-cyan-400">{formatDate(document.updated_at)}</span></div>
-                <div>USER: <span className="text-cyan-400 font-mono">{document.user_id}</span></div>
+                {document.updated_at && (
+                  <div>UPDATED: <span className="text-cyan-400">{formatDate(document.updated_at)}</span></div>
+                )}
               </div>
             </div>
 
@@ -99,9 +100,6 @@ export default function InfoLayer({ document, documentSize, isVisible, onToggleV
                   <div>FORMAT: <span className="text-cyan-400">{currentFile.mime_type}</span></div>
                   <div>SIZE: <span className="text-cyan-400">{formatFileSize(currentFile.file_size)}</span></div>
                   <div>HASH: <span className="text-cyan-400 font-mono text-xs">{currentFile.file_hash.substring(0, 16)}...</span></div>
-                  {currentFile.filename && (
-                    <div>FILE: <span className="text-cyan-400">{currentFile.filename}</span></div>
-                  )}
                 </div>
               </div>
             )}
@@ -123,8 +121,8 @@ export default function InfoLayer({ document, documentSize, isVisible, onToggleV
                 [OPERATIONS]
               </h3>
               <div className="space-y-1 pl-2">
-                <div>PROMPTS: <span className="text-orange-400 font-bold">{document.prompts?.length || 0} CONFIGURED</span></div>
-                <div>SELECTIONS: <span className="text-orange-400 font-bold">{document.selections?.length || 0} ACTIVE</span></div>
+                <div>PROMPTS: <span className="text-orange-400 font-bold">LOADED ON-DEMAND</span></div>
+                <div>SELECTIONS: <span className="text-orange-400 font-bold">LOADED ON-DEMAND</span></div>
                 <div>STATUS: <span className="text-green-400 font-bold animate-pulse">ONLINE</span></div>
               </div>
             </div>

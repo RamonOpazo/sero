@@ -2,10 +2,10 @@ import { UnifiedViewerProvider } from "./core/ViewerState";
 import Renderer from "./Layers";
 import Controller from "./Controls";
 import { WidgetContainer, Widget, WidgetBody } from "@/components/shared/Widget";
-import { type DocumentType } from "@/types";
+import { type MinimalDocumentType } from "@/types";
 
 type DocumentViewerProps = {
-  document: DocumentType;
+  document: MinimalDocumentType;
 };
 
 export default function DocumentViewer({ document }: DocumentViewerProps) {

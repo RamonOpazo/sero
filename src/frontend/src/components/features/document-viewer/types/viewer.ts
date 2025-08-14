@@ -3,7 +3,7 @@
  * Phase 2: State Consolidation - Unified types for simplified state management
  */
 
-import { type DocumentType, type SelectionCreateType } from '@/types';
+import { type MinimalDocumentType, type SelectionCreateType } from '@/types';
 
 // Viewer modes
 export type ViewerMode = 'pan' | 'select';
@@ -83,7 +83,7 @@ export interface NavigationState {
 // Consolidated viewer state
 export interface ViewerState {
   // Document being viewed
-  document: DocumentType | null;
+  document: MinimalDocumentType | null;
   
   // Document dimensions
   documentSize: DocumentSize;
@@ -106,7 +106,7 @@ export interface ViewerState {
 
 // Action types for state updates
 export type ViewerAction = 
-  | { type: 'SET_DOCUMENT'; payload: DocumentType }
+  | { type: 'SET_DOCUMENT'; payload: MinimalDocumentType }
   | { type: 'SET_DOCUMENT_SIZE'; payload: DocumentSize }
   | { type: 'SET_PAN'; payload: Point }
   | { type: 'SET_ZOOM'; payload: number }
