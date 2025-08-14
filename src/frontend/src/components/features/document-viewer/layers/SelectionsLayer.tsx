@@ -35,6 +35,7 @@ export default function SelectionsLayer({ documentSize }: Props) {
   } | null>(null);
 
   const isDraggingRef = useRef(false);
+  const rafRef = useRef<number | null>(null);
 
   // Handle selection click
   const handleSelectionClick = (
@@ -147,9 +148,22 @@ export default function SelectionsLayer({ documentSize }: Props) {
       return () => {
         document.removeEventListener('mousemove', handleMouseMove);
         document.removeEventListener('mouseup', handleMouseUp);
+        // Clean up any pending RAF
+        if (rafRef.current) {
+          cancelAnimationFrame(rafRef.current);
+        }
       };
     }
   }, [resizeState, handleMouseMove, handleMouseUp]);
+
+  // Clean up RAF on unmount
+  React.useEffect(() => {
+    return () => {
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+      }
+    };
+  }, []);
 
   // Render resize handles
   const renderResizeHandles = () => {
@@ -198,7 +212,11 @@ export default function SelectionsLayer({ documentSize }: Props) {
       <div
         key={key}
         className={cn(
-          "absolute pointer-events-auto group transition-all duration-200",
+          "absolute pointer-events-auto group",
+          // Disable transitions during resize to prevent lag
+          resizeState && selectedSelection?.type === (isNew ? 'new' : 'existing') && selectedSelection?.index === index
+            ? "" // No transition during resize
+            : "transition-all duration-200", // Normal transitions when not resizing
           isSelected
             ? "border border-blue-600 bg-blue-100/20"
             : isNew
