@@ -5,11 +5,17 @@ import { Brain, FileText, FileWarning, Trash2, Download } from "lucide-react";
 import SelectionList from "./SelectionsList";
 import PromptList from "./PromptsList";
 import type { DocumentType } from "@/types";
-import { useDocumentViewerContext } from "@/context/DocumentViewerContext";
+import { useViewerState } from "./hooks/useViewerState";
 type Props = { document: DocumentType };
 
 export default function Controller({ document, className, ...props }: Props & React.ComponentProps<"div">) {
-  const { isViewingProcessedDocument, setIsViewingProcessedDocument } = useDocumentViewerContext();
+  const { navigation, dispatch } = useViewerState();
+  const { isViewingProcessedDocument } = navigation;
+  
+  const setIsViewingProcessedDocument = (value: boolean | ((prev: boolean) => boolean)) => {
+    const newValue = typeof value === 'function' ? value(isViewingProcessedDocument) : value;
+    dispatch({ type: 'SET_VIEWING_PROCESSED', payload: newValue });
+  };
   
   const handleDownloadFile = () => {
     // Simple download using the blob from the document

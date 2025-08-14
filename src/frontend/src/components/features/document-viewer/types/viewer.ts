@@ -118,6 +118,7 @@ export type ViewerAction =
   | { type: 'SET_DOCUMENT_CONTAINER'; payload: HTMLElement | null }
   | { type: 'SET_SHOW_SELECTIONS'; payload: boolean }
   | { type: 'SET_SHOW_INFO_PANEL'; payload: boolean }
+  | { type: 'SET_VIEWING_PROCESSED'; payload: boolean }
   | { type: 'REGISTER_PAGE'; payload: { index: number; element: HTMLElement | null } }
   | { type: 'START_SELECTION'; payload: SelectionCreateType }
   | { type: 'UPDATE_SELECTION'; payload: SelectionCreateType }

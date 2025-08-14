@@ -14,6 +14,53 @@ import type { ViewerMode, Point } from '../types/viewer';
 export function useViewerState() {
   const context = useUnifiedViewerContext();
   
+  // Stabilize the registerPage function to prevent infinite re-renders
+  const registerPage = useCallback((el: HTMLElement | null, index: number) => {
+    context.dispatch({ type: 'REGISTER_PAGE', payload: { index, element: el } });
+  }, [context.dispatch]);
+  
+  // Stabilize other action functions
+  const setZoom = useCallback((zoom: number) => {
+    context.dispatch({ type: 'SET_ZOOM', payload: zoom });
+  }, [context.dispatch]);
+  
+  const setPan = useCallback((pan: Point) => {
+    context.dispatch({ type: 'SET_PAN', payload: pan });
+  }, [context.dispatch]);
+  
+  const setCurrentPage = useCallback((page: number) => {
+    context.dispatch({ type: 'SET_CURRENT_PAGE', payload: page });
+  }, [context.dispatch]);
+  
+  const setNumPages = useCallback((numPages: number) => {
+    context.dispatch({ type: 'SET_NUM_PAGES', payload: numPages });
+  }, [context.dispatch]);
+  
+  const setMode = useCallback((mode: ViewerMode) => {
+    context.dispatch({ type: 'SET_MODE', payload: mode });
+  }, [context.dispatch]);
+  
+  const setIsPanning = useCallback((isPanning: boolean) => {
+    context.dispatch({ type: 'SET_IS_PANNING', payload: isPanning });
+  }, [context.dispatch]);
+  
+  const setShowSelections = useCallback((show: boolean) => {
+    context.dispatch({ type: 'SET_SHOW_SELECTIONS', payload: show });
+  }, [context.dispatch]);
+  
+  const setIsRendered = useCallback((isRendered: boolean) => {
+    context.dispatch({ type: 'SET_IS_RENDERED', payload: isRendered });
+  }, [context.dispatch]);
+  
+  const setDocumentContainer = useCallback((container: HTMLElement | null) => {
+    context.dispatch({ type: 'SET_DOCUMENT_CONTAINER', payload: container });
+  }, [context.dispatch]);
+  
+  const triggerUpdate = useCallback(() => {
+    // In the old system, this forced re-renders. In the new system, state changes automatically trigger re-renders
+    // This method is kept for compatibility but may be a no-op
+  }, []);
+  
   return {
     // Direct access to context for complex operations
     ...context,
@@ -40,24 +87,20 @@ export function useViewerState() {
     get pageRefs() { return { current: context.state.pdf.pageRefs }; },
     get documentContainer() { return context.state.pdf.documentContainer; },
     
-    // Legacy action methods
-    setZoom: (zoom: number) => context.dispatch({ type: 'SET_ZOOM', payload: zoom }),
-    setPan: (pan: Point) => context.dispatch({ type: 'SET_PAN', payload: pan }),
-    setCurrentPage: (page: number) => context.dispatch({ type: 'SET_CURRENT_PAGE', payload: page }),
-    setNumPages: (numPages: number) => context.dispatch({ type: 'SET_NUM_PAGES', payload: numPages }),
-    setMode: (mode: ViewerMode) => context.dispatch({ type: 'SET_MODE', payload: mode }),
-    setIsPanning: (isPanning: boolean) => context.dispatch({ type: 'SET_IS_PANNING', payload: isPanning }),
-    setShowSelections: (show: boolean) => context.dispatch({ type: 'SET_SHOW_SELECTIONS', payload: show }),
-    setIsRendered: (isRendered: boolean) => context.dispatch({ type: 'SET_IS_RENDERED', payload: isRendered }),
-    setDocumentContainer: (container: HTMLElement | null) => context.dispatch({ type: 'SET_DOCUMENT_CONTAINER', payload: container }),
+    // Stabilized action methods
+    setZoom,
+    setPan,
+    setCurrentPage,
+    setNumPages,
+    setMode,
+    setIsPanning,
+    setShowSelections,
+    setIsRendered,
+    setDocumentContainer,
     
     // PDF-related methods (replaces usePDFContext)
-    registerPage: (el: HTMLElement | null, index: number) => 
-      context.dispatch({ type: 'REGISTER_PAGE', payload: { index, element: el } }),
-    triggerUpdate: () => {
-      // In the old system, this forced re-renders. In the new system, state changes automatically trigger re-renders
-      // This method is kept for compatibility but may be a no-op
-    },
+    registerPage,
+    triggerUpdate,
     
     // Selection methods (replaces useSelection)
     get newSelections() { return context.state.selections.newSelections; },

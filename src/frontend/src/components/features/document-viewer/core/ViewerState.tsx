@@ -191,6 +191,15 @@ function viewerStateReducer(state: ViewerState, action: ViewerAction): ViewerSta
         }
       };
 
+    case 'SET_VIEWING_PROCESSED':
+      return {
+        ...state,
+        navigation: {
+          ...state.navigation,
+          isViewingProcessedDocument: action.payload
+        }
+      };
+
     case 'REGISTER_PAGE': {
       const newPageRefs = new Map(state.pdf.pageRefs);
       if (action.payload.element) {
