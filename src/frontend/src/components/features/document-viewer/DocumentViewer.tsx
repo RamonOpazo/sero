@@ -1,5 +1,4 @@
 import { UnifiedViewerProvider } from "./core/ViewerState";
-import UnifiedEventHandler from "./core/EventHandler";
 import Renderer from "./Layers";
 import Controller from "./Controls";
 import { WidgetContainer, Widget, WidgetBody } from "@/components/shared/Widget";
@@ -16,20 +15,18 @@ export default function DocumentViewer({ document }: DocumentViewerProps) {
 
   return (
     <UnifiedViewerProvider document={document}>
-      <UnifiedEventHandler documentSize={{ width: 800, height: 600 }}>
-        <WidgetContainer expanded className="flex-row">
-          <Widget expanded orthocentered className="relative">
-            <WidgetBody expanded>
-              <Renderer document={document} />
-            </WidgetBody>
-          </Widget>
-          <Widget expanded className="max-w-(--sidebar-width)">
-            <WidgetBody expanded>
-              <Controller document={document} />
-            </WidgetBody>
-          </Widget>
-        </WidgetContainer>
-      </UnifiedEventHandler>
+      <WidgetContainer expanded className="flex-row">
+        <Widget expanded orthocentered className="relative">
+          <WidgetBody expanded>
+            <Renderer document={document} />
+          </WidgetBody>
+        </Widget>
+        <Widget expanded className="max-w-(--sidebar-width)">
+          <WidgetBody expanded>
+            <Controller document={document} />
+          </WidgetBody>
+        </Widget>
+      </WidgetContainer>
     </UnifiedViewerProvider>
   );
 }

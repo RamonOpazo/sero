@@ -276,40 +276,8 @@ export function FileViewer({ fileType }: FileViewerProps) {
 
       {currentFileData && (
         <div className="space-y-6">
-          {/* File Info Header */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <div className="flex items-center space-x-2">
-                    <FileText className="h-5 w-5" />
-                    <h3 className="font-semibold">{document?.name}</h3>
-                    <Badge variant="outline">{currentFileData.file.file_type}</Badge>
-                    <Badge variant="secondary">{fileType}</Badge>
-                  </div>
-                  <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                    <span>Size: {formatFileSize(currentFileData.file.file_size)}</span>
-                    <span>Type: {currentFileData.file.mime_type}</span>
-                    <span>Hash: {currentFileData.file.file_hash.substring(0, 8)}...</span>
-                  </div>
-                </div>
-                
-                <div className="flex items-center space-x-2">
-                  <Badge variant="secondary" className="flex items-center space-x-1">
-                    <MessageSquare className="h-3 w-3" />
-                    <span>{currentFileData.prompts.length} Prompts</span>
-                  </Badge>
-                  <Badge variant="secondary" className="flex items-center space-x-1">
-                    <Target className="h-3 w-3" />
-                    <span>{currentFileData.selections.length} Selections</span>
-                  </Badge>
-                </div>
-              </div>
-            </CardHeader>
-          </Card>
-
-          {/* File Viewer Tabs */}
-          <Card className="h-[calc(100vh-300px)]">
+          {/* File Viewer - Now Full Height */}
+          <Card className="h-[calc(100vh-200px)]">
             <Tabs value={viewerTab} onValueChange={setViewerTab} className="flex-1 flex flex-col h-full">
               <div className="px-6 pt-4">
                 <TabsList className="grid w-full grid-cols-4">

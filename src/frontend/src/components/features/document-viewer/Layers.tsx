@@ -36,18 +36,20 @@ export default function Renderer({ document, className, ...props }: Props & Reac
           document={document} 
           documentSize={documentSize}
         />
-        <InfoLayer 
-          document={document} 
-          documentSize={documentSize}
-          isVisible={showInfoPanel}
-          onToggleVisibility={toggleInfoPanel}
-        />
       </UnifiedViewport>
       
       {/* Actions layer stays outside unified transform for fixed positioning */}
       <ActionsLayer 
         isInfoVisible={showInfoPanel}
         onToggleInfo={toggleInfoPanel}
+      />
+      
+      {/* Info layer covers the entire viewer area */}
+      <InfoLayer 
+        document={document} 
+        documentSize={documentSize}
+        isVisible={showInfoPanel}
+        onToggleVisibility={toggleInfoPanel}
       />
     </div>
   );
