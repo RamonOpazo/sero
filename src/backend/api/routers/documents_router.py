@@ -144,6 +144,17 @@ async def get_document_tags(
 
 
 
+@router.get("/id/{document_id}/prompts", response_model=list[prompts_schema.Prompt])
+async def get_document_prompts(
+    document_id: UUID,
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db_session)
+):
+    """Get prompts for a document."""
+    return documents_controller.get_prompts(db=db, document_id=document_id, skip=skip, limit=limit)
+
+
 @router.post("/id/{document_id}/prompts", response_model=prompts_schema.Prompt)
 async def add_prompt_to_document(
     document_id: UUID,
@@ -152,6 +163,17 @@ async def add_prompt_to_document(
 ):
     """Add a prompt to a document."""
     return documents_controller.add_prompt(db=db, document_id=document_id, prompt_data=prompt_data)
+
+
+@router.get("/id/{document_id}/selections", response_model=list[selections_schema.Selection])
+async def get_document_selections(
+    document_id: UUID,
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db_session)
+):
+    """Get selections for a document."""
+    return documents_controller.get_selections(db=db, document_id=document_id, skip=skip, limit=limit)
 
 
 @router.post("/id/{document_id}/selections", response_model=selections_schema.Selection)

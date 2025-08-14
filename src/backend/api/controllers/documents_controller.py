@@ -290,6 +290,20 @@ def bulk_create_with_files(db: Session, uploads_data: list[files_schema.FileUplo
     )
 
 
+def get_prompts(db: Session, document_id: UUID, skip: int = 0, limit: int = 100) -> list[prompts_schema.Prompt]:
+    """Get prompts for a document."""
+    # Verify document exists
+    if not documents_crud.exist(db=db, id=document_id):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Document with ID {str(document_id)!r} not found"
+        )
+    
+    # Get prompts by document ID
+    prompts = prompts_crud.read_list_by_document(db=db, document_id=document_id, skip=skip, limit=limit)
+    return [prompts_schema.Prompt.model_validate(prompt) for prompt in prompts]
+
+
 def add_prompt(db: Session, document_id: UUID, prompt_data: prompts_schema.PromptCreate) -> prompts_schema.Prompt:
     """Add a prompt to a document."""
     # Verify document exists
@@ -303,6 +317,20 @@ def add_prompt(db: Session, document_id: UUID, prompt_data: prompts_schema.Promp
     prompt_data.document_id = document_id
     prompt = prompts_crud.create(db=db, data=prompt_data)
     return prompts_schema.Prompt.model_validate(prompt)
+
+
+def get_selections(db: Session, document_id: UUID, skip: int = 0, limit: int = 100) -> list[selections_schema.Selection]:
+    """Get selections for a document."""
+    # Verify document exists
+    if not documents_crud.exist(db=db, id=document_id):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Document with ID {str(document_id)!r} not found"
+        )
+    
+    # Get selections by document ID
+    selections = selections_crud.read_list_by_document(db=db, document_id=document_id, skip=skip, limit=limit)
+    return [selections_schema.Selection.model_validate(selection) for selection in selections]
 
 
 def add_selection(db: Session, document_id: UUID, selection_data: selections_schema.SelectionCreate) -> selections_schema.Selection:
