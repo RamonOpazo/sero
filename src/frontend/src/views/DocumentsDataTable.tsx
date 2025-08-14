@@ -150,8 +150,7 @@ export function DocumentsDataTable({ onDocumentSelect }: DocumentsDataTableProps
     Actions.create<DocumentShallowType>()
       .copy(
         (document) => document.id,
-        'Copy document ID',
-        handleCopyDocumentId
+        'Copy document ID'
       )
       .separator()
       .custom({

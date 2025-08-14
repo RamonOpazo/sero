@@ -1,26 +1,17 @@
-import React, { useRef, useCallback, useEffect, useState } from 'react';
 import { cn } from "@/lib/utils";
-import type { MinimalDocumentType, SelectionCreateType } from "@/types";
+import type { SelectionCreateType } from "@/types";
 import { useViewerState } from '../hooks/useViewerState';
 
 type Props = { 
-  document: MinimalDocumentType;
   documentSize: { width: number; height: number };
 };
 
-export default function SelectionsLayer({ document, documentSize }: Props) {
+export default function SelectionsLayer({ documentSize }: Props) {
   const {
-    pageRefs,
     isRendered,
-    mode,
     showSelections,
-    screenToDocument,
     newSelections,
     drawing,
-    isDrawing,
-    startSelection,
-    updateSelection,
-    endSelection,
     deleteSelection,
   } = useViewerState();
 

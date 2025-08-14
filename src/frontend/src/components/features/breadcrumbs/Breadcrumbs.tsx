@@ -80,7 +80,7 @@ export function Breadcrumbs() {
       if (!matchedRoutePattern.includes(':')) {
         // Simple static route - just build breadcrumbs from the path segments
         let accumulatedPath = '';
-        pathSegments.forEach((segment, index) => {
+        pathSegments.forEach((segment) => {
           accumulatedPath += '/' + segment;
           const label = segmentToLabelMap[segment] || segment;
           

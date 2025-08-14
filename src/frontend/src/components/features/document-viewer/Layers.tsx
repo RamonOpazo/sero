@@ -33,7 +33,6 @@ export default function Renderer({ document, className, ...props }: Props & Reac
           onDocumentSizeChange={handleDocumentSizeChange}
         />
         <SelectionsLayer 
-          document={document} 
           documentSize={documentSize}
         />
       </UnifiedViewport>

@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import { useCallback } from 'react';
 import { type MinimalDocumentType } from "@/types";
 import { useViewerState } from '../hooks/useViewerState';
 
@@ -33,7 +33,6 @@ export default function InfoLayer({ document, documentSize, isVisible, onToggleV
 
   // Get current file information
   const currentFile = document.original_file || document.redacted_file;
-  const fileWithBlob = document.files?.find(f => f.id === currentFile?.id);
 
   // Early return if not visible - MUST be after all hooks
   if (!isVisible) return null;

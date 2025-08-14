@@ -5,15 +5,12 @@ import {
   CircleSlash2,
   BookOpen,
   Home,
-  Network,
   SquareTerminal,
   Settings,
   Code,
-  Beaker,
 } from "lucide-react"
 
 import { NavMain } from "@/views/NavMain"
-import { NavApi } from "@/views/NavApi"
 import { NavUser } from "@/views/NavUser"
 import {
   Sidebar,

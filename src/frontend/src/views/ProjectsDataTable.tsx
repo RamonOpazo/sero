@@ -101,8 +101,7 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
     Actions.create<ProjectShallowType>()
       .copy(
         (project) => project.id,
-        'Copy project ID',
-        handleCopyProjectId
+        'Copy project ID'
       )
       .separator()
       .custom({

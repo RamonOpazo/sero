@@ -21,6 +21,7 @@ export default function ActionsLayer({ isInfoVisible = false, onToggleInfo }: Ac
     setMode,
     showSelections,
     setShowSelections,
+    toggleSelections,
     resetView,
     dispatch,
   } = useViewerState();
@@ -203,7 +204,7 @@ export default function ActionsLayer({ isInfoVisible = false, onToggleInfo }: Ac
       <Button
         variant="ghost"
         size="icon"
-        onClick={() => setShowSelections(prev => !prev)}
+        onClick={toggleSelections}
       >
         {showSelections ? <Eye /> : <EyeOff />}
       </Button>
