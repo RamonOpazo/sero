@@ -12,6 +12,7 @@ export * from "./PromptsList";
 export * from "./core/UnifiedViewport";
 export * from "./core/CoordinateSystem";
 export * from "./core/ViewerState";
+export * from "./core/EventHandler";
 export * from "./layers/RenderLayer";
 export * from "./layers/SelectionsLayer";
 export * from "./layers/InfoLayer";

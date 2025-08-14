@@ -42,62 +42,8 @@ export function UnifiedViewport({
     }
   }, []);
 
-  // Handle mouse events for panning
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (mode !== 'pan') return;
-    
-    e.preventDefault();
-    setIsPanning(true);
-    panStartRef.current = {
-      x: e.clientX - pan.x,
-      y: e.clientY - pan.y,
-    };
-  }, [mode, pan, setIsPanning]);
-
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (mode !== 'pan' || !isPanning || !panStartRef.current) return;
-    
-    e.preventDefault();
-    
-    // Cancel previous animation frame
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current);
-    }
-
-    // Schedule update for next frame
-    animationFrameRef.current = requestAnimationFrame(() => {
-      const newPan = {
-        x: e.clientX - panStartRef.current!.x,
-        y: e.clientY - panStartRef.current!.y,
-      };
-
-      // Get viewport size for clamping
-      const bounds = getViewportBounds();
-      if (bounds) {
-        const clampedPan = clampPan(
-          newPan,
-          zoom,
-          { width: bounds.width, height: bounds.height },
-          documentSize
-        );
-        setPan(clampedPan);
-      } else {
-        setPan(newPan);
-      }
-    });
-  }, [mode, isPanning, zoom, documentSize, getViewportBounds, setPan]);
-
-  const handleMouseUp = useCallback(() => {
-    if (mode !== 'pan') return;
-    setIsPanning(false);
-    panStartRef.current = null;
-    
-    // Cancel any pending animation frame
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current);
-      animationFrameRef.current = null;
-    }
-  }, [mode, setIsPanning]);
+  // Event handling is now managed by UnifiedEventHandler
+  // This viewport only handles the visual representation
 
   // Cleanup animation frame on unmount
   useEffect(() => {
@@ -134,10 +80,6 @@ export function UnifiedViewport({
           className
         )}
         style={{ cursor: cursorStyle }}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
       >
         {/* Grid background */}
         <div

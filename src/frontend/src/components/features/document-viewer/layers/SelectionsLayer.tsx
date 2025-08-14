@@ -24,41 +24,8 @@ export default function SelectionsLayer({ document, documentSize }: Props) {
     deleteSelection,
   } = useViewerState();
 
-  const drawStartRef = useRef<{ pageIndex: number; startPoint: { x: number; y: number } } | null>(null);
-
-  // Handle selection drawing with unified coordinates
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (mode !== "select") return;
-    
-    e.preventDefault();
-    e.stopPropagation();
-    
-    // Find which page was clicked
-    const pageIndex = 0; // For now, assume single page. TODO: Multi-page support
-    const pageRef = pageRefs.current.get(pageIndex);
-    if (!pageRef) return;
-
-    drawStartRef.current = { pageIndex, startPoint: { x: e.clientX, y: e.clientY } };
-    
-    // Start the selection drawing using unified state
-    startSelection(e, pageIndex);
-  }, [mode, screenToDocument, documentSize, pageRefs, startSelection]);
-
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (mode !== "select" || !isDrawing || !drawStartRef.current) return;
-    
-    e.preventDefault();
-    
-    // Update the selection drawing using unified state
-    updateSelection(e);
-  }, [mode, isDrawing, updateSelection]);
-
-  const handleMouseUp = useCallback(() => {
-    if (mode !== "select") return;
-    
-    drawStartRef.current = null;
-    endSelection();
-  }, [mode, endSelection]);
+  // Event handling is now managed by UnifiedEventHandler
+  // This layer only handles rendering
 
   // Render selection boxes using absolute positioning within the unified transform
   const renderBox = (
@@ -136,21 +103,7 @@ export default function SelectionsLayer({ document, documentSize }: Props) {
         {drawingThisPage && renderBox(drawingThisPage, true, "drawing", false)}
       </div>
 
-      {/* Interaction layer - covers the entire viewport for mouse events */}
-      <div
-        className={cn(
-          "absolute inset-0 z-10",
-          mode === "select" ? "cursor-crosshair" : "pointer-events-none"
-        )}
-        style={{
-          width: documentSize.width,
-          height: documentSize.height,
-          pointerEvents: mode === "select" ? "auto" : "none",
-        }}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-      />
+      {/* No interaction layer needed - handled by UnifiedEventHandler */}
     </>
   );
 }
