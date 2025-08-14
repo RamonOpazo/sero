@@ -228,6 +228,38 @@ function viewerStateReducer(state: ViewerState, action: ViewerAction): ViewerSta
         }
       };
 
+    case 'UPDATE_EXISTING_SELECTION': {
+      const { index, selection } = action.payload;
+      const updatedExistingSelections = [...state.selections.existingSelections];
+      if (index >= 0 && index < updatedExistingSelections.length) {
+        updatedExistingSelections[index] = selection;
+      }
+      
+      return {
+        ...state,
+        selections: {
+          ...state.selections,
+          existingSelections: updatedExistingSelections
+        }
+      };
+    }
+
+    case 'UPDATE_NEW_SELECTION': {
+      const { index, selection } = action.payload;
+      const updatedNewSelections = [...state.selections.newSelections];
+      if (index >= 0 && index < updatedNewSelections.length) {
+        updatedNewSelections[index] = selection;
+      }
+      
+      return {
+        ...state,
+        selections: {
+          ...state.selections,
+          newSelections: updatedNewSelections
+        }
+      };
+    }
+
     case 'START_SELECTION':
       return {
         ...state,

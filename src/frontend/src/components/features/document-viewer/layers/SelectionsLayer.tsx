@@ -16,6 +16,7 @@ export default function SelectionsLayer({ documentSize }: Props) {
     drawing,
     deleteSelection,
     currentPage,
+    dispatch,
   } = useViewerState();
 
   // State for selection editing
@@ -111,10 +112,20 @@ export default function SelectionsLayer({ documentSize }: Props) {
       selection: newSelection
     } : null);
     
-    // TODO: Update the actual selection in the state (existing or new)
-    // This would require dispatching to the viewer state
+    // Update the actual selection in the viewer state
+    if (selectedSelection.type === 'existing') {
+      dispatch({
+        type: 'UPDATE_EXISTING_SELECTION',
+        payload: { index: selectedSelection.index, selection: newSelection }
+      });
+    } else {
+      dispatch({
+        type: 'UPDATE_NEW_SELECTION',
+        payload: { index: selectedSelection.index, selection: newSelection }
+      });
+    }
     
-  }, [resizeState, selectedSelection, documentSize]);
+  }, [resizeState, selectedSelection, documentSize, dispatch]);
 
   // Handle mouse up to end resize
   const handleMouseUp = useCallback(() => {
