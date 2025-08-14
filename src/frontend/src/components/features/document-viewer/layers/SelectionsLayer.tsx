@@ -620,6 +620,9 @@ export default function SelectionsLayer({ documentSize }: Props) {
 
     const isSelected = selectedSelection?.type === (isNew ? 'new' : 'existing') && 
                       selectedSelection?.index === index;
+    
+    // Check if selection is global (applies to all pages)
+    const isGlobalSelection = sel.page_number === 0 || sel.page_number === null;
 
     const selectionElement = (
       <div
@@ -633,8 +636,12 @@ export default function SelectionsLayer({ documentSize }: Props) {
           isSelected
             ? "border border-blue-600 bg-blue-100/20"
             : isNew
-              ? "border border-green-400/60 bg-green-50/10 hover:border-green-500/80"
-              : "border border-slate-400/60 bg-slate-50/10 hover:border-slate-500/80"
+              ? isGlobalSelection
+                ? "border border-purple-400/60 bg-purple-50/10 hover:border-purple-500/80" // Global new selections - purple
+                : "border border-green-400/60 bg-green-50/10 hover:border-green-500/80"   // Page-specific new selections - green
+              : isGlobalSelection
+                ? "border border-orange-400/60 bg-orange-50/10 hover:border-orange-500/80" // Global existing selections - orange
+                : "border border-slate-400/60 bg-slate-50/10 hover:border-slate-500/80"   // Page-specific existing selections - slate
         )}
         style={{ 
           left: `${Math.min(left, left + sel.width * documentSize.width)}px`,

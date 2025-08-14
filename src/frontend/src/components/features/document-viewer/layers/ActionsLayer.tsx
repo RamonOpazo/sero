@@ -131,73 +131,56 @@ export default function ActionsLayer({ isInfoVisible = false, onToggleInfo }: Ac
 
 
   // State for auto-hide behavior
-  const [visible, setVisible] = useState(true); // Start visible
+  const [visible, setVisible] = useState(false); // Start hidden, show on hover
   const [showBar, setShowBar] = useState(true); // Controls if bar appears at all
   const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isMouseOverRenderArea = useRef(false); // Track if mouse is currently over render area
 
-  // Handle mouse movement in render layer to show/hide UI with delay
+  // Handle mouse enter/leave in render layer to show/hide UI based on hover
   useEffect(() => {
     const handleRenderLayerMouseEnter = () => {
-      if (!showBar) return; // If bar is disabled, don't show anything
-      
-      // Show the UI immediately when entering render layer
-      setVisible(true);
-      
-      // Clear existing timeout
-      if (hideTimeoutRef.current) {
-        clearTimeout(hideTimeoutRef.current);
+      isMouseOverRenderArea.current = true;
+      if (showBar) {
+        setVisible(true);
       }
       
-      // Set new timeout to hide after 1 second
-      hideTimeoutRef.current = setTimeout(() => {
-        setVisible(false);
-      }, 1000);
+      // Clear any existing timeout
+      if (hideTimeoutRef.current) {
+        clearTimeout(hideTimeoutRef.current);
+        hideTimeoutRef.current = null;
+      }
     };
 
-    // Find the render layer element and add mouse enter listener
+    const handleRenderLayerMouseLeave = () => {
+      isMouseOverRenderArea.current = false;
+      if (showBar) {
+        setVisible(false);
+      }
+    };
+
+    // Find the render layer element and add mouse enter/leave listeners
     const renderLayer = document.querySelector('[data-slot="document-viewer-renderer"]');
     if (renderLayer) {
       renderLayer.addEventListener('mouseenter', handleRenderLayerMouseEnter);
-      
-      // Also handle mouse movement within render layer to reset timer
-      const handleRenderLayerMouseMove = () => {
-        if (!showBar) return;
-        
-        setVisible(true);
-        
-        if (hideTimeoutRef.current) {
-          clearTimeout(hideTimeoutRef.current);
-        }
-        
-        hideTimeoutRef.current = setTimeout(() => {
-          setVisible(false);
-        }, 1000);
-      };
-      
-      renderLayer.addEventListener('mousemove', handleRenderLayerMouseMove);
+      renderLayer.addEventListener('mouseleave', handleRenderLayerMouseLeave);
       
       return () => {
         renderLayer.removeEventListener('mouseenter', handleRenderLayerMouseEnter);
-        renderLayer.removeEventListener('mousemove', handleRenderLayerMouseMove);
+        renderLayer.removeEventListener('mouseleave', handleRenderLayerMouseLeave);
         if (hideTimeoutRef.current) {
           clearTimeout(hideTimeoutRef.current);
+          hideTimeoutRef.current = null;
         }
       };
-    }
-    
-    // Initial timeout to hide after 1 second if no movement and bar is enabled
-    if (showBar) {
-      hideTimeoutRef.current = setTimeout(() => {
-        setVisible(false);
-      }, 1000);
     }
 
     return () => {
       if (hideTimeoutRef.current) {
         clearTimeout(hideTimeoutRef.current);
+        hideTimeoutRef.current = null;
       }
     };
-  }, [showBar]);
+  }, []); // Remove showBar dependency to avoid recreating handlers
 
   // Handle show/hide bar toggle
   const handleBarToggle = () => {
@@ -205,11 +188,12 @@ export default function ActionsLayer({ isInfoVisible = false, onToggleInfo }: Ac
     setShowBar(newShowBar);
     
     if (newShowBar) {
-      // If enabling bar, show it and start auto-hide timer
-      setVisible(true);
-      hideTimeoutRef.current = setTimeout(() => {
+      // If enabling bar and mouse is over render area, show it immediately
+      if (isMouseOverRenderArea.current) {
+        setVisible(true);
+      } else {
         setVisible(false);
-      }, 1000);
+      }
     } else {
       // If disabling bar, hide it completely and clear any timers
       setVisible(false);
