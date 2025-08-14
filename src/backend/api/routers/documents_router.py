@@ -1,5 +1,6 @@
 from uuid import UUID
 from fastapi import APIRouter, Depends, File, UploadFile, Form
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from backend.core.database import get_db_session
@@ -171,3 +172,59 @@ async def process_document(
 ):
     """Process a document to generate redacted version."""
     return documents_controller.process(db=db, document_id=document_id, password=password)
+
+
+@router.post("/id/{document_id}/download/original", response_class=StreamingResponse)
+async def download_original_file(
+    document_id: UUID,
+    request: files_schema.EncryptedFileDownloadRequest,
+    db: Session = Depends(get_db_session)
+) -> StreamingResponse:
+    """Download the original file for a document using encrypted password.
+    
+    This endpoint provides document-centric file access without requiring
+    separate file ID lookups. Original files are encrypted and require
+    password verification.
+    
+    Args:
+        document_id: UUID of the document
+        request: Contains encrypted password and key metadata
+        db: Database session
+        
+    Returns:
+        StreamingResponse: The decrypted original file
+        
+    Raises:
+        HTTPException: If document not found, no original file, or invalid password
+    """
+    return documents_controller.download_original_file(
+        db=db, 
+        document_id=document_id, 
+        request=request
+    )
+
+
+@router.get("/id/{document_id}/download/redacted", response_class=StreamingResponse)
+async def download_redacted_file(
+    document_id: UUID,
+    db: Session = Depends(get_db_session)
+) -> StreamingResponse:
+    """Download the redacted file for a document.
+    
+    This endpoint provides direct access to redacted files without password
+    requirements since redacted files are not encrypted.
+    
+    Args:
+        document_id: UUID of the document
+        db: Database session
+        
+    Returns:
+        StreamingResponse: The redacted file
+        
+    Raises:
+        HTTPException: If document not found or no redacted file exists
+    """
+    return documents_controller.download_redacted_file(
+        db=db, 
+        document_id=document_id
+    )

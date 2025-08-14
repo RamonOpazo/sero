@@ -4,12 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { FileText, ArrowLeft, Lock } from 'lucide-react';
 import { toast } from 'sonner';
-import { api } from '@/lib/axios';
 import { PasswordDialog } from '@/components/dialogs/PasswordDialog';
 import DocumentViewer from '@/components/features/document-viewer/DocumentViewer';
 import { useFiles } from '@/hooks/useFiles';
-import type { DocumentType, DocumentShallowType } from '@/types';
-import { FileTypeEnumSchema } from '@/types/enums';
+import type { DocumentType } from '@/types';
 
 interface FileViewerProps {
   fileType: 'original' | 'redacted';
@@ -19,10 +17,8 @@ export function FileViewer({ fileType }: FileViewerProps) {
   const { projectId, documentId } = useParams<{ projectId: string; documentId: string }>();
   const navigate = useNavigate();
 
-  // Local state for document info
-  const [document, setDocument] = useState<DocumentShallowType | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // No need to fetch document - we have the ID from URL params
+  const [error] = useState<string | null>(null);
 
   // Password dialog state
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
@@ -30,37 +26,14 @@ export function FileViewer({ fileType }: FileViewerProps) {
   const [isValidatingPassword, setIsValidatingPassword] = useState(false);
   const [userCancelledPassword, setUserCancelledPassword] = useState(false);
 
-  // Use refactor files hook for file loading
-  const { loadFileWithData, currentFileData, loading: fileLoading, error: fileError } = useFiles();
+  // Use files hook for file loading with new document-based methods
+  const { loadOriginalFileByDocumentId, loadRedactedFileByDocumentId, currentFileData, error: fileError } = useFiles();
 
-  // Fetch document data on mount
+  // Auto-prompt for password on mount if we haven't cancelled and no file is loaded
   useEffect(() => {
-    const fetchDocument = async () => {
-      if (!documentId) return;
-
-      try {
-        setLoading(true);
-        const result = await api.safe.get(`/documents/id/${documentId}`);
-
-        if (result.ok) {
-          setDocument(result.value);
-
-          // Auto-prompt for password if we haven't cancelled and no file is loaded
-          if (!userCancelledPassword && !currentFileData) {
-            setIsPasswordDialogOpen(true);
-          }
-        } else {
-          setError('Failed to load document');
-        }
-      } catch (err) {
-        setError('Failed to load document');
-        console.error('Error loading document:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchDocument();
+    if (!userCancelledPassword && !currentFileData && documentId) {
+      setIsPasswordDialogOpen(true);
+    }
   }, [documentId, userCancelledPassword, currentFileData]);
 
   const handleBackToDocuments = () => {
@@ -68,26 +41,18 @@ export function FileViewer({ fileType }: FileViewerProps) {
   };
 
   const handlePasswordConfirm = useCallback(async (password: string) => {
-    if (!document) return;
+    if (!documentId) return;
 
     setIsValidatingPassword(true);
     setPasswordError(null);
 
     try {
-      // Find the appropriate file based on fileType
-      const targetFileType = fileType === 'original'
-        ? FileTypeEnumSchema.enum.original
-        : FileTypeEnumSchema.enum.redacted;
-
-      const targetFile = document.files?.find((f: any) => f.file_type === targetFileType);
-
-      if (!targetFile) {
-        setPasswordError(`No ${fileType} file found for this document`);
-        return;
+      // Use new document-based download methods - they will handle file existence validation
+      if (fileType === 'original') {
+        await loadOriginalFileByDocumentId(documentId, password);
+      } else {
+        await loadRedactedFileByDocumentId(documentId);
       }
-
-      // Load the file with data
-      await loadFileWithData(targetFile.id, password);
 
       if (!fileError) {
         // Success - close dialog
@@ -95,7 +60,7 @@ export function FileViewer({ fileType }: FileViewerProps) {
         setPasswordError(null);
 
         toast.success('File loaded successfully!', {
-          description: `Loaded ${targetFile.filename || targetFile.id}`
+          description: `Loaded ${fileType} file`
         });
       } else {
         setPasswordError('Failed to load file. Please check your password and try again.');
@@ -106,7 +71,7 @@ export function FileViewer({ fileType }: FileViewerProps) {
     } finally {
       setIsValidatingPassword(false);
     }
-  }, [document, fileType, loadFileWithData, fileError]);
+  }, [documentId, fileType, loadOriginalFileByDocumentId, loadRedactedFileByDocumentId, fileError]);
 
   const handlePasswordCancel = useCallback(() => {
     setIsPasswordDialogOpen(false);
@@ -121,9 +86,9 @@ export function FileViewer({ fileType }: FileViewerProps) {
     setUserCancelledPassword(false);
   }, [userCancelledPassword]);
 
-  // Create a document object compatible with DocumentViewer with both original and redacted files
+  // Create a document object compatible with DocumentViewer from loaded file data
   const documentForViewer = useMemo((): DocumentType | null => {
-    if (!document || !currentFileData) {
+    if (!documentId || !currentFileData) {
       return null;
     }
 
@@ -137,18 +102,22 @@ export function FileViewer({ fileType }: FileViewerProps) {
     const stablePrompts = currentFileData.prompts || [];
     const stableSelections = currentFileData.selections || [];
 
-    // Determine original and redacted files based on document structure
-    const originalFile = document.files?.find((f: any) => f.file_type === 'original') || null;
-    const redactedFile = document.files?.find((f: any) => f.file_type === 'redacted') || null;
+    // Since DocumentShallowType doesn't have files array, we determine
+    // original/redacted files based on the current loaded file and shallow metadata
+    const isCurrentFileOriginal = currentFileData.file.file_type === 'original';
+    const originalFile = isCurrentFileOriginal ? fileWithBlob : null;
+    const redactedFile = !isCurrentFileOriginal ? fileWithBlob : null;
 
     // Create a stable object to avoid unnecessary re-renders
+    // Use synthetic document data since we don't fetch the document
     const viewerDocument: DocumentType = {
-      id: document.id,
-      name: document.name,
-      description: document.description || '',
-      created_at: document.created_at,
-      updated_at: document.updated_at,
-      user_id: document.user_id,
+      id: documentId,
+      name: `Document ${documentId.slice(-8)}`, // Use last 8 chars of ID as fallback name
+      description: '',
+      created_at: new Date().toISOString(), // Fallback timestamp
+      updated_at: null,
+      project_id: projectId || '', // Use from URL params
+      tags: [],
       files: stableFiles,
       original_file: originalFile,
       redacted_file: redactedFile,
@@ -158,18 +127,16 @@ export function FileViewer({ fileType }: FileViewerProps) {
 
     return viewerDocument;
   }, [
-    // More specific dependencies
-    document?.id,
-    document?.name,
-    document?.description,
-    document?.created_at,
-    document?.updated_at,
+    // Document ID dependencies
+    documentId,
+    projectId,
+    // Loaded file data dependencies
     currentFileData?.file?.id,
     currentFileData?.file?.file_hash,
     currentFileData?.file?.file_size,
+    currentFileData?.file?.file_type,
     currentFileData?.prompts?.length,
     currentFileData?.selections?.length,
-    // Remove fileType dependency since we now include both files
   ]);
 
   const formatFileSize = (bytes: number) => {
@@ -180,16 +147,6 @@ export function FileViewer({ fileType }: FileViewerProps) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading file...</p>
-        </div>
-      </div>
-    );
-  }
 
   if (error) {
     return (
@@ -223,7 +180,7 @@ export function FileViewer({ fileType }: FileViewerProps) {
                 File Encrypted
               </p>
               <p className="text-sm text-muted-foreground mb-6">
-                Document "{document?.name}" requires a password to decrypt the {fileType} file
+                This document requires a password to decrypt the {fileType} file
               </p>
               <Button
                 onClick={() => setIsPasswordDialogOpen(true)}
