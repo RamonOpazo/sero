@@ -1,6 +1,6 @@
 export * from "./DocumentViewer";
 export * from "./Layers";
-export * from "./ActionsLayer";
+export * from "./layers/ActionsLayer";
 export * from "./Controls";
 export * from "./SelectionsList";
 export * from "./PromptsList";

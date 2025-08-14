@@ -16,8 +16,8 @@ export default function DocumentViewer({ document }: DocumentViewerProps) {
   return (
     <UnifiedViewerProvider document={document}>
       <WidgetContainer expanded className="flex-row">
-        <Widget expanded orthocentered className="relative">
-          <WidgetBody expanded>
+        <Widget expanded orthocentered className="relative p-0">
+          <WidgetBody expanded className="p-0">
             <Renderer document={document} />
           </WidgetBody>
         </Widget>

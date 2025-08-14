@@ -4,7 +4,7 @@ import UnifiedViewport from "./core/UnifiedViewport";
 import RenderLayer from "./layers/RenderLayer";
 import SelectionsLayer from "./layers/SelectionsLayer";
 import InfoLayer from "./layers/InfoLayer";
-import ActionsLayer from "./ActionsLayer";
+import ActionsLayer from "./layers/ActionsLayer";
 import { useViewerState } from './hooks/useViewerState';
 import type { MinimalDocumentType } from "@/types";
 
