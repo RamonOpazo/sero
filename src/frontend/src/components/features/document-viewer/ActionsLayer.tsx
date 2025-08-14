@@ -1,10 +1,15 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Bolt } from "lucide-react";
-import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Hand, MousePointerClick, Eye, EyeOff, Scan } from "lucide-react";
+import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Hand, MousePointerClick, Eye, EyeOff, Scan, Info } from "lucide-react";
 import { useDocumentViewerContext } from "@/context/DocumentViewerContext";
 
-export default function ActionsLayer() {
+interface ActionsLayerProps {
+  isInfoVisible?: boolean;
+  onToggleInfo?: () => void;
+}
+
+export default function ActionsLayer({ isInfoVisible = false, onToggleInfo }: ActionsLayerProps = {}) {
   const {
     currentPage,
     numPages,
@@ -99,6 +104,18 @@ export default function ActionsLayer() {
       >
         {showSelections ? <Eye /> : <EyeOff />}
       </Button>
+
+      {/* Info panel toggle */}
+      {onToggleInfo && (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onToggleInfo}
+          className={isInfoVisible ? 'bg-accent text-accent-foreground' : ''}
+        >
+          <Info />
+        </Button>
+      )}
     </ActionsLayerContainer>
   );
 }

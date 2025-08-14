@@ -11,6 +11,7 @@ export function useDocumentViewerState() {
   const [showSelections, setShowSelectionsState] = useState(true);
   const [userPreferredShowSelections, setUserPreferredShowSelections] = useState(true);
   const [isViewingProcessedDocument, setIsViewingProcessedDocument] = useState(false);
+  const [showInfoPanel, setShowInfoPanel] = useState(false);
 
   const setShowSelections = (value: boolean | ((prevState: boolean) => boolean)) => {
     setShowSelectionsState(value);
@@ -43,5 +44,7 @@ export function useDocumentViewerState() {
     resetView,
     isViewingProcessedDocument,
     setIsViewingProcessedDocument,
+    showInfoPanel,
+    setShowInfoPanel,
   };
 }
