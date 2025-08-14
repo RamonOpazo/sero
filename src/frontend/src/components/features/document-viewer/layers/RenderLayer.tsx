@@ -25,6 +25,10 @@ export default function RenderLayer({ document, onDocumentSizeChange }: Props) {
   const [blob, setBlob] = useState<Blob | null>(null);
   const [arrayBuffer, setArrayBuffer] = useState<ArrayBuffer | null>(null);
   const [documentSize, setDocumentSize] = useState<{ width: number; height: number }>({ width: 800, height: 600 });
+  const [isPageRendering, setIsPageRendering] = useState(false);
+  const [lastRenderedZoom, setLastRenderedZoom] = useState(zoom);
+  const [renderZoom, setRenderZoom] = useState(zoom); // The zoom level actually used for rendering
+  const zoomDebounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const documentInnerRef = useRef<HTMLDivElement>(null);
   
@@ -124,11 +128,46 @@ export default function RenderLayer({ document, onDocumentSizeChange }: Props) {
     setIsRendered(true);
   };
 
-  // When the current page or zoom changes, we are no longer "rendered" until the new page is done.
+  // Debounced zoom handling to prevent flicker during rapid zoom changes (mouse wheel)
   useEffect(() => {
-    setIsRendered(false);
+    // Clear existing timeout
+    if (zoomDebounceTimeoutRef.current) {
+      clearTimeout(zoomDebounceTimeoutRef.current);
+    }
+    
+    // For button clicks (large zoom changes), update immediately
+    const zoomDifference = Math.abs(zoom - renderZoom);
+    const isLargeZoomChange = zoomDifference > 0.05; // Button clicks typically cause larger changes
+    
+    if (isLargeZoomChange) {
+      // Immediate update for button clicks
+      setRenderZoom(zoom);
+      setIsPageRendering(true);
+      setIsRendered(false);
+    } else if (zoomDifference > 0.001) {
+      // Debounced update for mouse wheel (small incremental changes)
+      zoomDebounceTimeoutRef.current = setTimeout(() => {
+        setRenderZoom(zoom);
+        setIsPageRendering(true);
+        setIsRendered(false);
+      }, 100); // Wait 100ms after zoom stops changing
+    }
+    
     triggerUpdate();
-  }, [currentPage, zoom, triggerUpdate, setIsRendered]);
+    
+    return () => {
+      if (zoomDebounceTimeoutRef.current) {
+        clearTimeout(zoomDebounceTimeoutRef.current);
+      }
+    };
+  }, [currentPage, zoom, renderZoom, triggerUpdate, setIsRendered]);
+  
+  // Update last rendered zoom when page finishes rendering
+  const handlePageRenderComplete = (page: any) => {
+    handlePageRenderSuccess(page);
+    setLastRenderedZoom(zoom);
+    setIsPageRendering(false);
+  };
 
   if (!document) return <div className="text-red-500">No document selected</div>;
   if (!blob) return <div className="text-red-500">Unable to load file</div>;
@@ -155,8 +194,8 @@ export default function RenderLayer({ document, onDocumentSizeChange }: Props) {
         >
           <Page
             pageIndex={currentPage}
-            scale={1} // Let the UnifiedViewport handle scaling
-            onRenderSuccess={handlePageRenderSuccess}
+            scale={renderZoom} // Use debounced zoom for rendering to prevent flicker
+            onRenderSuccess={handlePageRenderComplete}
             className="pdf-page shadow-lg pointer-events-none"
             renderTextLayer={false}
             renderAnnotationLayer={false}

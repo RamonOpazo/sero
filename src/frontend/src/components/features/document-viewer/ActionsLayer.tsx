@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Bolt } from "lucide-react";
 import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Hand, MousePointerClick, Eye, EyeOff, Scan, Info } from "lucide-react";
@@ -14,13 +14,51 @@ export default function ActionsLayer({ isInfoVisible = false, onToggleInfo }: Ac
     currentPage,
     numPages,
     mode,
+    zoom,
+    pan,
+    setPan,
     setCurrentPage,
-    setZoom,
     setMode,
     showSelections,
     setShowSelections,
     resetView,
+    dispatch,
   } = useViewerState();
+
+  // Track last mouse position for button-based zooming
+  const mousePositionRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  
+  // Track temporary panning state for mode indicator
+  const [isTemporaryPanning, setIsTemporaryPanning] = useState(false);
+
+  // Update mouse position and track middle button for temporary panning
+  useEffect(() => {
+    const handleMouseMove = (event: MouseEvent) => {
+      mousePositionRef.current = { x: event.clientX, y: event.clientY };
+    };
+
+    const handleMouseDown = (event: MouseEvent) => {
+      if (event.button === 1) { // Middle button
+        setIsTemporaryPanning(true);
+      }
+    };
+
+    const handleMouseUp = (event: MouseEvent) => {
+      if (event.button === 1) { // Middle button
+        setIsTemporaryPanning(false);
+      }
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mousedown', handleMouseDown);
+    document.addEventListener('mouseup', handleMouseUp);
+    
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mousedown', handleMouseDown);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, []);
 
   const handleModeToggle = () => {
     if (mode === "pan") {
@@ -38,9 +76,84 @@ export default function ActionsLayer({ isInfoVisible = false, onToggleInfo }: Ac
     setShowSelections(false);
   }
 
+  // Mouse-position-aware zoom handlers for button clicks
+  const performZoom = useCallback((zoomFactor: number) => {
+    const newZoom = zoomFactor > 1 
+      ? Math.min(zoom * zoomFactor, 3)
+      : Math.max(zoom * zoomFactor, 0.5);
+    
+    // Find the viewport element (the unified viewport container)
+    const viewportElement = document.querySelector('.unified-viewport');
+    if (!viewportElement) {
+      // Fallback to center-based zoom if viewport not found
+      const centerX = -pan.x;
+      const centerY = -pan.y;
+      const scaleFactor = newZoom / zoom;
+      const newPanX = -centerX * scaleFactor;
+      const newPanY = -centerY * scaleFactor;
+      
+      dispatch({ type: 'SET_ZOOM', payload: newZoom });
+      setPan({ x: newPanX, y: newPanY });
+      return;
+    }
+
+    // Get viewport bounds
+    const rect = viewportElement.getBoundingClientRect();
+    
+    // Mouse position relative to viewport center
+    const mouseX = mousePositionRef.current.x - rect.left - rect.width / 2;
+    const mouseY = mousePositionRef.current.y - rect.top - rect.height / 2;
+    
+    // Since PDF renders at zoom level, document coordinates are already scaled
+    // Current document point under mouse (before zoom) - no division by zoom needed
+    const docPointX = mouseX - pan.x;
+    const docPointY = mouseY - pan.y;
+    
+    // Calculate scale factor for the document coordinates
+    const scaleFactor = newZoom / zoom;
+    
+    // Calculate new pan to keep the same document point under mouse (after zoom)
+    const newPanX = mouseX - docPointX * scaleFactor;
+    const newPanY = mouseY - docPointY * scaleFactor;
+    
+    // Update zoom and pan simultaneously
+    dispatch({ type: 'SET_ZOOM', payload: newZoom });
+    setPan({ x: newPanX, y: newPanY });
+  }, [zoom, pan, dispatch, setPan]);
+
+  const handleZoomIn = useCallback(() => {
+    performZoom(1.1);
+  }, [performZoom]);
+
+  const handleZoomOut = useCallback(() => {
+    performZoom(0.9);
+  }, [performZoom]);
+
+
   return (
-    <ActionsLayerContainer>
-      {/* Pagination */}
+    <>
+      {/* Mode Toggle Button - Left Side */}
+      <div className="absolute top-0 left-0 z-1000 bg-muted/80 rounded-md shadow-md">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={handleModeToggle}
+          className={(mode === "pan" || isTemporaryPanning) ? 'bg-accent text-accent-foreground' : ''}
+          title={
+            isTemporaryPanning 
+              ? "Temporary Pan Mode (Middle Button)"
+              : mode === "pan" 
+                ? "Pan Mode - Click to switch to Select" 
+                : "Select Mode - Click to switch to Pan"
+          }
+        >
+          {/* Show hand icon if in pan mode OR temporarily panning */}
+          {(mode === "pan" || isTemporaryPanning) ? <Hand /> : <MousePointerClick />}
+        </Button>
+      </div>
+
+      <ActionsLayerContainer>
+        {/* Pagination */}
       <Button
         variant="ghost"
         size="icon"
@@ -65,7 +178,7 @@ export default function ActionsLayer({ isInfoVisible = false, onToggleInfo }: Ac
       <Button
         variant="ghost"
         size="icon"
-        onClick={() => setZoom(prev => Math.min(prev + 0.1, 3))}
+        onClick={handleZoomIn}
       >
         <ZoomIn />
       </Button>
@@ -81,19 +194,9 @@ export default function ActionsLayer({ isInfoVisible = false, onToggleInfo }: Ac
       <Button
         variant="ghost"
         size="icon"
-        onClick={() => setZoom(prev => Math.max(prev - 0.1, 0.5))}
+        onClick={handleZoomOut}
       >
         <ZoomOut />
-      </Button>
-
-      {/* Mode toggle */}
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={handleModeToggle}
-        className="ml-2"
-      >
-        {mode === "pan" ? <Hand /> : <MousePointerClick />}
       </Button>
 
       {/* Selections visibility toggle */}
@@ -116,7 +219,8 @@ export default function ActionsLayer({ isInfoVisible = false, onToggleInfo }: Ac
           <Info />
         </Button>
       )}
-    </ActionsLayerContainer>
+      </ActionsLayerContainer>
+    </>
   );
 }
 

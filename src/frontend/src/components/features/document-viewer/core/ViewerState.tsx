@@ -88,17 +88,11 @@ function viewerStateReducer(state: ViewerState, action: ViewerAction): ViewerSta
       };
 
     case 'SET_PAN': {
-      const clampedPan = clampPan(
-        action.payload,
-        state.transform.zoom,
-        { width: 800, height: 600 }, // TODO: Get actual viewport size
-        state.documentSize
-      );
       return {
         ...state,
         transform: {
           ...state.transform,
-          pan: clampedPan
+          pan: action.payload
         }
       };
     }
@@ -108,7 +102,7 @@ function viewerStateReducer(state: ViewerState, action: ViewerAction): ViewerSta
         ...state,
         transform: {
           ...state.transform,
-          zoom: Math.max(0.1, Math.min(5, action.payload))
+          zoom: Math.max(0.5, Math.min(3, action.payload))
         }
       };
 

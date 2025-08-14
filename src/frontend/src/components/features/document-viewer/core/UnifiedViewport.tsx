@@ -101,15 +101,23 @@ export function UnifiedViewport({
   const animationFrameRef = useRef<number | null>(null);
   const panStartRef = useRef<{ x: number; y: number } | null>(null);
   
-  // Event state management
+  // Event state management for multi-button mouse handling
   const eventStateRef = useRef<{
-    isMouseDown: boolean;
+    leftButtonDown: boolean;
+    middleButtonDown: boolean;
+    rightButtonDown: boolean;
     panStart: { x: number; y: number } | null;
     selectionPageIndex: number | null;
+    isTemporaryPanning: boolean;
+    originalMode: string | null; // Store original mode during temporary operations
   }>({
-    isMouseDown: false,
+    leftButtonDown: false,
+    middleButtonDown: false,
+    rightButtonDown: false,
     panStart: null,
     selectionPageIndex: null,
+    isTemporaryPanning: false,
+    originalMode: null,
   });
 
   // Throttled pan update for smooth performance
@@ -122,58 +130,105 @@ export function UnifiedViewport({
     updateSelection(e);
   }, 10);
 
-  // Mouse event handlers with mode delegation
+  // Enhanced mouse event handlers with multi-button support (Option A)
   const handleMouseDown = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
-    if (event.button !== 0) return; // Only handle left mouse button
-    
     event.preventDefault();
-    eventStateRef.current.isMouseDown = true;
-
-    if (mode === 'pan') {
+    
+    // Track which button was pressed
+    if (event.button === 0) { // Left button
+      eventStateRef.current.leftButtonDown = true;
+      
+      if (!eventStateRef.current.isTemporaryPanning) {
+        if (mode === 'pan') {
+          // Left button starts panning in pan mode
+          setIsPanning(true);
+          eventStateRef.current.panStart = {
+            x: event.clientX - pan.x,
+            y: event.clientY - pan.y,
+          };
+        } else {
+          // Left button initiates selection in select mode
+          const pageIndex = 0; // TODO: Multi-page support
+          const pageRef = pageRefs.current.get(pageIndex);
+          
+          if (pageRef) {
+            eventStateRef.current.selectionPageIndex = pageIndex;
+            startSelection(event, pageIndex);
+          }
+        }
+      }
+      
+    } else if (event.button === 1) { // Middle button
+      eventStateRef.current.middleButtonDown = true;
+      eventStateRef.current.isTemporaryPanning = true;
+      eventStateRef.current.originalMode = mode;
+      
+      // Start temporary panning
       setIsPanning(true);
       eventStateRef.current.panStart = {
         x: event.clientX - pan.x,
         y: event.clientY - pan.y,
       };
-    } else if (mode === 'select') {
-      // Find which page was clicked for selection
-      const pageIndex = 0; // TODO: Multi-page support
-      const pageRef = pageRefs.current.get(pageIndex);
       
-      if (pageRef) {
-        eventStateRef.current.selectionPageIndex = pageIndex;
-        startSelection(event, pageIndex);
-      }
+    } else if (event.button === 2) { // Right button
+      eventStateRef.current.rightButtonDown = true;
+      // Right button handled in onContextMenu for now
     }
   }, [mode, pan, setIsPanning, startSelection, pageRefs]);
 
   const handleMouseMove = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
-    if (!eventStateRef.current.isMouseDown) return;
-
-    if (mode === 'pan' && isPanning && eventStateRef.current.panStart) {
+    // Handle temporary panning (middle button)
+    if (eventStateRef.current.middleButtonDown && eventStateRef.current.isTemporaryPanning && eventStateRef.current.panStart) {
       const newPan = {
         x: event.clientX - eventStateRef.current.panStart.x,
         y: event.clientY - eventStateRef.current.panStart.y,
       };
-      
-      // Use throttled update for smooth panning
       throttledPanUpdate(newPan);
-    } else if (mode === 'select' && eventStateRef.current.selectionPageIndex !== null) {
-      // Use debounced update for selections to reduce overhead
-      debouncedSelectionUpdate(event);
+      return;
+    }
+
+    // Handle regular mode-based interactions
+    if (eventStateRef.current.leftButtonDown) {
+      if (mode === 'pan' && isPanning && eventStateRef.current.panStart && !eventStateRef.current.isTemporaryPanning) {
+        const newPan = {
+          x: event.clientX - eventStateRef.current.panStart.x,
+          y: event.clientY - eventStateRef.current.panStart.y,
+        };
+        throttledPanUpdate(newPan);
+      } else if (eventStateRef.current.selectionPageIndex !== null && !eventStateRef.current.isTemporaryPanning) {
+        // Use debounced update for selections to reduce overhead
+        debouncedSelectionUpdate(event);
+      }
     }
   }, [mode, isPanning, throttledPanUpdate, debouncedSelectionUpdate]);
 
   const handleMouseUp = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
-    eventStateRef.current.isMouseDown = false;
-
-    if (mode === 'pan' && isPanning) {
-      setIsPanning(false);
-      eventStateRef.current.panStart = null;
-    } else if (mode === 'select' && eventStateRef.current.selectionPageIndex !== null) {
-      cancelSelectionUpdate();
-      endSelection();
-      eventStateRef.current.selectionPageIndex = null;
+    if (event.button === 0) { // Left button
+      eventStateRef.current.leftButtonDown = false;
+      
+      if (mode === 'pan' && isPanning && !eventStateRef.current.isTemporaryPanning) {
+        setIsPanning(false);
+        eventStateRef.current.panStart = null;
+      } else if (eventStateRef.current.selectionPageIndex !== null) {
+        cancelSelectionUpdate();
+        endSelection();
+        eventStateRef.current.selectionPageIndex = null;
+      }
+      
+    } else if (event.button === 1) { // Middle button
+      eventStateRef.current.middleButtonDown = false;
+      
+      if (eventStateRef.current.isTemporaryPanning) {
+        // End temporary panning
+        setIsPanning(false);
+        eventStateRef.current.panStart = null;
+        eventStateRef.current.isTemporaryPanning = false;
+        eventStateRef.current.originalMode = null;
+      }
+      
+    } else if (event.button === 2) { // Right button
+      eventStateRef.current.rightButtonDown = false;
+      // Right button handling will be in context menu
     }
   }, [mode, isPanning, setIsPanning, cancelSelectionUpdate, endSelection]);
 
@@ -181,6 +236,39 @@ export function UnifiedViewport({
     // Treat mouse leave as mouse up to end any ongoing operations
     handleMouseUp(event);
   }, [handleMouseUp]);
+
+  // Mouse wheel zoom handling with mouse position awareness
+  const handleWheel = useCallback((event: React.WheelEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    
+    if (!viewportRef.current) return;
+    
+    const zoomFactor = event.deltaY > 0 ? 0.9 : 1.1; // Zoom out for positive delta, in for negative
+    const newZoom = Math.max(0.1, Math.min(3, zoom * zoomFactor));
+    
+    // Get viewport bounds
+    const rect = viewportRef.current.getBoundingClientRect();
+    
+    // Mouse position relative to viewport center
+    const mouseX = event.clientX - rect.left - rect.width / 2;
+    const mouseY = event.clientY - rect.top - rect.height / 2;
+    
+    // Since PDF renders at zoom level, document coordinates are already scaled
+    // Current document point under mouse (before zoom) - no division by zoom needed
+    const docPointX = mouseX - pan.x;
+    const docPointY = mouseY - pan.y;
+    
+    // Calculate scale factor for the document coordinates
+    const scaleFactor = newZoom / zoom;
+    
+    // Calculate new pan to keep the same document point under mouse (after zoom)
+    const newPanX = mouseX - docPointX * scaleFactor;
+    const newPanY = mouseY - docPointY * scaleFactor;
+    
+    // Update zoom and pan simultaneously
+    dispatch({ type: 'SET_ZOOM', payload: newZoom });
+    setPan({ x: newPanX, y: newPanY });
+  }, [zoom, pan, setPan, dispatch]);
 
   // Context menu handling
   const handleContextMenu = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
@@ -244,7 +332,7 @@ export function UnifiedViewport({
 
       case '-':
         if (ctrlKey || metaKey) {
-          dispatch({ type: 'SET_ZOOM', payload: Math.max(zoom / 1.1, 0.1) });
+          dispatch({ type: 'SET_ZOOM', payload: Math.max(zoom / 1.1, 0.5) });
           event.preventDefault();
         }
         break;
@@ -258,14 +346,57 @@ export function UnifiedViewport({
     }
   }, [mode, isPanning, zoom, setIsPanning, cancelSelectionUpdate, endSelection, dispatch]);
 
-  // Attach keyboard event listeners to document
+  // Attach keyboard and wheel event listeners to document/viewport
   useEffect(() => {
     document.addEventListener('keydown', handleKeyDown);
+    
+    // Add wheel event listener with passive: false to allow preventDefault
+    const viewport = viewportRef.current;
+    if (viewport) {
+      const wheelHandler = (event: WheelEvent) => {
+        event.preventDefault();
+        
+        if (!viewportRef.current) return;
+        
+        const zoomFactor = event.deltaY > 0 ? 0.9 : 1.1; // Zoom out for positive delta, in for negative
+        const newZoom = Math.max(0.5, Math.min(3, zoom * zoomFactor));
+        
+        // Get viewport bounds
+        const rect = viewportRef.current.getBoundingClientRect();
+        
+        // Mouse position relative to viewport center
+        const mouseX = event.clientX - rect.left - rect.width / 2;
+        const mouseY = event.clientY - rect.top - rect.height / 2;
+        
+        // Since PDF renders at zoom level, document coordinates are already scaled
+        // Current document point under mouse (before zoom) - no division by zoom needed
+        const docPointX = mouseX - pan.x;
+        const docPointY = mouseY - pan.y;
+        
+        // Calculate scale factor for the document coordinates
+        const scaleFactor = newZoom / zoom;
+        
+        // Calculate new pan to keep the same document point under mouse (after zoom)
+        const newPanX = mouseX - docPointX * scaleFactor;
+        const newPanY = mouseY - docPointY * scaleFactor;
+        
+        // Update zoom and pan simultaneously
+        dispatch({ type: 'SET_ZOOM', payload: newZoom });
+        setPan({ x: newPanX, y: newPanY });
+      };
+      
+      viewport.addEventListener('wheel', wheelHandler, { passive: false });
+      
+      return () => {
+        document.removeEventListener('keydown', handleKeyDown);
+        viewport.removeEventListener('wheel', wheelHandler);
+      };
+    }
     
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [handleKeyDown]);
+  }, [handleKeyDown, zoom, pan, setPan, dispatch]);
 
   // Update viewport bounds reference
   useEffect(() => {
@@ -285,18 +416,23 @@ export function UnifiedViewport({
     };
   }, [cancelSelectionUpdate]);
 
-  // Calculate transform styles
+  // Calculate transform styles - only translation since PDF renders at zoom level
   const transformStyle = React.useMemo(() => ({
-    transform: `translate3d(${pan.x}px, ${pan.y}px, 0) scale(${zoom})`,
+    transform: `translate3d(${pan.x}px, ${pan.y}px, 0)`,
     transformOrigin: '0 0',
     transition: isPanning ? 'none' : 'transform 0.1s ease-out',
     willChange: isPanning ? 'transform' : 'auto',
-  }), [pan.x, pan.y, zoom, isPanning]);
+  }), [pan.x, pan.y, isPanning]);
 
   // Cursor style based on mode and state
   const cursorStyle = React.useMemo(() => {
+    // Show grabbing cursor during temporary panning (middle button)
+    if (eventStateRef.current.isTemporaryPanning || (mode === 'pan' && isPanning)) {
+      return 'grabbing';
+    }
+    // Show grab cursor in pan mode or during middle button hover
     if (mode === 'pan') {
-      return isPanning ? 'grabbing' : 'grab';
+      return 'grab';
     }
     return 'default';
   }, [mode, isPanning]);
