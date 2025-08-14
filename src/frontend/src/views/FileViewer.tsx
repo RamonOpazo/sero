@@ -18,18 +18,18 @@ interface FileViewerProps {
 export function FileViewer({ fileType }: FileViewerProps) {
   const { projectId, documentId } = useParams<{ projectId: string; documentId: string }>();
   const navigate = useNavigate();
-  
+
   // Local state for document info
   const [document, setDocument] = useState<DocumentShallowType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Password dialog state
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [isValidatingPassword, setIsValidatingPassword] = useState(false);
   const [userCancelledPassword, setUserCancelledPassword] = useState(false);
-  
+
   // Use refactor files hook for file loading
   const { loadFileWithData, currentFileData, loading: fileLoading, error: fileError } = useFiles();
 
@@ -37,14 +37,14 @@ export function FileViewer({ fileType }: FileViewerProps) {
   useEffect(() => {
     const fetchDocument = async () => {
       if (!documentId) return;
-      
+
       try {
         setLoading(true);
         const result = await api.safe.get(`/documents/id/${documentId}`);
-        
+
         if (result.ok) {
           setDocument(result.value);
-          
+
           // Auto-prompt for password if we haven't cancelled and no file is loaded
           if (!userCancelledPassword && !currentFileData) {
             setIsPasswordDialogOpen(true);
@@ -75,25 +75,25 @@ export function FileViewer({ fileType }: FileViewerProps) {
 
     try {
       // Find the appropriate file based on fileType
-      const targetFileType = fileType === 'original' 
-        ? FileTypeEnumSchema.enum.original 
+      const targetFileType = fileType === 'original'
+        ? FileTypeEnumSchema.enum.original
         : FileTypeEnumSchema.enum.redacted;
-        
+
       const targetFile = document.files?.find((f: any) => f.file_type === targetFileType);
-      
+
       if (!targetFile) {
         setPasswordError(`No ${fileType} file found for this document`);
         return;
       }
-      
+
       // Load the file with data
       await loadFileWithData(targetFile.id, password);
-      
+
       if (!fileError) {
         // Success - close dialog
         setIsPasswordDialogOpen(false);
         setPasswordError(null);
-        
+
         toast.success('File loaded successfully!', {
           description: `Loaded ${targetFile.filename || targetFile.id}`
         });
@@ -155,16 +155,15 @@ export function FileViewer({ fileType }: FileViewerProps) {
       prompts: stablePrompts,
       selections: stableSelections
     };
-    
+
     return viewerDocument;
   }, [
     // More specific dependencies
     document?.id,
-    document?.name, 
+    document?.name,
     document?.description,
     document?.created_at,
     document?.updated_at,
-    document?.user_id,
     currentFileData?.file?.id,
     currentFileData?.file?.file_hash,
     currentFileData?.file?.file_size,
@@ -198,8 +197,8 @@ export function FileViewer({ fileType }: FileViewerProps) {
         <div className="text-center">
           <p className="text-destructive mb-2">Failed to load file</p>
           <p className="text-sm text-muted-foreground">{error}</p>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={handleBackToDocuments}
             className="mt-4"
           >
@@ -212,97 +211,75 @@ export function FileViewer({ fileType }: FileViewerProps) {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header with navigation */}
-      <div className="flex items-center space-x-4">
-        <Button 
-          variant="outline" 
-          onClick={handleBackToDocuments}
-          className="flex items-center space-x-2"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          <span>Documents</span>
-        </Button>
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            {fileType === 'original' ? 'Original File' : 'Redacted File'}
-          </h1>
-          <p className="text-muted-foreground">
-            Viewing {fileType} file for document ID: {documentId}
-          </p>
-        </div>
-      </div>
+    <div className="flex flex-col h-full">
 
       {/* File Content */}
       {!currentFileData && !userCancelledPassword && (
-        <Card>
-          <CardContent className="p-16 text-center">
-            <Lock className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-            <p className="text-lg font-medium text-muted-foreground mb-4">
-              File Encrypted
-            </p>
-            <p className="text-sm text-muted-foreground mb-6">
-              Document "{document?.name}" requires a password to decrypt the {fileType} file
-            </p>
-            <Button 
-              onClick={() => setIsPasswordDialogOpen(true)}
-              className="px-6 py-2"
-            >
-              Enter Password
-            </Button>
-          </CardContent>
-        </Card>
+        <div className="flex-1 flex items-center justify-center">
+          <Card>
+            <CardContent className="p-16 text-center">
+              <Lock className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+              <p className="text-lg font-medium text-muted-foreground mb-4">
+                File Encrypted
+              </p>
+              <p className="text-sm text-muted-foreground mb-6">
+                Document "{document?.name}" requires a password to decrypt the {fileType} file
+              </p>
+              <Button
+                onClick={() => setIsPasswordDialogOpen(true)}
+                className="px-6 py-2"
+              >
+                Enter Password
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       {!currentFileData && userCancelledPassword && (
-        <Card>
-          <CardContent className="p-16 text-center">
-            <FileText className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-            <p className="text-lg font-medium text-muted-foreground mb-4">
-              File Not Loaded
-            </p>
-            <p className="text-sm text-muted-foreground mb-6">
-              You cancelled the password entry. Click below to try again.
-            </p>
-            <Button 
-              onClick={handleRetryPassword}
-              variant="outline"
-              className="px-6 py-2"
-            >
-              Retry Password
-            </Button>
-          </CardContent>
-        </Card>
+        <div className="flex-1 flex items-center justify-center">
+          <Card>
+            <CardContent className="p-16 text-center">
+              <FileText className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+              <p className="text-lg font-medium text-muted-foreground mb-4">
+                File Not Loaded
+              </p>
+              <p className="text-sm text-muted-foreground mb-6">
+                You cancelled the password entry. Click below to try again.
+              </p>
+              <Button
+                onClick={handleRetryPassword}
+                variant="outline"
+                className="px-6 py-2"
+              >
+                Retry Password
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       )}
 
-      {currentFileData && (
-        <div className="space-y-6">
-          {/* Simplified Document Viewer - Uses Built-in ORIGINAL/REDACTED Toggle */}
-          <Card className="h-[calc(100vh-200px)]">
-            {documentForViewer ? (
-              <div className="h-full p-4">
-                <DocumentViewer 
-                  key={`${documentId}-${currentFileData?.file?.id}`}
-                  document={documentForViewer} 
-                />
-              </div>
-            ) : (
-              <CardContent className="flex-1 p-0 h-full">
-                <div className="flex items-center justify-center h-full bg-muted/10 rounded-lg">
-                  <div className="text-center">
-                    <FileText className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-                    <p className="text-lg font-medium text-muted-foreground">PDF Preview</p>
-                    <p className="text-sm text-muted-foreground">
-                      File loaded successfully ({formatFileSize(currentFileData.blob.size)})
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Unable to initialize document viewer
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            )}
-          </Card>
+      {currentFileData && documentForViewer && (
+        <div className="flex-1 min-h-0">
+          <DocumentViewer
+            key={`${documentId}-${currentFileData?.file?.id}`}
+            document={documentForViewer}
+          />
+        </div>
+      )}
+
+      {currentFileData && !documentForViewer && (
+        <div className="flex-1 flex items-center justify-center bg-muted/10 rounded-lg">
+          <div className="text-center">
+            <FileText className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+            <p className="text-lg font-medium text-muted-foreground">PDF Preview</p>
+            <p className="text-sm text-muted-foreground">
+              File loaded successfully ({formatFileSize(currentFileData.blob.size)})
+            </p>
+            <p className="text-xs text-muted-foreground mt-2">
+              Unable to initialize document viewer
+            </p>
+          </div>
         </div>
       )}
 

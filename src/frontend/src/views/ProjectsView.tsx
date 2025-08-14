@@ -1,15 +1,12 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { FolderOpen } from 'lucide-react';
 import { useProjects } from '@/hooks/useProjects';
 import { ProjectsDataTable } from './ProjectsDataTable';
 import type { ProjectShallowType } from '@/types';
 
 export function ProjectsView() {
   const navigate = useNavigate();
-  const { projects, loading, error, refreshProjects } = useProjects();
+  const { loading, error, refreshProjects } = useProjects();
 
   useEffect(() => {
     refreshProjects();
@@ -44,32 +41,7 @@ export function ProjectsView() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">SERO Document Management</h1>
-        <p className="text-muted-foreground">
-          Secure document processing and redaction system
-        </p>
-      </div>
-
-      {/* Projects Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <FolderOpen className="h-5 w-5" />
-            <span>Projects</span>
-            {projects.length > 0 && (
-              <Badge variant="outline">{projects.length}</Badge>
-            )}
-          </CardTitle>
-          <CardDescription>
-            Select a project to view its documents. Projects are loaded with shallow data for optimal performance.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ProjectsDataTable onProjectSelect={handleSelectProject} />
-        </CardContent>
-      </Card>
+      <ProjectsDataTable onProjectSelect={handleSelectProject} />
     </div>
   );
 }
