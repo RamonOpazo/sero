@@ -10,15 +10,12 @@ import {
   type ViewerAction, 
   type ViewerContextType,
   type ViewerSelectors,
-  type Point,
-  type DocumentSize 
+  type Point 
 } from '../types/viewer';
 import { 
   screenToViewport,
   screenToDocument as screenToDocumentUtil,
   documentToViewport as documentToViewportUtil,
-  clampPan,
-  calculateCenterFit
 } from './CoordinateSystem';
 
 // Initial state

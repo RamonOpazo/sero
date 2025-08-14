@@ -24,9 +24,6 @@ export default function RenderLayer({ document, onDocumentSizeChange }: Props) {
 
   const [blob, setBlob] = useState<Blob | null>(null);
   const [arrayBuffer, setArrayBuffer] = useState<ArrayBuffer | null>(null);
-  const [documentSize, setDocumentSize] = useState<{ width: number; height: number }>({ width: 800, height: 600 });
-  const [isPageRendering, setIsPageRendering] = useState(false);
-  const [lastRenderedZoom, setLastRenderedZoom] = useState(zoom);
   const [renderZoom, setRenderZoom] = useState(zoom); // The zoom level actually used for rendering
   const zoomDebounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -122,7 +119,6 @@ export default function RenderLayer({ document, onDocumentSizeChange }: Props) {
     // Update document size based on the actual rendered page
     if (page && page.width && page.height) {
       const newSize = { width: page.width, height: page.height };
-      setDocumentSize(newSize);
       onDocumentSizeChange?.(newSize);
     }
     setIsRendered(true);
@@ -142,13 +138,11 @@ export default function RenderLayer({ document, onDocumentSizeChange }: Props) {
     if (isLargeZoomChange) {
       // Immediate update for button clicks
       setRenderZoom(zoom);
-      setIsPageRendering(true);
       setIsRendered(false);
     } else if (zoomDifference > 0.001) {
       // Debounced update for mouse wheel (small incremental changes)
       zoomDebounceTimeoutRef.current = setTimeout(() => {
         setRenderZoom(zoom);
-        setIsPageRendering(true);
         setIsRendered(false);
       }, 100); // Wait 100ms after zoom stops changing
     }
@@ -162,11 +156,9 @@ export default function RenderLayer({ document, onDocumentSizeChange }: Props) {
     };
   }, [currentPage, zoom, renderZoom, triggerUpdate, setIsRendered]);
   
-  // Update last rendered zoom when page finishes rendering
+  // Handle page render completion
   const handlePageRenderComplete = (page: any) => {
     handlePageRenderSuccess(page);
-    setLastRenderedZoom(zoom);
-    setIsPageRendering(false);
   };
 
   if (!document) return <div className="text-red-500">No document selected</div>;

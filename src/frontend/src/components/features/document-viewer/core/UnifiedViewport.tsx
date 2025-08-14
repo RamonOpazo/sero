@@ -1,10 +1,6 @@
 import React, { useRef, useCallback, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { useViewerState } from '../hooks/useViewerState';
-import {
-  type Point,
-  clampPan,
-} from './CoordinateSystem';
 
 /**
  * Throttle utility for high-frequency events like mouse move
@@ -77,7 +73,6 @@ interface UnifiedViewportProps {
 export function UnifiedViewport({ 
   children, 
   className,
-  documentSize = { width: 800, height: 600 }
 }: UnifiedViewportProps) {
   const {
     zoom,
@@ -86,10 +81,6 @@ export function UnifiedViewport({
     isPanning,
     setIsPanning,
     mode,
-    isRendered,
-    getViewportBounds,
-    screenToViewport: screenToViewportCoords,
-    screenToDocument: screenToDocumentCoords,
     startSelection,
     updateSelection,
     endSelection,
@@ -99,7 +90,6 @@ export function UnifiedViewport({
   
   const viewportRef = useRef<HTMLDivElement>(null);
   const animationFrameRef = useRef<number | null>(null);
-  const panStartRef = useRef<{ x: number; y: number } | null>(null);
   
   // Event state management for multi-button mouse handling
   const eventStateRef = useRef<{
@@ -236,39 +226,6 @@ export function UnifiedViewport({
     // Treat mouse leave as mouse up to end any ongoing operations
     handleMouseUp(event);
   }, [handleMouseUp]);
-
-  // Mouse wheel zoom handling with mouse position awareness
-  const handleWheel = useCallback((event: React.WheelEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    
-    if (!viewportRef.current) return;
-    
-    const zoomFactor = event.deltaY > 0 ? 0.9 : 1.1; // Zoom out for positive delta, in for negative
-    const newZoom = Math.max(0.1, Math.min(3, zoom * zoomFactor));
-    
-    // Get viewport bounds
-    const rect = viewportRef.current.getBoundingClientRect();
-    
-    // Mouse position relative to viewport center
-    const mouseX = event.clientX - rect.left - rect.width / 2;
-    const mouseY = event.clientY - rect.top - rect.height / 2;
-    
-    // Since PDF renders at zoom level, document coordinates are already scaled
-    // Current document point under mouse (before zoom) - no division by zoom needed
-    const docPointX = mouseX - pan.x;
-    const docPointY = mouseY - pan.y;
-    
-    // Calculate scale factor for the document coordinates
-    const scaleFactor = newZoom / zoom;
-    
-    // Calculate new pan to keep the same document point under mouse (after zoom)
-    const newPanX = mouseX - docPointX * scaleFactor;
-    const newPanY = mouseY - docPointY * scaleFactor;
-    
-    // Update zoom and pan simultaneously
-    dispatch({ type: 'SET_ZOOM', payload: newZoom });
-    setPan({ x: newPanX, y: newPanY });
-  }, [zoom, pan, setPan, dispatch]);
 
   // Context menu handling
   const handleContextMenu = useCallback((event: React.MouseEvent<HTMLDivElement>) => {

@@ -77,7 +77,7 @@ function useThrottle<T extends (...args: any[]) => any>(
  * Unified Event Handler Component
  * Manages all mouse/touch events for the viewer with delegation
  */
-export function UnifiedEventHandler({ children, documentSize }: EventHandlerProps) {
+export function UnifiedEventHandler({ children }: EventHandlerProps) {
   const {
     mode,
     isPanning,
@@ -89,7 +89,6 @@ export function UnifiedEventHandler({ children, documentSize }: EventHandlerProp
     updateSelection,
     endSelection,
     pageRefs,
-    screenToDocument,
     dispatch,
   } = useViewerState();
 
@@ -116,7 +115,7 @@ export function UnifiedEventHandler({ children, documentSize }: EventHandlerProp
 
   // Main mouse event handler with delegation
   const handleMouseEvent = useCallback((event: MouseEvent) => {
-    const { type, clientX, clientY, button } = event;
+    const { type, button } = event;
     
     // Only handle left mouse button
     if (button !== 0 && type !== 'mousemove' && type !== 'mouseup' && type !== 'mouseleave') {
@@ -132,7 +131,7 @@ export function UnifiedEventHandler({ children, documentSize }: EventHandlerProp
         break;
       case 'mouseup':
       case 'mouseleave':
-        handleMouseUp(event);
+        handleMouseUp();
         break;
     }
   }, [mode, isPanning, pan, zoom]);
@@ -176,7 +175,7 @@ export function UnifiedEventHandler({ children, documentSize }: EventHandlerProp
     }
   }, [mode, isPanning, throttledPanUpdate, debouncedSelectionUpdate]);
 
-  const handleMouseUp = useCallback((event: MouseEvent) => {
+  const handleMouseUp = useCallback(() => {
     eventStateRef.current.isMouseDown = false;
 
     if (mode === 'pan' && isPanning) {
