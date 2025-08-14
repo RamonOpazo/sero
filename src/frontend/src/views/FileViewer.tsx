@@ -1,10 +1,8 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileText, ArrowLeft, Lock, MessageSquare, Target, Info } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { FileText, ArrowLeft, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/lib/axios';
 import { PasswordDialog } from '@/components/dialogs/PasswordDialog';
@@ -25,7 +23,6 @@ export function FileViewer({ fileType }: FileViewerProps) {
   const [document, setDocument] = useState<DocumentShallowType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [viewerTab, setViewerTab] = useState('preview');
   
   // Password dialog state
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
@@ -124,7 +121,7 @@ export function FileViewer({ fileType }: FileViewerProps) {
     setUserCancelledPassword(false);
   }, [userCancelledPassword]);
 
-  // Create a document object compatible with DocumentViewer with more stable references
+  // Create a document object compatible with DocumentViewer with both original and redacted files
   const documentForViewer = useMemo((): DocumentType | null => {
     if (!document || !currentFileData) {
       return null;
@@ -140,6 +137,10 @@ export function FileViewer({ fileType }: FileViewerProps) {
     const stablePrompts = currentFileData.prompts || [];
     const stableSelections = currentFileData.selections || [];
 
+    // Determine original and redacted files based on document structure
+    const originalFile = document.files?.find((f: any) => f.file_type === 'original') || null;
+    const redactedFile = document.files?.find((f: any) => f.file_type === 'redacted') || null;
+
     // Create a stable object to avoid unnecessary re-renders
     const viewerDocument: DocumentType = {
       id: document.id,
@@ -149,8 +150,8 @@ export function FileViewer({ fileType }: FileViewerProps) {
       updated_at: document.updated_at,
       user_id: document.user_id,
       files: stableFiles,
-      original_file: fileType === 'original' ? currentFileData.file : null,
-      redacted_file: fileType === 'redacted' ? currentFileData.file : null,
+      original_file: originalFile,
+      redacted_file: redactedFile,
       prompts: stablePrompts,
       selections: stableSelections
     };
@@ -169,7 +170,7 @@ export function FileViewer({ fileType }: FileViewerProps) {
     currentFileData?.file?.file_size,
     currentFileData?.prompts?.length,
     currentFileData?.selections?.length,
-    fileType
+    // Remove fileType dependency since we now include both files
   ]);
 
   const formatFileSize = (bytes: number) => {
@@ -276,108 +277,31 @@ export function FileViewer({ fileType }: FileViewerProps) {
 
       {currentFileData && (
         <div className="space-y-6">
-          {/* File Viewer - Now Full Height */}
+          {/* Simplified Document Viewer - Uses Built-in ORIGINAL/REDACTED Toggle */}
           <Card className="h-[calc(100vh-200px)]">
-            <Tabs value={viewerTab} onValueChange={setViewerTab} className="flex-1 flex flex-col h-full">
-              <div className="px-6 pt-4">
-                <TabsList className="grid w-full grid-cols-4">
-                  <TabsTrigger value="preview" className="flex items-center space-x-2">
-                    <FileText className="h-4 w-4" />
-                    <span>Preview</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="prompts" className="flex items-center space-x-2">
-                    <MessageSquare className="h-4 w-4" />
-                    <span>Prompts</span>
-                    {currentFileData.prompts.length > 0 && (
-                      <Badge variant="outline" className="ml-1">
-                        {currentFileData.prompts.length}
-                      </Badge>
-                    )}
-                  </TabsTrigger>
-                  <TabsTrigger value="selections" className="flex items-center space-x-2">
-                    <Target className="h-4 w-4" />
-                    <span>Selections</span>
-                    {currentFileData.selections.length > 0 && (
-                      <Badge variant="outline" className="ml-1">
-                        {currentFileData.selections.length}
-                      </Badge>
-                    )}
-                  </TabsTrigger>
-                  <TabsTrigger value="info" className="flex items-center space-x-2">
-                    <Info className="h-4 w-4" />
-                    <span>Info</span>
-                  </TabsTrigger>
-                </TabsList>
+            {documentForViewer ? (
+              <div className="h-full p-4">
+                <DocumentViewer 
+                  key={`${documentId}-${currentFileData?.file?.id}`}
+                  document={documentForViewer} 
+                />
               </div>
-
-              {/* Preview Tab */}
-              <TabsContent value="preview" className="flex-1 p-0 m-0">
-                {documentForViewer ? (
-                  <div className="h-full p-4">
-                    <DocumentViewer 
-                      key={`${documentId}-${fileType}-${currentFileData?.file?.id}`}
-                      document={documentForViewer} 
-                    />
-                  </div>
-                ) : (
-                  <CardContent className="flex-1 p-0 h-full">
-                    <div className="flex items-center justify-center h-full bg-muted/10 rounded-lg">
-                      <div className="text-center">
-                        <FileText className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-                        <p className="text-lg font-medium text-muted-foreground">PDF Preview</p>
-                        <p className="text-sm text-muted-foreground">
-                          File loaded successfully ({formatFileSize(currentFileData.blob.size)})
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-2">
-                          Unable to initialize document viewer
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                )}
-              </TabsContent>
-
-              {/* Other tabs with prompts, selections, info... */}
-              <TabsContent value="prompts" className="flex-1 p-6">
-                <div className="text-center py-8">
-                  <MessageSquare className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                  <p className="text-muted-foreground">{currentFileData.prompts.length} prompts configured</p>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="selections" className="flex-1 p-6">
-                <div className="text-center py-8">
-                  <Target className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                  <p className="text-muted-foreground">{currentFileData.selections.length} selections made</p>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="info" className="flex-1 p-6">
-                <div className="space-y-6">
-                  <div>
-                    <h4 className="font-medium mb-2">File Details</h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">ID:</span>
-                        <span className="font-mono">{currentFileData.file.id}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Type:</span>
-                        <span>{currentFileData.file.file_type}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">MIME Type:</span>
-                        <span>{currentFileData.file.mime_type}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Size:</span>
-                        <span>{formatFileSize(currentFileData.file.file_size)}</span>
-                      </div>
-                    </div>
+            ) : (
+              <CardContent className="flex-1 p-0 h-full">
+                <div className="flex items-center justify-center h-full bg-muted/10 rounded-lg">
+                  <div className="text-center">
+                    <FileText className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+                    <p className="text-lg font-medium text-muted-foreground">PDF Preview</p>
+                    <p className="text-sm text-muted-foreground">
+                      File loaded successfully ({formatFileSize(currentFileData.blob.size)})
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Unable to initialize document viewer
+                    </p>
                   </div>
                 </div>
-              </TabsContent>
-            </Tabs>
+              </CardContent>
+            )}
           </Card>
         </div>
       )}
