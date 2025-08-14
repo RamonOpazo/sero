@@ -17,6 +17,8 @@ export default function SelectionsLayer({ documentSize }: Props) {
     deleteSelection,
     currentPage,
     dispatch,
+    document: currentDocument,
+    mode,
   } = useViewerState();
 
   // State for selection editing
@@ -34,6 +36,20 @@ export default function SelectionsLayer({ documentSize }: Props) {
     startMousePos: { x: number; y: number };
   } | null>(null);
 
+  // State for move dragging
+  const [moveState, setMoveState] = useState<{
+    isMoving: boolean;
+    initialSelection: SelectionCreateType;
+    startMousePos: { x: number; y: number };
+  } | null>(null);
+
+  // State for creating new selection by dragging on empty space
+  const [creatingState, setCreatingState] = useState<{
+    isCreating: boolean;
+    startPoint: { x: number; y: number };
+    startMousePos: { x: number; y: number };
+  } | null>(null);
+
   const isDraggingRef = useRef(false);
   const rafRef = useRef<number | null>(null);
 
@@ -45,6 +61,23 @@ export default function SelectionsLayer({ documentSize }: Props) {
   ) => {
     setSelectedSelection({ type, index, selection: sel });
   };
+
+  // Handle move drag start
+  const handleMoveStart = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    
+    if (!selectedSelection) return;
+    
+    const startMousePos = { x: e.clientX, y: e.clientY };
+    setMoveState({
+      isMoving: true,
+      initialSelection: { ...selectedSelection.selection },
+      startMousePos
+    });
+    
+    isDraggingRef.current = true;
+  }, [selectedSelection]);
 
   // Handle resize handle drag start
   const handleResizeStart = useCallback((corner: string, e: React.MouseEvent) => {
@@ -64,48 +97,149 @@ export default function SelectionsLayer({ documentSize }: Props) {
     isDraggingRef.current = true;
   }, [selectedSelection]);
 
-  // Handle mouse move during resize
+  // Handle starting new selection creation on empty space
+  const handleCreateStart = useCallback((e: React.MouseEvent) => {
+    // Only allow creation in select mode
+    if (mode !== 'select' || !currentDocument) return;
+    
+    e.stopPropagation();
+    e.preventDefault();
+    
+    // Calculate normalized document coordinates
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / documentSize.width;
+    const y = (e.clientY - rect.top) / documentSize.height;
+    
+    // Start creating new selection
+    const startMousePos = { x: e.clientX, y: e.clientY };
+    const startPoint = { x, y };
+    
+    setCreatingState({
+      isCreating: true,
+      startPoint,
+      startMousePos
+    });
+    
+    // Start the drawing selection in the viewer state
+    const initialSelection: SelectionCreateType = {
+      x,
+      y,
+      width: 0,
+      height: 0,
+      page_number: currentPage + 1,
+      document_id: currentDocument.id,
+    };
+    
+    dispatch({ type: 'START_SELECTION', payload: initialSelection });
+    isDraggingRef.current = true;
+    
+    // Clear any selected selection
+    setSelectedSelection(null);
+  }, [mode, currentDocument, documentSize, currentPage, dispatch]);
+
+  // Handle mouse move during resize, move, or creation
   const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (!resizeState || !selectedSelection || !isDraggingRef.current) return;
+    if (!isDraggingRef.current) return;
     
-    const { corner, initialSelection, startMousePos } = resizeState;
-    
-    // Calculate mouse movement in document coordinates
-    const deltaX = (e.clientX - startMousePos.x) / documentSize.width;
-    const deltaY = (e.clientY - startMousePos.y) / documentSize.height;
-    
-    let newSelection = { ...initialSelection };
-    
-    // Apply resize based on corner being dragged
-    switch (corner) {
-      case 'nw': // Northwest: move top-left corner
-        newSelection.x = initialSelection.x + deltaX;
-        newSelection.y = initialSelection.y + deltaY;
-        newSelection.width = initialSelection.width - deltaX;
-        newSelection.height = initialSelection.height - deltaY;
-        break;
-      case 'ne': // Northeast: move top-right corner
-        newSelection.y = initialSelection.y + deltaY;
-        newSelection.width = initialSelection.width + deltaX;
-        newSelection.height = initialSelection.height - deltaY;
-        break;
-      case 'sw': // Southwest: move bottom-left corner
-        newSelection.x = initialSelection.x + deltaX;
-        newSelection.width = initialSelection.width - deltaX;
-        newSelection.height = initialSelection.height + deltaY;
-        break;
-      case 'se': // Southeast: move bottom-right corner
-        newSelection.width = initialSelection.width + deltaX;
-        newSelection.height = initialSelection.height + deltaY;
-        break;
+    if (creatingState) {
+      // Handle creating new selection
+      const { startPoint, startMousePos } = creatingState;
+      
+      // Calculate current position in document coordinates
+      const deltaX = (e.clientX - startMousePos.x) / documentSize.width;
+      const deltaY = (e.clientY - startMousePos.y) / documentSize.height;
+      
+      const currentX = startPoint.x + deltaX;
+      const currentY = startPoint.y + deltaY;
+      
+      // Create selection from start point to current point
+      const newSelection: SelectionCreateType = {
+        x: Math.min(startPoint.x, currentX),
+        y: Math.min(startPoint.y, currentY),
+        width: Math.abs(currentX - startPoint.x),
+        height: Math.abs(currentY - startPoint.y),
+        page_number: currentPage + 1,
+        document_id: currentDocument!.id,
+      };
+      
+      // Ensure selection stays within bounds (0-1)
+      const constrainedSelection = {
+        ...newSelection,
+        x: Math.max(0, Math.min(1, newSelection.x)),
+        y: Math.max(0, Math.min(1, newSelection.y)),
+        width: Math.max(0, Math.min(1 - newSelection.x, newSelection.width)),
+        height: Math.max(0, Math.min(1 - newSelection.y, newSelection.height)),
+      };
+      
+      // Update the drawing selection
+      dispatch({ type: 'UPDATE_SELECTION', payload: constrainedSelection });
+      return;
     }
     
-    // Ensure selection stays within bounds (0-1) and has minimum size
-    const minSize = 0.01; // 1% minimum size
-    newSelection.x = Math.max(0, Math.min(1 - minSize, newSelection.x));
-    newSelection.y = Math.max(0, Math.min(1 - minSize, newSelection.y));
-    newSelection.width = Math.max(minSize, Math.min(1 - newSelection.x, newSelection.width));
-    newSelection.height = Math.max(minSize, Math.min(1 - newSelection.y, newSelection.height));
+    if (!selectedSelection) return;
+    
+    let newSelection: SelectionCreateType;
+    
+    if (resizeState) {
+      // Handle resize operation
+      const { corner, initialSelection, startMousePos } = resizeState;
+      
+      // Calculate mouse movement in document coordinates
+      const deltaX = (e.clientX - startMousePos.x) / documentSize.width;
+      const deltaY = (e.clientY - startMousePos.y) / documentSize.height;
+      
+      newSelection = { ...initialSelection };
+      
+      // Apply resize based on corner being dragged
+      switch (corner) {
+        case 'nw': // Northwest: move top-left corner
+          newSelection.x = initialSelection.x + deltaX;
+          newSelection.y = initialSelection.y + deltaY;
+          newSelection.width = initialSelection.width - deltaX;
+          newSelection.height = initialSelection.height - deltaY;
+          break;
+        case 'ne': // Northeast: move top-right corner
+          newSelection.y = initialSelection.y + deltaY;
+          newSelection.width = initialSelection.width + deltaX;
+          newSelection.height = initialSelection.height - deltaY;
+          break;
+        case 'sw': // Southwest: move bottom-left corner
+          newSelection.x = initialSelection.x + deltaX;
+          newSelection.width = initialSelection.width - deltaX;
+          newSelection.height = initialSelection.height + deltaY;
+          break;
+        case 'se': // Southeast: move bottom-right corner
+          newSelection.width = initialSelection.width + deltaX;
+          newSelection.height = initialSelection.height + deltaY;
+          break;
+      }
+      
+      // Ensure selection stays within bounds (0-1) and has minimum size
+      const minSize = 0.01; // 1% minimum size
+      newSelection.x = Math.max(0, Math.min(1 - minSize, newSelection.x));
+      newSelection.y = Math.max(0, Math.min(1 - minSize, newSelection.y));
+      newSelection.width = Math.max(minSize, Math.min(1 - newSelection.x, newSelection.width));
+      newSelection.height = Math.max(minSize, Math.min(1 - newSelection.y, newSelection.height));
+      
+    } else if (moveState) {
+      // Handle move operation
+      const { initialSelection, startMousePos } = moveState;
+      
+      // Calculate mouse movement in document coordinates
+      const deltaX = (e.clientX - startMousePos.x) / documentSize.width;
+      const deltaY = (e.clientY - startMousePos.y) / documentSize.height;
+      
+      newSelection = { ...initialSelection };
+      newSelection.x = initialSelection.x + deltaX;
+      newSelection.y = initialSelection.y + deltaY;
+      
+      // Ensure selection stays within bounds (0-1)
+      newSelection.x = Math.max(0, Math.min(1 - newSelection.width, newSelection.x));
+      newSelection.y = Math.max(0, Math.min(1 - newSelection.height, newSelection.y));
+      
+    } else {
+      return; // No active drag operation
+    }
     
     // Update the selected selection
     setSelectedSelection(prev => prev ? {
@@ -126,22 +260,35 @@ export default function SelectionsLayer({ documentSize }: Props) {
       });
     }
     
-  }, [resizeState, selectedSelection, documentSize, dispatch]);
+  }, [resizeState, moveState, creatingState, selectedSelection, documentSize, dispatch, currentPage, currentDocument]);
 
-  // Handle mouse up to end resize
+  // Handle mouse up to end resize, move, or creation
   const handleMouseUp = useCallback(() => {
+    if (creatingState) {
+      // End the selection creation
+      dispatch({ type: 'END_SELECTION' });
+      console.log('Selection creation completed');
+      setCreatingState(null);
+    }
+    
     if (resizeState && selectedSelection) {
       // TODO: Save the resized selection to the appropriate state/database
       console.log('Resize completed:', selectedSelection.selection);
     }
     
+    if (moveState && selectedSelection) {
+      // TODO: Save the moved selection to the appropriate state/database
+      console.log('Move completed:', selectedSelection.selection);
+    }
+    
     setResizeState(null);
+    setMoveState(null);
     isDraggingRef.current = false;
-  }, [resizeState, selectedSelection]);
+  }, [creatingState, resizeState, moveState, selectedSelection, dispatch]);
 
   // Set up global mouse event listeners for dragging
   React.useEffect(() => {
-    if (resizeState) {
+    if (resizeState || moveState || creatingState) {
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
       
@@ -154,7 +301,7 @@ export default function SelectionsLayer({ documentSize }: Props) {
         }
       };
     }
-  }, [resizeState, handleMouseMove, handleMouseUp]);
+  }, [resizeState, moveState, creatingState, handleMouseMove, handleMouseUp]);
 
   // Clean up RAF on unmount
   React.useEffect(() => {
@@ -213,10 +360,10 @@ export default function SelectionsLayer({ documentSize }: Props) {
         key={key}
         className={cn(
           "absolute pointer-events-auto group",
-          // Disable transitions during resize to prevent lag
-          resizeState && selectedSelection?.type === (isNew ? 'new' : 'existing') && selectedSelection?.index === index
-            ? "" // No transition during resize
-            : "transition-all duration-200", // Normal transitions when not resizing
+          // Disable transitions during resize, move, or creation to prevent lag
+          (resizeState || moveState || (creatingState && key === "drawing"))
+            ? "" // No transition during resize/move/creation
+            : "transition-all duration-200", // Normal transitions when not actively dragging
           isSelected
             ? "border border-blue-600 bg-blue-100/20"
             : isNew
@@ -228,25 +375,23 @@ export default function SelectionsLayer({ documentSize }: Props) {
           top: `${Math.min(top, top + sel.height * documentSize.height)}px`,
           width: `${width}px`,
           height: `${height}px`,
+          cursor: isSelected 
+            ? moveState?.isMoving 
+              ? 'grabbing' 
+              : 'grab'
+            : 'pointer',
         }}
         onClick={(e) => {
           e.stopPropagation();
           handleSelectionClick(sel, isNew ? 'new' : 'existing', index);
         }}
+        onMouseDown={(e) => {
+          // Only start move if this selection is selected and we're not clicking on resize handles
+          if (isSelected && !e.defaultPrevented) {
+            handleMoveStart(e);
+          }
+        }}
       >
-        {/* Delete button for new selections */}
-        {isNew && deletable && (
-          <button
-            className="absolute -top-2 -right-2 text-xs bg-red-500 text-white w-4 h-4 rounded-full flex items-center justify-center hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
-            onClick={(e) => {
-              e.stopPropagation();
-              deleteSelection(index);
-            }}
-          >
-            ×
-          </button>
-        )}
-        
         {/* Resize handles for selected selection */}
         {isSelected && renderResizeHandles()}
       </div>
@@ -283,8 +428,15 @@ export default function SelectionsLayer({ documentSize }: Props) {
         style={{
           width: documentSize.width,
           height: documentSize.height,
+          cursor: mode === 'select' ? 'crosshair' : 'default',
         }}
         onClick={() => setSelectedSelection(null)}
+        onMouseDown={(e) => {
+          // Only handle mouse down on empty space (not on existing selections)
+          if (e.target === e.currentTarget && mode === 'select') {
+            handleCreateStart(e);
+          }
+        }}
       >
         {/* Existing selections from database */}
         {pageExisting.map((sel, i) => renderBox(sel, false, `existing-${i}`, i))}
