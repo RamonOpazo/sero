@@ -79,6 +79,7 @@ export function useViewerState() {
     get pan() { return context.state.transform.pan; },
     get currentPage() { return context.state.navigation.currentPage; },
     get numPages() { return context.state.navigation.numPages; },
+    get isViewingProcessedDocument() { return context.state.navigation.isViewingProcessedDocument; },
     get mode() { return context.state.ui.mode; },
     get isPanning() { return context.state.ui.isPanning; },
     get showSelections() { return context.state.ui.showSelections; },

@@ -23,6 +23,7 @@ export default function SelectionsLayer({ documentSize }: Props) {
     dispatch,
     document: currentDocument,
     mode,
+    isViewingProcessedDocument,
   } = useViewerState();
 
   // State for selection editing
@@ -707,7 +708,7 @@ export default function SelectionsLayer({ documentSize }: Props) {
   // Drawing selection: show if page_number is null/0 (all pages) or matches current page
   const drawingThisPage = drawing && (drawing.page_number === null || drawing.page_number === 0 || drawing.page_number === currentPageNumber) ? drawing : null;
 
-  if (!isRendered || !showSelections) {
+  if (!isRendered || !showSelections || isViewingProcessedDocument) {
     return null;
   }
 
