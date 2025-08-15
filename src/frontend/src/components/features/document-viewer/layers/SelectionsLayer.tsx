@@ -26,12 +26,31 @@ export default function SelectionsLayer({ documentSize }: Props) {
     isViewingProcessedDocument,
   } = useViewerState();
 
-  // State for selection editing
-  const [selectedSelection, setSelectedSelection] = useState<{
+  // State for selection editing - only store the reference, derive the actual data
+  const [selectedSelectionRef, setSelectedSelectionRef] = useState<{
     type: 'existing' | 'new';
     index: number;
-    selection: SelectionCreateType;
   } | null>(null);
+
+  // Derive the current selection data from global state to ensure it's always up-to-date
+  const selectedSelection = React.useMemo(() => {
+    if (!selectedSelectionRef) return null;
+    
+    const { type, index } = selectedSelectionRef;
+    const currentData = type === 'existing' ? existingSelections[index] : newSelections[index];
+    
+    // Return null if the selection no longer exists at that index
+    if (!currentData) {
+      setSelectedSelectionRef(null);
+      return null;
+    }
+    
+    return {
+      type,
+      index,
+      selection: currentData
+    };
+  }, [selectedSelectionRef, existingSelections, newSelections]);
 
   // State for resize dragging
   const [resizeState, setResizeState] = useState<{
@@ -111,7 +130,7 @@ export default function SelectionsLayer({ documentSize }: Props) {
             payload: [...existingSelections, savedSelection]
           });
           
-          setSelectedSelection(null);
+          setSelectedSelectionRef(null);
           toast.success('Selection saved successfully');
           console.log('Selection saved successfully:', savedSelection);
         } else {
@@ -175,7 +194,7 @@ export default function SelectionsLayer({ documentSize }: Props) {
               return newSet;
             });
             
-            setSelectedSelection(null);
+            setSelectedSelectionRef(null);
             toast.success('Selection saved successfully');
             console.log('Selection created successfully (no ID case):', savedSelection);
             setContextMenuOpen(false);
@@ -220,7 +239,7 @@ export default function SelectionsLayer({ documentSize }: Props) {
             return newSet;
           });
           
-          setSelectedSelection(null);
+          setSelectedSelectionRef(null);
           toast.success('Selection updated successfully');
           console.log('Selection updated successfully:', updatedSelection);
         } else {
@@ -253,7 +272,7 @@ export default function SelectionsLayer({ documentSize }: Props) {
         payload: { index }
       });
     }
-    setSelectedSelection(null);
+    setSelectedSelectionRef(null);
     setContextMenuOpen(false);
   }, [deleteSelection, dispatch]);
 
@@ -282,14 +301,8 @@ export default function SelectionsLayer({ documentSize }: Props) {
       }
     }
     
-    // Update the selected selection state to reflect the change
-    setSelectedSelection(prev => prev ? {
-      ...prev,
-      selection: {
-        ...prev.selection,
-        page_number: 0
-      }
-    } : null);
+    // The selectedSelection will be automatically updated via the derived state
+    // since the global state has been updated
     
     setContextMenuOpen(false);
   }, [dispatch, newSelections, existingSelections, setEditedExistingSelections]);
@@ -300,7 +313,7 @@ export default function SelectionsLayer({ documentSize }: Props) {
     type: 'existing' | 'new',
     index: number
   ) => {
-    setSelectedSelection({ type, index, selection: sel });
+    setSelectedSelectionRef({ type, index });
   };
 
   // Handle move drag start
@@ -381,7 +394,7 @@ export default function SelectionsLayer({ documentSize }: Props) {
     isDraggingRef.current = true;
     
     // Clear any selected selection
-    setSelectedSelection(null);
+    setSelectedSelectionRef(null);
   }, [mode, currentDocument, documentSize, currentPage, dispatch]);
 
   // Handle mouse move during resize, move, or creation
@@ -488,16 +501,13 @@ export default function SelectionsLayer({ documentSize }: Props) {
       return; // No active drag operation
     }
     
-    // Update the selected selection
-    setSelectedSelection(prev => prev ? {
-      ...prev,
-      selection: newSelection
-    } : null);
+    // The selectedSelection will automatically reflect the current state
+    // since it's derived from the global state
     
-    // Update the actual selection in the viewer state
+    // Update the actual selection in the viewer state WITHOUT creating history entries
     if (selectedSelection.type === 'existing') {
       dispatch({
-        type: 'UPDATE_EXISTING_SELECTION',
+        type: 'UPDATE_EXISTING_SELECTION_NO_HISTORY',
         payload: { index: selectedSelection.index, selection: newSelection }
       });
       
@@ -505,7 +515,7 @@ export default function SelectionsLayer({ documentSize }: Props) {
       setEditedExistingSelections(prev => new Set(prev).add(selectedSelection.index));
     } else {
       dispatch({
-        type: 'UPDATE_NEW_SELECTION',
+        type: 'UPDATE_NEW_SELECTION_NO_HISTORY',
         payload: { index: selectedSelection.index, selection: newSelection }
       });
     }
@@ -521,14 +531,13 @@ export default function SelectionsLayer({ documentSize }: Props) {
       setCreatingState(null);
     }
     
-    if (resizeState && selectedSelection) {
-      // TODO: Save the resized selection to the appropriate state/database
-      console.log('Resize completed:', selectedSelection.selection);
-    }
-    
-    if (moveState && selectedSelection) {
-      // TODO: Save the moved selection to the appropriate state/database
-      console.log('Move completed:', selectedSelection.selection);
+    if ((resizeState || moveState) && selectedSelection) {
+      // Save final state to history after resize/move operation
+      dispatch({ 
+        type: selectedSelection.type === 'existing' ? 'UPDATE_EXISTING_SELECTION' : 'UPDATE_NEW_SELECTION',
+        payload: { index: selectedSelection.index, selection: selectedSelection.selection }
+      });
+      console.log('Drag operation completed:', selectedSelection.selection);
     }
     
     setResizeState(null);
@@ -723,7 +732,7 @@ export default function SelectionsLayer({ documentSize }: Props) {
           height: documentSize.height,
           cursor: mode === 'select' ? 'crosshair' : 'default',
         }}
-        onClick={() => setSelectedSelection(null)}
+        onClick={() => setSelectedSelectionRef(null)}
         onMouseDown={(e) => {
           // Only handle left-click mouse down on empty space (not on existing selections)
           if (e.target === e.currentTarget && mode === 'select' && e.button === 0) {

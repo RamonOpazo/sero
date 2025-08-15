@@ -279,6 +279,32 @@ function viewerStateReducer(state: ViewerState, action: ViewerAction): ViewerSta
       return addHistoryEntry(stateWithUpdatedSelection);
     }
 
+    case 'UPDATE_EXISTING_SELECTION_NO_HISTORY': {
+      const { index, selection } = action.payload;
+      const updatedExistingSelections = [...state.selections.existingSelections];
+      if (index >= 0 && index < updatedExistingSelections.length) {
+        // Merge the selection update with existing metadata (preserve id, created_at, etc.)
+        const existingSelection = updatedExistingSelections[index];
+        updatedExistingSelections[index] = {
+          ...existingSelection,
+          ...selection,
+          // Always preserve these metadata fields from the existing selection
+          id: existingSelection.id,
+          created_at: existingSelection.created_at,
+          updated_at: new Date().toISOString(), // Update the timestamp
+        };
+      }
+      
+      // Update without creating history entry
+      return {
+        ...state,
+        selections: {
+          ...state.selections,
+          existingSelections: updatedExistingSelections
+        }
+      };
+    }
+
     case 'UPDATE_NEW_SELECTION': {
       const { index, selection } = action.payload;
       const updatedNewSelections = [...state.selections.newSelections];
@@ -286,6 +312,23 @@ function viewerStateReducer(state: ViewerState, action: ViewerAction): ViewerSta
         updatedNewSelections[index] = selection;
       }
       
+      return {
+        ...state,
+        selections: {
+          ...state.selections,
+          newSelections: updatedNewSelections
+        }
+      };
+    }
+
+    case 'UPDATE_NEW_SELECTION_NO_HISTORY': {
+      const { index, selection } = action.payload;
+      const updatedNewSelections = [...state.selections.newSelections];
+      if (index >= 0 && index < updatedNewSelections.length) {
+        updatedNewSelections[index] = selection;
+      }
+      
+      // Update without creating history entry
       return {
         ...state,
         selections: {
