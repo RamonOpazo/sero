@@ -24,6 +24,7 @@ interface SelectionContextValue {
   finishDraw: () => void;
   cancelDraw: () => void;
   selectSelection: (id: string | null) => void;
+  updateSelection: (id: string, selection: Selection) => void;
   deleteSelection: (id: string) => void;
   deleteSelectedSelection: () => boolean;
   saveNewSelections: (selections: Selection[]) => void;
@@ -106,6 +107,10 @@ export function SelectionProvider({ children, initialSelections }: SelectionProv
     dispatch({ type: 'SELECT_SELECTION', payload: id });
   }, [dispatch]);
   
+  const updateSelection = useCallback((id: string, selection: Selection) => {
+    dispatch({ type: 'UPDATE_SELECTION', payload: { id, selection } });
+  }, [dispatch]);
+  
   const deleteSelection = useCallback((id: string) => {
     dispatch({ type: 'DELETE_SELECTION', payload: id });
   }, [dispatch]);
@@ -153,6 +158,7 @@ export function SelectionProvider({ children, initialSelections }: SelectionProv
     finishDraw,
     cancelDraw,
     selectSelection,
+    updateSelection,
     deleteSelection,
     deleteSelectedSelection,
     saveNewSelections,
@@ -173,6 +179,7 @@ export function SelectionProvider({ children, initialSelections }: SelectionProv
     finishDraw,
     cancelDraw,
     selectSelection,
+    updateSelection,
     deleteSelection,
     deleteSelectedSelection,
     saveNewSelections,

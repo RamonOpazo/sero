@@ -39,6 +39,7 @@ export type SelectionManagerAction =
   | { type: 'FINISH_DRAW' }
   | { type: 'CANCEL_DRAW' }
   | { type: 'SELECT_SELECTION'; payload: string | null }
+  | { type: 'UPDATE_SELECTION'; payload: { id: string; selection: Selection } }
   | { type: 'DELETE_SELECTION'; payload: string }
   | { type: 'SAVE_NEW_SELECTIONS'; payload: Selection[] }
   | { type: 'LOAD_SAVED_SELECTIONS'; payload: Selection[] }
@@ -135,6 +136,24 @@ class SelectionManager {
 
       case 'SELECT_SELECTION':
         this.state.selectedSelectionId = action.payload;
+        break;
+
+      case 'UPDATE_SELECTION':
+        const { id: updateId, selection: updatedSelection } = action.payload;
+        
+        // Update in saved selections
+        const savedUpdateIndex = this.state.savedSelections.findIndex(s => s.id === updateId);
+        if (savedUpdateIndex >= 0) {
+          this.state.savedSelections[savedUpdateIndex] = updatedSelection;
+          this.addToHistory();
+        }
+        
+        // Update in new selections
+        const newUpdateIndex = this.state.newSelections.findIndex(s => s.id === updateId);
+        if (newUpdateIndex >= 0) {
+          this.state.newSelections[newUpdateIndex] = updatedSelection;
+          this.addToHistory();
+        }
         break;
 
       case 'DELETE_SELECTION':

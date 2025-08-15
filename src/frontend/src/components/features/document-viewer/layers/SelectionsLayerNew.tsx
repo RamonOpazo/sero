@@ -36,22 +36,26 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     allSelections,
     selectedSelection,
     selectSelection,
+    updateSelection,
     deleteSelection,
     // deleteSelectedSelection, // TODO: Use for keyboard shortcuts
     startDraw,
     updateDraw,
     finishDraw,
-    // cancelDraw, // TODO: Use for cancel operations
+    cancelDraw,
   } = useSelections();
 
   // Local UI state
   const [contextMenuOpen, setContextMenuOpen] = useState(false);
   const [contextMenuPosition, setContextMenuPosition] = useState<{ x: number; y: number } | null>(null);
+  
+  // Interaction state for resize, move, and create operations
   const [dragState, setDragState] = useState<{
     type: 'move' | 'resize' | 'create';
     corner?: string;
     startMousePos: { x: number; y: number };
     startPoint?: { x: number; y: number };
+    initialSelection?: Selection;
   } | null>(null);
 
   const isDraggingRef = useRef(false);
@@ -102,7 +106,7 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     if (!isDraggingRef.current || !dragState) return;
     
     if (dragState.type === 'create' && dragState.startPoint) {
-      // Handle creating new selection
+      // Handle creating new selection - use drawing system
       const { startPoint, startMousePos } = dragState;
       
       // Calculate current position in document coordinates
@@ -132,18 +136,77 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
       };
       
       updateDraw(constrainedSelection);
+      
+    } else if (dragState.type === 'move' && dragState.initialSelection && selectedSelection) {
+      // Handle moving selection - directly update the selection in real-time
+      const { startMousePos, initialSelection } = dragState;
+      
+      const deltaX = (e.clientX - startMousePos.x) / documentSize.width;
+      const deltaY = (e.clientY - startMousePos.y) / documentSize.height;
+      
+      const updatedSelection = {
+        ...initialSelection,
+        x: Math.max(0, Math.min(1 - initialSelection.width, initialSelection.x + deltaX)),
+        y: Math.max(0, Math.min(1 - initialSelection.height, initialSelection.y + deltaY)),
+      };
+      
+      // Directly update the selection in the SelectionManager
+      updateSelection(selectedSelection.id, updatedSelection);
+      
+    } else if (dragState.type === 'resize' && dragState.initialSelection && dragState.corner && selectedSelection) {
+      // Handle resizing selection - directly update the selection in real-time
+      const { startMousePos, initialSelection, corner } = dragState;
+      
+      const deltaX = (e.clientX - startMousePos.x) / documentSize.width;
+      const deltaY = (e.clientY - startMousePos.y) / documentSize.height;
+      
+      let updatedSelection = { ...initialSelection };
+      
+      // Apply resize based on corner
+      switch (corner) {
+        case 'nw':
+          updatedSelection.x = initialSelection.x + deltaX;
+          updatedSelection.y = initialSelection.y + deltaY;
+          updatedSelection.width = initialSelection.width - deltaX;
+          updatedSelection.height = initialSelection.height - deltaY;
+          break;
+        case 'ne':
+          updatedSelection.y = initialSelection.y + deltaY;
+          updatedSelection.width = initialSelection.width + deltaX;
+          updatedSelection.height = initialSelection.height - deltaY;
+          break;
+        case 'sw':
+          updatedSelection.x = initialSelection.x + deltaX;
+          updatedSelection.width = initialSelection.width - deltaX;
+          updatedSelection.height = initialSelection.height + deltaY;
+          break;
+        case 'se':
+          updatedSelection.width = initialSelection.width + deltaX;
+          updatedSelection.height = initialSelection.height + deltaY;
+          break;
+      }
+      
+      // Ensure minimum size and bounds
+      const minSize = 0.01;
+      updatedSelection.x = Math.max(0, Math.min(1 - minSize, updatedSelection.x));
+      updatedSelection.y = Math.max(0, Math.min(1 - minSize, updatedSelection.y));
+      updatedSelection.width = Math.max(minSize, Math.min(1 - updatedSelection.x, updatedSelection.width));
+      updatedSelection.height = Math.max(minSize, Math.min(1 - updatedSelection.y, updatedSelection.height));
+      
+      // Directly update the selection in the SelectionManager
+      updateSelection(selectedSelection.id, updatedSelection);
     }
-    
-    // TODO: Add move and resize handling in future iterations
-  }, [dragState, documentSize, currentPage, currentDocument, updateDraw]);
+  }, [dragState, documentSize, currentPage, currentDocument, updateDraw, selectedSelection, updateSelection]);
 
   // Handle mouse up to end drag operations
   const handleMouseUp = useCallback(() => {
     if (!isDraggingRef.current) return;
     
     if (dragState?.type === 'create') {
+      // Only creation uses the drawing system
       finishDraw();
     }
+    // For move and resize, no additional action needed since we update in real-time
     
     setDragState(null);
     isDraggingRef.current = false;
@@ -217,6 +280,63 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     setContextMenuOpen(false);
   }, [currentDocument]);
 
+  // Handle move start
+  const handleMoveStart = useCallback((e: React.MouseEvent, selection: Selection) => {
+    if (e.button !== 0) return; // Only left click
+    
+    e.stopPropagation();
+    e.preventDefault();
+    
+    setDragState({
+      type: 'move',
+      startMousePos: { x: e.clientX, y: e.clientY },
+      initialSelection: selection,
+    });
+    
+    isDraggingRef.current = true;
+  }, []);
+  
+  // Handle resize start
+  const handleResizeStart = useCallback((corner: string, e: React.MouseEvent, selection: Selection) => {
+    if (e.button !== 0) return; // Only left click
+    
+    e.stopPropagation();
+    e.preventDefault();
+    
+    setDragState({
+      type: 'resize',
+      corner,
+      startMousePos: { x: e.clientX, y: e.clientY },
+      initialSelection: selection,
+    });
+    
+    isDraggingRef.current = true;
+  }, []);
+
+  // Render resize handles
+  const renderResizeHandles = useCallback((selection: Selection) => {
+    const handleSize = 10;
+    const positions = [
+      { name: 'nw', style: { top: -handleSize/2, left: -handleSize/2, cursor: 'nw-resize' } },
+      { name: 'ne', style: { top: -handleSize/2, right: -handleSize/2, cursor: 'ne-resize' } },
+      { name: 'sw', style: { bottom: -handleSize/2, left: -handleSize/2, cursor: 'sw-resize' } },
+      { name: 'se', style: { bottom: -handleSize/2, right: -handleSize/2, cursor: 'se-resize' } },
+    ];
+
+    return positions.map(({ name, style }) => (
+      <div
+        key={name}
+        className="absolute bg-blue-600 border border-white shadow-md hover:bg-blue-700 transition-colors z-10"
+        style={{
+          width: handleSize,
+          height: handleSize,
+          ...style,
+        }}
+        onMouseDown={(e) => handleResizeStart(name, e, selection)}
+      />
+    ));
+  }, [handleResizeStart]);
+
   // Remove selection
   const handleRemoveSelection = useCallback((selectionId: string) => {
     deleteSelection(selectionId);
@@ -239,7 +359,11 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
       <div
         key={selection.id}
         className={cn(
-          "absolute pointer-events-auto group transition-all duration-200",
+          "absolute pointer-events-auto group",
+          // Disable transitions during drag operations
+          dragState?.type === 'move' || dragState?.type === 'resize' 
+            ? "" 
+            : "transition-all duration-200",
           isSelected
             ? "border border-blue-600 bg-blue-100/20"
             : isNew
@@ -255,11 +379,21 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
           top: `${top}px`,
           width: `${width}px`,
           height: `${height}px`,
-          cursor: 'pointer',
+          cursor: isSelected 
+            ? dragState?.type === 'move' 
+              ? 'grabbing' 
+              : 'grab'
+            : 'pointer',
         }}
         onClick={(e) => {
           e.stopPropagation();
           handleSelectionClick(selection);
+        }}
+        onMouseDown={(e) => {
+          // Start move if this selection is selected and not clicking resize handles
+          if (isSelected && e.button === 0 && !e.defaultPrevented) {
+            handleMoveStart(e, selection);
+          }
         }}
         onContextMenu={(e) => {
           if (isSelected) {
@@ -269,11 +403,14 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
             setContextMenuOpen(true);
           }
         }}
-      />
+      >
+        {/* Resize handles for selected selection */}
+        {isSelected && renderResizeHandles(selection)}
+      </div>
     );
 
     return selectionElement;
-  }, [documentSize, selectedSelection, handleSelectionClick]);
+  }, [documentSize, selectedSelection, handleSelectionClick, dragState, renderResizeHandles, handleMoveStart]);
 
   // Filter selections for current page
   const currentPageNumber = currentPage + 1;
