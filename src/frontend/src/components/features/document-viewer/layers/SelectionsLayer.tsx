@@ -258,8 +258,8 @@ export default function SelectionsLayer({ documentSize }: Props) {
     setContextMenuOpen(false);
   }, [currentDocument, dispatch, existingSelections, api, editedExistingSelections]);
 
-  const handleRemoveSelection = useCallback((sel: SelectionCreateType, type: 'existing' | 'new', index: number) => {
-    console.log('Remove selection:', { sel, type, index });
+  const handleRemoveSelection = useCallback((type: 'existing' | 'new', index: number) => {
+    console.log('Remove selection:', { type, index });
     if (type === 'new') {
       deleteSelection(index);
     } else {
@@ -306,7 +306,6 @@ export default function SelectionsLayer({ documentSize }: Props) {
 
   // Handle selection click
   const handleSelectionClick = (
-    sel: SelectionCreateType,
     type: 'existing' | 'new',
     index: number
   ) => {
@@ -663,7 +662,7 @@ export default function SelectionsLayer({ documentSize }: Props) {
         }}
         onClick={(e) => {
           e.stopPropagation();
-          handleSelectionClick(sel, isNew ? 'new' : 'existing', index);
+          handleSelectionClick(isNew ? 'new' : 'existing', index);
         }}
         onMouseDown={(e) => {
           // Only start move if this selection is selected, left-click, and we're not clicking on resize handles
@@ -808,7 +807,6 @@ export default function SelectionsLayer({ documentSize }: Props) {
               e.preventDefault();
               e.stopPropagation();
               handleRemoveSelection(
-                selectedSelection.selection, 
                 selectedSelection.type, 
                 selectedSelection.index
               );

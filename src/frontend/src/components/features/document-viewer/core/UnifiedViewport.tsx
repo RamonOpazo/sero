@@ -1,6 +1,7 @@
 import React, { useRef, useCallback, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { useViewerState } from '../hooks/useViewerState';
+import { useSelections } from './SelectionProvider';
 import { toast } from 'sonner';
 
 /**
@@ -32,38 +33,6 @@ function useThrottle<T extends (...args: any[]) => any>(
   }, [func, delay]) as T;
 }
 
-/**
- * Debounce utility for expensive operations
- */
-function useDebounce<T extends (...args: any[]) => any>(
-  func: T,
-  delay: number
-): [T, () => void] {
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-  
-  const debouncedFunc = useCallback((...args: Parameters<T>) => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-    
-    timeoutRef.current = setTimeout(() => {
-      func(...args);
-    }, delay);
-  }, [func, delay]) as T;
-
-  const cancel = useCallback(() => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
-  }, []);
-
-  useEffect(() => {
-    return cancel;
-  }, [cancel]);
-
-  return [debouncedFunc, cancel];
-}
 
 interface UnifiedViewportProps {
   children: React.ReactNode;
@@ -75,6 +44,7 @@ export function UnifiedViewport({
   children, 
   className,
 }: UnifiedViewportProps) {
+  // Get non-selection state from old system
   const {
     zoom,
     pan,
@@ -82,10 +52,6 @@ export function UnifiedViewport({
     isPanning,
     setIsPanning,
     mode,
-    startSelection,
-    updateSelection,
-    endSelection,
-    pageRefs,
     dispatch,
     currentPage,
     numPages,
@@ -94,10 +60,15 @@ export function UnifiedViewport({
     toggleInfoPanel,
     showHelpOverlay,
     toggleHelpOverlay,
-    newSelections,
-    deleteSelection,
-    selections,
   } = useViewerState();
+  
+  // Get selection state from new system
+  const {
+    deleteSelectedSelection,
+    undo,
+    redo,
+    cancelDraw,
+  } = useSelections();
   
   const viewportRef = useRef<HTMLDivElement>(null);
   const animationFrameRef = useRef<number | null>(null);
@@ -126,10 +97,7 @@ export function UnifiedViewport({
     setPan(newPan);
   }, 16); // ~60fps
 
-  // Debounced expensive operations for selection updates
-  const [debouncedSelectionUpdate, cancelSelectionUpdate] = useDebounce((e: React.MouseEvent) => {
-    updateSelection(e);
-  }, 10);
+  // No longer need debounced selection updates as drawing is handled by SelectionsLayerNew
 
   // Enhanced mouse event handlers with multi-button support (Option A)
   const handleMouseDown = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
@@ -147,16 +115,8 @@ export function UnifiedViewport({
             x: event.clientX - pan.x,
             y: event.clientY - pan.y,
           };
-        } else {
-          // Left button initiates selection in select mode
-          const pageIndex = 0; // TODO: Multi-page support
-          const pageRef = pageRefs.current.get(pageIndex);
-          
-          if (pageRef) {
-            eventStateRef.current.selectionPageIndex = pageIndex;
-            startSelection(event, pageIndex);
-          }
         }
+        // Selection drawing is now handled by SelectionsLayerNew component
       }
       
     } else if (event.button === 1) { // Middle button
@@ -175,7 +135,7 @@ export function UnifiedViewport({
       eventStateRef.current.rightButtonDown = true;
       // Right button handled in onContextMenu for now
     }
-  }, [mode, pan, setIsPanning, startSelection, pageRefs]);
+  }, [mode, pan, setIsPanning]);
 
   const handleMouseMove = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
     // Handle temporary panning (middle button)
@@ -196,12 +156,10 @@ export function UnifiedViewport({
           y: event.clientY - eventStateRef.current.panStart.y,
         };
         throttledPanUpdate(newPan);
-      } else if (eventStateRef.current.selectionPageIndex !== null && !eventStateRef.current.isTemporaryPanning) {
-        // Use debounced update for selections to reduce overhead
-        debouncedSelectionUpdate(event);
       }
+      // Selection drawing is now handled by SelectionsLayerNew component
     }
-  }, [mode, isPanning, throttledPanUpdate, debouncedSelectionUpdate]);
+  }, [mode, isPanning, throttledPanUpdate]);
 
   const handleMouseUp = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
     if (event.button === 0) { // Left button
@@ -210,11 +168,8 @@ export function UnifiedViewport({
       if (mode === 'pan' && isPanning && !eventStateRef.current.isTemporaryPanning) {
         setIsPanning(false);
         eventStateRef.current.panStart = null;
-      } else if (eventStateRef.current.selectionPageIndex !== null) {
-        cancelSelectionUpdate();
-        endSelection();
-        eventStateRef.current.selectionPageIndex = null;
       }
+      // Selection end is now handled by SelectionsLayerNew component
       
     } else if (event.button === 1) { // Middle button
       eventStateRef.current.middleButtonDown = false;
@@ -231,7 +186,7 @@ export function UnifiedViewport({
       eventStateRef.current.rightButtonDown = false;
       // Right button handling will be in context menu
     }
-  }, [mode, isPanning, setIsPanning, cancelSelectionUpdate, endSelection]);
+  }, [mode, isPanning, setIsPanning]);
 
   const handleMouseLeave = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
     // Treat mouse leave as mouse up to end any ongoing operations
@@ -262,11 +217,8 @@ export function UnifiedViewport({
           setIsPanning(false);
           eventStateRef.current.panStart = null;
         }
-        if (eventStateRef.current.selectionPageIndex !== null) {
-          cancelSelectionUpdate();
-          endSelection();
-          eventStateRef.current.selectionPageIndex = null;
-        }
+        // Cancel any current selection drawing - handled by SelectionsLayerNew
+        cancelDraw();
         // Close help overlay if open
         if (showHelpOverlay) {
           toggleHelpOverlay();
@@ -422,17 +374,10 @@ export function UnifiedViewport({
       case 'Delete':
       case 'Backspace':
         if (!isModifierPressed) {
-          // Delete the currently selected selection (new or existing)
-          const selectedSelection = selections.selectedSelection;
-          if (selectedSelection) {
-            dispatch({ type: 'DELETE_SELECTED_SELECTION' });
-            const selectionType = selectedSelection.type === 'new' ? 'new' : 'saved';
-            toast.success(`Selected ${selectionType} selection removed`);
-          } else if (newSelections.length > 0) {
-            // Fallback: delete the most recent new selection if no selection is actively selected
-            const lastIndex = newSelections.length - 1;
-            deleteSelection(lastIndex);
-            toast.success('Last selection removed');
+          // Delete the currently selected selection using new system
+          const success = deleteSelectedSelection();
+          if (success) {
+            toast.success('Selection removed');
           } else {
             toast.info('No selections to remove');
           }
@@ -443,11 +388,13 @@ export function UnifiedViewport({
       case 'z':
         if ((ctrlKey || metaKey) && !altKey) {
           if (shiftKey) {
-            // Redo
-            dispatch({ type: 'REDO_SELECTION' });
+            // Redo using new system
+            redo();
+            toast.success('Redo');
           } else {
-            // Undo
-            dispatch({ type: 'UNDO_SELECTION' });
+            // Undo using new system
+            undo();
+            toast.success('Undo');
           }
           event.preventDefault();
         }
@@ -460,7 +407,7 @@ export function UnifiedViewport({
         }
         break;
     }
-  }, [mode, isPanning, zoom, setIsPanning, cancelSelectionUpdate, endSelection, dispatch, currentPage, numPages, setCurrentPage, setMode, toggleInfoPanel, showHelpOverlay, toggleHelpOverlay, newSelections, deleteSelection, selections]);
+  }, [mode, isPanning, zoom, setIsPanning, cancelDraw, dispatch, currentPage, numPages, setCurrentPage, setMode, toggleInfoPanel, showHelpOverlay, toggleHelpOverlay, deleteSelectedSelection, undo, redo]);
 
   // Attach keyboard and wheel event listeners to document/viewport
   useEffect(() => {
@@ -522,15 +469,14 @@ export function UnifiedViewport({
     }
   }, []);
 
-  // Cleanup animation frame and debounced operations on unmount
+  // Cleanup animation frame on unmount
   useEffect(() => {
     return () => {
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
-      cancelSelectionUpdate();
     };
-  }, [cancelSelectionUpdate]);
+  }, []);
 
   // Calculate transform styles - only translation since PDF renders at zoom level
   const transformStyle = React.useMemo(() => ({

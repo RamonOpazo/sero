@@ -5,9 +5,8 @@ import { X, Globe, MapPin } from "lucide-react";
 import { useViewerState } from "./hooks/useViewerState";
 import { useMemo } from "react";
 
-type Props = { documentId: string };
 
-export default function SelectionList({ documentId }: Props) {
+export default function SelectionList() {
   const { existingSelections, newSelections, dispatch } = useViewerState();
 
   // Combine all selections with type information

@@ -101,8 +101,6 @@ class SelectionManager {
 
   // Core actions
   dispatch(action: SelectionManagerAction) {
-    const prevState = { ...this.state };
-
     switch (action.type) {
       case 'START_DRAW':
         this.state.currentDraw = action.payload;

@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { cn } from "@/lib/utils"
 import UnifiedViewport from "./core/UnifiedViewport";
 import RenderLayer from "./layers/RenderLayer";
-import SelectionsLayer from "./layers/SelectionsLayer";
+// import SelectionsLayer from "./layers/SelectionsLayer"; // Old layer - using SelectionsLayerNew
 import SelectionsLayerNew from "./layers/SelectionsLayerNew";
 import InfoLayer from "./layers/InfoLayer";
 import ActionsLayer from "./layers/ActionsLayer";

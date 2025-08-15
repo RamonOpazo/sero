@@ -248,7 +248,7 @@ export default function Controller({ document, className, ...props }: Props & Re
       </Widget>
 
       {/* Selection List Widget */}
-      <SelectionList documentId={document.id} />
+      <SelectionList />
 
       {/* Document Actions Widget */}
       <Widget className="py-2">

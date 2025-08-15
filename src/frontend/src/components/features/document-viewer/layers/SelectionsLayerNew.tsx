@@ -10,7 +10,7 @@ import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 import { useSelections } from '../core/SelectionProvider';
 import { useViewerState } from '../hooks/useViewerState';
-import { Save, Trash2, Globe } from "lucide-react";
+import { Save, Trash2 } from "lucide-react";
 import { api } from "@/lib/axios";
 import { toast } from "sonner";
 import type { Selection, SelectionCreateType } from '../types/viewer';
@@ -37,11 +37,11 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     selectedSelection,
     selectSelection,
     deleteSelection,
-    deleteSelectedSelection,
+    // deleteSelectedSelection, // TODO: Use for keyboard shortcuts
     startDraw,
     updateDraw,
     finishDraw,
-    cancelDraw,
+    // cancelDraw, // TODO: Use for cancel operations
   } = useSelections();
 
   // Local UI state

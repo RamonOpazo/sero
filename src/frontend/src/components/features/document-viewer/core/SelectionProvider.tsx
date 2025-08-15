@@ -9,7 +9,7 @@ import SelectionManager, {
   type SelectionManagerState, 
   type SelectionManagerAction 
 } from './SelectionManager';
-import { type Selection } from '../types/viewer';
+import { type Selection, type SelectionCreateType } from '../types/viewer';
 
 interface SelectionContextValue {
   // State
@@ -19,13 +19,13 @@ interface SelectionContextValue {
   dispatch: (action: SelectionManagerAction) => void;
   
   // Convenience methods
-  startDraw: (selection: Selection) => void;
-  updateDraw: (selection: Selection) => void;
+  startDraw: (selection: SelectionCreateType) => void;
+  updateDraw: (selection: SelectionCreateType) => void;
   finishDraw: () => void;
   cancelDraw: () => void;
   selectSelection: (id: string | null) => void;
   deleteSelection: (id: string) => void;
-  deleteSelectedSelection: () => void;
+  deleteSelectedSelection: () => boolean;
   saveNewSelections: (selections: Selection[]) => void;
   loadSavedSelections: (selections: Selection[]) => void;
   undo: () => void;
@@ -76,12 +76,22 @@ export function SelectionProvider({ children, initialSelections }: SelectionProv
   }, [manager]);
   
   // Convenience methods
-  const startDraw = useCallback((selection: Selection) => {
-    dispatch({ type: 'START_DRAW', payload: selection });
+  const startDraw = useCallback((selection: SelectionCreateType) => {
+    // Convert SelectionCreateType to Selection by adding temporary ID
+    const selectionWithId: Selection = {
+      ...selection,
+      id: selection.id || `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    };
+    dispatch({ type: 'START_DRAW', payload: selectionWithId });
   }, [dispatch]);
   
-  const updateDraw = useCallback((selection: Selection) => {
-    dispatch({ type: 'UPDATE_DRAW', payload: selection });
+  const updateDraw = useCallback((selection: SelectionCreateType) => {
+    // Convert SelectionCreateType to Selection by adding temporary ID
+    const selectionWithId: Selection = {
+      ...selection,
+      id: selection.id || `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    };
+    dispatch({ type: 'UPDATE_DRAW', payload: selectionWithId });
   }, [dispatch]);
   
   const finishDraw = useCallback(() => {
@@ -103,7 +113,9 @@ export function SelectionProvider({ children, initialSelections }: SelectionProv
   const deleteSelectedSelection = useCallback(() => {
     if (state.selectedSelectionId) {
       dispatch({ type: 'DELETE_SELECTION', payload: state.selectedSelectionId });
+      return true;
     }
+    return false;
   }, [dispatch, state.selectedSelectionId]);
   
   const saveNewSelections = useCallback((selections: Selection[]) => {

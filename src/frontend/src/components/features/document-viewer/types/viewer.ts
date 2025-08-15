@@ -5,6 +5,9 @@
 
 import { type MinimalDocumentType, type SelectionCreateType, type SelectionType } from '@/types';
 
+// Re-export SelectionCreateType for internal use
+export type { SelectionCreateType };
+
 // Selection type alias for the new selection manager (supports both saved and new selections)
 export type Selection = SelectionType | (SelectionCreateType & { id: string });
 
@@ -147,6 +150,7 @@ export type ViewerAction =
   | { type: 'DELETE_SELECTION'; payload: number }
   | { type: 'SET_SELECTED_SELECTION'; payload: { type: 'existing' | 'new'; index: number } | null }
   | { type: 'DELETE_SELECTED_SELECTION' }
+  | { type: 'SET_NEW_SELECTIONS'; payload: SelectionCreateType[] }
   | { type: 'RESET_VIEW' }
   | { type: 'UNDO_SELECTION' }
   | { type: 'REDO_SELECTION' };
