@@ -22,9 +22,10 @@ export interface SelectionManagerState {
   currentDraw: Selection | null;
   isDrawing: boolean;
   
-  // History (simplified - only track meaningful changes)
-  history: SelectionSnapshot[];
-  historyIndex: number;
+  // History - tracks changes from initial state
+  initialState: SelectionSnapshot; // The starting point (loaded selections or empty)
+  changeHistory: SelectionSnapshot[]; // Array of changes from initial state
+  currentHistoryIndex: number; // -1 = at initial state, 0+ = at specific change
 }
 
 interface SelectionSnapshot {
@@ -61,25 +62,15 @@ class SelectionManager {
       selectedSelectionId: null,
       currentDraw: null,
       isDrawing: false,
-      history: [],
-      historyIndex: -1,
+      initialState: {
+        savedSelections: [],
+        newSelections: [],
+        timestamp: Date.now(),
+      },
+      changeHistory: [],
+      currentHistoryIndex: -1, // -1 means we're at initial state
       ...initialState,
     };
-    
-    // Add initial state to history
-    this.addInitialHistory();
-  }
-  
-  // Add initial state to history
-  private addInitialHistory() {
-    const initialSnapshot: SelectionSnapshot = {
-      savedSelections: [...this.state.savedSelections],
-      newSelections: [...this.state.newSelections],
-      timestamp: Date.now(),
-    };
-    
-    this.state.history = [initialSnapshot];
-    this.state.historyIndex = 0;
   }
 
   // State access
@@ -97,7 +88,7 @@ class SelectionManager {
     this.listeners.forEach(listener => listener(this.getState()));
   }
 
-  // History management (simplified)
+  // History management - tracks changes from initial state
   private addToHistory() {
     // Don't add to history during batch operations
     if (this.isBatchOperation) {
@@ -110,17 +101,21 @@ class SelectionManager {
       timestamp: Date.now(),
     };
 
-    // Truncate future history if we're not at the end
-    const newHistory = this.state.history.slice(0, this.state.historyIndex + 1);
-    newHistory.push(snapshot);
-
-    // Keep only last 50 snapshots
-    if (newHistory.length > 50) {
-      newHistory.shift();
+    // If we're in the middle of history and make a new change,
+    // truncate future history and add the new change
+    if (this.state.currentHistoryIndex < this.state.changeHistory.length - 1) {
+      this.state.changeHistory = this.state.changeHistory.slice(0, this.state.currentHistoryIndex + 1);
     }
+    
+    // Add the new change to history
+    this.state.changeHistory.push(snapshot);
+    this.state.currentHistoryIndex = this.state.changeHistory.length - 1;
 
-    this.state.history = newHistory;
-    this.state.historyIndex = newHistory.length - 1;
+    // Keep only last 50 changes
+    if (this.state.changeHistory.length > 50) {
+      this.state.changeHistory.shift();
+      this.state.currentHistoryIndex = Math.max(0, this.state.currentHistoryIndex - 1);
+    }
   }
 
   // Core actions
@@ -254,43 +249,44 @@ class SelectionManager {
         break;
 
       case 'LOAD_SAVED_SELECTIONS':
+        // Set the loaded selections as both current state AND initial state
         this.state.savedSelections = action.payload;
         this.state.selectedSelectionId = null;
         
-        // If we're at the initial state (historyIndex 0) and history has only the initial empty snapshot,
-        // update the initial snapshot instead of creating a new one
-        if (this.state.historyIndex === 0 && this.state.history.length === 1) {
-          const initialSnapshot = this.state.history[0];
-          if (initialSnapshot.savedSelections.length === 0 && initialSnapshot.newSelections.length === 0) {
-            // Update the initial snapshot with the loaded selections
-            this.state.history[0] = {
-              savedSelections: [...this.state.savedSelections],
-              newSelections: [...this.state.newSelections],
-              timestamp: Date.now(),
-            };
-            console.log('Updated initial history snapshot with loaded selections:', this.state.history[0]);
-          } else {
-            this.addToHistory();
-          }
-        } else {
-          this.addToHistory();
-        }
+        // Update the initial state to reflect loaded selections
+        this.state.initialState = {
+          savedSelections: [...action.payload],
+          newSelections: [],
+          timestamp: Date.now(),
+        };
+        
+        // Reset history - we're now at a new initial state
+        this.state.changeHistory = [];
+        this.state.currentHistoryIndex = -1; // At initial state
         break;
 
       case 'UNDO':
         if (this.canUndo()) {
-          this.state.historyIndex--;
-          const snapshot = this.state.history[this.state.historyIndex];
-          
-          // Validate snapshot before applying
-          if (!snapshot || !Array.isArray(snapshot.savedSelections) || !Array.isArray(snapshot.newSelections)) {
-            console.error('Invalid history snapshot during undo:', snapshot);
-            this.state.historyIndex++; // Revert the index change
-            return;
+          if (this.state.currentHistoryIndex === 0) {
+            // Go back to initial state
+            this.state.savedSelections = [...this.state.initialState.savedSelections];
+            this.state.newSelections = [...this.state.initialState.newSelections];
+            this.state.currentHistoryIndex = -1;
+          } else {
+            // Go back one change in history
+            this.state.currentHistoryIndex--;
+            const snapshot = this.state.changeHistory[this.state.currentHistoryIndex];
+            
+            // Validate snapshot before applying
+            if (!snapshot || !Array.isArray(snapshot.savedSelections) || !Array.isArray(snapshot.newSelections)) {
+              console.error('Invalid history snapshot during undo:', snapshot);
+              this.state.currentHistoryIndex++; // Revert the index change
+              return;
+            }
+            
+            this.state.savedSelections = [...snapshot.savedSelections];
+            this.state.newSelections = [...snapshot.newSelections];
           }
-          
-          this.state.savedSelections = [...snapshot.savedSelections];
-          this.state.newSelections = [...snapshot.newSelections];
           this.state.selectedSelectionId = null; // Clear selection after undo
         } else {
           // At initial state, do nothing
@@ -300,13 +296,13 @@ class SelectionManager {
 
       case 'REDO':
         if (this.canRedo()) {
-          this.state.historyIndex++;
-          const snapshot = this.state.history[this.state.historyIndex];
+          this.state.currentHistoryIndex++;
+          const snapshot = this.state.changeHistory[this.state.currentHistoryIndex];
           
           // Validate snapshot before applying
           if (!snapshot || !Array.isArray(snapshot.savedSelections) || !Array.isArray(snapshot.newSelections)) {
             console.error('Invalid history snapshot during redo:', snapshot);
-            this.state.historyIndex--; // Revert the index change
+            this.state.currentHistoryIndex--; // Revert the index change
             return;
           }
           
@@ -314,7 +310,6 @@ class SelectionManager {
           this.state.newSelections = [...snapshot.newSelections];
           this.state.selectedSelectionId = null; // Clear selection after redo
         } else {
-          // At latest state, do nothing
           return; // Early return to prevent notification when no change occurred
         }
         break;
@@ -350,11 +345,13 @@ class SelectionManager {
   }
 
   canUndo(): boolean {
-    return this.state.historyIndex > 0;
+    // Can undo if we have changes in history (currentHistoryIndex >= 0)
+    return this.state.currentHistoryIndex >= 0;
   }
 
   canRedo(): boolean {
-    return this.state.historyIndex < this.state.history.length - 1;
+    // Can redo if we're not at the latest change
+    return this.state.currentHistoryIndex < this.state.changeHistory.length - 1;
   }
 
   hasUnsavedChanges(): boolean {

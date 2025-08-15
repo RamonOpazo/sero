@@ -389,16 +389,23 @@ export function UnifiedViewport({
         }
         break;
 
+      case 'y':
+        if (ctrlKey || metaKey) {
+          // Standard redo shortcut (works reliably)
+          redo();
+          toast.success('Redo');
+          event.preventDefault();
+        }
+        break;
+
       case 'z':
         if ((ctrlKey || metaKey) && !altKey) {
           if (shiftKey) {
-            // Redo using new system
-            console.log('UnifiedViewport: Redo keyboard shortcut triggered');
+            // Alternative redo shortcut (may not work in all browsers)
             redo();
             toast.success('Redo');
           } else {
-            // Undo using new system
-            console.log('UnifiedViewport: Undo keyboard shortcut triggered');
+            // Standard undo shortcut
             undo();
             toast.success('Undo');
           }
