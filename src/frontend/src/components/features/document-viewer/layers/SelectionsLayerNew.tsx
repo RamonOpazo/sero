@@ -9,7 +9,7 @@ import React, { useState, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 import { useSelections } from '../core/SelectionProvider';
-import { useViewerState } from '../hooks/useViewerState';
+import { useViewportState } from '../core/ViewportState';
 import { Save, Trash2 } from "lucide-react";
 import { api } from "@/lib/axios";
 import { toast } from "sonner";
@@ -20,7 +20,7 @@ type Props = {
 };
 
 export default function SelectionsLayerNew({ documentSize }: Props) {
-  // Old system (for non-selection state)
+  // Viewport state (for non-selection state)
   const {
     isRendered,
     showSelections,
@@ -28,7 +28,7 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     mode,
     isViewingProcessedDocument,
     document: currentDocument,
-  } = useViewerState();
+  } = useViewportState();
 
   // New selection system
   const {
@@ -36,13 +36,13 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     allSelections,
     selectedSelection,
     selectSelection,
-    updateSelection,
+    updateSelectionBatch,
+    finishBatchOperation,
     deleteSelection,
     // deleteSelectedSelection, // TODO: Use for keyboard shortcuts
     startDraw,
     updateDraw,
     finishDraw,
-    cancelDraw,
   } = useSelections();
 
   // Local UI state
@@ -150,8 +150,8 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
         y: Math.max(0, Math.min(1 - initialSelection.height, initialSelection.y + deltaY)),
       };
       
-      // Directly update the selection in the SelectionManager
-      updateSelection(selectedSelection.id, updatedSelection);
+      // Use batch update to avoid history spam during drag
+      updateSelectionBatch(selectedSelection.id, updatedSelection);
       
     } else if (dragState.type === 'resize' && dragState.initialSelection && dragState.corner && selectedSelection) {
       // Handle resizing selection - directly update the selection in real-time
@@ -193,10 +193,10 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
       updatedSelection.width = Math.max(minSize, Math.min(1 - updatedSelection.x, updatedSelection.width));
       updatedSelection.height = Math.max(minSize, Math.min(1 - updatedSelection.y, updatedSelection.height));
       
-      // Directly update the selection in the SelectionManager
-      updateSelection(selectedSelection.id, updatedSelection);
+      // Use batch update to avoid history spam during drag
+      updateSelectionBatch(selectedSelection.id, updatedSelection);
     }
-  }, [dragState, documentSize, currentPage, currentDocument, updateDraw, selectedSelection, updateSelection]);
+  }, [dragState, documentSize, currentPage, currentDocument, updateDraw, selectedSelection, updateSelectionBatch]);
 
   // Handle mouse up to end drag operations
   const handleMouseUp = useCallback(() => {
@@ -205,12 +205,14 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     if (dragState?.type === 'create') {
       // Only creation uses the drawing system
       finishDraw();
+    } else if (dragState?.type === 'move' || dragState?.type === 'resize') {
+      // Finish the batch operation to add single history entry
+      finishBatchOperation();
     }
-    // For move and resize, no additional action needed since we update in real-time
     
     setDragState(null);
     isDraggingRef.current = false;
-  }, [dragState, finishDraw]);
+  }, [dragState, finishDraw, finishBatchOperation]);
 
   // Set up global mouse event listeners for dragging
   React.useEffect(() => {

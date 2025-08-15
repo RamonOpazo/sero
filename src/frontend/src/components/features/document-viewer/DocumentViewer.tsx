@@ -1,4 +1,4 @@
-import { UnifiedViewerProvider } from "./core/ViewerState";
+import { ViewportProvider } from "./core/ViewportState";
 import { SelectionProvider } from "./core/SelectionProvider";
 import Renderer from "./Layers";
 import Controller from "./Controls";
@@ -51,8 +51,8 @@ export default function DocumentViewer({ document }: DocumentViewerProps) {
   }
 
   return (
-    <UnifiedViewerProvider document={document}>
+    <ViewportProvider document={document}>
       <ViewerWithCleanArchitecture document={document} />
-    </UnifiedViewerProvider>
+    </ViewportProvider>
   );
 }

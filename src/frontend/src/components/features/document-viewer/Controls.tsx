@@ -6,7 +6,7 @@ import { WidgetContainer, Widget, WidgetHeader, WidgetTitle, WidgetBody } from "
 import SelectionList from "./SelectionsList";
 import PromptList from "./PromptsList";
 import type { MinimalDocumentType } from "@/types";
-import { useViewerState } from "./hooks/useViewerState";
+import { useViewportState } from "./core/ViewportState";
 import { useSelections } from "./core/SelectionProvider";
 import { api } from "@/lib/axios";
 import { toast } from "sonner";
@@ -14,9 +14,8 @@ import { useState, useCallback, useMemo } from "react";
 type Props = { document: MinimalDocumentType };
 
 export default function Controller({ document, className, ...props }: Props & React.ComponentProps<"div">) {
-  // Old system for non-selection state
-  const { navigation, dispatch, showSelections } = useViewerState();
-  const { isViewingProcessedDocument } = navigation;
+  // Viewport state for non-selection state
+  const { isViewingProcessedDocument, dispatch, showSelections } = useViewportState();
   
   // New selection system
   const {

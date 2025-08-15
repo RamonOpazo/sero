@@ -40,6 +40,8 @@ export type SelectionManagerAction =
   | { type: 'CANCEL_DRAW' }
   | { type: 'SELECT_SELECTION'; payload: string | null }
   | { type: 'UPDATE_SELECTION'; payload: { id: string; selection: Selection } }
+  | { type: 'UPDATE_SELECTION_BATCH'; payload: { id: string; selection: Selection } }
+  | { type: 'FINISH_BATCH_OPERATION' }
   | { type: 'DELETE_SELECTION'; payload: string }
   | { type: 'SAVE_NEW_SELECTIONS'; payload: Selection[] }
   | { type: 'LOAD_SAVED_SELECTIONS'; payload: Selection[] }
@@ -50,6 +52,7 @@ export type SelectionManagerAction =
 class SelectionManager {
   private state: SelectionManagerState;
   private listeners: Set<(state: SelectionManagerState) => void> = new Set();
+  private isBatchOperation: boolean = false;
 
   constructor(initialState?: Partial<SelectionManagerState>) {
     this.state = {
@@ -62,6 +65,21 @@ class SelectionManager {
       historyIndex: -1,
       ...initialState,
     };
+    
+    // Add initial state to history
+    this.addInitialHistory();
+  }
+  
+  // Add initial state to history
+  private addInitialHistory() {
+    const initialSnapshot: SelectionSnapshot = {
+      savedSelections: [...this.state.savedSelections],
+      newSelections: [...this.state.newSelections],
+      timestamp: Date.now(),
+    };
+    
+    this.state.history = [initialSnapshot];
+    this.state.historyIndex = 0;
   }
 
   // State access
@@ -81,6 +99,11 @@ class SelectionManager {
 
   // History management (simplified)
   private addToHistory() {
+    // Don't add to history during batch operations
+    if (this.isBatchOperation) {
+      return;
+    }
+    
     const snapshot: SelectionSnapshot = {
       savedSelections: [...this.state.savedSelections],
       newSelections: [...this.state.newSelections],
@@ -156,6 +179,34 @@ class SelectionManager {
         }
         break;
 
+      case 'UPDATE_SELECTION_BATCH':
+        const { id: batchUpdateId, selection: batchUpdatedSelection } = action.payload;
+        
+        // Start batch operation if not already started
+        if (!this.isBatchOperation) {
+          this.isBatchOperation = true;
+        }
+        
+        // Update in saved selections
+        const batchSavedUpdateIndex = this.state.savedSelections.findIndex(s => s.id === batchUpdateId);
+        if (batchSavedUpdateIndex >= 0) {
+          this.state.savedSelections[batchSavedUpdateIndex] = batchUpdatedSelection;
+        }
+        
+        // Update in new selections
+        const batchNewUpdateIndex = this.state.newSelections.findIndex(s => s.id === batchUpdateId);
+        if (batchNewUpdateIndex >= 0) {
+          this.state.newSelections[batchNewUpdateIndex] = batchUpdatedSelection;
+        }
+        break;
+
+      case 'FINISH_BATCH_OPERATION':
+        if (this.isBatchOperation) {
+          this.isBatchOperation = false;
+          this.addToHistory(); // Add single history entry for the entire batch operation
+        }
+        break;
+
       case 'DELETE_SELECTION':
         const selectionId = action.payload;
         
@@ -197,22 +248,38 @@ class SelectionManager {
         break;
 
       case 'UNDO':
+        console.log('UNDO action triggered');
+        console.log('Current historyIndex:', this.state.historyIndex);
+        console.log('History length:', this.state.history.length);
+        console.log('Can undo:', this.state.historyIndex > 0);
+        
         if (this.state.historyIndex > 0) {
           this.state.historyIndex--;
           const snapshot = this.state.history[this.state.historyIndex];
+          console.log('Undoing to snapshot:', snapshot);
           this.state.savedSelections = [...snapshot.savedSelections];
           this.state.newSelections = [...snapshot.newSelections];
           this.state.selectedSelectionId = null; // Clear selection after undo
+        } else {
+          console.log('Nothing to undo');
         }
         break;
 
       case 'REDO':
+        console.log('REDO action triggered');
+        console.log('Current historyIndex:', this.state.historyIndex);
+        console.log('History length:', this.state.history.length);
+        console.log('Can redo:', this.state.historyIndex < this.state.history.length - 1);
+        
         if (this.state.historyIndex < this.state.history.length - 1) {
           this.state.historyIndex++;
           const snapshot = this.state.history[this.state.historyIndex];
+          console.log('Redoing to snapshot:', snapshot);
           this.state.savedSelections = [...snapshot.savedSelections];
           this.state.newSelections = [...snapshot.newSelections];
           this.state.selectedSelectionId = null; // Clear selection after redo
+        } else {
+          console.log('Nothing to redo');
         }
         break;
 

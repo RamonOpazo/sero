@@ -1,6 +1,6 @@
 import React, { useRef, useCallback, useEffect } from 'react';
 import { cn } from '@/lib/utils';
-import { useViewerState } from '../hooks/useViewerState';
+import { useViewportState, useViewportActions } from './ViewportState';
 import { useSelections } from './SelectionProvider';
 import { toast } from 'sonner';
 
@@ -44,7 +44,7 @@ export function UnifiedViewport({
   children, 
   className,
 }: UnifiedViewportProps) {
-  // Get non-selection state from old system
+  // Get viewport state from new minimal system
   const {
     zoom,
     pan,
@@ -57,10 +57,14 @@ export function UnifiedViewport({
     numPages,
     setCurrentPage,
     setMode,
-    toggleInfoPanel,
     showHelpOverlay,
+  } = useViewportState();
+  
+  // Get viewport actions
+  const {
+    toggleInfoPanel,
     toggleHelpOverlay,
-  } = useViewerState();
+  } = useViewportActions();
   
   // Get selection state from new system
   const {
@@ -389,10 +393,12 @@ export function UnifiedViewport({
         if ((ctrlKey || metaKey) && !altKey) {
           if (shiftKey) {
             // Redo using new system
+            console.log('UnifiedViewport: Redo keyboard shortcut triggered');
             redo();
             toast.success('Redo');
           } else {
             // Undo using new system
+            console.log('UnifiedViewport: Undo keyboard shortcut triggered');
             undo();
             toast.success('Undo');
           }

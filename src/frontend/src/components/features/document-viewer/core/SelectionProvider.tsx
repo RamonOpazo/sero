@@ -25,6 +25,8 @@ interface SelectionContextValue {
   cancelDraw: () => void;
   selectSelection: (id: string | null) => void;
   updateSelection: (id: string, selection: Selection) => void;
+  updateSelectionBatch: (id: string, selection: Selection) => void;
+  finishBatchOperation: () => void;
   deleteSelection: (id: string) => void;
   deleteSelectedSelection: () => boolean;
   saveNewSelections: (selections: Selection[]) => void;
@@ -111,6 +113,14 @@ export function SelectionProvider({ children, initialSelections }: SelectionProv
     dispatch({ type: 'UPDATE_SELECTION', payload: { id, selection } });
   }, [dispatch]);
   
+  const updateSelectionBatch = useCallback((id: string, selection: Selection) => {
+    dispatch({ type: 'UPDATE_SELECTION_BATCH', payload: { id, selection } });
+  }, [dispatch]);
+  
+  const finishBatchOperation = useCallback(() => {
+    dispatch({ type: 'FINISH_BATCH_OPERATION' });
+  }, [dispatch]);
+  
   const deleteSelection = useCallback((id: string) => {
     dispatch({ type: 'DELETE_SELECTION', payload: id });
   }, [dispatch]);
@@ -159,6 +169,8 @@ export function SelectionProvider({ children, initialSelections }: SelectionProv
     cancelDraw,
     selectSelection,
     updateSelection,
+    updateSelectionBatch,
+    finishBatchOperation,
     deleteSelection,
     deleteSelectedSelection,
     saveNewSelections,
@@ -180,6 +192,8 @@ export function SelectionProvider({ children, initialSelections }: SelectionProv
     cancelDraw,
     selectSelection,
     updateSelection,
+    updateSelectionBatch,
+    finishBatchOperation,
     deleteSelection,
     deleteSelectedSelection,
     saveNewSelections,

@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useLayoutEffect, useMemo } from "react";
 import { Document, Page } from "react-pdf";
 import { toast } from "sonner";
 import { type MinimalDocumentType } from "@/types";
-import { useViewerState } from '../hooks/useViewerState';
+import { useViewportState } from '../core/ViewportState';
 
 type Props = {
   document: MinimalDocumentType;
@@ -16,11 +16,16 @@ export default function RenderLayer({ document, onDocumentSizeChange }: Props) {
     setCurrentPage,
     setNumPages,
     setDocumentContainer,
-    navigation,
+    isViewingProcessedDocument,
     registerPage,
-    triggerUpdate,
     setIsRendered,
-  } = useViewerState();
+  } = useViewportState();
+  
+  // Create navigation object for compatibility
+  const navigation = { isViewingProcessedDocument };
+  
+  // Compatibility function for triggerUpdate (no-op in new system)
+  const triggerUpdate = () => {};
 
   const [blob, setBlob] = useState<Blob | null>(null);
   const [arrayBuffer, setArrayBuffer] = useState<ArrayBuffer | null>(null);

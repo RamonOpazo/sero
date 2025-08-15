@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Hand, MousePointerClick, Eye, EyeOff, Scan, Info, Pen, PenOff } from "lucide-react";
-import { useViewerState } from '../hooks/useViewerState';
+import { useViewportState, useViewportActions } from '../core/ViewportState';
 
 interface ActionsLayerProps {
   isInfoVisible?: boolean;
@@ -19,11 +19,18 @@ export default function ActionsLayer({ isInfoVisible = false, onToggleInfo }: Ac
     setCurrentPage,
     setMode,
     showSelections,
-    setShowSelections,
+    dispatch,
+  } = useViewportState();
+  
+  const {
     toggleSelections,
     resetView,
-    dispatch,
-  } = useViewerState();
+  } = useViewportActions();
+  
+  // Compatibility function for setShowSelections
+  const setShowSelections = (show: boolean) => {
+    dispatch({ type: 'SET_SHOW_SELECTIONS', payload: show });
+  };
 
   // Track last mouse position for button-based zooming
   const mousePositionRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });

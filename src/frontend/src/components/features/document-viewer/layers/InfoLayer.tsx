@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { type MinimalDocumentType } from "@/types";
-import { useViewerState } from '../hooks/useViewerState';
+import { useViewportState } from '../core/ViewportState';
 
 type Props = { 
   document: MinimalDocumentType;
@@ -11,7 +11,7 @@ type Props = {
 
 
 export default function InfoLayer({ document, documentSize, isVisible, onToggleVisibility }: Props) {
-  const { currentPage, numPages, zoom } = useViewerState();
+  const { currentPage, numPages, zoom } = useViewportState();
 
   const formatFileSize = useCallback((bytes: number) => {
     if (bytes === 0) return '0 Bytes';
