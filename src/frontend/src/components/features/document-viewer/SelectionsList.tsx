@@ -2,52 +2,34 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Widget, WidgetHeader, WidgetTitle, WidgetBody } from "@/components/shared/Widget";
 import { X, Globe, MapPin } from "lucide-react";
-import { useViewerState } from "./hooks/useViewerState";
+import { useSelections } from "./core/SelectionProvider";
 import { useMemo } from "react";
 
 
 export default function SelectionList() {
-  const { existingSelections, newSelections, dispatch } = useViewerState();
+  const { state: selectionState, deleteSelection } = useSelections();
 
-  // Combine all selections with type information
-  const allSelections = useMemo(() => {
-    const existing = existingSelections.map((sel, index) => ({
+  // Combine all selections with type information from new system
+  const selectionsWithTypeInfo = useMemo(() => {
+    const saved = selectionState.savedSelections.map((sel) => ({
       ...sel,
-      type: 'existing' as const,
-      index,
-      displayId: sel.id || `existing-${index}`,
+      type: 'saved' as const,
+      displayId: sel.id,
     }));
-    const newOnes = newSelections.map((sel, index) => ({
+    const newOnes = selectionState.newSelections.map((sel) => ({
       ...sel,
       type: 'new' as const,
-      index,
-      displayId: `new-${index}`,
-      id: `new-${index}`, // Temporary ID for new selections
+      displayId: sel.id,
     }));
-    return [...existing, ...newOnes];
-  }, [existingSelections, newSelections]);
+    return [...saved, ...newOnes];
+  }, [selectionState.savedSelections, selectionState.newSelections]);
 
-  const handleRemoveSelection = (type: 'existing' | 'new', index: number) => {
-    if (type === 'new') {
-      // Remove from new selections
-      const updatedNewSelections = [...newSelections];
-      updatedNewSelections.splice(index, 1);
-      dispatch({
-        type: 'SET_NEW_SELECTIONS',
-        payload: updatedNewSelections
-      });
-    } else {
-      // Remove from existing selections
-      const updatedExistingSelections = [...existingSelections];
-      updatedExistingSelections.splice(index, 1);
-      dispatch({
-        type: 'SET_EXISTING_SELECTIONS',
-        payload: updatedExistingSelections
-      });
-    }
+  const handleRemoveSelection = (selectionId: string) => {
+    // Use new system's deleteSelection method
+    deleteSelection(selectionId);
   };
 
-  if (allSelections.length === 0) {
+  if (selectionsWithTypeInfo.length === 0) {
     return (
       <Widget className="py-2">
         <WidgetHeader className="pb-1">
@@ -69,7 +51,7 @@ export default function SelectionList() {
       </WidgetHeader>
       <WidgetBody className="pt-0">
         <div className="space-y-1">
-          {allSelections.slice(0, 8).map((sel) => {
+          {selectionsWithTypeInfo.slice(0, 8).map((sel) => {
             const isGlobal = sel.page_number === null || sel.page_number === 0;
             const pageDisplay = isGlobal ? 'All' : `P${sel.page_number}`;
             
@@ -94,7 +76,7 @@ export default function SelectionList() {
                 <Button
                   size="sm"
                   variant="ghost"
-                  onClick={() => handleRemoveSelection(sel.type, sel.index)}
+                  onClick={() => handleRemoveSelection(sel.id)}
                   className="h-5 w-5 p-0 text-muted-foreground hover:text-destructive"
                 >
                   <X className="h-3 w-3" />
@@ -102,9 +84,9 @@ export default function SelectionList() {
               </div>
             );
           })}
-          {allSelections.length > 8 && (
+          {selectionsWithTypeInfo.length > 8 && (
             <div className="text-xs text-muted-foreground text-center py-1 border border-dashed rounded">
-              +{allSelections.length - 8} more selections
+              +{selectionsWithTypeInfo.length - 8} more selections
             </div>
           )}
         </div>

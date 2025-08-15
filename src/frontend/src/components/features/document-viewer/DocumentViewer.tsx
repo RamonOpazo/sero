@@ -4,31 +4,21 @@ import Renderer from "./Layers";
 import Controller from "./Controls";
 import { WidgetContainer, Widget, WidgetBody } from "@/components/shared/Widget";
 import { type MinimalDocumentType } from "@/types";
-import { useSelectionsIntegration } from "./hooks/useSelectionsIntegration";
-import { useViewerState } from "./hooks/useViewerState";
+import { useSelectionLoader } from "./hooks/useSelectionLoader";
 
 type DocumentViewerProps = {
   document: MinimalDocumentType;
 };
 
-// Bridge component that provides selections from old system to new SelectionProvider
-function SelectionProviderBridge({ document }: { document: MinimalDocumentType }) {
-  const { existingSelections, newSelections } = useViewerState();
+// Clean component that loads selections directly into new system
+function ViewerWithNewSystem({ document }: { document: MinimalDocumentType }) {
+  // Load selections from API directly into new SelectionManager system
+  useSelectionLoader(document.id);
   
-  // Convert old selection format to new format for the SelectionProvider
-  const initialSelections = {
-    saved: existingSelections,
-    new: newSelections.map(sel => ({ ...sel, id: sel.id || `temp_${Date.now()}_${Math.random()}` }))
-  };
-  
-  return (
-    <SelectionProvider initialSelections={initialSelections}>
-      <ViewerContent document={document} />
-    </SelectionProvider>
-  );
+  return <ViewerContent document={document} />;
 }
 
-// Internal component that uses selections integration hook within the provider
+// Clean content component - no selection logic mixed in
 function ViewerContent({ document }: { document: MinimalDocumentType }) {
   return (
     <WidgetContainer expanded className="flex-row">
@@ -46,12 +36,13 @@ function ViewerContent({ document }: { document: MinimalDocumentType }) {
   );
 }
 
-// Main component that integrates selections within the UnifiedViewerProvider
-function ViewerWithSelections({ document }: { document: MinimalDocumentType }) {
-  // This hook connects the fetched selections to the ViewerState
-  useSelectionsIntegration(document.id);
-
-  return <SelectionProviderBridge document={document} />;
+// Main component with clean architecture - old system removed from selection logic
+function ViewerWithCleanArchitecture({ document }: { document: MinimalDocumentType }) {
+  return (
+    <SelectionProvider>
+      <ViewerWithNewSystem document={document} />
+    </SelectionProvider>
+  );
 }
 
 export default function DocumentViewer({ document }: DocumentViewerProps) {
@@ -61,7 +52,7 @@ export default function DocumentViewer({ document }: DocumentViewerProps) {
 
   return (
     <UnifiedViewerProvider document={document}>
-      <ViewerWithSelections document={document} />
+      <ViewerWithCleanArchitecture document={document} />
     </UnifiedViewerProvider>
   );
 }

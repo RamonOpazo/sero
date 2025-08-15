@@ -7,14 +7,25 @@ import SelectionList from "./SelectionsList";
 import PromptList from "./PromptsList";
 import type { MinimalDocumentType } from "@/types";
 import { useViewerState } from "./hooks/useViewerState";
+import { useSelections } from "./core/SelectionProvider";
 import { api } from "@/lib/axios";
 import { toast } from "sonner";
 import { useState, useCallback, useMemo } from "react";
 type Props = { document: MinimalDocumentType };
 
 export default function Controller({ document, className, ...props }: Props & React.ComponentProps<"div">) {
-  const { navigation, dispatch, newSelections, existingSelections, showSelections } = useViewerState();
+  // Old system for non-selection state
+  const { navigation, dispatch, showSelections } = useViewerState();
   const { isViewingProcessedDocument } = navigation;
+  
+  // New selection system
+  const {
+    state: selectionState,
+    allSelections,
+    hasUnsavedChanges,
+    clearAll,
+    saveNewSelections,
+  } = useSelections();
   const [isSaving, setIsSaving] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
   
@@ -39,24 +50,23 @@ export default function Controller({ document, className, ...props }: Props & Re
     }
   };
 
-  // Calculate selection statistics
+  // Calculate selection statistics from new system
   const selectionStats = useMemo(() => {
-    const newCount = newSelections.length;
-    const existingCount = existingSelections.length;
-    const totalCount = newCount + existingCount;
-    const hasUnsavedChanges = newCount > 0; // For now, only new selections count as unsaved
+    const newCount = selectionState.newSelections.length;
+    const existingCount = selectionState.savedSelections.length;
+    const totalCount = allSelections.length;
     
     return {
       newCount,
       existingCount,
       totalCount,
-      hasUnsavedChanges
+      hasUnsavedChanges // From the new system
     };
-  }, [newSelections, existingSelections]);
+  }, [selectionState.newSelections, selectionState.savedSelections, allSelections, hasUnsavedChanges]);
 
-  // Save all new selections
+  // Save all new selections using new system
   const handleSaveAllSelections = useCallback(async () => {
-    if (newSelections.length === 0) {
+    if (selectionState.newSelections.length === 0) {
       toast.info('No unsaved selections to save');
       return;
     }
@@ -64,7 +74,7 @@ export default function Controller({ document, className, ...props }: Props & Re
     setIsSaving(true);
     
     try {
-      const savePromises = newSelections.map(async (sel, index) => {
+      const savePromises = selectionState.newSelections.map(async (sel) => {
         const selectionData = {
           page_number: sel.page_number || null,
           x: sel.x,
@@ -81,7 +91,7 @@ export default function Controller({ document, className, ...props }: Props & Re
         );
 
         if (result.ok) {
-          return { success: true, selection: result.value, index };
+          return { success: true, selection: result.value };
         } else {
           throw new Error((result.error as any)?.response?.data?.detail || (result.error as any)?.message || 'Failed to save selection');
         }
@@ -92,19 +102,10 @@ export default function Controller({ document, className, ...props }: Props & Re
       const failed = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected');
 
       if (successful.length > 0) {
-        // Add successful saves to existing selections
-        const newExistingSelections = [...existingSelections, ...successful.map(s => s.selection)];
-        dispatch({
-          type: 'SET_EXISTING_SELECTIONS',
-          payload: newExistingSelections
-        });
-
-        // Clear saved selections from new selections
-        dispatch({
-          type: 'SET_NEW_SELECTIONS',
-          payload: []
-        });
-
+        // Use new system to save selections
+        const savedSelections = successful.map(s => ({ ...s.selection, id: s.selection.id }));
+        saveNewSelections(savedSelections);
+        
         toast.success(`Successfully saved ${successful.length} selection${successful.length === 1 ? '' : 's'}`);
       }
 
@@ -118,9 +119,9 @@ export default function Controller({ document, className, ...props }: Props & Re
     } finally {
       setIsSaving(false);
     }
-  }, [newSelections, existingSelections, document.id, dispatch]);
+  }, [selectionState.newSelections, document.id, saveNewSelections]);
 
-  // Clear all selections
+  // Clear all selections using new system
   const handleClearAllSelections = useCallback(async () => {
     if (selectionStats.totalCount === 0) {
       toast.info('No selections to clear');
@@ -130,18 +131,8 @@ export default function Controller({ document, className, ...props }: Props & Re
     setIsClearing(true);
     
     try {
-      // Clear new selections immediately
-      dispatch({
-        type: 'SET_NEW_SELECTIONS',
-        payload: []
-      });
-
-      // Clear existing selections from state
-      dispatch({
-        type: 'SET_EXISTING_SELECTIONS',
-        payload: []
-      });
-
+      // Use new system's clearAll method
+      clearAll();
       toast.success('All selections cleared');
     } catch (error) {
       console.error('Error clearing selections:', error);
@@ -149,7 +140,7 @@ export default function Controller({ document, className, ...props }: Props & Re
     } finally {
       setIsClearing(false);
     }
-  }, [dispatch, selectionStats.totalCount]);
+  }, [clearAll, selectionStats.totalCount]);
 
   const toggleSelectionVisibility = useCallback(() => {
     dispatch({ type: 'SET_SHOW_SELECTIONS', payload: !showSelections });
