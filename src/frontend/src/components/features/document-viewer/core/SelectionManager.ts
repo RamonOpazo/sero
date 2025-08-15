@@ -163,18 +163,24 @@ class SelectionManager {
 
       case 'UPDATE_SELECTION':
         const { id: updateId, selection: updatedSelection } = action.payload;
+        let selectionUpdated = false;
         
         // Update in saved selections
         const savedUpdateIndex = this.state.savedSelections.findIndex(s => s.id === updateId);
         if (savedUpdateIndex >= 0) {
           this.state.savedSelections[savedUpdateIndex] = updatedSelection;
-          this.addToHistory();
+          selectionUpdated = true;
         }
         
         // Update in new selections
         const newUpdateIndex = this.state.newSelections.findIndex(s => s.id === updateId);
         if (newUpdateIndex >= 0) {
           this.state.newSelections[newUpdateIndex] = updatedSelection;
+          selectionUpdated = true;
+        }
+        
+        // Only add to history once if any update was made
+        if (selectionUpdated) {
           this.addToHistory();
         }
         break;
@@ -209,24 +215,30 @@ class SelectionManager {
 
       case 'DELETE_SELECTION':
         const selectionId = action.payload;
+        let selectionDeleted = false;
         
         // Remove from saved selections
         const savedIndex = this.state.savedSelections.findIndex(s => s.id === selectionId);
         if (savedIndex >= 0) {
           this.state.savedSelections.splice(savedIndex, 1);
-          this.addToHistory();
+          selectionDeleted = true;
         }
         
         // Remove from new selections
         const newIndex = this.state.newSelections.findIndex(s => s.id === selectionId);
         if (newIndex >= 0) {
           this.state.newSelections.splice(newIndex, 1);
-          this.addToHistory();
+          selectionDeleted = true;
         }
         
         // Clear selection if deleted
         if (this.state.selectedSelectionId === selectionId) {
           this.state.selectedSelectionId = null;
+        }
+        
+        // Only add to history once if any deletion was made
+        if (selectionDeleted) {
+          this.addToHistory();
         }
         break;
 
@@ -244,42 +256,66 @@ class SelectionManager {
       case 'LOAD_SAVED_SELECTIONS':
         this.state.savedSelections = action.payload;
         this.state.selectedSelectionId = null;
-        this.addToHistory();
+        
+        // If we're at the initial state (historyIndex 0) and history has only the initial empty snapshot,
+        // update the initial snapshot instead of creating a new one
+        if (this.state.historyIndex === 0 && this.state.history.length === 1) {
+          const initialSnapshot = this.state.history[0];
+          if (initialSnapshot.savedSelections.length === 0 && initialSnapshot.newSelections.length === 0) {
+            // Update the initial snapshot with the loaded selections
+            this.state.history[0] = {
+              savedSelections: [...this.state.savedSelections],
+              newSelections: [...this.state.newSelections],
+              timestamp: Date.now(),
+            };
+            console.log('Updated initial history snapshot with loaded selections:', this.state.history[0]);
+          } else {
+            this.addToHistory();
+          }
+        } else {
+          this.addToHistory();
+        }
         break;
 
       case 'UNDO':
-        console.log('UNDO action triggered');
-        console.log('Current historyIndex:', this.state.historyIndex);
-        console.log('History length:', this.state.history.length);
-        console.log('Can undo:', this.state.historyIndex > 0);
-        
-        if (this.state.historyIndex > 0) {
+        if (this.canUndo()) {
           this.state.historyIndex--;
           const snapshot = this.state.history[this.state.historyIndex];
-          console.log('Undoing to snapshot:', snapshot);
+          
+          // Validate snapshot before applying
+          if (!snapshot || !Array.isArray(snapshot.savedSelections) || !Array.isArray(snapshot.newSelections)) {
+            console.error('Invalid history snapshot during undo:', snapshot);
+            this.state.historyIndex++; // Revert the index change
+            return;
+          }
+          
           this.state.savedSelections = [...snapshot.savedSelections];
           this.state.newSelections = [...snapshot.newSelections];
           this.state.selectedSelectionId = null; // Clear selection after undo
         } else {
-          console.log('Nothing to undo');
+          // At initial state, do nothing
+          return; // Early return to prevent notification when no change occurred
         }
         break;
 
       case 'REDO':
-        console.log('REDO action triggered');
-        console.log('Current historyIndex:', this.state.historyIndex);
-        console.log('History length:', this.state.history.length);
-        console.log('Can redo:', this.state.historyIndex < this.state.history.length - 1);
-        
-        if (this.state.historyIndex < this.state.history.length - 1) {
+        if (this.canRedo()) {
           this.state.historyIndex++;
           const snapshot = this.state.history[this.state.historyIndex];
-          console.log('Redoing to snapshot:', snapshot);
+          
+          // Validate snapshot before applying
+          if (!snapshot || !Array.isArray(snapshot.savedSelections) || !Array.isArray(snapshot.newSelections)) {
+            console.error('Invalid history snapshot during redo:', snapshot);
+            this.state.historyIndex--; // Revert the index change
+            return;
+          }
+          
           this.state.savedSelections = [...snapshot.savedSelections];
           this.state.newSelections = [...snapshot.newSelections];
           this.state.selectedSelectionId = null; // Clear selection after redo
         } else {
-          console.log('Nothing to redo');
+          // At latest state, do nothing
+          return; // Early return to prevent notification when no change occurred
         }
         break;
 
