@@ -2,9 +2,9 @@
 export { default as DocumentViewer } from "./DocumentViewer";
 
 // Layout components
-export { default as DocumentViewerLayout } from "./layouts/MainLayout";
-export { default as RendererLayout } from "./layouts/ViewportLayout";
-export { default as ControlsLayout } from "./layouts/TooldeckLayout";
+export { default as MainLayout } from "./layouts/MainLayout";
+export { default as ViewportLayout } from "./layouts/ViewportLayout";
+export { default as TooldeckLayout } from "./layouts/TooldeckLayout";
 
 // Control components
 export * from "./tooldeck";
