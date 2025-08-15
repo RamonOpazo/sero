@@ -5,6 +5,9 @@
 
 import { type MinimalDocumentType, type SelectionCreateType, type SelectionType } from '@/types';
 
+// Selection type alias for the new selection manager (supports both saved and new selections)
+export type Selection = SelectionType | (SelectionCreateType & { id: string });
+
 // Viewer modes
 export type ViewerMode = 'pan' | 'select';
 
@@ -47,6 +50,8 @@ export interface SelectionState {
   drawing: SelectionCreateType | null;
   // Drawing state
   isDrawing: boolean;
+  // Currently selected selection for UI operations (delete, etc.)
+  selectedSelection: { type: 'existing' | 'new'; index: number } | null;
   // History for undo/redo - now stores complete selection state snapshots
   history: SelectionHistorySnapshot[];
   historyIndex: number;
@@ -140,6 +145,8 @@ export type ViewerAction =
   | { type: 'END_SELECTION' }
   | { type: 'ADD_SELECTION'; payload: SelectionCreateType }
   | { type: 'DELETE_SELECTION'; payload: number }
+  | { type: 'SET_SELECTED_SELECTION'; payload: { type: 'existing' | 'new'; index: number } | null }
+  | { type: 'DELETE_SELECTED_SELECTION' }
   | { type: 'RESET_VIEW' }
   | { type: 'UNDO_SELECTION' }
   | { type: 'REDO_SELECTION' };

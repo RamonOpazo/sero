@@ -15,5 +15,11 @@ export * from "./layers/InfoLayer";
 export * from "./hooks/useViewerState";
 // Export coordinate system utils but not types to avoid conflicts
 export { screenToViewport, screenToDocument, documentToViewport, clampPan, calculateCenterFit } from "./core/CoordinateSystem";
+
+// New selection management system
+export { default as SelectionManager } from './core/SelectionManager';
+export { SelectionProvider, useSelections } from './core/SelectionProvider';
+export type { SelectionManagerState, SelectionManagerAction } from './core/SelectionManager';
+
 // Export viewer types
 export * from "./types/viewer";

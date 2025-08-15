@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils"
 import UnifiedViewport from "./core/UnifiedViewport";
 import RenderLayer from "./layers/RenderLayer";
 import SelectionsLayer from "./layers/SelectionsLayer";
+import SelectionsLayerNew from "./layers/SelectionsLayerNew";
 import InfoLayer from "./layers/InfoLayer";
 import ActionsLayer from "./layers/ActionsLayer";
 import HelpOverlay from "./layers/HelpOverlay";
@@ -33,7 +34,7 @@ export default function Renderer({ document, className, ...props }: Props & Reac
           document={document} 
           onDocumentSizeChange={handleDocumentSizeChange}
         />
-        <SelectionsLayer 
+        <SelectionsLayerNew 
           documentSize={documentSize}
         />
       </UnifiedViewport>

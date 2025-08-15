@@ -96,6 +96,7 @@ export function UnifiedViewport({
     toggleHelpOverlay,
     newSelections,
     deleteSelection,
+    selections,
   } = useViewerState();
   
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -421,8 +422,14 @@ export function UnifiedViewport({
       case 'Delete':
       case 'Backspace':
         if (!isModifierPressed) {
-          // Delete the most recent new selection
-          if (newSelections.length > 0) {
+          // Delete the currently selected selection (new or existing)
+          const selectedSelection = selections.selectedSelection;
+          if (selectedSelection) {
+            dispatch({ type: 'DELETE_SELECTED_SELECTION' });
+            const selectionType = selectedSelection.type === 'new' ? 'new' : 'saved';
+            toast.success(`Selected ${selectionType} selection removed`);
+          } else if (newSelections.length > 0) {
+            // Fallback: delete the most recent new selection if no selection is actively selected
             const lastIndex = newSelections.length - 1;
             deleteSelection(lastIndex);
             toast.success('Last selection removed');
@@ -453,7 +460,7 @@ export function UnifiedViewport({
         }
         break;
     }
-  }, [mode, isPanning, zoom, setIsPanning, cancelSelectionUpdate, endSelection, dispatch, currentPage, numPages, setCurrentPage, setMode, toggleInfoPanel, showHelpOverlay, toggleHelpOverlay, newSelections, deleteSelection]);
+  }, [mode, isPanning, zoom, setIsPanning, cancelSelectionUpdate, endSelection, dispatch, currentPage, numPages, setCurrentPage, setMode, toggleInfoPanel, showHelpOverlay, toggleHelpOverlay, newSelections, deleteSelection, selections]);
 
   // Attach keyboard and wheel event listeners to document/viewport
   useEffect(() => {

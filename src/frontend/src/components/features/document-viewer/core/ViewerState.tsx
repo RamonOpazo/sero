@@ -59,6 +59,7 @@ const createInitialState = (): ViewerState => ({
     newSelections: [],
     drawing: null,
     isDrawing: false,
+    selectedSelection: null,
     history: [],
     historyIndex: -1
   },
@@ -433,6 +434,56 @@ function viewerStateReducer(state: ViewerState, action: ViewerAction): ViewerSta
       return addHistoryEntry(stateWithRemovedSelection);
     }
 
+    case 'SET_SELECTED_SELECTION':
+      return {
+        ...state,
+        selections: {
+          ...state.selections,
+          selectedSelection: action.payload
+        }
+      };
+
+    case 'DELETE_SELECTED_SELECTION': {
+      const { selectedSelection } = state.selections;
+      if (!selectedSelection) {
+        return state; // No selection to delete
+      }
+
+      if (selectedSelection.type === 'new') {
+        // Delete from newSelections
+        const newSelections = [...state.selections.newSelections];
+        newSelections.splice(selectedSelection.index, 1);
+        
+        const stateWithDeletedSelection = {
+          ...state,
+          selections: {
+            ...state.selections,
+            newSelections,
+            selectedSelection: null // Clear selection after deletion
+          }
+        };
+
+        // Add history entry
+        return addHistoryEntry(stateWithDeletedSelection);
+      } else {
+        // Delete from existingSelections
+        const existingSelections = [...state.selections.existingSelections];
+        existingSelections.splice(selectedSelection.index, 1);
+        
+        const stateWithDeletedSelection = {
+          ...state,
+          selections: {
+            ...state.selections,
+            existingSelections,
+            selectedSelection: null // Clear selection after deletion
+          }
+        };
+
+        // Add history entry
+        return addHistoryEntry(stateWithDeletedSelection);
+      }
+    }
+
     case 'RESET_VIEW':
       return {
         ...state,
@@ -460,7 +511,8 @@ function viewerStateReducer(state: ViewerState, action: ViewerAction): ViewerSta
           ...state.selections,
           existingSelections: [...snapshot.existingSelections],
           newSelections: [...snapshot.newSelections],
-          historyIndex: newIndex
+          historyIndex: newIndex,
+          selectedSelection: null // Clear selection after undo
         }
       };
     }
@@ -483,7 +535,8 @@ function viewerStateReducer(state: ViewerState, action: ViewerAction): ViewerSta
           ...state.selections,
           existingSelections: [...snapshot.existingSelections],
           newSelections: [...snapshot.newSelections],
-          historyIndex: newIndex
+          historyIndex: newIndex,
+          selectedSelection: null // Clear selection after redo
         }
       };
     }
