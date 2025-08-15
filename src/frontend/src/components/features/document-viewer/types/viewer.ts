@@ -31,6 +31,12 @@ export interface ViewportBounds {
   height: number;
 }
 
+// Selection history snapshot
+export interface SelectionHistorySnapshot {
+  existingSelections: SelectionType[];
+  newSelections: SelectionCreateType[];
+}
+
 // Selection state
 export interface SelectionState {
   // Existing selections from the document (include ID since they're saved)
@@ -41,8 +47,8 @@ export interface SelectionState {
   drawing: SelectionCreateType | null;
   // Drawing state
   isDrawing: boolean;
-  // History for undo/redo
-  history: SelectionCreateType[][];
+  // History for undo/redo - now stores complete selection state snapshots
+  history: SelectionHistorySnapshot[];
   historyIndex: number;
 }
 
@@ -66,6 +72,8 @@ export interface UIState {
   userPreferredShowSelections: boolean;
   // Whether info panel is visible
   showInfoPanel: boolean;
+  // Whether help overlay is visible
+  showHelpOverlay: boolean;
   // Whether we're currently panning
   isPanning: boolean;
 }
@@ -118,6 +126,7 @@ export type ViewerAction =
   | { type: 'SET_DOCUMENT_CONTAINER'; payload: HTMLElement | null }
   | { type: 'SET_SHOW_SELECTIONS'; payload: boolean }
   | { type: 'SET_SHOW_INFO_PANEL'; payload: boolean }
+  | { type: 'SET_SHOW_HELP_OVERLAY'; payload: boolean }
   | { type: 'SET_VIEWING_PROCESSED'; payload: boolean }
   | { type: 'REGISTER_PAGE'; payload: { index: number; element: HTMLElement | null } }
   | { type: 'SET_EXISTING_SELECTIONS'; payload: SelectionType[] }
@@ -149,6 +158,7 @@ export interface ViewerContextType {
   toggleMode: () => void;
   toggleSelections: () => void;
   toggleInfoPanel: () => void;
+  toggleHelpOverlay: () => void;
   
   // Selection actions
   startSelection: (e: React.MouseEvent, pageIndex: number) => void;

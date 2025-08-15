@@ -5,6 +5,7 @@ import RenderLayer from "./layers/RenderLayer";
 import SelectionsLayer from "./layers/SelectionsLayer";
 import InfoLayer from "./layers/InfoLayer";
 import ActionsLayer from "./layers/ActionsLayer";
+import HelpOverlay from "./layers/HelpOverlay";
 import { useViewerState } from './hooks/useViewerState';
 import type { MinimalDocumentType } from "@/types";
 
@@ -12,7 +13,7 @@ type Props = { document: MinimalDocumentType };
 
 export default function Renderer({ document, className, ...props }: Props & React.ComponentProps<"div">) {
   const [documentSize, setDocumentSize] = useState({ width: 800, height: 600 });
-  const { showInfoPanel, toggleInfoPanel } = useViewerState();
+  const { showInfoPanel, toggleInfoPanel, showHelpOverlay, toggleHelpOverlay } = useViewerState();
 
   const handleDocumentSizeChange = useCallback((size: { width: number; height: number }) => {
     setDocumentSize(size);
@@ -49,6 +50,12 @@ export default function Renderer({ document, className, ...props }: Props & Reac
         documentSize={documentSize}
         isVisible={showInfoPanel}
         onToggleVisibility={toggleInfoPanel}
+      />
+      
+      {/* Help overlay covers the entire viewer area */}
+      <HelpOverlay 
+        isVisible={showHelpOverlay}
+        onToggleVisibility={toggleHelpOverlay}
       />
     </div>
   );

@@ -1,6 +1,7 @@
 import React, { useRef, useCallback, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { useViewerState } from '../hooks/useViewerState';
+import { toast } from 'sonner';
 
 /**
  * Throttle utility for high-frequency events like mouse move
@@ -86,6 +87,15 @@ export function UnifiedViewport({
     endSelection,
     pageRefs,
     dispatch,
+    currentPage,
+    numPages,
+    setCurrentPage,
+    setMode,
+    toggleInfoPanel,
+    showHelpOverlay,
+    toggleHelpOverlay,
+    newSelections,
+    deleteSelection,
   } = useViewerState();
   
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -256,12 +266,169 @@ export function UnifiedViewport({
           endSelection();
           eventStateRef.current.selectionPageIndex = null;
         }
+        // Close help overlay if open
+        if (showHelpOverlay) {
+          toggleHelpOverlay();
+        }
         event.preventDefault();
+        break;
+
+      // Navigation - Arrow keys for page navigation and scrolling
+      case 'ArrowLeft':
+      case 'PageUp':
+        if (!isModifierPressed && numPages > 1) {
+          const newPage = Math.max(0, currentPage - 1);
+          if (newPage !== currentPage) {
+            setCurrentPage(newPage);
+            toast.success(`Page ${newPage + 1} of ${numPages}`);
+          }
+          event.preventDefault();
+        }
+        break;
+
+      case 'ArrowRight':
+      case 'PageDown':
+        if (!isModifierPressed && numPages > 1) {
+          const newPage = Math.min(numPages - 1, currentPage + 1);
+          if (newPage !== currentPage) {
+            setCurrentPage(newPage);
+            toast.success(`Page ${newPage + 1} of ${numPages}`);
+          }
+          event.preventDefault();
+        }
+        break;
+
+
+      case 'Home':
+        if (!isModifierPressed && numPages > 1) {
+          if (currentPage !== 0) {
+            setCurrentPage(0);
+            toast.success('First page');
+          }
+          event.preventDefault();
+        }
+        break;
+
+      case 'End':
+        if (!isModifierPressed && numPages > 1) {
+          const lastPage = numPages - 1;
+          if (currentPage !== lastPage) {
+            setCurrentPage(lastPage);
+            toast.success('Last page');
+          }
+          event.preventDefault();
+        }
+        break;
+
+      // Zoom controls with +/- keys (without modifiers)
+      case '+':
+      case '=':
+        if (!isModifierPressed) {
+          const newZoom = Math.min(zoom * 1.1, 3);
+          dispatch({ type: 'SET_ZOOM', payload: newZoom });
+          toast.success(`Zoom ${Math.round(newZoom * 100)}%`);
+          event.preventDefault();
+        } else if (ctrlKey || metaKey) {
+          // Keep existing Ctrl+Plus behavior
+          dispatch({ type: 'SET_ZOOM', payload: Math.min(zoom * 1.1, 3) });
+          event.preventDefault();
+        }
+        break;
+
+      case '-':
+        if (!isModifierPressed) {
+          const newZoom = Math.max(zoom / 1.1, 0.5);
+          dispatch({ type: 'SET_ZOOM', payload: newZoom });
+          toast.success(`Zoom ${Math.round(newZoom * 100)}%`);
+          event.preventDefault();
+        } else if (ctrlKey || metaKey) {
+          // Keep existing Ctrl+Minus behavior
+          dispatch({ type: 'SET_ZOOM', payload: Math.max(zoom / 1.1, 0.5) });
+          event.preventDefault();
+        }
+        break;
+
+      // Mode switching
+      case 'p':
+      case 'P':
+        if (!isModifierPressed) {
+          setMode('pan');
+          toast.success('Panning mode activated', {
+            description: 'Use left click and drag to pan around the document'
+          });
+          event.preventDefault();
+        }
+        break;
+
+      case 's':
+      case 'S':
+        if (!isModifierPressed) {
+          setMode('select');
+          toast.success('Selection mode activated', {
+            description: 'Click and drag to create selections'
+          });
+          event.preventDefault();
+        }
+        break;
+
+      // Info panel toggle
+      case 'i':
+      case 'I':
+        if (!isModifierPressed) {
+          toggleInfoPanel();
+          event.preventDefault();
+        }
+        break;
+
+      // Help overlay toggle
+      case 'h':
+      case 'H':
+        if (!isModifierPressed) {
+          toggleHelpOverlay();
+          event.preventDefault();
+        }
         break;
 
       case ' ': // Spacebar for temporary pan mode
         if (!isModifierPressed && mode === 'select') {
           // TODO: Implement temporary pan mode
+          event.preventDefault();
+        }
+        break;
+
+      case 'g':
+      case 'G':
+        if (ctrlKey || metaKey) {
+          // Show go-to-page dialog
+          const pageInput = prompt(
+            `Go to page (1-${numPages}):`,
+            String(currentPage + 1)
+          );
+          if (pageInput !== null) {
+            const pageNum = parseInt(pageInput.trim());
+            if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= numPages) {
+              const newPage = pageNum - 1; // Convert to 0-based
+              setCurrentPage(newPage);
+              toast.success(`Jumped to page ${pageNum}`);
+            } else {
+              toast.error(`Invalid page number. Enter a number between 1 and ${numPages}.`);
+            }
+          }
+          event.preventDefault();
+        }
+        break;
+
+      case 'Delete':
+      case 'Backspace':
+        if (!isModifierPressed) {
+          // Delete the most recent new selection
+          if (newSelections.length > 0) {
+            const lastIndex = newSelections.length - 1;
+            deleteSelection(lastIndex);
+            toast.success('Last selection removed');
+          } else {
+            toast.info('No selections to remove');
+          }
           event.preventDefault();
         }
         break;
@@ -279,21 +446,6 @@ export function UnifiedViewport({
         }
         break;
 
-      case '+':
-      case '=':
-        if (ctrlKey || metaKey) {
-          dispatch({ type: 'SET_ZOOM', payload: Math.min(zoom * 1.1, 3) });
-          event.preventDefault();
-        }
-        break;
-
-      case '-':
-        if (ctrlKey || metaKey) {
-          dispatch({ type: 'SET_ZOOM', payload: Math.max(zoom / 1.1, 0.5) });
-          event.preventDefault();
-        }
-        break;
-
       case '0':
         if (ctrlKey || metaKey) {
           dispatch({ type: 'RESET_VIEW' });
@@ -301,7 +453,7 @@ export function UnifiedViewport({
         }
         break;
     }
-  }, [mode, isPanning, zoom, setIsPanning, cancelSelectionUpdate, endSelection, dispatch]);
+  }, [mode, isPanning, zoom, setIsPanning, cancelSelectionUpdate, endSelection, dispatch, currentPage, numPages, setCurrentPage, setMode, toggleInfoPanel, showHelpOverlay, toggleHelpOverlay, newSelections, deleteSelection]);
 
   // Attach keyboard and wheel event listeners to document/viewport
   useEffect(() => {

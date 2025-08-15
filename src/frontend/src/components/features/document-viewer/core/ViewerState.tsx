@@ -10,13 +10,36 @@ import {
   type ViewerAction, 
   type ViewerContextType,
   type ViewerSelectors,
-  type Point 
+  type Point,
+  type SelectionHistorySnapshot
 } from '../types/viewer';
 import { 
   screenToViewport,
   screenToDocument as screenToDocumentUtil,
   documentToViewport as documentToViewportUtil,
 } from './CoordinateSystem';
+
+// Helper function to create a selection history snapshot
+const createSelectionSnapshot = (state: ViewerState): SelectionHistorySnapshot => ({
+  existingSelections: [...state.selections.existingSelections],
+  newSelections: [...state.selections.newSelections]
+});
+
+// Helper function to add a history entry
+const addHistoryEntry = (state: ViewerState): ViewerState => {
+  const snapshot = createSelectionSnapshot(state);
+  const newHistory = state.selections.history.slice(0, state.selections.historyIndex + 1);
+  newHistory.push(snapshot);
+  
+  return {
+    ...state,
+    selections: {
+      ...state.selections,
+      history: newHistory,
+      historyIndex: newHistory.length - 1
+    }
+  };
+};
 
 // Initial state
 const createInitialState = (): ViewerState => ({
@@ -49,6 +72,7 @@ const createInitialState = (): ViewerState => ({
     showSelections: true,
     userPreferredShowSelections: true,
     showInfoPanel: false,
+    showHelpOverlay: false,
     isPanning: false
   }
 });
@@ -183,6 +207,15 @@ function viewerStateReducer(state: ViewerState, action: ViewerAction): ViewerSta
         }
       };
 
+    case 'SET_SHOW_HELP_OVERLAY':
+      return {
+        ...state,
+        ui: {
+          ...state.ui,
+          showHelpOverlay: action.payload
+        }
+      };
+
     case 'SET_VIEWING_PROCESSED':
       return {
         ...state,
@@ -234,13 +267,16 @@ function viewerStateReducer(state: ViewerState, action: ViewerAction): ViewerSta
         };
       }
       
-      return {
+      const stateWithUpdatedSelection = {
         ...state,
         selections: {
           ...state.selections,
           existingSelections: updatedExistingSelections
         }
       };
+
+      // Add history entry with both existing and new selections
+      return addHistoryEntry(stateWithUpdatedSelection);
     }
 
     case 'UPDATE_NEW_SELECTION': {
@@ -292,69 +328,66 @@ function viewerStateReducer(state: ViewerState, action: ViewerAction): ViewerSta
         };
       }
 
-      // Add to new selections and history
+      // Add to new selections
       const newSelections = [...state.selections.newSelections, drawing];
-      const newHistory = state.selections.history.slice(0, state.selections.historyIndex + 1);
-      newHistory.push([...newSelections]);
-
-      return {
+      const stateWithNewSelection = {
         ...state,
         selections: {
           ...state.selections,
           newSelections,
           drawing: null,
-          isDrawing: false,
-          history: newHistory,
-          historyIndex: newHistory.length - 1
+          isDrawing: false
         }
       };
+
+      // Add history entry with both existing and new selections
+      return addHistoryEntry(stateWithNewSelection);
     }
 
     case 'ADD_SELECTION': {
       const newSelections = [...state.selections.newSelections, action.payload];
-      const newHistory = state.selections.history.slice(0, state.selections.historyIndex + 1);
-      newHistory.push([...newSelections]);
-
-      return {
+      const stateWithNewSelection = {
         ...state,
         selections: {
           ...state.selections,
-          newSelections,
-          history: newHistory,
-          historyIndex: newHistory.length - 1
+          newSelections
         }
       };
+
+      // Add history entry with both existing and new selections
+      return addHistoryEntry(stateWithNewSelection);
     }
 
     case 'DELETE_SELECTION': {
       const newSelections = [...state.selections.newSelections];
       newSelections.splice(action.payload, 1);
       
-      const newHistory = state.selections.history.slice(0, state.selections.historyIndex + 1);
-      newHistory.push([...newSelections]);
-
-      return {
+      const stateWithDeletedSelection = {
         ...state,
         selections: {
           ...state.selections,
-          newSelections,
-          history: newHistory,
-          historyIndex: newHistory.length - 1
+          newSelections
         }
       };
+
+      // Add history entry with both existing and new selections
+      return addHistoryEntry(stateWithDeletedSelection);
     }
 
     case 'REMOVE_EXISTING_SELECTION': {
       const updatedExistingSelections = [...state.selections.existingSelections];
       updatedExistingSelections.splice(action.payload.index, 1);
       
-      return {
+      const stateWithRemovedSelection = {
         ...state,
         selections: {
           ...state.selections,
           existingSelections: updatedExistingSelections
         }
       };
+
+      // Add history entry with both existing and new selections
+      return addHistoryEntry(stateWithRemovedSelection);
     }
 
     case 'RESET_VIEW':
@@ -367,28 +400,46 @@ function viewerStateReducer(state: ViewerState, action: ViewerAction): ViewerSta
       };
 
     case 'UNDO_SELECTION': {
-      const newIndex = Math.max(0, state.selections.historyIndex - 1);
-      const newSelections = state.selections.history[newIndex] || [];
+      if (state.selections.historyIndex <= 0) {
+        return state; // Nothing to undo
+      }
+      
+      const newIndex = state.selections.historyIndex - 1;
+      const snapshot = state.selections.history[newIndex];
+      
+      if (!snapshot) {
+        return state; // Invalid history state
+      }
       
       return {
         ...state,
         selections: {
           ...state.selections,
-          newSelections: [...newSelections],
+          existingSelections: [...snapshot.existingSelections],
+          newSelections: [...snapshot.newSelections],
           historyIndex: newIndex
         }
       };
     }
 
     case 'REDO_SELECTION': {
-      const newIndex = Math.min(state.selections.history.length - 1, state.selections.historyIndex + 1);
-      const newSelections = state.selections.history[newIndex] || [];
+      if (state.selections.historyIndex >= state.selections.history.length - 1) {
+        return state; // Nothing to redo
+      }
+      
+      const newIndex = state.selections.historyIndex + 1;
+      const snapshot = state.selections.history[newIndex];
+      
+      if (!snapshot) {
+        return state; // Invalid history state
+      }
       
       return {
         ...state,
         selections: {
           ...state.selections,
-          newSelections: [...newSelections],
+          existingSelections: [...snapshot.existingSelections],
+          newSelections: [...snapshot.newSelections],
           historyIndex: newIndex
         }
       };
@@ -479,6 +530,10 @@ export function UnifiedViewerProvider({ children, document }: ViewerProviderProp
     dispatch({ type: 'SET_SHOW_INFO_PANEL', payload: !state.ui.showInfoPanel });
   }, [state.ui.showInfoPanel]);
 
+  const toggleHelpOverlay = useCallback(() => {
+    dispatch({ type: 'SET_SHOW_HELP_OVERLAY', payload: !state.ui.showHelpOverlay });
+  }, [state.ui.showHelpOverlay]);
+
   // Selection actions
   const startSelection = useCallback((e: React.MouseEvent, pageIndex: number) => {
     const documentPoint = screenToDocumentCoords({ x: e.clientX, y: e.clientY });
@@ -539,6 +594,7 @@ export function UnifiedViewerProvider({ children, document }: ViewerProviderProp
     toggleMode,
     toggleSelections,
     toggleInfoPanel,
+    toggleHelpOverlay,
     startSelection,
     updateSelection,
     endSelection,
@@ -555,6 +611,7 @@ export function UnifiedViewerProvider({ children, document }: ViewerProviderProp
     toggleMode,
     toggleSelections,
     toggleInfoPanel,
+    toggleHelpOverlay,
     startSelection,
     updateSelection,
     endSelection,
