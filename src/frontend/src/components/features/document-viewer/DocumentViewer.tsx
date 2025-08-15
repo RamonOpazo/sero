@@ -1,8 +1,6 @@
 import { ViewportProvider } from "./core/ViewportState";
 import { SelectionProvider } from "./core/SelectionProvider";
-import Renderer from "./Layers";
-import Controller from "./Controls";
-import { WidgetContainer, Widget, WidgetBody } from "@/components/shared/Widget";
+import DocumentViewerLayout from "./layouts/MainLayout";
 import { type MinimalDocumentType } from "@/types";
 import { useSelectionLoader } from "./hooks/useSelectionLoader";
 
@@ -15,25 +13,7 @@ function ViewerWithNewSystem({ document }: { document: MinimalDocumentType }) {
   // Load selections from API directly into new SelectionManager system
   useSelectionLoader(document.id);
   
-  return <ViewerContent document={document} />;
-}
-
-// Clean content component - no selection logic mixed in
-function ViewerContent({ document }: { document: MinimalDocumentType }) {
-  return (
-    <WidgetContainer expanded className="flex-row">
-      <Widget expanded orthocentered className="relative p-0">
-        <WidgetBody expanded className="p-0">
-          <Renderer document={document} />
-        </WidgetBody>
-      </Widget>
-      <Widget expanded className="max-w-(--sidebar-width)">
-        <WidgetBody expanded>
-          <Controller document={document} />
-        </WidgetBody>
-      </Widget>
-    </WidgetContainer>
-  );
+  return <DocumentViewerLayout document={document} />;
 }
 
 // Main component with clean architecture - old system removed from selection logic

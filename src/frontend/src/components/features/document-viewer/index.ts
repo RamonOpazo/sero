@@ -1,23 +1,33 @@
-export * from "./DocumentViewer";
-export * from "./Layers";
-export * from "./layers/ActionsLayer";
-export * from "./Controls";
-export * from "./SelectionsList";
-export * from "./PromptsList";
+// Main component
+export { default as DocumentViewer } from "./DocumentViewer";
 
-// New unified architecture exports
-export * from "./core/UnifiedViewport";
+// Layout components
+export { default as DocumentViewerLayout } from "./layouts/MainLayout";
+export { default as RendererLayout } from "./layouts/ViewportLayout";
+export { default as ControlsLayout } from "./layouts/TooldeckLayout";
+
+// Control components
+export * from "./tooldeck";
+
+// Layer components
+export { default as ActionsLayer } from "./viewport/ActionsLayer";
+export { default as SelectionsLayer } from "./viewport/SelectionsLayer";
+export { default as RenderLayer } from "./viewport/RenderLayer";
+export { default as InfoLayer } from "./viewport/InfoLayer";
+export { default as HelpOverlay } from "./viewport/HelpOverlay";
+
+// Core system
+export { default as UnifiedViewport } from "./core/UnifiedViewport";
 export { ViewportProvider, useViewportState, useViewportActions } from "./core/ViewportState";
-export * from "./layers/RenderLayer";
-export { default as SelectionsLayerNew } from "./layers/SelectionsLayerNew";
-export * from "./layers/InfoLayer";
-// Export coordinate system utils but not types to avoid conflicts
-export { screenToViewport, screenToDocument, documentToViewport, clampPan, calculateCenterFit } from "./core/CoordinateSystem";
-
-// New selection management system
 export { default as SelectionManager } from './core/SelectionManager';
 export { SelectionProvider, useSelections } from './core/SelectionProvider';
 export type { SelectionManagerState, SelectionManagerAction } from './core/SelectionManager';
 
-// Export specific types from viewer types (avoid conflicts with ViewportState)
+// Utilities
+export { screenToViewport, screenToDocument, documentToViewport, clampPan, calculateCenterFit } from "./core/CoordinateSystem";
+
+// Hooks
+export { useSelectionLoader } from './hooks/useSelectionLoader';
+
+// Types
 export type { Selection, SelectionCreateType } from "./types/viewer";

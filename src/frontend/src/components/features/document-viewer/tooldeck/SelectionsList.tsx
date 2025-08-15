@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Widget, WidgetHeader, WidgetTitle, WidgetBody } from "@/components/shared/Widget";
 import { X, Globe, MapPin } from "lucide-react";
-import { useSelections } from "./core/SelectionProvider";
+import { useSelections } from "../core/SelectionProvider";
 import { useMemo } from "react";
 
 

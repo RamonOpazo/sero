@@ -1,18 +1,25 @@
 import React, { useState, useCallback } from 'react';
-import { cn } from "@/lib/utils"
-import UnifiedViewport from "./core/UnifiedViewport";
-import RenderLayer from "./layers/RenderLayer";
-// import SelectionsLayer from "./layers/SelectionsLayer"; // Old layer - using SelectionsLayerNew
-import SelectionsLayerNew from "./layers/SelectionsLayerNew";
-import InfoLayer from "./layers/InfoLayer";
-import ActionsLayer from "./layers/ActionsLayer";
-import HelpOverlay from "./layers/HelpOverlay";
-import { useViewportState, useViewportActions } from './core/ViewportState';
+import { cn } from "@/lib/utils";
+import UnifiedViewport from "../core/UnifiedViewport";
+import RenderLayer from "../viewport/RenderLayer";
+import SelectionsLayer from "../viewport/SelectionsLayer"; // Note: Will be renamed from SelectionsLayerNew
+import InfoLayer from "../viewport/InfoLayer";
+import ActionsLayer from "../viewport/ActionsLayer";
+import HelpOverlay from "../viewport/HelpOverlay";
+import { useViewportState, useViewportActions } from '../core/ViewportState';
 import type { MinimalDocumentType } from "@/types";
 
-type Props = { document: MinimalDocumentType };
+interface RendererLayoutProps {
+  document: MinimalDocumentType;
+  className?: string;
+}
 
-export default function Renderer({ document, className, ...props }: Props & React.ComponentProps<"div">) {
+/**
+ * Layout component for the document renderer
+ * Manages the composition of rendering layers, viewport, and overlays
+ * This replaces the old Layers.tsx with better naming and organization
+ */
+export default function ViewportLayout({ document, className, ...props }: RendererLayoutProps & React.ComponentProps<"div">) {
   const [documentSize, setDocumentSize] = useState({ width: 800, height: 600 });
   const { showInfoPanel, showHelpOverlay } = useViewportState();
   const { toggleInfoPanel, toggleHelpOverlay } = useViewportActions();
@@ -30,12 +37,13 @@ export default function Renderer({ document, className, ...props }: Props & Reac
       )}
       {...props}
     >
+      {/* Main viewport with document and selections */}
       <UnifiedViewport documentSize={documentSize}>
         <RenderLayer 
           document={document} 
           onDocumentSizeChange={handleDocumentSizeChange}
         />
-        <SelectionsLayerNew 
+        <SelectionsLayer 
           documentSize={documentSize}
         />
       </UnifiedViewport>
