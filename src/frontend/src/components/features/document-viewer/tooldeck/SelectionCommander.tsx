@@ -1,5 +1,4 @@
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Save, RotateCcw, AlertCircle, Trash2, FileX } from "lucide-react";
 import { useViewportState } from "../core/ViewportState";
@@ -22,44 +21,24 @@ export default function SelectionControls({ document }: SelectionControlsProps) 
   
   const {
     state: selectionState,
-    selectedSelection,
     allSelections,
-    hasUnsavedChanges,
-    saveNewSelections,
+    pendingChanges,
+    pendingChangesCount,
+    commitChanges,
     clearAll,
     clearPage,
   } = useSelections();
   
   const [isSaving, setIsSaving] = useState(false);
 
-  // Calculate selection statistics
+  // Calculate selection statistics using the clean PendingChanges API
   const selectionStats = useMemo(() => {
-    const newCount = selectionState.newSelections.length;
+    const newCount = pendingChanges.creates.length;
     const existingCount = selectionState.savedSelections.length;
     const totalCount = allSelections.length;
-    
-    // Count ALL unsaved changes: new selections + modifications to saved selections
-    // Compare current saved selections with initial state to find modified ones
-    const initialSavedSelections = selectionState.initialState.savedSelections;
-    const modifiedSavedCount = selectionState.savedSelections.filter(currentSelection => {
-      const initialSelection = initialSavedSelections.find(initial => initial.id === currentSelection.id);
-      if (!initialSelection) {
-        // This selection wasn't in the initial state, but it's in saved now
-        // This can happen when new selections are saved, so don't count as "modified"
-        return false;
-      }
-      
-      // Check if any properties have changed from the initial state
-      return (
-        currentSelection.x !== initialSelection.x ||
-        currentSelection.y !== initialSelection.y ||
-        currentSelection.width !== initialSelection.width ||
-        currentSelection.height !== initialSelection.height ||
-        currentSelection.page_number !== initialSelection.page_number
-      );
-    }).length;
-    
-    const totalUnsavedChanges = newCount + modifiedSavedCount;
+    const modifiedSavedCount = pendingChanges.updates.length;
+    const pendingDeletionsCount = pendingChanges.deletes.length;
+    const totalUnsavedChanges = pendingChangesCount;
     const hasUnsavedChanges = totalUnsavedChanges > 0;
     
     return {
@@ -67,65 +46,129 @@ export default function SelectionControls({ document }: SelectionControlsProps) 
       existingCount,
       totalCount,
       modifiedSavedCount,
+      pendingDeletionsCount,
       totalUnsavedChanges,
       hasUnsavedChanges
     };
-  }, [selectionState.newSelections, selectionState.savedSelections, selectionState.initialState, allSelections]);
+  }, [pendingChanges, pendingChangesCount, selectionState.savedSelections.length, allSelections.length]);
 
-  // Save all new selections
+  // Save all pending changes (creates, updates, deletes)
   const handleSaveAllSelections = useCallback(async () => {
-    if (selectionState.newSelections.length === 0) {
-      toast.info('No unsaved selections to save');
+    if (pendingChangesCount === 0) {
+      toast.info('No pending changes to save');
       return;
     }
 
     setIsSaving(true);
     
     try {
-      const savePromises = selectionState.newSelections.map(async (sel) => {
-        const selectionData = {
-          page_number: sel.page_number ?? null,
-          x: sel.x,
-          y: sel.y,
-          width: sel.width,
-          height: sel.height,
-          confidence: null,
-          document_id: document.id,
-        };
+      const results = { creates: 0, updates: 0, deletes: 0, errors: 0 };
+      
+      // Handle creates (new selections)
+      for (const sel of pendingChanges.creates) {
+        try {
+          const selectionData = {
+            page_number: sel.page_number ?? null,
+            x: sel.x,
+            y: sel.y,
+            width: sel.width,
+            height: sel.height,
+            confidence: null,
+            document_id: document.id,
+          };
 
-        const result = await api.safe.post(
-          `/documents/id/${document.id}/selections`,
-          selectionData
-        );
+          const result = await api.safe.post(
+            `/documents/id/${document.id}/selections`,
+            selectionData
+          );
 
-        if (result.ok) {
-          return { success: true, selection: result.value };
-        } else {
-          throw new Error((result.error as any)?.response?.data?.detail || 'Failed to save selection');
+          if (result.ok) {
+            results.creates++;
+          } else {
+            results.errors++;
+            console.error('Failed to create selection:', result.error);
+          }
+        } catch (error) {
+          results.errors++;
+          console.error('Error creating selection:', error);
         }
-      });
-
-      const results = await Promise.allSettled(savePromises);
-      const successful = results.filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled').map(r => r.value);
-      const failed = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected');
-
-      if (successful.length > 0) {
-        const savedSelections = successful.map(s => ({ ...s.selection, id: s.selection.id }));
-        saveNewSelections(savedSelections);
-        toast.success(`Successfully saved ${successful.length} selection${successful.length === 1 ? '' : 's'}`);
       }
 
-      if (failed.length > 0) {
-        toast.error(`Failed to save ${failed.length} selection${failed.length === 1 ? '' : 's'}`);
-        console.error('Failed to save selections:', failed);
+      // Handle updates (modified saved selections)
+      for (const sel of pendingChanges.updates) {
+        try {
+          const selectionData = {
+            page_number: sel.page_number ?? null,
+            x: sel.x,
+            y: sel.y,
+            width: sel.width,
+            height: sel.height,
+            confidence: 'confidence' in sel ? sel.confidence : null,
+            document_id: document.id,
+          };
+
+          const result = await api.safe.put(
+            `/documents/id/${document.id}/selections/${sel.id}`,
+            selectionData
+          );
+
+          if (result.ok) {
+            results.updates++;
+          } else {
+            results.errors++;
+            console.error('Failed to update selection:', result.error);
+          }
+        } catch (error) {
+          results.errors++;
+          console.error('Error updating selection:', error);
+        }
       }
+
+      // Handle deletes (removed saved selections)
+      for (const sel of pendingChanges.deletes) {
+        try {
+          const result = await api.safe.delete(
+            `/documents/id/${document.id}/selections/${sel.id}`
+          );
+
+          if (result.ok) {
+            results.deletes++;
+          } else {
+            results.errors++;
+            console.error('Failed to delete selection:', result.error);
+          }
+        } catch (error) {
+          results.errors++;
+          console.error('Error deleting selection:', error);
+        }
+      }
+
+      // Show results
+      const totalSuccess = results.creates + results.updates + results.deletes;
+      
+      if (totalSuccess > 0) {
+        const messages = [];
+        if (results.creates > 0) messages.push(`${results.creates} created`);
+        if (results.updates > 0) messages.push(`${results.updates} updated`);
+        if (results.deletes > 0) messages.push(`${results.deletes} deleted`);
+        
+        toast.success(`Successfully saved changes: ${messages.join(', ')}`);
+        
+        // Commit changes to update the initial state and clear pending changes
+        commitChanges();
+      }
+
+      if (results.errors > 0) {
+        toast.error(`Failed to save ${results.errors} change${results.errors === 1 ? '' : 's'}`);
+      }
+      
     } catch (error) {
       console.error('Error saving selections:', error);
       toast.error('Failed to save selections');
     } finally {
       setIsSaving(false);
     }
-  }, [selectionState.newSelections, document.id, saveNewSelections]);
+  }, [pendingChanges, pendingChangesCount, document.id, commitChanges]);
 
   // Clear all selections
   const handleClearAll = useCallback(() => {
@@ -188,7 +231,7 @@ export default function SelectionControls({ document }: SelectionControlsProps) 
           variant="default"
           size="sm"
           onClick={handleSaveAllSelections}
-          disabled={isSaving || selectionStats.newCount === 0 || isViewingProcessedDocument}
+          disabled={isSaving || selectionStats.totalUnsavedChanges === 0 || isViewingProcessedDocument}
           className="w-full h-9 text-xs"
         >
           {isSaving ? (

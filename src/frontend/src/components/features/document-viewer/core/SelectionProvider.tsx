@@ -7,7 +7,8 @@
 import React, { createContext, useContext, useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import SelectionManager, { 
   type SelectionManagerState, 
-  type SelectionManagerAction 
+  type SelectionManagerAction,
+  type PendingChanges
 } from './SelectionManager';
 import { type Selection, type SelectionCreateType } from '../types/viewer';
 
@@ -29,12 +30,12 @@ interface SelectionContextValue {
   finishBatchOperation: () => void;
   deleteSelection: (id: string) => void;
   deleteSelectedSelection: () => boolean;
-  saveNewSelections: (selections: Selection[]) => void;
   loadSavedSelections: (selections: Selection[]) => void;
   undo: () => void;
   redo: () => void;
   clearAll: () => void;
   clearPage: (pageNumber: number) => void;
+  commitChanges: () => void;
   
   // Computed values
   allSelections: Selection[];
@@ -42,6 +43,8 @@ interface SelectionContextValue {
   canUndo: boolean;
   canRedo: boolean;
   hasUnsavedChanges: boolean;
+  pendingChanges: PendingChanges;
+  pendingChangesCount: number;
 }
 
 const SelectionContext = createContext<SelectionContextValue | null>(null);
@@ -134,10 +137,6 @@ export function SelectionProvider({ children, initialSelections }: SelectionProv
     return false;
   }, [dispatch, state.selectedSelectionId]);
   
-  const saveNewSelections = useCallback((selections: Selection[]) => {
-    dispatch({ type: 'SAVE_NEW_SELECTIONS', payload: selections });
-  }, [dispatch]);
-  
   const loadSavedSelections = useCallback((selections: Selection[]) => {
     dispatch({ type: 'LOAD_SAVED_SELECTIONS', payload: selections });
   }, [dispatch]);
@@ -158,12 +157,18 @@ export function SelectionProvider({ children, initialSelections }: SelectionProv
     dispatch({ type: 'CLEAR_PAGE', payload: pageNumber });
   }, [dispatch]);
   
+  const commitChanges = useCallback(() => {
+    dispatch({ type: 'COMMIT_CHANGES' });
+  }, [dispatch]);
+  
   // Computed values
   const allSelections = useMemo(() => manager.getAllSelections(), [manager, state]);
   const selectedSelection = useMemo(() => manager.getSelectedSelection(), [manager, state]);
   const canUndo = useMemo(() => manager.canUndo(), [manager, state]);
   const canRedo = useMemo(() => manager.canRedo(), [manager, state]);
   const hasUnsavedChanges = useMemo(() => manager.hasUnsavedChanges(), [manager, state]);
+  const pendingChanges = useMemo(() => manager.getPendingChanges(), [manager, state]);
+  const pendingChangesCount = useMemo(() => manager.getPendingChangesCount(), [manager, state]);
   
   const contextValue: SelectionContextValue = useMemo(() => ({
     state,
@@ -178,17 +183,19 @@ export function SelectionProvider({ children, initialSelections }: SelectionProv
     finishBatchOperation,
     deleteSelection,
     deleteSelectedSelection,
-    saveNewSelections,
     loadSavedSelections,
     undo,
     redo,
     clearAll,
     clearPage,
+    commitChanges,
     allSelections,
     selectedSelection,
     canUndo,
     canRedo,
     hasUnsavedChanges,
+    pendingChanges,
+    pendingChangesCount,
   }), [
     state,
     dispatch,
@@ -202,17 +209,19 @@ export function SelectionProvider({ children, initialSelections }: SelectionProv
     finishBatchOperation,
     deleteSelection,
     deleteSelectedSelection,
-    saveNewSelections,
     loadSavedSelections,
     undo,
     redo,
     clearAll,
     clearPage,
+    commitChanges,
     allSelections,
     selectedSelection,
     canUndo,
     canRedo,
     hasUnsavedChanges,
+    pendingChanges,
+    pendingChangesCount,
   ]);
   
   return (

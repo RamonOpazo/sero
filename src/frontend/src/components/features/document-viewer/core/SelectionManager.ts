@@ -10,6 +10,12 @@
 
 import { type Selection } from '../types/viewer';
 
+export interface PendingChanges {
+  creates: Selection[]; // New selections to be created
+  updates: Selection[]; // Modified saved selections to be updated 
+  deletes: Selection[]; // Saved selections that have been deleted
+}
+
 export interface SelectionManagerState {
   // Core selection data
   savedSelections: Selection[];
@@ -44,8 +50,8 @@ export type SelectionManagerAction =
   | { type: 'UPDATE_SELECTION_BATCH'; payload: { id: string; selection: Selection } }
   | { type: 'FINISH_BATCH_OPERATION' }
   | { type: 'DELETE_SELECTION'; payload: string }
-  | { type: 'SAVE_NEW_SELECTIONS'; payload: Selection[] }
   | { type: 'LOAD_SAVED_SELECTIONS'; payload: Selection[] }
+  | { type: 'COMMIT_CHANGES' } // Resets initial state to current state after successful save
   | { type: 'UNDO' }
   | { type: 'REDO' }
   | { type: 'CLEAR_ALL' }
@@ -238,17 +244,6 @@ class SelectionManager {
         }
         break;
 
-      case 'SAVE_NEW_SELECTIONS':
-        // Move new selections to saved
-        const newSaved = action.payload.map(sel => ({
-          ...sel,
-          id: sel.id || this.generateId(),
-        }));
-        this.state.savedSelections.push(...newSaved);
-        this.state.newSelections = [];
-        this.addToHistory();
-        break;
-
       case 'LOAD_SAVED_SELECTIONS':
         // Set the loaded selections as both current state AND initial state
         this.state.savedSelections = action.payload;
@@ -264,6 +259,22 @@ class SelectionManager {
         // Reset history - we're now at a new initial state
         this.state.changeHistory = [];
         this.state.currentHistoryIndex = -1; // At initial state
+        break;
+
+      case 'COMMIT_CHANGES':
+        // Update initial state to current state after successful save
+        // This makes all pending changes "committed" and no longer unsaved
+        this.state.initialState = {
+          savedSelections: [...this.state.savedSelections],
+          newSelections: [], // New selections should be empty after commit
+          timestamp: Date.now(),
+        };
+        
+        // Clear new selections since they should now be part of saved selections
+        this.state.newSelections = [];
+        
+        // Don't reset history - users should still be able to undo/redo
+        // but now the "clean" state is the post-save state
         break;
 
       case 'UNDO':
@@ -388,7 +399,45 @@ class SelectionManager {
   }
 
   hasUnsavedChanges(): boolean {
-    return this.state.newSelections.length > 0;
+    const changes = this.getPendingChanges();
+    return changes.creates.length > 0 || changes.updates.length > 0 || changes.deletes.length > 0;
+  }
+
+  getPendingChanges(): PendingChanges {
+    const creates = [...this.state.newSelections];
+    
+    // Find updates: saved selections that differ from their initial state
+    const updates = this.state.savedSelections.filter(currentSelection => {
+      const initialSelection = this.state.initialState.savedSelections.find(
+        initial => initial.id === currentSelection.id
+      );
+      
+      if (!initialSelection) {
+        // This selection wasn't in the initial state - it's a new selection that was already saved
+        return false;
+      }
+      
+      // Check if any properties have changed from the initial state
+      return (
+        currentSelection.x !== initialSelection.x ||
+        currentSelection.y !== initialSelection.y ||
+        currentSelection.width !== initialSelection.width ||
+        currentSelection.height !== initialSelection.height ||
+        currentSelection.page_number !== initialSelection.page_number
+      );
+    });
+    
+    // Find deletes: selections that exist in initial state but not in current saved selections
+    const deletes = this.state.initialState.savedSelections.filter(initialSelection => {
+      return !this.state.savedSelections.find(current => current.id === initialSelection.id);
+    });
+    
+    return { creates, updates, deletes };
+  }
+
+  getPendingChangesCount(): number {
+    const changes = this.getPendingChanges();
+    return changes.creates.length + changes.updates.length + changes.deletes.length;
   }
 }
 

@@ -32,11 +32,8 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     allSelections,
     selectedSelection,
     selectSelection,
-    updateSelection,
     updateSelectionBatch,
     finishBatchOperation,
-    deleteSelection,
-    // deleteSelectedSelection, // TODO: Use for keyboard shortcuts
     startDraw,
     updateDraw,
     finishDraw,
