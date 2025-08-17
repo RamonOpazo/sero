@@ -83,7 +83,17 @@ class SelectionManager {
 
   // State access
   getState(): SelectionManagerState {
-    return { ...this.state };
+    return {
+      ...this.state,
+      savedSelections: [...this.state.savedSelections],
+      newSelections: [...this.state.newSelections],
+      initialState: {
+        ...this.state.initialState,
+        savedSelections: [...this.state.initialState.savedSelections],
+        newSelections: [...this.state.initialState.newSelections]
+      },
+      changeHistory: [...this.state.changeHistory]
+    };
   }
 
   // Subscription management

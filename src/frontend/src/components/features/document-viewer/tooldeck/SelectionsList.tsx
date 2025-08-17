@@ -67,7 +67,7 @@ export default function SelectionList() {
     }));
     
     return [...saved, ...newOnes];
-  }, [selectionState.savedSelections, selectionState.newSelections, selectionState.initialState]);
+  }, [selectionState]);
 
   // Group selections by type for better organization
   const groupedSelections = useMemo(() => {
