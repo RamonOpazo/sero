@@ -51,6 +51,7 @@ export type SelectionManagerAction =
   | { type: 'FINISH_BATCH_OPERATION' }
   | { type: 'DELETE_SELECTION'; payload: string }
   | { type: 'TOGGLE_SELECTION_GLOBAL'; payload: { id: string; currentPageNumber?: number | null } }
+  | { type: 'SET_SELECTION_PAGE'; payload: { id: string; pageNumber: number | null } }
   | { type: 'LOAD_SAVED_SELECTIONS'; payload: Selection[] }
   | { type: 'COMMIT_CHANGES' } // Resets initial state to current state after successful save
   | { type: 'UNDO' }
@@ -287,6 +288,36 @@ class SelectionManager {
         
         // Only add to history if any update was made
         if (toggleUpdated) {
+          this.addToHistory();
+        }
+        break;
+
+      case 'SET_SELECTION_PAGE':
+        const { id: setPageId, pageNumber: setPageNumber } = action.payload;
+        let setPageUpdated = false;
+        
+        // Update in saved selections
+        const setPageSavedIndex = this.state.savedSelections.findIndex(s => s.id === setPageId);
+        if (setPageSavedIndex >= 0) {
+          this.state.savedSelections[setPageSavedIndex] = {
+            ...this.state.savedSelections[setPageSavedIndex],
+            page_number: setPageNumber
+          };
+          setPageUpdated = true;
+        }
+        
+        // Update in new selections
+        const setPageNewIndex = this.state.newSelections.findIndex(s => s.id === setPageId);
+        if (setPageNewIndex >= 0) {
+          this.state.newSelections[setPageNewIndex] = {
+            ...this.state.newSelections[setPageNewIndex],
+            page_number: setPageNumber
+          };
+          setPageUpdated = true;
+        }
+        
+        // Only add to history if any update was made
+        if (setPageUpdated) {
           this.addToHistory();
         }
         break;

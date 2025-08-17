@@ -4,8 +4,9 @@ import { Separator } from "@/components/ui/separator";
 import { X, MousePointer2, Globe, Hash } from "lucide-react";
 import { useSelections } from "../core/SelectionProvider";
 import { useViewportState } from "../core/ViewportState";
-import { useMemo, useRef, useEffect } from "react";
+import { useMemo, useRef, useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
+import PageSelectionDialog from "../dialogs/PageSelectionDialog";
 
 
 export default function SelectionList() {
@@ -14,10 +15,16 @@ export default function SelectionList() {
     selectedSelection, 
     selectSelection, 
     deleteSelection,
-    toggleSelectionGlobal
+    setSelectionPage
   } = useSelections();
   
-  const { setCurrentPage, currentPage } = useViewportState();
+  const { setCurrentPage, currentPage, numPages } = useViewportState();
+  
+  // Dialog state for page selection
+  const [dialogState, setDialogState] = useState<{
+    isOpen: boolean;
+    selectionId: string | null;
+  }>({ isOpen: false, selectionId: null });
   
   // Refs to track selection items for scrolling
   const itemRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -100,7 +107,28 @@ export default function SelectionList() {
 
   const handleToggleGlobal = (selectionId: string, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent selection when clicking the badge
-    toggleSelectionGlobal(selectionId, currentPage);
+    
+    const selection = selectionsWithTypeInfo.find(sel => sel.id === selectionId);
+    if (!selection) return;
+    
+    if (selection.page_number === null) {
+      // Currently global -> make page-specific: open dialog to choose page
+      setDialogState({ isOpen: true, selectionId });
+    } else {
+      // Currently page-specific -> make global: directly toggle
+      setSelectionPage(selectionId, null);
+    }
+  };
+  
+  const handleDialogConfirm = (pageNumber: number | null) => {
+    if (dialogState.selectionId) {
+      setSelectionPage(dialogState.selectionId, pageNumber);
+    }
+    setDialogState({ isOpen: false, selectionId: null });
+  };
+  
+  const handleDialogClose = () => {
+    setDialogState({ isOpen: false, selectionId: null });
   };
 
   const formatValue = (value: number): string => {
@@ -210,16 +238,28 @@ export default function SelectionList() {
   }
 
   return (
-    <ScrollArea className="h-80 hide-scrollbar">
-      <div>
-        {/* Show all selections in order: new first, then saved */}
-        {[...groupedSelections.new, ...groupedSelections.saved].map((sel, index, array) => (
-          <div key={sel.displayId}>
-            {renderSelectionItem(sel)}
-            {index < array.length - 1 && <Separator />}
-          </div>
-        ))}
-      </div>
-    </ScrollArea>
+    <>
+      <ScrollArea className="h-80 hide-scrollbar">
+        <div>
+          {/* Show all selections in order: new first, then saved */}
+          {[...groupedSelections.new, ...groupedSelections.saved].map((sel, index, array) => (
+            <div key={sel.displayId}>
+              {renderSelectionItem(sel)}
+              {index < array.length - 1 && <Separator />}
+            </div>
+          ))}
+        </div>
+      </ScrollArea>
+      
+      {/* Page Selection Dialog */}
+      <PageSelectionDialog
+        isOpen={dialogState.isOpen}
+        onClose={handleDialogClose}
+        onConfirm={handleDialogConfirm}
+        currentPage={currentPage}
+        totalPages={numPages}
+        selectionId={dialogState.selectionId ?? undefined}
+      />
+    </>
   );
 }
