@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { X, Globe, MapPin, MousePointer2 } from "lucide-react";
+import { X, MousePointer2 } from "lucide-react";
 import { useSelections } from "../core/SelectionProvider";
 import { useMemo } from "react";
 import { cn } from "@/lib/utils";
@@ -16,20 +16,38 @@ export default function SelectionList() {
     deleteSelection
   } = useSelections();
 
-  // Use all selections from the manager with type information
+  // Use all selections from the manager with type information and modification status
   const selectionsWithTypeInfo = useMemo(() => {
-    const saved = selectionState.savedSelections.map((sel) => ({
-      ...sel,
-      type: 'saved' as const,
-      displayId: sel.id,
-    }));
+    const initialSavedSelections = selectionState.initialState.savedSelections;
+    
+    const saved = selectionState.savedSelections.map((sel) => {
+      // Check if this saved selection was modified from its initial state
+      const initialSelection = initialSavedSelections.find(initial => initial.id === sel.id);
+      const isModified = initialSelection && (
+        sel.x !== initialSelection.x ||
+        sel.y !== initialSelection.y ||
+        sel.width !== initialSelection.width ||
+        sel.height !== initialSelection.height ||
+        sel.page_number !== initialSelection.page_number
+      );
+      
+      return {
+        ...sel,
+        type: 'saved' as const,
+        isModified: !!isModified,
+        displayId: sel.id,
+      };
+    });
+    
     const newOnes = selectionState.newSelections.map((sel) => ({
       ...sel,
       type: 'new' as const,
+      isModified: false,
       displayId: sel.id,
     }));
+    
     return [...saved, ...newOnes];
-  }, [selectionState.savedSelections, selectionState.newSelections]);
+  }, [selectionState.savedSelections, selectionState.newSelections, selectionState.initialState]);
 
   // Group selections by type for better organization
   const groupedSelections = useMemo(() => {
@@ -53,60 +71,93 @@ export default function SelectionList() {
   };
 
   const formatDimensions = (width: number, height: number): string => {
-    return `${width.toFixed(0)}×${height.toFixed(0)}`;
+    return `${Math.round(width)}×${Math.round(height)}`;
   };
+
+  const formatValue = (value: number): string => {
+    return value.toFixed(2);
+  };
+
 
   const renderSelectionItem = (sel: typeof selectionsWithTypeInfo[0]) => {
     const isGlobal = sel.page_number === null || sel.page_number === 0;
-    const pageDisplay = isGlobal ? 'All' : `P${sel.page_number}`;
+    const pageDisplay = isGlobal ? 'Global' : `Page ${sel.page_number}`;
     const isSelected = selectedSelection?.id === sel.id;
+    const isNew = sel.type === 'new';
+    const isModified = sel.isModified;
+    
+    // Determine status indicator
+    const getStatusIndicator = () => {
+      if (isNew) {
+        return {
+          color: "bg-green-500",
+          title: "New selection",
+          label: "New"
+        };
+      } else if (isModified) {
+        return {
+          color: "bg-amber-500",
+          title: "Modified selection",
+          label: "Modified"
+        };
+      } else {
+        return {
+          color: "bg-gray-400",
+          title: "Saved selection",
+          label: "Saved"
+        };
+      }
+    };
+    
+    const statusIndicator = getStatusIndicator();
     
     return (
       <div
         key={sel.displayId}
         className={cn(
-          "group flex items-center gap-2 p-2 rounded-md border text-xs transition-colors cursor-pointer",
+          "group pr-4 py-3 text-xs transition-all duration-200 cursor-pointer border-l-2 border-transparent focus:outline-none focus:ring-0",
           isSelected 
-            ? "bg-primary/10 border-primary/30 text-primary-foreground" 
-            : "border-border/50 hover:bg-muted/50"
+            ? "border-l-primary bg-primary/3 shadow-sm pl-4" 
+            : "pl-0 hover:border-l-border hover:pl-4 focus:border-l-border focus:pl-4"
         )}
         onClick={() => handleSelectSelection(sel.id)}
+        tabIndex={0}
       >
-        <Badge 
-          variant={sel.type === 'new' ? 'default' : 'secondary'} 
-          className="text-xs h-5 px-1.5 flex-shrink-0"
-        >
-          {sel.type === 'new' ? 'New' : 'Saved'}
-        </Badge>
-        
-        <div className="flex items-center gap-1 text-muted-foreground min-w-0">
-          {isGlobal ? (
-            <><Globe className="h-3 w-3" /> {pageDisplay}</>
-          ) : (
-            <><MapPin className="h-3 w-3" /> {pageDisplay}</>
-          )}
+        {/* Top row: Page badge, status, and delete button */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className={cn(
+              "font-medium px-2 py-0.5 rounded text-xs",
+              isGlobal ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" :
+              "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
+            )}>
+              {pageDisplay}
+            </span>
+            
+            <div className="flex items-center gap-1">
+              <div className={cn("w-1.5 h-1.5 rounded-full", statusIndicator.color)} title={statusIndicator.title} />
+              <span className="text-muted-foreground text-xs">{statusIndicator.label}</span>
+            </div>
+          </div>
+          
+          {/* Delete button */}
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleRemoveSelection(sel.id);
+            }}
+            className="h-6 w-6 p-0 text-muted-foreground/60 hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-all duration-200"
+          >
+            <X className="h-3 w-3" />
+          </Button>
         </div>
         
-        <div className="flex-1 min-w-0 space-y-0.5">
-          <div className="font-mono text-xs truncate text-muted-foreground">
-            {sel.x.toFixed(1)}, {sel.y.toFixed(1)}
-          </div>
-          <div className="font-mono text-xs text-muted-foreground/70">
-            {formatDimensions(sel.width, sel.height)}
-          </div>
+        {/* Bottom row: Simple coordinates */}
+        <div className="text-xs text-muted-foreground/60 mt-1.5">
+          {formatValue(sel.x)}, {formatValue(sel.y)} • {formatValue(sel.width)} × {formatValue(sel.height)}
         </div>
-        
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={(e) => {
-            e.stopPropagation();
-            handleRemoveSelection(sel.id);
-          }}
-          className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
-        >
-          <X className="h-3 w-3" />
-        </Button>
       </div>
     );
   };
@@ -122,11 +173,15 @@ export default function SelectionList() {
   }
 
   return (
-    <ScrollArea className="h-80">
-      <div className="space-y-1 pr-4">
+    <ScrollArea className="h-80 hide-scrollbar">
+      <div>
         {/* Show all selections in order: new first, then saved */}
-        {groupedSelections.new.map(renderSelectionItem)}
-        {groupedSelections.saved.map(renderSelectionItem)}
+        {[...groupedSelections.new, ...groupedSelections.saved].map((sel, index, array) => (
+          <div key={sel.displayId}>
+            {renderSelectionItem(sel)}
+            {index < array.length - 1 && <Separator />}
+          </div>
+        ))}
       </div>
     </ScrollArea>
   );
