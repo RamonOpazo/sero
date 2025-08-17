@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Play, Download, Trash2, FileText, Eye, EyeOff } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { Play, Download, Trash2, FileText, Eye, Calendar, Clock } from "lucide-react";
 import { useViewportState } from "../core/ViewportState";
 import type { MinimalDocumentType } from "@/types";
 
@@ -45,23 +46,75 @@ export default function DocumentControls({ document }: DocumentControlsProps) {
     return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
   };
 
+  const formatDate = (dateString: string): string => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  const formatRelativeTime = (dateString: string): string => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+    
+    if (diffInHours < 1) return 'Less than an hour ago';
+    if (diffInHours < 24) return `${diffInHours} hour${diffInHours !== 1 ? 's' : ''} ago`;
+    if (diffInHours < 168) return `${Math.floor(diffInHours / 24)} day${Math.floor(diffInHours / 24) !== 1 ? 's' : ''} ago`;
+    return formatDate(dateString);
+  };
+
   const currentFile = isViewingProcessedDocument ? document.redacted_file : document.original_file;
   const hasRedactedFile = document.redacted_file !== null;
 
   return (
     <div className="space-y-4">
-      {/* Document Information */}
-      <div className="space-y-2">
+      {/* Document Header */}
+      <div className="space-y-3">
         <div className="space-y-1">
-          <div className="text-xs font-medium truncate" title={document.name}>
+          <div className="text-sm font-medium truncate" title={document.name}>
             {document.name}
           </div>
           {document.description && (
-            <div className="text-xs text-muted-foreground truncate" title={document.description}>
+            <div className="text-xs text-muted-foreground leading-relaxed" title={document.description}>
               {document.description}
             </div>
           )}
         </div>
+        
+        {document.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {document.tags.slice(0, 4).map((tag, index) => (
+              <Badge key={index} variant="outline" className="text-xs px-1.5 py-0.5">
+                {tag}
+              </Badge>
+            ))}
+            {document.tags.length > 4 && (
+              <Badge variant="outline" className="text-xs px-1.5 py-0.5">
+                +{document.tags.length - 4}
+              </Badge>
+            )}
+          </div>
+        )}
+      </div>
+      
+      <Separator />
+      
+      {/* Document Metadata */}
+      <div className="space-y-2">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Calendar className="h-3 w-3" />
+          <span>Created {formatDate(document.created_at)}</span>
+        </div>
+        
+        {document.updated_at && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Clock className="h-3 w-3" />
+            <span>Updated {formatRelativeTime(document.updated_at)}</span>
+          </div>
+        )}
         
         <div className="flex items-center justify-between">
           <span className="text-xs text-muted-foreground">Current View</span>
@@ -74,28 +127,25 @@ export default function DocumentControls({ document }: DocumentControlsProps) {
         </div>
         
         {currentFile && (
-          <div className="text-xs text-muted-foreground">
-            <div className="flex items-center justify-between">
-              <span>File Size:</span>
-              <span className="font-mono">{formatFileSize(currentFile.file_size)}</span>
-            </div>
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>File Size</span>
+            <span className="font-mono">{formatFileSize(currentFile.file_size)}</span>
           </div>
         )}
         
-        {document.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1 mt-2">
-            {document.tags.slice(0, 3).map((tag, index) => (
-              <Badge key={index} variant="outline" className="text-xs px-1 py-0">
-                {tag}
-              </Badge>
-            ))}
-            {document.tags.length > 3 && (
-              <Badge variant="outline" className="text-xs px-1 py-0">
-                +{document.tags.length - 3}
-              </Badge>
-            )}
-          </div>
-        )}
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-muted-foreground">Original File</span>
+          <Badge variant={document.original_file ? "secondary" : "outline"} className="text-xs">
+            {document.original_file ? "Available" : "Missing"}
+          </Badge>
+        </div>
+        
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-muted-foreground">Redacted File</span>
+          <Badge variant={hasRedactedFile ? "destructive" : "outline"} className="text-xs">
+            {hasRedactedFile ? "Available" : "Pending"}
+          </Badge>
+        </div>
       </div>
 
       {/* View Controls */}

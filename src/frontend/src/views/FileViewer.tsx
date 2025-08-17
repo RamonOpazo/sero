@@ -7,7 +7,8 @@ import { toast } from 'sonner';
 import { PasswordDialog } from '@/components/dialogs/PasswordDialog';
 import DocumentViewer from '@/components/features/document-viewer/DocumentViewer';
 import { useFiles } from '@/hooks/useFiles';
-import type { MinimalDocumentType } from '@/types';
+import { api } from '@/lib/axios';
+import type { MinimalDocumentType, DocumentShallowType } from '@/types';
 
 interface FileViewerProps {
   fileType: 'original' | 'redacted';
@@ -17,8 +18,10 @@ export function FileViewer({ fileType }: FileViewerProps) {
   const { projectId, documentId } = useParams<{ projectId: string; documentId: string }>();
   const navigate = useNavigate();
 
-  // No need to fetch document - we have the ID from URL params
-  const [error] = useState<string | null>(null);
+  // Document metadata state
+  const [documentMetadata, setDocumentMetadata] = useState<DocumentShallowType | null>(null);
+  const [metadataLoading, setMetadataLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Password dialog state
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
@@ -28,6 +31,48 @@ export function FileViewer({ fileType }: FileViewerProps) {
 
   // Use files hook for file loading with new document-based methods
   const { loadOriginalFileByDocumentId, loadRedactedFileByDocumentId, currentFileData, error: fileError } = useFiles();
+
+  // Fetch document metadata on mount
+  useEffect(() => {
+    const fetchDocumentMetadata = async () => {
+      if (!documentId) return;
+      
+      setMetadataLoading(true);
+      setError(null);
+      
+      try {
+        // Use search endpoint to get shallow document data - search by project_id should return our document
+        const params = new URLSearchParams();
+        if (projectId) params.append('project_id', projectId);
+        const queryString = params.toString();
+        const url = `/documents/search${queryString ? `?${queryString}` : ''}`;
+        
+        const result = await api.safe.get(url);
+        
+        if (result.ok) {
+          // Find our specific document in the results
+          const documents = result.value as DocumentShallowType[];
+          const targetDocument = documents.find(doc => doc.id === documentId);
+          
+          if (targetDocument) {
+            setDocumentMetadata(targetDocument);
+          } else {
+            setError('Document not found in project');
+          }
+        } else {
+          const errorMessage = (result.error as any)?.response?.data?.detail || 'Failed to fetch document metadata';
+          setError(errorMessage);
+        }
+      } catch (error) {
+        console.error('Error fetching document metadata:', error);
+        setError('Failed to fetch document metadata');
+      } finally {
+        setMetadataLoading(false);
+      }
+    };
+
+    fetchDocumentMetadata();
+  }, [documentId]);
 
   // Auto-prompt for password on mount if we haven't cancelled and no file is loaded
   useEffect(() => {
@@ -86,9 +131,9 @@ export function FileViewer({ fileType }: FileViewerProps) {
     setUserCancelledPassword(false);
   }, [userCancelledPassword]);
 
-  // Create a minimal document object compatible with DocumentViewer from loaded file data
+  // Create a minimal document object compatible with DocumentViewer from loaded file data and metadata
   const documentForViewer = useMemo((): MinimalDocumentType | null => {
-    if (!documentId || !currentFileData) {
+    if (!documentId || !currentFileData || !documentMetadata) {
       return null;
     }
 
@@ -106,16 +151,15 @@ export function FileViewer({ fileType }: FileViewerProps) {
     const originalFile = isCurrentFileOriginal ? fileWithBlob : null;
     const redactedFile = !isCurrentFileOriginal ? fileWithBlob : null;
 
-    // Create a minimal document object without prompts and selections
-    // These will be fetched on-demand by the components that need them
+    // Create a minimal document object with real metadata instead of fallback data
     const viewerDocument: MinimalDocumentType = {
-      id: documentId,
-      name: `Document ${documentId.slice(-8)}`, // Use last 8 chars of ID as fallback name
-      description: '',
-      created_at: new Date().toISOString(), // Fallback timestamp
-      updated_at: null,
-      project_id: projectId || '', // Use from URL params
-      tags: [],
+      id: documentMetadata.id,
+      name: documentMetadata.name,
+      description: documentMetadata.description,
+      created_at: documentMetadata.created_at,
+      updated_at: documentMetadata.updated_at,
+      project_id: documentMetadata.project_id,
+      tags: documentMetadata.tags,
       files: stableFiles,
       original_file: originalFile,
       redacted_file: redactedFile,
@@ -123,9 +167,14 @@ export function FileViewer({ fileType }: FileViewerProps) {
 
     return viewerDocument;
   }, [
-    // Document ID dependencies
-    documentId,
-    projectId,
+    // Document metadata dependencies
+    documentMetadata?.id,
+    documentMetadata?.name,
+    documentMetadata?.description,
+    documentMetadata?.created_at,
+    documentMetadata?.updated_at,
+    documentMetadata?.project_id,
+    documentMetadata?.tags,
     // Loaded file data dependencies
     currentFileData?.file?.id,
     currentFileData?.file?.file_hash,
@@ -146,7 +195,7 @@ export function FileViewer({ fileType }: FileViewerProps) {
     return (
       <div className="flex items-center justify-center py-8">
         <div className="text-center">
-          <p className="text-destructive mb-2">Failed to load file</p>
+          <p className="text-destructive mb-2">Failed to load document</p>
           <p className="text-sm text-muted-foreground">{error}</p>
           <Button
             variant="outline"
@@ -156,6 +205,16 @@ export function FileViewer({ fileType }: FileViewerProps) {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Documents
           </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (metadataLoading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="text-center">
+          <p className="text-muted-foreground mb-2">Loading document...</p>
         </div>
       </div>
     );

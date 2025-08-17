@@ -32,7 +32,6 @@ export default function ControlsLayout({ document, className, ...props }: Contro
       <Widget
         value="document-controls"
         title="Document Controls"
-        description="View, process, and manage document files"
       >
         <DocumentControls document={document} />
       </Widget>
@@ -41,7 +40,6 @@ export default function ControlsLayout({ document, className, ...props }: Contro
       <Widget
         value="selections"
         title="Selection Management"
-        description="Create, save, and manage document selections"
       >
         <SelectionCommander document={document} />
         <div className="mt-4">
@@ -53,7 +51,6 @@ export default function ControlsLayout({ document, className, ...props }: Contro
       <Widget
         value="prompts"
         title="AI Prompts"
-        description="Configure redaction prompts and rules"
       >
         <PromptsList documentId={document.id} />
       </Widget>
