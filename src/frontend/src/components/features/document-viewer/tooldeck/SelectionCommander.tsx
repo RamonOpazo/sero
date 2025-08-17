@@ -84,7 +84,7 @@ export default function SelectionControls({ document }: SelectionControlsProps) 
     try {
       const savePromises = selectionState.newSelections.map(async (sel) => {
         const selectionData = {
-          page_number: sel.page_number || null,
+          page_number: sel.page_number ?? null,
           x: sel.x,
           y: sel.y,
           width: sel.width,
@@ -140,15 +140,14 @@ export default function SelectionControls({ document }: SelectionControlsProps) 
 
   // Clear current page selections
   const handleClearPage = useCallback(() => {
-    const actualPageNumber = currentPage + 1; // Convert 0-based to 1-based
-    const pageSelections = allSelections.filter(sel => sel.page_number === actualPageNumber);
+    const pageSelections = allSelections.filter(sel => sel.page_number === currentPage);
     if (pageSelections.length === 0) {
-      toast.info(`No selections on page ${actualPageNumber}`);
+      toast.info(`No selections on page ${currentPage + 1}`);
       return;
     }
     
-    clearPage(actualPageNumber);
-    toast.success(`Cleared ${pageSelections.length} selections from page ${actualPageNumber}`);
+    clearPage(currentPage);
+    toast.success(`Cleared ${pageSelections.length} selections from page ${currentPage + 1}`);
   }, [clearPage, currentPage, allSelections]);
 
   return (
@@ -205,7 +204,7 @@ export default function SelectionControls({ document }: SelectionControlsProps) 
             variant="outline"
             size="sm"
             onClick={handleClearPage}
-            disabled={isViewingProcessedDocument || allSelections.filter(s => s.page_number === currentPage + 1).length === 0}
+            disabled={isViewingProcessedDocument || allSelections.filter(s => s.page_number === currentPage).length === 0}
             className="h-9 text-xs"
           >
             <FileX className="h-3 w-3 mr-1" />

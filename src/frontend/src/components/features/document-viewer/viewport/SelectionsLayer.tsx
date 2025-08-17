@@ -6,13 +6,9 @@
  */
 
 import React, { useState, useCallback, useRef } from "react";
-import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 import { useSelections } from '../core/SelectionProvider';
 import { useViewportState } from '../core/ViewportState';
-import { Save, Trash2 } from "lucide-react";
-import { api } from "@/lib/axios";
-import { toast } from "sonner";
 import type { Selection, SelectionCreateType } from '../types/viewer';
 
 type Props = { 
@@ -36,6 +32,7 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     allSelections,
     selectedSelection,
     selectSelection,
+    updateSelection,
     updateSelectionBatch,
     finishBatchOperation,
     deleteSelection,
@@ -45,9 +42,6 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     finishDraw,
   } = useSelections();
 
-  // Local UI state
-  const [contextMenuOpen, setContextMenuOpen] = useState(false);
-  const [contextMenuPosition, setContextMenuPosition] = useState<{ x: number; y: number } | null>(null);
   
   // Interaction state for resize, move, and create operations
   const [dragState, setDragState] = useState<{
@@ -227,60 +221,7 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     }
   }, [dragState, handleMouseMove, handleMouseUp]);
 
-  // Close context menu handlers
-  React.useEffect(() => {
-    if (contextMenuOpen) {
-      const handleClickOutside = () => setContextMenuOpen(false);
-      const handleEscape = (e: KeyboardEvent) => {
-        if (e.key === 'Escape') setContextMenuOpen(false);
-      };
-      
-      document.addEventListener('click', handleClickOutside);
-      document.addEventListener('keydown', handleEscape);
-      
-      return () => {
-        document.removeEventListener('click', handleClickOutside);
-        document.removeEventListener('keydown', handleEscape);
-      };
-    }
-  }, [contextMenuOpen]);
 
-  // Save selection to backend
-  const handleSaveSelection = useCallback(async (selection: Selection) => {
-    if (!currentDocument?.id) {
-      toast.error('Cannot save selection: No document loaded');
-      return;
-    }
-
-    try {
-      const selectionData = {
-        page_number: selection.page_number || null,
-        x: selection.x,
-        y: selection.y,
-        width: selection.width,
-        height: selection.height,
-        confidence: 'confidence' in selection ? selection.confidence : null,
-        document_id: currentDocument.id,
-      };
-
-      const result = await api.safe.post(
-        `/documents/id/${currentDocument.id}/selections`,
-        selectionData
-      );
-
-      if (result.ok) {
-        // TODO: Update the selection system with the saved selection
-        toast.success('Selection saved successfully');
-      } else {
-        throw new Error((result.error as any)?.response?.data?.detail || 'Failed to save selection');
-      }
-    } catch (error) {
-      console.error('Error saving selection:', error);
-      toast.error('Failed to save selection');
-    }
-    
-    setContextMenuOpen(false);
-  }, [currentDocument]);
 
   // Handle move start
   const handleMoveStart = useCallback((e: React.MouseEvent, selection: Selection) => {
@@ -339,11 +280,6 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     ));
   }, [handleResizeStart]);
 
-  // Remove selection
-  const handleRemoveSelection = useCallback((selectionId: string) => {
-    deleteSelection(selectionId);
-    setContextMenuOpen(false);
-  }, [deleteSelection]);
 
   // Render selection box
   const renderSelectionBox = useCallback((selection: Selection) => {
@@ -356,6 +292,20 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     const isSelected = selectedSelection?.id === selection.id;
     const isNew = !('created_at' in selection); // Simple check for new vs saved
     const isGlobal = selection.page_number === null;
+    
+    
+    // Check if this saved selection has been modified from its initial state
+    const isModified = !isNew && (() => {
+      const initialSavedSelections = selectionState.initialState.savedSelections;
+      const initialSelection = initialSavedSelections.find(initial => initial.id === selection.id);
+      return initialSelection && (
+        selection.x !== initialSelection.x ||
+        selection.y !== initialSelection.y ||
+        selection.width !== initialSelection.width ||
+        selection.height !== initialSelection.height ||
+        selection.page_number !== initialSelection.page_number
+      );
+    })();
 
     const selectionElement = (
       <div
@@ -368,13 +318,13 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
             : "transition-all duration-200",
           isSelected
             ? "border border-blue-600 bg-blue-100/20"
-            : isNew
-              ? isGlobal
-                ? "border border-purple-400/60 bg-purple-50/10 hover:border-purple-500/80"
-                : "border border-green-400/60 bg-green-50/10 hover:border-green-500/80"
-              : isGlobal
-                ? "border border-orange-400/60 bg-orange-50/10 hover:border-orange-500/80"
-                : "border border-slate-400/60 bg-slate-50/10 hover:border-slate-500/80"
+            : isGlobal
+              ? "border border-yellow-400/60 bg-yellow-50/10 hover:border-yellow-500/80"
+              : isNew
+                ? "border border-green-400/60 bg-green-50/10 hover:border-green-500/80"
+                : isModified
+                  ? "border border-purple-500/70 bg-purple-100/15 hover:border-purple-600/90"
+                  : "border border-slate-400/60 bg-slate-50/10 hover:border-slate-500/80"
         )}
         style={{ 
           left: `${left}px`,
@@ -395,14 +345,6 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
           // Start move if this selection is selected and not clicking resize handles
           if (isSelected && e.button === 0 && !e.defaultPrevented) {
             handleMoveStart(e, selection);
-          }
-        }}
-        onContextMenu={(e) => {
-          if (isSelected) {
-            e.preventDefault();
-            e.stopPropagation();
-            setContextMenuPosition({ x: e.clientX, y: e.clientY });
-            setContextMenuOpen(true);
           }
         }}
       >
@@ -463,34 +405,6 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
         )}
       </div>
 
-      {/* Context menu */}
-      {contextMenuOpen && contextMenuPosition && selectedSelection && createPortal(
-        <div
-          className="fixed z-[1000] bg-popover text-popover-foreground rounded-md border shadow-md min-w-[8rem] p-1"
-          style={{
-            left: contextMenuPosition.x,
-            top: contextMenuPosition.y,
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div
-            className="relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
-            onClick={() => handleSaveSelection(selectedSelection)}
-          >
-            <Save className="mr-2 h-4 w-4" />
-            Save
-          </div>
-          <div className="bg-border -mx-1 my-1 h-px" />
-          <div
-            className="relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
-            onClick={() => handleRemoveSelection(selectedSelection.id)}
-          >
-            <Trash2 className="mr-2 h-4 w-4" />
-            Remove
-          </div>
-        </div>,
-        document.body
-      )}
     </>
   );
 }
