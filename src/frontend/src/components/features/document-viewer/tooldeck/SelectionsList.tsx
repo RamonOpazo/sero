@@ -4,6 +4,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { X, MousePointer2 } from "lucide-react";
 import { useSelections } from "../core/SelectionProvider";
+import { useViewportState } from "../core/ViewportState";
 import { useMemo } from "react";
 import { cn } from "@/lib/utils";
 
@@ -15,6 +16,8 @@ export default function SelectionList() {
     selectSelection, 
     deleteSelection
   } = useSelections();
+  
+  const { setCurrentPage } = useViewportState();
 
   // Use all selections from the manager with type information and modification status
   const selectionsWithTypeInfo = useMemo(() => {
@@ -62,11 +65,19 @@ export default function SelectionList() {
   };
 
   const handleSelectSelection = (selectionId: string) => {
+    // Find the selection to get its page number
+    const selection = selectionsWithTypeInfo.find(sel => sel.id === selectionId);
+    
     // Toggle selection - if already selected, deselect; otherwise select
     if (selectedSelection?.id === selectionId) {
       selectSelection(null);
     } else {
       selectSelection(selectionId);
+      
+      // Navigate to the selection's page if it's not global (null)
+      if (selection && selection.page_number !== null && selection.page_number !== undefined) {
+        setCurrentPage(pageToArrayIndex(selection.page_number));
+      }
     }
   };
 
@@ -78,10 +89,19 @@ export default function SelectionList() {
     return value.toFixed(2);
   };
 
+  // Utility functions for page/index conversion
+  const pageToArrayIndex = (pageNumber: number): number => {
+    return pageNumber; // Both selections and viewport use 0-based indexing
+  };
+
+  const arrayIndexToPage = (arrayIndex: number): number => {
+    return arrayIndex; // Same indexing system
+  };
+
 
   const renderSelectionItem = (sel: typeof selectionsWithTypeInfo[0]) => {
-    const isGlobal = sel.page_number === null || sel.page_number === 0;
-    const pageDisplay = isGlobal ? 'Global' : `Page ${sel.page_number}`;
+    const isGlobal = sel.page_number === null;
+    const pageDisplay = isGlobal ? 'Global' : `Page ${sel.page_number + 1}`;
     const isSelected = selectedSelection?.id === sel.id;
     const isNew = sel.type === 'new';
     const isModified = sel.isModified;

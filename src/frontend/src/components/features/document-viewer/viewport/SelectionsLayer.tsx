@@ -92,7 +92,7 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
       y,
       width: 0,
       height: 0,
-      page_number: currentPage + 1,
+      page_number: currentPage,
       document_id: currentDocument.id,
     };
     
@@ -122,7 +122,7 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
         y: Math.min(startPoint.y, currentY),
         width: Math.abs(currentX - startPoint.x),
         height: Math.abs(currentY - startPoint.y),
-        page_number: currentPage + 1,
+        page_number: currentPage,
         document_id: currentDocument!.id,
       };
       
@@ -355,7 +355,7 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
 
     const isSelected = selectedSelection?.id === selection.id;
     const isNew = !('created_at' in selection); // Simple check for new vs saved
-    const isGlobal = selection.page_number === 0 || selection.page_number === null;
+    const isGlobal = selection.page_number === null;
 
     const selectionElement = (
       <div
@@ -415,15 +415,14 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
   }, [documentSize, selectedSelection, handleSelectionClick, dragState, renderResizeHandles, handleMoveStart]);
 
   // Filter selections for current page
-  const currentPageNumber = currentPage + 1;
   const pageSelections = allSelections.filter(
-    s => s.page_number === null || s.page_number === 0 || s.page_number === currentPageNumber
+    s => s.page_number === null || s.page_number === currentPage
   );
 
   // Show current drawing if any
   const currentDraw = selectionState.currentDraw;
   const drawingThisPage = currentDraw && 
-    (currentDraw.page_number === null || currentDraw.page_number === 0 || currentDraw.page_number === currentPageNumber);
+    (currentDraw.page_number === null || currentDraw.page_number === currentPage);
 
   if (!isRendered || !showSelections || isViewingProcessedDocument) {
     return null;
