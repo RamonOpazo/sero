@@ -1,5 +1,4 @@
 import { Button } from "@/components/ui/button";
-import { Widget, WidgetHeader, WidgetTitle, WidgetBody } from "@/components/shared/Widget";
 import { Brain, Download, Trash2 } from "lucide-react";
 import { useViewportState } from "../core/ViewportState";
 import type { MinimalDocumentType } from "@/types";
@@ -32,43 +31,40 @@ export default function DocumentActions({ document }: DocumentActionsProps) {
   };
 
   return (
-    <Widget className="py-2">
-      <WidgetHeader className="pb-1">
-        <WidgetTitle className="text-xs flex items-center gap-1">
-          <Brain className="h-3 w-3" />
-          Actions
-        </WidgetTitle>
-      </WidgetHeader>
-      <WidgetBody className="pt-0">
-        <div className="space-y-1">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            disabled={isViewingProcessedDocument}
-            className="w-full justify-start h-8 text-xs"
-          >
-            <Brain className="mr-2 h-3 w-3" />
-            Redact File
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleDownloadFile}
-            className="w-full justify-start h-8 text-xs"
-          >
-            <Download className="mr-2 h-3 w-3" />
-            Download File
-          </Button>
-          <Button 
-            variant="destructive" 
-            size="sm"
-            className="w-full justify-start h-8 text-xs"
-          >
-            <Trash2 className="mr-2 h-3 w-3" />
-            Delete File
-          </Button>
-        </div>
-      </WidgetBody>
-    </Widget>
+    <div className="space-y-3">
+      {/* Processing Actions */}
+      <div className="space-y-2">
+        <Button 
+          variant="default" 
+          size="sm" 
+          disabled={isViewingProcessedDocument}
+          className="w-full justify-start h-9 text-xs"
+        >
+          <Brain className="mr-2 h-3 w-3" />
+          Redact Document
+        </Button>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={handleDownloadFile}
+          className="w-full justify-start h-9 text-xs"
+        >
+          <Download className="mr-2 h-3 w-3" />
+          Download {isViewingProcessedDocument ? 'Redacted' : 'Original'}
+        </Button>
+      </div>
+      
+      {/* Danger Zone */}
+      <div className="pt-2 border-t border-border/50">
+        <Button 
+          variant="destructive" 
+          size="sm"
+          className="w-full justify-start h-9 text-xs"
+        >
+          <Trash2 className="mr-2 h-3 w-3" />
+          Delete Document
+        </Button>
+      </div>
+    </div>
   );
 }

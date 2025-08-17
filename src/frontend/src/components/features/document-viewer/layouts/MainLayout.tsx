@@ -1,5 +1,5 @@
 import { type MinimalDocumentType } from "@/types";
-import { WidgetContainer, Widget, WidgetBody } from "@/components/shared/Widget";
+import { WidgetContainer, Widget, WidgetContent } from "@/components/shared/Widget";
 import ViewportLayout from "./ViewportLayout";
 import ControlsLayout from "./TooldeckLayout";
 
@@ -16,17 +16,13 @@ export default function DocumentViewerLayout({ document }: DocumentViewerLayoutP
     <WidgetContainer expanded className="flex-row">
       {/* Main renderer area */}
       <Widget expanded orthocentered className="relative p-0">
-        <WidgetBody expanded className="p-0">
+        <WidgetContent expanded className="p-0">
           <ViewportLayout document={document} />
-        </WidgetBody>
+        </WidgetContent>
       </Widget>
-      
+
       {/* Controls sidebar */}
-      <Widget expanded className="max-w-(--sidebar-width)">
-        <WidgetBody expanded>
-          <ControlsLayout document={document} />
-        </WidgetBody>
-      </Widget>
+      <ControlsLayout document={document} className="max-w-(--sidebar-width)"/>
     </WidgetContainer>
   );
 }

@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
-import { Widget, WidgetHeader, WidgetTitle, WidgetBody } from "@/components/shared/Widget";
-import { Save, RotateCcw, Eye, EyeOff, CheckCircle2, AlertCircle, Trash2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Save, RotateCcw, Eye, EyeOff, AlertCircle, Trash2 } from "lucide-react";
 import { useViewportState } from "../core/ViewportState";
 import { useSelections } from "../core/SelectionProvider";
 import { api } from "@/lib/axios";
@@ -125,60 +125,67 @@ export default function SelectionControls({ document }: SelectionControlsProps) 
   }, [dispatch, showSelections]);
 
   return (
-    <Widget className="py-2">
-      <WidgetHeader className="pb-1">
-        <div className="flex items-center justify-between">
-          <WidgetTitle className="text-xs flex items-center gap-1">
-            <CheckCircle2 className="h-3 w-3" />
-            Selections
-            {selectionStats.hasUnsavedChanges && <AlertCircle className="h-3 w-3 text-amber-500" />}
-          </WidgetTitle>
-          <div className="text-xs text-muted-foreground">
-            {selectionStats.totalCount}
-            {selectionStats.newCount > 0 && (
-              <span className="text-amber-600 ml-1">({selectionStats.newCount})</span>
-            )}
-          </div>
+    <div className="space-y-4">
+      {/* Status Overview */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="text-xs">
+            Total: {selectionStats.totalCount}
+          </Badge>
+          {selectionStats.newCount > 0 && (
+            <Badge variant="secondary" className="text-xs">
+              New: {selectionStats.newCount}
+            </Badge>
+          )}
         </div>
-      </WidgetHeader>
-      <WidgetBody className="pt-0">
+        {selectionStats.hasUnsavedChanges && (
+          <AlertCircle className="h-4 w-4 text-amber-500" title="Unsaved changes" />
+        )}
+      </div>
+
+      {/* Action Controls */}
+      <div className="space-y-2">
         <div className="flex gap-2">
           <Button
             variant="outline"
             size="sm"
             onClick={toggleSelectionVisibility}
-            className="h-8 px-2 text-xs"
+            className="h-8 px-3 text-xs"
+            title={showSelections ? "Hide selections" : "Show selections"}
           >
-            {showSelections ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+            {showSelections ? <EyeOff className="h-3 w-3 mr-1" /> : <Eye className="h-3 w-3 mr-1" />}
+            {showSelections ? "Hide" : "Show"}
           </Button>
           <Button
             variant="default"
             size="sm"
             onClick={handleSaveAllSelections}
             disabled={isSaving || selectionStats.newCount === 0 || isViewingProcessedDocument}
-            className="h-8 px-2 text-xs flex-1"
+            className="h-8 px-3 text-xs flex-1"
           >
             {isSaving ? (
-              <RotateCcw className="h-3 w-3 animate-spin" />
+              <RotateCcw className="h-3 w-3 animate-spin mr-1" />
             ) : (
-              <Save className="h-3 w-3" />
+              <Save className="h-3 w-3 mr-1" />
             )}
-          </Button>
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={handleClearAllSelections}
-            disabled={isClearing || selectionStats.totalCount === 0}
-            className="h-8 px-2 text-xs"
-          >
-            {isClearing ? (
-              <RotateCcw className="h-3 w-3 animate-spin" />
-            ) : (
-              <Trash2 className="h-3 w-3" />
-            )}
+            Save All
           </Button>
         </div>
-      </WidgetBody>
-    </Widget>
+        <Button
+          variant="destructive"
+          size="sm"
+          onClick={handleClearAllSelections}
+          disabled={isClearing || selectionStats.totalCount === 0}
+          className="h-8 w-full text-xs"
+        >
+          {isClearing ? (
+            <RotateCcw className="h-3 w-3 animate-spin mr-1" />
+          ) : (
+            <Trash2 className="h-3 w-3 mr-1" />
+          )}
+          Clear All
+        </Button>
+      </div>
+    </div>
   );
 }

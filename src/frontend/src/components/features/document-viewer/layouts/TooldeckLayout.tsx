@@ -1,11 +1,9 @@
 import { cn } from "@/lib/utils";
-import { WidgetContainer } from "@/components/shared/Widget";
+import { WidgetContainer, Widget } from "@/components/shared/Widget";
 import type { MinimalDocumentType } from "@/types";
 import {
-  DocumentStatusBadge,
-  ToggleCommander,
+  DocumentControls,
   SelectionCommander,
-  FileCommander,
   SelectionsList,
   PromptsList,
 } from "../tooldeck";
@@ -25,29 +23,41 @@ export default function ControlsLayout({ document, className, ...props }: Contro
     <WidgetContainer
       data-slot="document-viewer-controller"
       expanded
-      className={cn(
-        "gap-2 p-2",
-        className
-      )} 
+      accordion
+      accordionDefaultValue="document-controls"
+      className={cn(className)} 
       {...props}
     >
-      {/* Document Status Badge */}
-      <DocumentStatusBadge />
+      {/* Document Controls */}
+      <Widget
+        value="document-controls"
+        title="Document Controls"
+        description="View, process, and manage document files"
+      >
+        <DocumentControls document={document} />
+      </Widget>
 
-      {/* Document View Controls */}
-      <ToggleCommander />
+      {/* Selection Management */}
+      <Widget
+        value="selections"
+        title="Selection Management"
+        description="Create, save, and manage document selections"
+      >
+        <SelectionCommander document={document} />
+        <div className="mt-4">
+          <SelectionsList />
+        </div>
+      </Widget>
 
-      {/* Selection Controls */}
-      <SelectionCommander document={document} />
+      {/* AI Prompts */}
+      <Widget
+        value="prompts"
+        title="AI Prompts"
+        description="Configure redaction prompts and rules"
+      >
+        <PromptsList documentId={document.id} />
+      </Widget>
 
-      {/* Selection List Widget */}
-      <SelectionsList />
-
-      {/* Document Actions */}
-      <FileCommander document={document} />
-
-      {/* Prompts Widget */}
-      <PromptsList documentId={document.id} />
     </WidgetContainer>
   );
 }
