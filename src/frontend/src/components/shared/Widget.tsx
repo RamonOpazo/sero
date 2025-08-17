@@ -30,6 +30,9 @@ type AccordionOnlyProps = {
   accordionDefaultValue?: string
   accordionType?: "single" | "multiple"
   collapsible?: boolean
+  // Controlled accordion props
+  value?: string
+  onValueChange?: (value: string) => void
 }
 
 type AccordionContainerProps = WidgetExtraProps & AccordionOnlyProps
@@ -47,17 +50,26 @@ export function WidgetContainer({
   accordionDefaultValue,
   accordionType = "single",
   collapsible = true,
+  // Controlled accordion props
+  value,
+  onValueChange,
   // Everything else for the div
   ...restProps
 }: WidgetContainerProps) {
   if (accordion) {
+    // Determine if this is controlled or uncontrolled
+    const isControlled = value !== undefined && onValueChange !== undefined;
+    
     const accordionProps = accordionType === "single" ? {
       type: "single" as const,
-      defaultValue: accordionDefaultValue,
+      ...(isControlled ? { value, onValueChange } : { defaultValue: accordionDefaultValue }),
       collapsible
     } : {
       type: "multiple" as const,
-      defaultValue: accordionDefaultValue ? [accordionDefaultValue] : undefined,
+      ...(isControlled ? 
+        { value: value ? [value] : [], onValueChange: (vals: string[]) => onValueChange?.(vals[0] || "") } :
+        { defaultValue: accordionDefaultValue ? [accordionDefaultValue] : undefined }
+      ),
       collapsible
     }
 

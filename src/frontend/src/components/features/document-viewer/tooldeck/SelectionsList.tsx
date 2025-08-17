@@ -4,7 +4,7 @@ import { Separator } from "@/components/ui/separator";
 import { X, MousePointer2 } from "lucide-react";
 import { useSelections } from "../core/SelectionProvider";
 import { useViewportState } from "../core/ViewportState";
-import { useMemo } from "react";
+import { useMemo, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
 
 
@@ -17,6 +17,23 @@ export default function SelectionList() {
   } = useSelections();
   
   const { setCurrentPage, currentPage } = useViewportState();
+  
+  // Refs to track selection items for scrolling
+  const itemRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  
+  // Auto-scroll to selected item when selection changes
+  useEffect(() => {
+    if (selectedSelection?.id) {
+      const selectedElement = itemRefs.current[selectedSelection.id];
+      if (selectedElement) {
+        selectedElement.scrollIntoView({
+          behavior: 'smooth',
+          block: 'nearest',
+          inline: 'nearest'
+        });
+      }
+    }
+  }, [selectedSelection?.id]);
 
   // Use all selections from the manager with type information and modification status
   const selectionsWithTypeInfo = useMemo(() => {
@@ -120,6 +137,9 @@ export default function SelectionList() {
     return (
       <div
         key={sel.displayId}
+        ref={(el) => {
+          itemRefs.current[sel.id] = el;
+        }}
         className={cn(
           "group pr-4 py-3 text-xs transition-all duration-200 cursor-pointer border-l-2 border-transparent focus:outline-none focus:ring-0",
           isSelected 

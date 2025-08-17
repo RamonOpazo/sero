@@ -219,17 +219,17 @@ class SelectionManager {
         const selectionId = action.payload;
         let selectionDeleted = false;
         
-        // Remove from saved selections
+        // Remove from saved selections using immutable approach
         const savedIndex = this.state.savedSelections.findIndex(s => s.id === selectionId);
         if (savedIndex >= 0) {
-          this.state.savedSelections.splice(savedIndex, 1);
+          this.state.savedSelections = this.state.savedSelections.filter(s => s.id !== selectionId);
           selectionDeleted = true;
         }
         
-        // Remove from new selections
+        // Remove from new selections using immutable approach
         const newIndex = this.state.newSelections.findIndex(s => s.id === selectionId);
         if (newIndex >= 0) {
-          this.state.newSelections.splice(newIndex, 1);
+          this.state.newSelections = this.state.newSelections.filter(s => s.id !== selectionId);
           selectionDeleted = true;
         }
         
