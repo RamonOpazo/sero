@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Save, RotateCcw, Eye, EyeOff, AlertCircle, Trash2 } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { Save, RotateCcw, AlertCircle, Trash2, FileX } from "lucide-react";
 import { useViewportState } from "../core/ViewportState";
 import { useSelections } from "../core/SelectionProvider";
 import { api } from "@/lib/axios";
@@ -17,18 +18,19 @@ interface SelectionControlsProps {
  * Manages selection visibility, saving, and clearing operations
  */
 export default function SelectionControls({ document }: SelectionControlsProps) {
-  const { isViewingProcessedDocument, dispatch, showSelections } = useViewportState();
+  const { isViewingProcessedDocument, currentPage } = useViewportState();
   
   const {
     state: selectionState,
+    selectedSelection,
     allSelections,
     hasUnsavedChanges,
-    clearAll,
     saveNewSelections,
+    clearAll,
+    clearPage,
   } = useSelections();
   
   const [isSaving, setIsSaving] = useState(false);
-  const [isClearing, setIsClearing] = useState(false);
 
   // Calculate selection statistics
   const selectionStats = useMemo(() => {
@@ -36,13 +38,39 @@ export default function SelectionControls({ document }: SelectionControlsProps) 
     const existingCount = selectionState.savedSelections.length;
     const totalCount = allSelections.length;
     
+    // Count ALL unsaved changes: new selections + modifications to saved selections
+    // Compare current saved selections with initial state to find modified ones
+    const initialSavedSelections = selectionState.initialState.savedSelections;
+    const modifiedSavedCount = selectionState.savedSelections.filter(currentSelection => {
+      const initialSelection = initialSavedSelections.find(initial => initial.id === currentSelection.id);
+      if (!initialSelection) {
+        // This selection wasn't in the initial state, but it's in saved now
+        // This can happen when new selections are saved, so don't count as "modified"
+        return false;
+      }
+      
+      // Check if any properties have changed from the initial state
+      return (
+        currentSelection.x !== initialSelection.x ||
+        currentSelection.y !== initialSelection.y ||
+        currentSelection.width !== initialSelection.width ||
+        currentSelection.height !== initialSelection.height ||
+        currentSelection.page_number !== initialSelection.page_number
+      );
+    }).length;
+    
+    const totalUnsavedChanges = newCount + modifiedSavedCount;
+    const hasUnsavedChanges = totalUnsavedChanges > 0;
+    
     return {
       newCount,
       existingCount,
       totalCount,
+      modifiedSavedCount,
+      totalUnsavedChanges,
       hasUnsavedChanges
     };
-  }, [selectionState.newSelections, selectionState.savedSelections, allSelections, hasUnsavedChanges]);
+  }, [selectionState.newSelections, selectionState.savedSelections, selectionState.initialState, allSelections]);
 
   // Save all new selections
   const handleSaveAllSelections = useCallback(async () => {
@@ -100,91 +128,101 @@ export default function SelectionControls({ document }: SelectionControlsProps) 
   }, [selectionState.newSelections, document.id, saveNewSelections]);
 
   // Clear all selections
-  const handleClearAllSelections = useCallback(async () => {
-    if (selectionStats.totalCount === 0) {
+  const handleClearAll = useCallback(() => {
+    if (allSelections.length === 0) {
       toast.info('No selections to clear');
       return;
     }
-
-    setIsClearing(true);
     
-    try {
-      clearAll();
-      toast.success('All selections cleared');
-    } catch (error) {
-      console.error('Error clearing selections:', error);
-      toast.error('Failed to clear selections');
-    } finally {
-      setIsClearing(false);
-    }
-  }, [clearAll, selectionStats.totalCount]);
+    clearAll();
+    toast.success(`Cleared all ${allSelections.length} selections`);
+  }, [clearAll, allSelections.length]);
 
-  // Toggle selection visibility
-  const toggleSelectionVisibility = useCallback(() => {
-    dispatch({ type: 'SET_SHOW_SELECTIONS', payload: !showSelections });
-  }, [dispatch, showSelections]);
+  // Clear current page selections
+  const handleClearPage = useCallback(() => {
+    const actualPageNumber = currentPage + 1; // Convert 0-based to 1-based
+    const pageSelections = allSelections.filter(sel => sel.page_number === actualPageNumber);
+    if (pageSelections.length === 0) {
+      toast.info(`No selections on page ${actualPageNumber}`);
+      return;
+    }
+    
+    clearPage(actualPageNumber);
+    toast.success(`Cleared ${pageSelections.length} selections from page ${actualPageNumber}`);
+  }, [clearPage, currentPage, allSelections]);
 
   return (
     <div className="space-y-4">
-      {/* Status Overview */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Badge variant="outline" className="text-xs">
-            Total: {selectionStats.totalCount}
-          </Badge>
-          {selectionStats.newCount > 0 && (
-            <Badge variant="secondary" className="text-xs">
-              New: {selectionStats.newCount}
-            </Badge>
-          )}
+      {/* Selection Statistics */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-muted-foreground">Total Selections</span>
+          <span className="text-xs font-mono">{selectionStats.totalCount}</span>
         </div>
+        
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-muted-foreground">Saved Selections</span>
+          <span className="text-xs font-mono">{selectionStats.existingCount}</span>
+        </div>
+        
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-muted-foreground">New Selections</span>
+          <span className="text-xs font-mono">{selectionStats.newCount}</span>
+        </div>
+        
         {selectionStats.hasUnsavedChanges && (
-          <AlertCircle className="h-4 w-4 text-amber-500" title="Unsaved changes" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1">
+              <span className="text-xs text-muted-foreground">Unsaved Changes</span>
+              <AlertCircle className="h-3 w-3 text-amber-500" />
+            </div>
+            <span className="text-xs font-mono">{selectionStats.totalUnsavedChanges}</span>
+          </div>
         )}
       </div>
-
+      
+      <Separator />
+      
       {/* Action Controls */}
       <div className="space-y-2">
-        <div className="flex gap-2">
+        <Button
+          variant="default"
+          size="sm"
+          onClick={handleSaveAllSelections}
+          disabled={isSaving || selectionStats.newCount === 0 || isViewingProcessedDocument}
+          className="w-full h-9 text-xs"
+        >
+          {isSaving ? (
+            <RotateCcw className="h-3 w-3 animate-spin mr-2" />
+          ) : (
+            <Save className="h-3 w-3 mr-2" />
+          )}
+          Save all changes
+        </Button>
+        
+        <div className="grid grid-cols-2 gap-2">
           <Button
             variant="outline"
             size="sm"
-            onClick={toggleSelectionVisibility}
-            className="h-8 px-3 text-xs"
-            title={showSelections ? "Hide selections" : "Show selections"}
+            onClick={handleClearPage}
+            disabled={isViewingProcessedDocument || allSelections.filter(s => s.page_number === currentPage + 1).length === 0}
+            className="h-9 text-xs"
           >
-            {showSelections ? <EyeOff className="h-3 w-3 mr-1" /> : <Eye className="h-3 w-3 mr-1" />}
-            {showSelections ? "Hide" : "Show"}
+            <FileX className="h-3 w-3 mr-1" />
+            Clear page
           </Button>
+          
           <Button
-            variant="default"
+            variant="destructive"
             size="sm"
-            onClick={handleSaveAllSelections}
-            disabled={isSaving || selectionStats.newCount === 0 || isViewingProcessedDocument}
-            className="h-8 px-3 text-xs flex-1"
+            onClick={handleClearAll}
+            disabled={isViewingProcessedDocument || allSelections.length === 0}
+            className="h-9 text-xs"
           >
-            {isSaving ? (
-              <RotateCcw className="h-3 w-3 animate-spin mr-1" />
-            ) : (
-              <Save className="h-3 w-3 mr-1" />
-            )}
-            Save All
+            <Trash2 className="h-3 w-3 mr-1" />
+            Clear all
           </Button>
         </div>
-        <Button
-          variant="destructive"
-          size="sm"
-          onClick={handleClearAllSelections}
-          disabled={isClearing || selectionStats.totalCount === 0}
-          className="h-8 w-full text-xs"
-        >
-          {isClearing ? (
-            <RotateCcw className="h-3 w-3 animate-spin mr-1" />
-          ) : (
-            <Trash2 className="h-3 w-3 mr-1" />
-          )}
-          Clear All
-        </Button>
       </div>
     </div>
   );

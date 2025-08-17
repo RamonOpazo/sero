@@ -34,6 +34,7 @@ interface SelectionContextValue {
   undo: () => void;
   redo: () => void;
   clearAll: () => void;
+  clearPage: (pageNumber: number) => void;
   
   // Computed values
   allSelections: Selection[];
@@ -153,6 +154,10 @@ export function SelectionProvider({ children, initialSelections }: SelectionProv
     dispatch({ type: 'CLEAR_ALL' });
   }, [dispatch]);
   
+  const clearPage = useCallback((pageNumber: number) => {
+    dispatch({ type: 'CLEAR_PAGE', payload: pageNumber });
+  }, [dispatch]);
+  
   // Computed values
   const allSelections = useMemo(() => manager.getAllSelections(), [manager, state]);
   const selectedSelection = useMemo(() => manager.getSelectedSelection(), [manager, state]);
@@ -178,6 +183,7 @@ export function SelectionProvider({ children, initialSelections }: SelectionProv
     undo,
     redo,
     clearAll,
+    clearPage,
     allSelections,
     selectedSelection,
     canUndo,
@@ -201,6 +207,7 @@ export function SelectionProvider({ children, initialSelections }: SelectionProv
     undo,
     redo,
     clearAll,
+    clearPage,
     allSelections,
     selectedSelection,
     canUndo,

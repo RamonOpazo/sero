@@ -48,7 +48,8 @@ export type SelectionManagerAction =
   | { type: 'LOAD_SAVED_SELECTIONS'; payload: Selection[] }
   | { type: 'UNDO' }
   | { type: 'REDO' }
-  | { type: 'CLEAR_ALL' };
+  | { type: 'CLEAR_ALL' }
+  | { type: 'CLEAR_PAGE'; payload: number };
 
 class SelectionManager {
   private state: SelectionManagerState;
@@ -319,6 +320,38 @@ class SelectionManager {
         this.state.newSelections = [];
         this.state.selectedSelectionId = null;
         this.addToHistory();
+        break;
+
+      case 'CLEAR_PAGE':
+        const pageNumber = action.payload;
+        let anySelectionCleared = false;
+        
+        // Remove selections from saved selections that match the page
+        const originalSavedLength = this.state.savedSelections.length;
+        this.state.savedSelections = this.state.savedSelections.filter(s => s.page_number !== pageNumber);
+        if (this.state.savedSelections.length !== originalSavedLength) {
+          anySelectionCleared = true;
+        }
+        
+        // Remove selections from new selections that match the page
+        const originalNewLength = this.state.newSelections.length;
+        this.state.newSelections = this.state.newSelections.filter(s => s.page_number !== pageNumber);
+        if (this.state.newSelections.length !== originalNewLength) {
+          anySelectionCleared = true;
+        }
+        
+        // Clear selected selection if it was on the cleared page
+        if (this.state.selectedSelectionId) {
+          const selectedSelection = this.getAllSelections().find(s => s.id === this.state.selectedSelectionId);
+          if (selectedSelection && selectedSelection.page_number === pageNumber) {
+            this.state.selectedSelectionId = null;
+          }
+        }
+        
+        // Only add to history if any selections were actually cleared
+        if (anySelectionCleared) {
+          this.addToHistory();
+        }
         break;
 
       default:
