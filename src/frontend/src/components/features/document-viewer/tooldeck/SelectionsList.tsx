@@ -4,9 +4,10 @@ import { Separator } from "@/components/ui/separator";
 import { X, MousePointer2, Globe, Hash } from "lucide-react";
 import { useSelections } from "../core/SelectionProvider";
 import { useViewportState } from "../core/ViewportState";
-import { useMemo, useRef, useEffect, useState } from "react";
+import { useMemo, useRef, useEffect, useState, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import PageSelectionDialog from "../dialogs/PageSelectionDialog";
+import type { Selection } from "../types/viewer";
 
 
 export default function SelectionList() {
@@ -15,7 +16,8 @@ export default function SelectionList() {
     selectedSelection, 
     selectSelection, 
     deleteSelection,
-    setSelectionPage
+    setSelectionPage,
+    setOnSelectionDoubleClick
   } = useSelections();
   
   const { setCurrentPage, currentPage, numPages } = useViewportState();
@@ -130,6 +132,19 @@ export default function SelectionList() {
   const handleDialogClose = () => {
     setDialogState({ isOpen: false, selectionId: null });
   };
+
+  // Handle double-click from SelectionsLayer
+  const handleSelectionDoubleClick = useCallback((selection: Selection) => {
+    setDialogState({ isOpen: true, selectionId: selection.id });
+  }, []);
+
+  // Register double-click handler on mount
+  useEffect(() => {
+    setOnSelectionDoubleClick(handleSelectionDoubleClick);
+    return () => {
+      setOnSelectionDoubleClick(undefined); // Cleanup on unmount
+    };
+  }, [setOnSelectionDoubleClick, handleSelectionDoubleClick]);
 
   const formatValue = (value: number): string => {
     return value.toFixed(2);

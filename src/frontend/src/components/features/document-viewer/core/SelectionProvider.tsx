@@ -39,6 +39,10 @@ interface SelectionContextValue {
   clearPage: (pageNumber: number) => void;
   commitChanges: () => void;
   
+  // Event callbacks
+  onSelectionDoubleClick?: (selection: Selection) => void;
+  setOnSelectionDoubleClick: (callback: ((selection: Selection) => void) | undefined) => void;
+  
   // Computed values
   allSelections: Selection[];
   selectedSelection: Selection | null;
@@ -74,10 +78,18 @@ export function SelectionProvider({ children, initialSelections }: SelectionProv
   // Subscribe to state changes
   const [state, setState] = useState<SelectionManagerState>(manager.getState());
   
+  // Double-click callback state
+  const [onSelectionDoubleClick, setOnSelectionDoubleClickState] = useState<((selection: Selection) => void) | undefined>();
+  
   useEffect(() => {
     const unsubscribe = manager.subscribe(setState);
     return unsubscribe;
   }, [manager]);
+  
+  // Callback setter
+  const setOnSelectionDoubleClick = useCallback((callback: ((selection: Selection) => void) | undefined) => {
+    setOnSelectionDoubleClickState(() => callback);
+  }, []);
   
   // Memoized dispatch function
   const dispatch = useCallback((action: SelectionManagerAction) => {
@@ -201,6 +213,8 @@ export function SelectionProvider({ children, initialSelections }: SelectionProv
     clearAll,
     clearPage,
     commitChanges,
+    onSelectionDoubleClick,
+    setOnSelectionDoubleClick,
     allSelections,
     selectedSelection,
     canUndo,
@@ -229,6 +243,8 @@ export function SelectionProvider({ children, initialSelections }: SelectionProv
     clearAll,
     clearPage,
     commitChanges,
+    onSelectionDoubleClick,
+    setOnSelectionDoubleClick,
     allSelections,
     selectedSelection,
     canUndo,

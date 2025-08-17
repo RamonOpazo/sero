@@ -37,6 +37,7 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     startDraw,
     updateDraw,
     finishDraw,
+    onSelectionDoubleClick,
   } = useSelections();
 
   
@@ -51,10 +52,31 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
 
   const isDraggingRef = useRef(false);
 
-  // Handle selection click
+  // Track double-click timing
+  const lastClickRef = useRef<{ time: number; selectionId: string }>({ time: 0, selectionId: '' });
+
+  // Handle selection click with double-click detection
   const handleSelectionClick = useCallback((selection: Selection) => {
-    selectSelection(selection.id);
-  }, [selectSelection]);
+    const now = Date.now();
+    const DOUBLE_CLICK_DELAY = 300; // ms
+    
+    // Check if this is a double-click on the same selection
+    if (
+      selection.id === lastClickRef.current.selectionId &&
+      now - lastClickRef.current.time < DOUBLE_CLICK_DELAY
+    ) {
+      // Double-click detected - trigger callback if available
+      if (onSelectionDoubleClick) {
+        onSelectionDoubleClick(selection);
+      }
+    } else {
+      // Single click - select the selection
+      selectSelection(selection.id);
+    }
+    
+    // Update last click tracking
+    lastClickRef.current = { time: now, selectionId: selection.id };
+  }, [selectSelection, onSelectionDoubleClick]);
 
   // Handle starting new selection creation
   const handleCreateStart = useCallback((e: React.MouseEvent) => {
