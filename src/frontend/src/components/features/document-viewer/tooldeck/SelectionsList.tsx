@@ -110,16 +110,8 @@ export default function SelectionList() {
   const handleToggleGlobal = (selectionId: string, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent selection when clicking the badge
     
-    const selection = selectionsWithTypeInfo.find(sel => sel.id === selectionId);
-    if (!selection) return;
-    
-    if (selection.page_number === null) {
-      // Currently global -> make page-specific: open dialog to choose page
-      setDialogState({ isOpen: true, selectionId });
-    } else {
-      // Currently page-specific -> make global: directly toggle
-      setSelectionPage(selectionId, null);
-    }
+    // Always open dialog for better UX - prevents accidental changes
+    setDialogState({ isOpen: true, selectionId });
   };
   
   const handleDialogConfirm = (pageNumber: number | null) => {
@@ -208,7 +200,7 @@ export default function SelectionList() {
                 "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
               )}
               onClick={(e) => handleToggleGlobal(sel.id, e)}
-              title={isGlobal ? `Make page-specific (current: Page ${currentPage + 1})` : "Make global"}
+              title="Click to change page assignment"
             >
               {isGlobal ? <Globe className="h-3 w-3" /> : <Hash className="h-3 w-3" />}
               {pageDisplay}
