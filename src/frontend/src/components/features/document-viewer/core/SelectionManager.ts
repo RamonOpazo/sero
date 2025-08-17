@@ -54,6 +54,7 @@ export type SelectionManagerAction =
   | { type: 'SET_SELECTION_PAGE'; payload: { id: string; pageNumber: number | null } }
   | { type: 'LOAD_SAVED_SELECTIONS'; payload: Selection[] }
   | { type: 'COMMIT_CHANGES' } // Resets initial state to current state after successful save
+  | { type: 'DISCARD_ALL_CHANGES' } // Resets current state to initial state (discards all changes)
   | { type: 'UNDO' }
   | { type: 'REDO' }
   | { type: 'CLEAR_ALL' }
@@ -356,6 +357,17 @@ class SelectionManager {
         
         // Don't reset history - users should still be able to undo/redo
         // but now the "clean" state is the post-save state
+        break;
+
+      case 'DISCARD_ALL_CHANGES':
+        // Reset current state to initial state (discard all changes)
+        this.state.savedSelections = [...this.state.initialState.savedSelections];
+        this.state.newSelections = [...this.state.initialState.newSelections];
+        this.state.selectedSelectionId = null;
+        
+        // Reset history - we're back at initial state
+        this.state.changeHistory = [];
+        this.state.currentHistoryIndex = -1;
         break;
 
       case 'UNDO':

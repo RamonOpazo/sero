@@ -38,6 +38,7 @@ interface SelectionContextValue {
   clearAll: () => void;
   clearPage: (pageNumber: number) => void;
   commitChanges: () => void;
+  discardAllChanges: () => void;
   
   // Event callbacks
   onSelectionDoubleClick?: (selection: Selection) => void;
@@ -183,6 +184,10 @@ export function SelectionProvider({ children, initialSelections }: SelectionProv
     dispatch({ type: 'COMMIT_CHANGES' });
   }, [dispatch]);
   
+  const discardAllChanges = useCallback(() => {
+    dispatch({ type: 'DISCARD_ALL_CHANGES' });
+  }, [dispatch]);
+  
   // Computed values
   const allSelections = useMemo(() => manager.getAllSelections(), [manager, state]);
   const selectedSelection = useMemo(() => manager.getSelectedSelection(), [manager, state]);
@@ -213,6 +218,7 @@ export function SelectionProvider({ children, initialSelections }: SelectionProv
     clearAll,
     clearPage,
     commitChanges,
+    discardAllChanges,
     onSelectionDoubleClick,
     setOnSelectionDoubleClick,
     allSelections,
@@ -243,6 +249,7 @@ export function SelectionProvider({ children, initialSelections }: SelectionProv
     clearAll,
     clearPage,
     commitChanges,
+    discardAllChanges,
     onSelectionDoubleClick,
     setOnSelectionDoubleClick,
     allSelections,

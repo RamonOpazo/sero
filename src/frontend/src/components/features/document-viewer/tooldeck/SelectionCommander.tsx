@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Save, RotateCcw, AlertCircle, Trash2, FileX } from "lucide-react";
+import { Save, RotateCcw, AlertCircle, Trash2, FileX, Undo2 } from "lucide-react";
 import { useViewportState } from "../core/ViewportState";
 import { useSelections } from "../core/SelectionProvider";
 import { api } from "@/lib/axios";
@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { useState, useCallback, useMemo } from "react";
 import type { MinimalDocumentType } from "@/types";
 import { useDocumentSelections } from "@/hooks/useDocumentData";
+import SaveConfirmationDialog from "../dialogs/SaveConfirmationDialog";
 
 interface SelectionControlsProps {
   document: MinimalDocumentType;
@@ -29,12 +30,14 @@ export default function SelectionControls({ document }: SelectionControlsProps) 
     loadSavedSelections,
     clearAll,
     clearPage,
+    discardAllChanges,
   } = useSelections();
   
   // Get fresh selections data for reload after save
   const { refetch: refetchSelections } = useDocumentSelections(document.id);
   
   const [isSaving, setIsSaving] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   // Calculate selection statistics using the clean PendingChanges API
   const selectionStats = useMemo(() => {
@@ -58,7 +61,7 @@ export default function SelectionControls({ document }: SelectionControlsProps) 
   }, [pendingChanges, pendingChangesCount, selectionState.savedSelections.length, allSelections.length]);
 
   // Save all pending changes (creates, updates, deletes)
-  const handleSaveAllSelections = useCallback(async () => {
+  const performSaveAllSelections = useCallback(async () => {
     if (pendingChangesCount === 0) {
       toast.info('No pending changes to save');
       return;
@@ -184,6 +187,26 @@ export default function SelectionControls({ document }: SelectionControlsProps) 
     }
   }, [pendingChanges, pendingChangesCount, document.id, commitChanges, refetchSelections, loadSavedSelections]);
 
+  // Handler to show confirmation dialog
+  const handleSaveAllSelections = useCallback(() => {
+    if (pendingChangesCount === 0) {
+      toast.info('No pending changes to save');
+      return;
+    }
+    setShowConfirmDialog(true);
+  }, [pendingChangesCount]);
+
+  // Handler to close confirmation dialog
+  const handleCloseConfirmDialog = useCallback(() => {
+    setShowConfirmDialog(false);
+  }, []);
+
+  // Handler for confirmed save action
+  const handleConfirmedSave = useCallback(async () => {
+    await performSaveAllSelections();
+    setShowConfirmDialog(false); // Close dialog after save completes
+  }, [performSaveAllSelections]);
+
   // Clear all selections
   const handleClearAll = useCallback(() => {
     if (allSelections.length === 0) {
@@ -194,6 +217,17 @@ export default function SelectionControls({ document }: SelectionControlsProps) 
     clearAll();
     toast.success(`Cleared all ${allSelections.length} selections`);
   }, [clearAll, allSelections.length]);
+
+  // Discard all unsaved changes
+  const handleDiscardAllChanges = useCallback(() => {
+    if (selectionStats.totalUnsavedChanges === 0) {
+      toast.info('No unsaved changes to discard');
+      return;
+    }
+    
+    discardAllChanges();
+    toast.success(`Discarded ${selectionStats.totalUnsavedChanges} unsaved change${selectionStats.totalUnsavedChanges === 1 ? '' : 's'}`);
+  }, [discardAllChanges, selectionStats.totalUnsavedChanges]);
 
   // Clear current page selections
   const handleClearPage = useCallback(() => {
@@ -246,40 +280,58 @@ export default function SelectionControls({ document }: SelectionControlsProps) 
           size="sm"
           onClick={handleSaveAllSelections}
           disabled={isSaving || selectionStats.totalUnsavedChanges === 0 || isViewingProcessedDocument}
-          className="w-full h-9 text-xs"
+          className="w-full justify-start h-9 text-xs"
         >
           {isSaving ? (
-            <RotateCcw className="h-3 w-3 animate-spin mr-2" />
+            <RotateCcw className="mr-2 h-3 w-3 animate-spin" />
           ) : (
-            <Save className="h-3 w-3 mr-2" />
+            <Save className="mr-2 h-3 w-3" />
           )}
           Save all changes
         </Button>
         
-        <div className="grid grid-cols-2 gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleClearPage}
-            disabled={isViewingProcessedDocument || allSelections.filter(s => s.page_number === currentPage).length === 0}
-            className="h-9 text-xs"
-          >
-            <FileX className="h-3 w-3 mr-1" />
-            Clear page
-          </Button>
-          
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={handleClearAll}
-            disabled={isViewingProcessedDocument || allSelections.length === 0}
-            className="h-9 text-xs"
-          >
-            <Trash2 className="h-3 w-3 mr-1" />
-            Clear all
-          </Button>
-        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleDiscardAllChanges}
+          disabled={isViewingProcessedDocument || selectionStats.totalUnsavedChanges === 0}
+          className="w-full justify-start h-9 text-xs"
+        >
+          <Undo2 className="mr-2 h-3 w-3" />
+          Discard all changes
+        </Button>
+        
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleClearPage}
+          disabled={isViewingProcessedDocument || allSelections.filter(s => s.page_number === currentPage).length === 0}
+          className="w-full justify-start h-9 text-xs"
+        >
+          <FileX className="mr-2 h-3 w-3" />
+          Clear page
+        </Button>
+        
+        <Button
+          variant="destructive"
+          size="sm"
+          onClick={handleClearAll}
+          disabled={isViewingProcessedDocument || allSelections.length === 0}
+          className="w-full justify-start h-9 text-xs"
+        >
+          <Trash2 className="mr-2 h-3 w-3" />
+          Clear all
+        </Button>
       </div>
+      
+      {/* Save Confirmation Dialog */}
+      <SaveConfirmationDialog
+        isOpen={showConfirmDialog}
+        onClose={handleCloseConfirmDialog}
+        onConfirm={handleConfirmedSave}
+        changesCount={selectionStats.totalUnsavedChanges}
+        isSaving={isSaving}
+      />
     </div>
   );
 }
