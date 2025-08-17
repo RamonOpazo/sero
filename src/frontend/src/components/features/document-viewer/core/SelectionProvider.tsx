@@ -188,7 +188,7 @@ export function SelectionProvider({ children, initialSelections }: SelectionProv
     dispatch({ type: 'DISCARD_ALL_CHANGES' });
   }, [dispatch]);
   
-  // Computed values
+  // Computed values - these methods use the manager's internal state which we get updates for via subscription
   const allSelections = useMemo(() => manager.getAllSelections(), [manager, state]);
   const selectedSelection = useMemo(() => manager.getSelectedSelection(), [manager, state]);
   const canUndo = useMemo(() => manager.canUndo(), [manager, state]);

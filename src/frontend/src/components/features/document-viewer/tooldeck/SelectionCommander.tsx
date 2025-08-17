@@ -9,6 +9,7 @@ import { useState, useCallback, useMemo } from "react";
 import type { MinimalDocumentType } from "@/types";
 import { useDocumentSelections } from "@/hooks/useDocumentData";
 import SaveConfirmationDialog from "../dialogs/SaveConfirmationDialog";
+import SelectionsList from "./SelectionsList";
 
 interface SelectionControlsProps {
   document: MinimalDocumentType;
@@ -18,7 +19,7 @@ interface SelectionControlsProps {
  * Selection controls component
  * Manages selection visibility, saving, and clearing operations
  */
-export default function SelectionControls({ document }: SelectionControlsProps) {
+export default function SelectionManagement({ document }: SelectionControlsProps) {
   const { isViewingProcessedDocument, currentPage } = useViewportState();
   
   const {
@@ -242,9 +243,9 @@ export default function SelectionControls({ document }: SelectionControlsProps) 
   }, [clearPage, currentPage, allSelections]);
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-4">
       {/* Selection Statistics */}
-      <div className="space-y-2">
+      <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
           <span className="text-xs text-muted-foreground">Total Selections</span>
           <span className="text-xs font-mono">{selectionStats.totalCount}</span>
@@ -274,7 +275,7 @@ export default function SelectionControls({ document }: SelectionControlsProps) 
       <Separator />
       
       {/* Action Controls */}
-      <div className="space-y-2">
+      <div className="flex flex-col gap-2">
         <Button
           variant="default"
           size="sm"
@@ -322,6 +323,12 @@ export default function SelectionControls({ document }: SelectionControlsProps) 
           <Trash2 className="mr-2 h-3 w-3" />
           Clear all
         </Button>
+      </div>
+
+      <Separator />
+
+      <div className="flex flex-col gap-2">
+        <SelectionsList />
       </div>
       
       {/* Save Confirmation Dialog */}

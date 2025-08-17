@@ -17,9 +17,9 @@ export default function DocumentControls({ document }: DocumentControlsProps) {
   const { isViewingProcessedDocument, dispatch } = useViewportState();
 
   const toggleDocumentView = () => {
-    dispatch({ 
-      type: 'SET_VIEWING_PROCESSED', 
-      payload: !isViewingProcessedDocument 
+    dispatch({
+      type: 'SET_VIEWING_PROCESSED',
+      payload: !isViewingProcessedDocument
     });
   };
 
@@ -59,7 +59,7 @@ export default function DocumentControls({ document }: DocumentControlsProps) {
     const date = new Date(dateString);
     const now = new Date();
     const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
-    
+
     if (diffInHours < 1) return 'Less than an hour ago';
     if (diffInHours < 24) return `${diffInHours} hour${diffInHours !== 1 ? 's' : ''} ago`;
     if (diffInHours < 168) return `${Math.floor(diffInHours / 24)} day${Math.floor(diffInHours / 24) !== 1 ? 's' : ''} ago`;
@@ -70,10 +70,9 @@ export default function DocumentControls({ document }: DocumentControlsProps) {
   const hasRedactedFile = document.redacted_file !== null;
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-4">
       {/* Document Header */}
-      <div className="space-y-3">
-        <div className="space-y-1">
+      <div className="flex flex-col gap-2">
           <div className="text-sm font-medium truncate" title={document.name}>
             {document.name}
           </div>
@@ -82,8 +81,7 @@ export default function DocumentControls({ document }: DocumentControlsProps) {
               {document.description}
             </div>
           )}
-        </div>
-        
+
         {document.tags.length > 0 && (
           <div className="flex flex-wrap gap-1">
             {document.tags.slice(0, 4).map((tag, index) => (
@@ -98,58 +96,6 @@ export default function DocumentControls({ document }: DocumentControlsProps) {
             )}
           </div>
         )}
-      </div>
-      
-      <Separator />
-      
-      {/* Document Metadata */}
-      <div className="space-y-2">
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Calendar className="h-3 w-3" />
-          <span>Created {formatDate(document.created_at)}</span>
-        </div>
-        
-        {document.updated_at && (
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Clock className="h-3 w-3" />
-            <span>Updated {formatRelativeTime(document.updated_at)}</span>
-          </div>
-        )}
-        
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-muted-foreground">Current View</span>
-          <Badge 
-            variant={isViewingProcessedDocument ? "destructive" : "secondary"}
-            className="text-xs"
-          >
-            {isViewingProcessedDocument ? "Redacted" : "Original"}
-          </Badge>
-        </div>
-        
-        {currentFile && (
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>File Size</span>
-            <span className="font-mono">{formatFileSize(currentFile.file_size)}</span>
-          </div>
-        )}
-        
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-muted-foreground">Original File</span>
-          <Badge variant={document.original_file ? "secondary" : "outline"} className="text-xs">
-            {document.original_file ? "Available" : "Missing"}
-          </Badge>
-        </div>
-        
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-muted-foreground">Redacted File</span>
-          <Badge variant={hasRedactedFile ? "destructive" : "outline"} className="text-xs">
-            {hasRedactedFile ? "Available" : "Pending"}
-          </Badge>
-        </div>
-      </div>
-
-      {/* View Controls */}
-      <div className="space-y-2">
         <Button
           variant="outline"
           size="sm"
@@ -157,8 +103,8 @@ export default function DocumentControls({ document }: DocumentControlsProps) {
           disabled={!hasRedactedFile && !isViewingProcessedDocument}
           className="w-full justify-start h-9 text-xs"
         >
-          {isViewingProcessedDocument ? 
-            <FileText className="mr-2 h-3 w-3" /> : 
+          {isViewingProcessedDocument ?
+            <FileText className="mr-2 h-3 w-3" /> :
             <Eye className="mr-2 h-3 w-3" />
           }
           View {isViewingProcessedDocument ? 'Original' : 'Redacted'}
@@ -168,21 +114,71 @@ export default function DocumentControls({ document }: DocumentControlsProps) {
         </Button>
       </div>
 
-      {/* Processing Actions */}
+      <Separator />
+
+      {/* Document Metadata */}
       <div className="space-y-2">
-        <Button 
-          variant="default" 
-          size="sm" 
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Calendar className="h-3 w-3" />
+          <span>Created {formatDate(document.created_at)}</span>
+        </div>
+
+        {document.updated_at && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Clock className="h-3 w-3" />
+            <span>Updated {formatRelativeTime(document.updated_at)}</span>
+          </div>
+        )}
+
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-muted-foreground">Current View</span>
+          <Badge
+            variant={isViewingProcessedDocument ? "destructive" : "secondary"}
+            className="text-xs"
+          >
+            {isViewingProcessedDocument ? "Redacted" : "Original"}
+          </Badge>
+        </div>
+
+        {currentFile && (
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>File Size</span>
+            <span className="font-mono">{formatFileSize(currentFile.file_size)}</span>
+          </div>
+        )}
+
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-muted-foreground">Original File</span>
+          <Badge variant={document.original_file ? "secondary" : "outline"} className="text-xs">
+            {document.original_file ? "Available" : "Missing"}
+          </Badge>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-muted-foreground">Redacted File</span>
+          <Badge variant={hasRedactedFile ? "destructive" : "outline"} className="text-xs">
+            {hasRedactedFile ? "Available" : "Pending"}
+          </Badge>
+        </div>
+      </div>
+
+      <Separator />
+
+      {/* View Controls */}
+      <div className="flex flex-col gap-2">
+        <Button
+          variant="default"
+          size="sm"
           disabled={isViewingProcessedDocument}
           className="w-full justify-start h-9 text-xs"
         >
           <Play className="mr-2 h-3 w-3" />
           Process Document
         </Button>
-        
-        <Button 
-          variant="outline" 
-          size="sm" 
+
+        <Button
+          variant="outline"
+          size="sm"
           onClick={handleDownloadFile}
           disabled={!currentFile}
           className="w-full justify-start h-9 text-xs"
@@ -190,12 +186,9 @@ export default function DocumentControls({ document }: DocumentControlsProps) {
           <Download className="mr-2 h-3 w-3" />
           Download {isViewingProcessedDocument ? 'Redacted' : 'Original'}
         </Button>
-      </div>
-      
-      {/* Danger Zone */}
-      <div className="pt-2 border-t border-border/50">
-        <Button 
-          variant="destructive" 
+
+        <Button
+          variant="destructive"
           size="sm"
           className="w-full justify-start h-9 text-xs"
         >

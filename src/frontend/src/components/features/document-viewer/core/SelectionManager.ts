@@ -174,7 +174,10 @@ class SelectionManager {
 
       case 'SELECT_SELECTION':
         this.state.selectedSelectionId = action.payload;
-        break;
+        // Note: We don't add to history for selections as they don't change the data
+        // But we need to notify so components re-render with the new selection state
+        this.notify();
+        return; // Early return since we already called notify
 
       case 'UPDATE_SELECTION':
         const { id: updateId, selection: updatedSelection } = action.payload;

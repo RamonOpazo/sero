@@ -1,6 +1,5 @@
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import { X, MousePointer2, Globe, Hash } from "lucide-react";
 import { useSelections } from "../core/SelectionProvider";
 import { useViewportState } from "../core/ViewportState";
@@ -97,6 +96,11 @@ export default function SelectionList() {
     // Toggle selection - if already selected, deselect; otherwise select
     if (selectedSelection?.id === selectionId) {
       selectSelection(null);
+      // Remove focus from the element when deselecting to prevent focus styles from showing
+      const element = itemRefs.current[selectionId];
+      if (element) {
+        element.blur();
+      }
     } else {
       selectSelection(selectionId);
       
@@ -150,6 +154,7 @@ export default function SelectionList() {
     const isNew = sel.type === 'new';
     const isModified = sel.isModified;
     
+    
     // Determine status indicator
     const getStatusIndicator = () => {
       if (isNew) {
@@ -182,10 +187,19 @@ export default function SelectionList() {
           itemRefs.current[sel.id] = el;
         }}
         className={cn(
-          "group pr-4 py-3 text-xs transition-all duration-200 cursor-pointer border-l-2 border-transparent focus:outline-none focus:ring-0",
-          isSelected 
-            ? "border-l-primary bg-primary/3 shadow-sm pl-4" 
-            : "pl-0 hover:border-l-border hover:pl-4 focus:border-l-border focus:pl-4"
+          // Base classes always applied
+          "group pr-4 py-3 text-xs cursor-pointer focus:outline-none focus:ring-0",
+          // Selection-specific classes
+          isSelected ? [
+            // Selected state (no hover effects)
+            "border-l-2 border-l-primary bg-primary/3 shadow-sm pl-4"
+          ] : [
+            // Unselected state (with hover and focus effects)
+            "border-l-2 border-transparent pl-0 shadow-none",
+            "transition-all duration-200",
+            "hover:border-l-muted-foreground/30 hover:pl-4 hover:bg-muted/10",
+            "focus:border-l-primary/50 focus:pl-4 focus:bg-muted/20 focus:shadow-sm"
+          ]
         )}
         onClick={() => handleSelectSelection(sel.id)}
         tabIndex={0}
@@ -249,11 +263,8 @@ export default function SelectionList() {
       <ScrollArea className="h-80 hide-scrollbar">
         <div>
           {/* Show all selections in order: new first, then saved */}
-          {[...groupedSelections.new, ...groupedSelections.saved].map((sel, index, array) => (
-            <div key={sel.displayId}>
-              {renderSelectionItem(sel)}
-              {index < array.length - 1 && <Separator />}
-            </div>
+          {[...groupedSelections.new, ...groupedSelections.saved].map((sel) => (
+            renderSelectionItem(sel)
           ))}
         </div>
       </ScrollArea>
