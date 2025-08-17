@@ -30,6 +30,7 @@ interface SelectionContextValue {
   finishBatchOperation: () => void;
   deleteSelection: (id: string) => void;
   deleteSelectedSelection: () => boolean;
+  toggleSelectionGlobal: (id: string, currentPageNumber?: number | null) => void;
   loadSavedSelections: (selections: Selection[]) => void;
   undo: () => void;
   redo: () => void;
@@ -137,6 +138,10 @@ export function SelectionProvider({ children, initialSelections }: SelectionProv
     return false;
   }, [dispatch, state.selectedSelectionId]);
   
+  const toggleSelectionGlobal = useCallback((id: string, currentPageNumber?: number | null) => {
+    dispatch({ type: 'TOGGLE_SELECTION_GLOBAL', payload: { id, currentPageNumber } });
+  }, [dispatch]);
+  
   const loadSavedSelections = useCallback((selections: Selection[]) => {
     dispatch({ type: 'LOAD_SAVED_SELECTIONS', payload: selections });
   }, [dispatch]);
@@ -183,6 +188,7 @@ export function SelectionProvider({ children, initialSelections }: SelectionProv
     finishBatchOperation,
     deleteSelection,
     deleteSelectedSelection,
+    toggleSelectionGlobal,
     loadSavedSelections,
     undo,
     redo,
@@ -209,6 +215,7 @@ export function SelectionProvider({ children, initialSelections }: SelectionProv
     finishBatchOperation,
     deleteSelection,
     deleteSelectedSelection,
+    toggleSelectionGlobal,
     loadSavedSelections,
     undo,
     redo,

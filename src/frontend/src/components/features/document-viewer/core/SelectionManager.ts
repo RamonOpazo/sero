@@ -50,6 +50,7 @@ export type SelectionManagerAction =
   | { type: 'UPDATE_SELECTION_BATCH'; payload: { id: string; selection: Selection } }
   | { type: 'FINISH_BATCH_OPERATION' }
   | { type: 'DELETE_SELECTION'; payload: string }
+  | { type: 'TOGGLE_SELECTION_GLOBAL'; payload: { id: string; currentPageNumber?: number | null } }
   | { type: 'LOAD_SAVED_SELECTIONS'; payload: Selection[] }
   | { type: 'COMMIT_CHANGES' } // Resets initial state to current state after successful save
   | { type: 'UNDO' }
@@ -240,6 +241,42 @@ class SelectionManager {
         
         // Only add to history once if any deletion was made
         if (selectionDeleted) {
+          this.addToHistory();
+        }
+        break;
+
+      case 'TOGGLE_SELECTION_GLOBAL':
+        const { id: toggleId, currentPageNumber } = action.payload;
+        let toggleUpdated = false;
+        
+        // Update in saved selections
+        const toggleSavedIndex = this.state.savedSelections.findIndex(s => s.id === toggleId);
+        if (toggleSavedIndex >= 0) {
+          const selection = this.state.savedSelections[toggleSavedIndex];
+          // Toggle: if currently global (null), set to current page; if on a page, make global
+          const newPageNumber = selection.page_number === null ? currentPageNumber : null;
+          this.state.savedSelections[toggleSavedIndex] = {
+            ...selection,
+            page_number: newPageNumber
+          };
+          toggleUpdated = true;
+        }
+        
+        // Update in new selections
+        const toggleNewIndex = this.state.newSelections.findIndex(s => s.id === toggleId);
+        if (toggleNewIndex >= 0) {
+          const selection = this.state.newSelections[toggleNewIndex];
+          // Toggle: if currently global (null), set to current page; if on a page, make global
+          const newPageNumber = selection.page_number === null ? currentPageNumber : null;
+          this.state.newSelections[toggleNewIndex] = {
+            ...selection,
+            page_number: newPageNumber
+          };
+          toggleUpdated = true;
+        }
+        
+        // Only add to history if any update was made
+        if (toggleUpdated) {
           this.addToHistory();
         }
         break;

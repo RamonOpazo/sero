@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { X, MousePointer2 } from "lucide-react";
+import { X, MousePointer2, Globe, Hash } from "lucide-react";
 import { useSelections } from "../core/SelectionProvider";
 import { useViewportState } from "../core/ViewportState";
 import { useMemo, useRef, useEffect } from "react";
@@ -13,7 +13,8 @@ export default function SelectionList() {
     state: selectionState, 
     selectedSelection, 
     selectSelection, 
-    deleteSelection
+    deleteSelection,
+    toggleSelectionGlobal
   } = useSelections();
   
   const { setCurrentPage, currentPage } = useViewportState();
@@ -97,6 +98,11 @@ export default function SelectionList() {
     }
   };
 
+  const handleToggleGlobal = (selectionId: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent selection when clicking the badge
+    toggleSelectionGlobal(selectionId, currentPage);
+  };
+
   const formatValue = (value: number): string => {
     return value.toFixed(2);
   };
@@ -152,13 +158,18 @@ export default function SelectionList() {
         {/* Top row: Page badge, status, and delete button */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className={cn(
-              "font-medium px-2 py-0.5 rounded text-xs",
-              isGlobal ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" :
-              "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
-            )}>
+            <button
+              className={cn(
+                "flex items-center gap-1 font-medium px-2 py-0.5 rounded text-xs transition-colors hover:opacity-80 cursor-pointer",
+                isGlobal ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" :
+                "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
+              )}
+              onClick={(e) => handleToggleGlobal(sel.id, e)}
+              title={isGlobal ? `Make page-specific (current: Page ${currentPage + 1})` : "Make global"}
+            >
+              {isGlobal ? <Globe className="h-3 w-3" /> : <Hash className="h-3 w-3" />}
               {pageDisplay}
-            </span>
+            </button>
             
             <div className="flex items-center gap-1">
               <div className={cn("w-1.5 h-1.5 rounded-full", statusIndicator.color)} title={statusIndicator.title} />
