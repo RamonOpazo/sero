@@ -16,7 +16,7 @@ export default function SelectionList() {
     deleteSelection
   } = useSelections();
   
-  const { setCurrentPage } = useViewportState();
+  const { setCurrentPage, currentPage } = useViewportState();
 
   // Use all selections from the manager with type information and modification status
   const selectionsWithTypeInfo = useMemo(() => {
@@ -73,8 +73,8 @@ export default function SelectionList() {
     } else {
       selectSelection(selectionId);
       
-      // Navigate to the selection's page if it's not global (null)
-      if (selection && selection.page_number !== null && selection.page_number !== undefined) {
+      // Navigate to the selection's page if it's not global (null) and we're not already on that page
+      if (selection && selection.page_number !== null && selection.page_number !== undefined && selection.page_number !== currentPage) {
         setCurrentPage(selection.page_number);
       }
     }
