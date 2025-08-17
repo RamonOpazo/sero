@@ -249,6 +249,9 @@ class SelectionManager {
         this.state.savedSelections = action.payload;
         this.state.selectedSelectionId = null;
         
+        // Clear new selections since they should now be part of saved selections
+        this.state.newSelections = [];
+        
         // Update the initial state to reflect loaded selections
         this.state.initialState = {
           savedSelections: [...action.payload],

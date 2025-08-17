@@ -3,7 +3,7 @@
  * This eliminates the need to include prompts/selections in DocumentType
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { api } from '@/lib/axios';
 import type { PromptType, SelectionType } from '@/types';
 
@@ -53,38 +53,42 @@ export function useDocumentSelections(documentId: string) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const fetchSelections = useCallback(async () => {
     if (!documentId) {
       setSelections([]);
       setLoading(false);
-      return;
+      return [];
     }
 
-    const fetchSelections = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        const result = await api.safe.get(`/documents/id/${documentId}/selections`);
-        
-        if (result.ok) {
-          setSelections(result.value as SelectionType[]);
-        } else {
-          console.error('Failed to fetch selections:', result.error);
-          setError('Failed to load selections');
-          setSelections([]);
-        }
-      } catch (err) {
-        console.error('Error fetching selections:', err);
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const result = await api.safe.get(`/documents/id/${documentId}/selections`);
+      
+      if (result.ok) {
+        const selectionsData = result.value as SelectionType[];
+        setSelections(selectionsData);
+        return selectionsData;
+      } else {
+        console.error('Failed to fetch selections:', result.error);
         setError('Failed to load selections');
         setSelections([]);
-      } finally {
-        setLoading(false);
+        return [];
       }
-    };
-
-    fetchSelections();
+    } catch (err) {
+      console.error('Error fetching selections:', err);
+      setError('Failed to load selections');
+      setSelections([]);
+      return [];
+    } finally {
+      setLoading(false);
+    }
   }, [documentId]);
 
-  return { selections, loading, error };
+  useEffect(() => {
+    fetchSelections();
+  }, [fetchSelections]);
+
+  return { selections, loading, error, refetch: fetchSelections };
 }

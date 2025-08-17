@@ -7,6 +7,7 @@ import { api } from "@/lib/axios";
 import { toast } from "sonner";
 import { useState, useCallback, useMemo } from "react";
 import type { MinimalDocumentType } from "@/types";
+import { useDocumentSelections } from "@/hooks/useDocumentData";
 
 interface SelectionControlsProps {
   document: MinimalDocumentType;
@@ -25,9 +26,13 @@ export default function SelectionControls({ document }: SelectionControlsProps) 
     pendingChanges,
     pendingChangesCount,
     commitChanges,
+    loadSavedSelections,
     clearAll,
     clearPage,
   } = useSelections();
+  
+  // Get fresh selections data for reload after save
+  const { refetch: refetchSelections } = useDocumentSelections(document.id);
   
   const [isSaving, setIsSaving] = useState(false);
 
@@ -108,7 +113,7 @@ export default function SelectionControls({ document }: SelectionControlsProps) 
           };
 
           const result = await api.safe.put(
-            `/documents/id/${document.id}/selections/${sel.id}`,
+            `/selections/id/${sel.id}`,
             selectionData
           );
 
@@ -128,7 +133,7 @@ export default function SelectionControls({ document }: SelectionControlsProps) 
       for (const sel of pendingChanges.deletes) {
         try {
           const result = await api.safe.delete(
-            `/documents/id/${document.id}/selections/${sel.id}`
+            `/selections/id/${sel.id}`
           );
 
           if (result.ok) {
@@ -154,8 +159,17 @@ export default function SelectionControls({ document }: SelectionControlsProps) 
         
         toast.success(`Successfully saved changes: ${messages.join(', ')}`);
         
-        // Commit changes to update the initial state and clear pending changes
-        commitChanges();
+        // Reload selections from backend to get updated IDs and state
+        try {
+          const freshSelections = await refetchSelections();
+          if (freshSelections) {
+            loadSavedSelections(freshSelections);
+          }
+        } catch (reloadError) {
+          console.warn('Failed to reload selections after save:', reloadError);
+          // Still commit changes even if reload fails
+          commitChanges();
+        }
       }
 
       if (results.errors > 0) {
@@ -168,7 +182,7 @@ export default function SelectionControls({ document }: SelectionControlsProps) 
     } finally {
       setIsSaving(false);
     }
-  }, [pendingChanges, pendingChangesCount, document.id, commitChanges]);
+  }, [pendingChanges, pendingChangesCount, document.id, commitChanges, refetchSelections, loadSavedSelections]);
 
   // Clear all selections
   const handleClearAll = useCallback(() => {
