@@ -17,7 +17,7 @@ interface PasswordDialogProps {
   isLoading?: boolean
 }
 
-export function PasswordDialog({ isOpen, onClose, onConfirm, error, isLoading }: PasswordDialogProps) {
+export function DocumentPasswordDialog({ isOpen, onClose, onConfirm, error, isLoading }: PasswordDialogProps) {
   const [password, setPassword] = useState('')
 
   const handleConfirm = () => {

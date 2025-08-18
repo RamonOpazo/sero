@@ -21,7 +21,7 @@ This document outlines the **MANDATORY** step-by-step migration from the current
 - [x] **Phase 2**: Move Pages & Remove Legacy (10 min) ✅ COMPLETE
 - [x] **Phase 3**: ProjectsView Module Migration (20 min) ✅ COMPLETE
 - [x] **Phase 4**: DocumentsView Module Migration (20 min) ✅ COMPLETE
-- [ ] **Phase 5**: DocumentEditor Module Migration (20 min)
+- [x] **Phase 5**: DocumentEditor Module Migration (20 min) ✅ COMPLETE
 - [ ] **Phase 6**: Shared Components Reorganization (15 min)
 - [ ] **Phase 7**: Layout Components Migration (10 min)
 - [ ] **Phase 8**: Hook Encapsulation Enforcement (15 min)
@@ -30,8 +30,8 @@ This document outlines the **MANDATORY** step-by-step migration from the current
 - [ ] **Phase 11**: Build Validation & Testing (15 min)
 
 **Total Estimated Time**: 165 minutes (~2.75 hours)
-**Completed**: 4/11 phases (55 minutes) ✅
-**Remaining**: 7 phases (~1.8 hours)
+**Completed**: 5/11 phases (75 minutes) ✅
+**Remaining**: 6 phases (~1.5 hours)
 
 ## ✅ **PROGRESS SUMMARY**
 
@@ -40,17 +40,19 @@ This document outlines the **MANDATORY** step-by-step migration from the current
 2. ✅ **Phase 2**: Pages migrated - HomePage, SettingsPage, and docs/ pages moved with index files
 3. ✅ **Phase 3**: ProjectsView complete - Full component encapsulation with useProjectsView hook and domain dialogs
 4. ✅ **Phase 4**: DocumentsView complete - Full component encapsulation with useDocumentsView hook and semantic UploadDocumentsDialog naming
+5. ✅ **Phase 5**: DocumentEditor complete - Full component encapsulation with useDocumentEditor hook and contextual dialog renaming
 
 ### **Current Status:**
 - **Build Status**: ✅ Passing (`pnpm build` successful)
 - **ProjectsView Module**: ✅ 100% compliant with DIRECTORY_STRUCTURE.md
 - **DocumentsView Module**: ✅ 100% compliant with DIRECTORY_STRUCTURE.md
+- **DocumentEditor Module**: ✅ 100% compliant with DIRECTORY_STRUCTURE.md
 - **Import Hygiene**: ✅ Clean imports via co-located dialogs
 - **Hook Encapsulation**: ✅ Business logic properly co-located
-- **Semantic Naming**: ✅ UploadDocumentsDialog provides better context than CreateDocumentDialog
+- **Semantic Naming**: ✅ UploadDocumentsDialog and DocumentPasswordDialog provide better context
 
 ### **Next Steps:**
-- **Phase 5**: DocumentEditor Module Migration (requires file moves via IDE)
+- **Phase 6**: Shared Components Reorganization (requires file moves via IDE / refactoring)
 - Continue with remaining phases...
 
 ---
@@ -262,59 +264,59 @@ export { UploadDocumentsDialog } from './UploadDocumentsDialog'
 - [x] Verify structure: `tree src/components/DocumentsView/`
 - [x] Ready for Phase 5: YES
 
-### Phase 5: DocumentEditor Module Migration (20 minutes)
+### Phase 5: DocumentEditor Module Migration (20 minutes) ✅ COMPLETE
 **COMPLIANCE TARGET**: Establish complete document editing domain encapsulation per directive #1
 
 #### 5.1 Move and Rename Main Component
-- [ ] Verify source exists: `ls src/views/FileViewer.tsx`
-- [ ] Execute: `mv src/views/FileViewer.tsx src/components/DocumentEditor/DocumentEditor.tsx`
-- [ ] Verify moved: `ls src/components/DocumentEditor/DocumentEditor.tsx`
-- [ ] **COMPLIANCE CHECK**: Semantic naming aligned with domain per directive #2
+- [x] Verify source exists: `ls src/views/FileViewer.tsx`
+- [x] Execute: `mv src/views/FileViewer.tsx src/components/DocumentEditor/DocumentEditor.tsx`
+- [x] Verify moved: `ls src/components/DocumentEditor/DocumentEditor.tsx`
+- [x] **COMPLIANCE CHECK**: Semantic naming aligned with domain per directive #2
 
 #### 5.2 Create DocumentViewer if exists
-- [ ] Check if DocumentViewer exists: `ls src/views/DocumentViewer.tsx` (may exist separately)
-- [ ] If exists, execute: `mv src/views/DocumentViewer.tsx src/components/DocumentEditor/`
-- [ ] If not exists, note for potential consolidation with DocumentEditor
-- [ ] **COMPLIANCE CHECK**: Complete editing domain consolidation per directive #1
+- [x] Check if DocumentViewer exists: `ls src/views/DocumentViewer.tsx` (checked - does not exist separately)
+- [x] If exists, execute: `mv src/views/DocumentViewer.tsx src/components/DocumentEditor/`
+- [x] If not exists, note for potential consolidation with DocumentEditor
+- [x] **COMPLIANCE CHECK**: Complete editing domain consolidation per directive #1
 
 #### 5.3 Move Editor Dialogs with Context Renaming
-- [ ] Verify source exists: `ls src/components/dialogs/PasswordDialog.tsx`
-- [ ] Execute: `mv src/components/dialogs/PasswordDialog.tsx src/components/DocumentEditor/dialogs/DocumentPasswordDialog.tsx`
-- [ ] Verify moved: `ls src/components/DocumentEditor/dialogs/DocumentPasswordDialog.tsx`
-- [ ] **COMPLIANCE CHECK**: Contextual naming and domain ownership per directive #3
+- [x] Verify source exists: `ls src/components/dialogs/PasswordDialog.tsx`
+- [x] Execute: `mv src/components/dialogs/PasswordDialog.tsx src/components/DocumentEditor/dialogs/DocumentPasswordDialog.tsx`
+- [x] Verify moved: `ls src/components/DocumentEditor/dialogs/DocumentPasswordDialog.tsx`
+- [x] **COMPLIANCE CHECK**: Contextual naming and domain ownership per directive #3
 
 #### 5.4 Extract Business Logic Hook
-- [ ] Create `src/components/DocumentEditor/useDocumentEditor.ts` (new file)
-- [ ] **MANDATORY**: Extract ALL business logic from DocumentEditor.tsx into this hook
-- [ ] Include: file loading, password handling, document state, editing operations
-- [ ] Verify file created: `ls src/components/DocumentEditor/useDocumentEditor.ts`
-- [ ] **COMPLIANCE CHECK**: Business logic hook co-located per directive #4
+- [x] Create `src/components/DocumentEditor/useDocumentEditor.ts` (new file)
+- [x] **MANDATORY**: Extract ALL business logic from DocumentEditor.tsx into this hook
+- [x] Include: file loading, password handling, document state, editing operations
+- [x] Verify file created: `ls src/components/DocumentEditor/useDocumentEditor.ts`
+- [x] **COMPLIANCE CHECK**: Business logic hook co-located per directive #4
 
 #### 5.5 Create DocumentEditor Index
-- [ ] Create `src/components/DocumentEditor/index.ts` with content:
+- [x] Create `src/components/DocumentEditor/index.ts` with content:
 ```typescript
 export { DocumentEditor } from './DocumentEditor'
 export { useDocumentEditor } from './useDocumentEditor'
 export * from './dialogs'
 ```
-- [ ] Verify file created: `ls src/components/DocumentEditor/index.ts`
-- [ ] **COMPLIANCE CHECK**: Clean public API per directive #6
+- [x] Verify file created: `ls src/components/DocumentEditor/index.ts`
+- [x] **COMPLIANCE CHECK**: Clean public API per directive #6
 
 #### 5.6 Create DocumentEditor Dialogs Index
-- [ ] Create `src/components/DocumentEditor/dialogs/index.ts` with content:
+- [x] Create `src/components/DocumentEditor/dialogs/index.ts` with content:
 ```typescript
 export { DocumentPasswordDialog } from './DocumentPasswordDialog'
 ```
-- [ ] Verify file created: `ls src/components/DocumentEditor/dialogs/index.ts`
-- [ ] **COMPLIANCE CHECK**: Clean dialog exports per directive #6
+- [x] Verify file created: `ls src/components/DocumentEditor/dialogs/index.ts`
+- [x] **COMPLIANCE CHECK**: Clean dialog exports per directive #6
 
 #### 5.7 Phase 5 Validation
-- [ ] **MANDATORY**: All DocumentEditor files moved to correct locations
-- [ ] **MANDATORY**: Business logic hook created and encapsulated
-- [ ] **MANDATORY**: Dialog domain ownership enforced with contextual naming
-- [ ] **MANDATORY**: Clean public APIs created
-- [ ] Verify structure: `tree src/components/DocumentEditor/`
-- [ ] Ready for Phase 6: YES / NO
+- [x] **MANDATORY**: All DocumentEditor files moved to correct locations
+- [x] **MANDATORY**: Business logic hook created and encapsulated
+- [x] **MANDATORY**: Dialog domain ownership enforced with contextual naming
+- [x] **MANDATORY**: Clean public APIs created
+- [x] Verify structure: `tree src/components/DocumentEditor/`
+- [x] Ready for Phase 6: YES
 
 ### Phase 6: Shared Components Reorganization (15 minutes)
 **COMPLIANCE TARGET**: Establish truly shared components per directive #1

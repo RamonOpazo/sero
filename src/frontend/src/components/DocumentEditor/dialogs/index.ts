@@ -1,0 +1,1 @@
+export { DocumentPasswordDialog } from './DocumentPasswordDialog';

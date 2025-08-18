@@ -1,20 +1,19 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { FileText, ArrowLeft, Lock } from 'lucide-react';
 import { toast } from 'sonner';
-import { PasswordDialog } from '@/components/dialogs/PasswordDialog';
-import DocumentViewer from '@/components/features/document-viewer/DocumentViewer';
 import { useFiles } from '@/hooks/useFiles';
 import { api } from '@/lib/axios';
 import type { MinimalDocumentType, DocumentShallowType } from '@/types';
 
-interface FileViewerProps {
+interface UseDocumentEditorProps {
   fileType: 'original' | 'redacted';
 }
 
-export function FileViewer({ fileType }: FileViewerProps) {
+/**
+ * Business logic hook for DocumentEditor component
+ * Handles document metadata loading, password validation, file loading, and document state management
+ */
+export function useDocumentEditor({ fileType }: UseDocumentEditorProps) {
   const { projectId, documentId } = useParams<{ projectId: string; documentId: string }>();
   const navigate = useNavigate();
 
@@ -72,7 +71,7 @@ export function FileViewer({ fileType }: FileViewerProps) {
     };
 
     fetchDocumentMetadata();
-  }, [documentId]);
+  }, [documentId, projectId]);
 
   // Auto-prompt for password on mount if we haven't cancelled and no file is loaded
   useEffect(() => {
@@ -81,10 +80,12 @@ export function FileViewer({ fileType }: FileViewerProps) {
     }
   }, [documentId, userCancelledPassword, currentFileData]);
 
-  const handleBackToDocuments = () => {
+  // Navigation handler to go back to documents list
+  const handleBackToDocuments = useCallback(() => {
     navigate(`/projects/${projectId}/documents`);
-  };
+  }, [navigate, projectId]);
 
+  // Handle password confirmation and file loading
   const handlePasswordConfirm = useCallback(async (password: string) => {
     if (!documentId) return;
 
@@ -118,12 +119,14 @@ export function FileViewer({ fileType }: FileViewerProps) {
     }
   }, [documentId, fileType, loadOriginalFileByDocumentId, loadRedactedFileByDocumentId, fileError]);
 
+  // Handle password dialog cancellation
   const handlePasswordCancel = useCallback(() => {
     setIsPasswordDialogOpen(false);
     setPasswordError(null);
     setUserCancelledPassword(true);
   }, []);
 
+  // Handle retry password after cancellation
   const handleRetryPassword = useCallback(() => {
     if (!userCancelledPassword) return;
     setIsPasswordDialogOpen(true);
@@ -182,6 +185,7 @@ export function FileViewer({ fileType }: FileViewerProps) {
     currentFileData?.file?.file_type,
   ]);
 
+  // Utility function for formatting file sizes
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -190,117 +194,30 @@ export function FileViewer({ fileType }: FileViewerProps) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <div className="text-center">
-          <p className="text-destructive mb-2">Failed to load document</p>
-          <p className="text-sm text-muted-foreground">{error}</p>
-          <Button
-            variant="outline"
-            onClick={handleBackToDocuments}
-            className="mt-4"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Documents
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  if (metadataLoading) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <div className="text-center">
-          <p className="text-muted-foreground mb-2">Loading document...</p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex flex-col h-full">
-
-      {/* File Content */}
-      {!currentFileData && !userCancelledPassword && (
-        <div className="flex-1 flex items-center justify-center">
-          <Card>
-            <CardContent className="p-16 text-center">
-              <Lock className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-              <p className="text-lg font-medium text-muted-foreground mb-4">
-                File Encrypted
-              </p>
-              <p className="text-sm text-muted-foreground mb-6">
-                This document requires a password to decrypt the {fileType} file
-              </p>
-              <Button
-                onClick={() => setIsPasswordDialogOpen(true)}
-                className="px-6 py-2"
-              >
-                Enter Password
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {!currentFileData && userCancelledPassword && (
-        <div className="flex-1 flex items-center justify-center">
-          <Card>
-            <CardContent className="p-16 text-center">
-              <FileText className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-              <p className="text-lg font-medium text-muted-foreground mb-4">
-                File Not Loaded
-              </p>
-              <p className="text-sm text-muted-foreground mb-6">
-                You cancelled the password entry. Click below to try again.
-              </p>
-              <Button
-                onClick={handleRetryPassword}
-                variant="outline"
-                className="px-6 py-2"
-              >
-                Retry Password
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {currentFileData && documentForViewer && (
-        <div className="flex-1 min-h-0">
-          <DocumentViewer
-            key={`${documentId}-${currentFileData?.file?.id}`}
-            document={documentForViewer}
-          />
-        </div>
-      )}
-
-      {currentFileData && !documentForViewer && (
-        <div className="flex-1 flex items-center justify-center bg-muted/10 rounded-lg">
-          <div className="text-center">
-            <FileText className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-            <p className="text-lg font-medium text-muted-foreground">PDF Preview</p>
-            <p className="text-sm text-muted-foreground">
-              File loaded successfully ({formatFileSize(currentFileData.blob.size)})
-            </p>
-            <p className="text-xs text-muted-foreground mt-2">
-              Unable to initialize document viewer
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Password Dialog */}
-      <PasswordDialog
-        isOpen={isPasswordDialogOpen}
-        onClose={handlePasswordCancel}
-        onConfirm={handlePasswordConfirm}
-        error={passwordError}
-        isLoading={isValidatingPassword}
-      />
-    </div>
-  );
+  return {
+    // State
+    projectId,
+    documentId,
+    documentMetadata,
+    metadataLoading,
+    error,
+    currentFileData,
+    documentForViewer,
+    
+    // Password dialog state
+    isPasswordDialogOpen,
+    passwordError,
+    isValidatingPassword,
+    userCancelledPassword,
+    
+    // Actions
+    handleBackToDocuments,
+    handlePasswordConfirm,
+    handlePasswordCancel,
+    handleRetryPassword,
+    setIsPasswordDialogOpen,
+    
+    // Utilities
+    formatFileSize,
+  };
 }

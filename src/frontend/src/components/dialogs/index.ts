@@ -4,4 +4,4 @@ export { UploadDocumentsDialog } from '../DocumentsView/dialogs/UploadDocumentsD
 export { CreateProjectDialog } from '../ProjectsView/dialogs/CreateProjectDialog';
 export { EditDocumentDialog } from '../DocumentsView/dialogs/EditDocumentDialog';
 export { EditProjectDialog } from '../ProjectsView/dialogs/EditProjectDialog';
-export { PasswordDialog } from './PasswordDialog';
+export { DocumentPasswordDialog as PasswordDialog } from '../DocumentEditor/dialogs/DocumentPasswordDialog';

@@ -5,7 +5,7 @@ import { MainLayout } from '@/views/MainLayout';
 import { HomePage } from '@/pages/HomePage';
 import { ProjectsView } from '@/components/ProjectsView/ProjectsView';
 import { DocumentsView } from '@/components/DocumentsView/DocumentsView';
-import { FileViewer } from '@/views/FileViewer';
+import { DocumentEditor } from '@/components/DocumentEditor/DocumentEditor';
 import { DocumentationRenderer } from '@/components/DocumentationRenderer';
 import { SettingsPage } from '@/pages/SettingsPage';
 import { CryptoTest } from '@/components/CryptoTest';
@@ -61,8 +61,8 @@ function App() {
             {/* Redirect /projects/:projectId/documents/:documentId to /projects/:projectId/documents/:documentId/original-file */}
             <Route path="/projects/:projectId/documents/:documentId" element={<DocumentRedirect />} />
 
-            <Route path="/projects/:projectId/documents/:documentId/original-file" element={<FileViewer fileType="original" />} />
-            <Route path="/projects/:projectId/documents/:documentId/redacted-file" element={<FileViewer fileType="redacted" />} />
+            <Route path="/projects/:projectId/documents/:documentId/original-file" element={<DocumentEditor fileType="original" />} />
+            <Route path="/projects/:projectId/documents/:documentId/redacted-file" element={<DocumentEditor fileType="redacted" />} />
 
             {/* Redirect all other routes to home */}
             <Route path="*" element={<Navigate to="/" replace />} />
