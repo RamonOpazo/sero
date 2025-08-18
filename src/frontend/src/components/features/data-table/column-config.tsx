@@ -2,13 +2,10 @@ import { type ColumnDef } from '@tanstack/react-table'
 import { ArrowUpDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import React from 'react'
+import type { ResponsiveColumnConfig } from './hooks/use-responsive-columns'
 
-// Responsive column configuration
-export interface ResponsiveColumnConfig {
-  priority?: number // Lower number = higher priority (0 = highest)
-  minWidth?: number // Minimum width in pixels
-  alwaysVisible?: boolean // Never hide this column
-}
+// Re-export ResponsiveColumnConfig from responsive columns hook
+export type { ResponsiveColumnConfig } from './hooks/use-responsive-columns'
 
 // Pure column configuration interface
 export interface ColumnConfig<TData, TValue = unknown> {

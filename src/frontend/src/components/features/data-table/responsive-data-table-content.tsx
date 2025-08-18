@@ -1,5 +1,6 @@
 import { useRef } from 'react'
 import { flexRender } from '@tanstack/react-table'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import {
   Table as TableComponent,
   TableBody,
@@ -8,7 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { HiddenColumnsDisplay } from './hidden-columns-display'
+import { Button } from '@/components/ui/button'
 import { useResponsiveColumns, type ExtendedColumnDef } from './hooks/use-responsive-columns'
 import type { Table } from '@tanstack/react-table'
 import "./data-table.css"
@@ -24,23 +25,58 @@ export function ResponsiveDataTableContent<TData>({
 }: ResponsiveDataTableContentProps<TData>) {
   const containerRef = useRef<HTMLDivElement>(null)
   
-  // Get all columns and cast them to extended columns
-  const allColumns = table.getAllColumns().map(col => col.columnDef) as ExtendedColumnDef[]
+  // Get all columns and enhance them with responsive metadata
+  const allColumns: ExtendedColumnDef[] = table.getAllColumns().map(col => {
+    const columnDef = col.columnDef as ExtendedColumnDef
+    
+    // Add default responsive metadata for special columns if not already set
+    if (!columnDef.responsive) {
+      if (columnDef.id === 'select') {
+        columnDef.responsive = {
+          pinned: 'left',
+          priority: -2,
+          minWidth: 50
+        }
+      } else if (columnDef.id === 'actions') {
+        columnDef.responsive = {
+          pinned: 'right',
+          priority: -1,
+          minWidth: 80
+        }
+      } else {
+        // Default responsive metadata for columns without it
+        columnDef.responsive = {
+          priority: 999,
+          minWidth: 150,
+          pinned: false
+        }
+      }
+    }
+    
+    return columnDef
+  })
   
   // Use responsive column management
-  const { visibleColumns, hiddenColumns, isResponsive } = useResponsiveColumns({
+  const {
+    leftPinnedColumns,
+    rightPinnedColumns,
+    visibleScrollableColumns,
+    canScrollLeft,
+    canScrollRight,
+    scrollLeft,
+    scrollRight,
+    needsNavigation
+  } = useResponsiveColumns({
     columns: allColumns,
     containerRef,
     minTableWidth
   })
 
-  // Find special columns
-  const hasSelectColumn = visibleColumns.some(col => col.id === 'select')
-  const hasActionsColumn = visibleColumns.some(col => col.id === 'actions') || 
-                          allColumns.some(col => col.id === 'actions')
-
+  // Combine all visible columns in order
+  const allVisibleColumns = [...leftPinnedColumns, ...visibleScrollableColumns, ...rightPinnedColumns]
+  
   // Filter table columns to only show visible ones
-  const visibleColumnIds = new Set(visibleColumns.map(col => col.id))
+  const visibleColumnIds = new Set(allVisibleColumns.map(col => col.id))
   
   return (
     <div ref={containerRef} className="mb-4 overflow-x-auto">
@@ -63,21 +99,40 @@ export function ResponsiveDataTableContent<TData>({
                       key={header.id}
                       className={`
                         ${isSelectColumn ? 'sticky left-0 z-20 w-[2rem] min-w-[2rem] max-w-[2rem]' : ''}
-                        ${isActionsColumn ? 'sticky right-0 z-20 w-[4rem] min-w-[4rem] max-w-[4rem] text-right' : ''}
+                        ${isActionsColumn ? 'sticky right-0 z-20 w-[6rem] min-w-[6rem] max-w-[6rem] text-right' : ''}
                         ${!isSelectColumn && !isActionsColumn ? 'w-[8rem]' : ''}
                       `}
                     >
-                      {flexRender(header.column.columnDef.header, header.getContext())}
+                      {isActionsColumn && needsNavigation ? (
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0"
+                            onClick={scrollLeft}
+                            disabled={!canScrollLeft}
+                            title="Previous columns"
+                          >
+                            <ChevronLeft className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0"
+                            onClick={scrollRight}
+                            disabled={!canScrollRight}
+                            title="Next columns"
+                          >
+                            <ChevronRight className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        flexRender(header.column.columnDef.header, header.getContext())
+                      )}
                     </TableHead>
                   )
                 })}
                 
-                {/* Add hidden columns indicator if we have hidden columns but no actions column */}
-                {isResponsive && !hasActionsColumn && hiddenColumns.length > 0 && (
-                  <TableHead className="sticky right-0 z-20 w-[4rem] min-w-[4rem] max-w-[4rem] text-right">
-                    More
-                  </TableHead>
-                )}
               </TableRow>
             )
           })}
@@ -94,7 +149,7 @@ export function ResponsiveDataTableContent<TData>({
               return (
                 <TableRow
                   key={row.id}
-                  data-state={hasSelectColumn && row.getIsSelected() && "selected"}
+                  data-state={leftPinnedColumns.some(col => col.id === 'select') && row.getIsSelected() && "selected"}
                   className="hover:bg-muted/50 transition-colors"
                 >
                   {visibleCells.map((cell) => {
@@ -106,41 +161,22 @@ export function ResponsiveDataTableContent<TData>({
                         key={cell.id}
                         className={`
                           ${isSelectColumn ? 'sticky left-0 z-10 w-[2rem] min-w-[2rem] max-w-[2rem]' : ''}
-                          ${isActionsColumn ? 'sticky right-0 z-10 w-[4rem] min-w-[4rem] max-w-[4rem] text-right' : ''}
+                          ${isActionsColumn ? 'sticky right-0 z-10 w-[6rem] min-w-[6rem] max-w-[6rem] text-right' : ''}
                           ${!isSelectColumn && !isActionsColumn ? 'w-[8rem]' : ''}
                         `}
                       >
-                        <div className="flex items-center gap-2">
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                          
-                          {/* Add hidden columns display to actions column */}
-                          {isActionsColumn && isResponsive && hiddenColumns.length > 0 && (
-                            <HiddenColumnsDisplay 
-                              hiddenColumns={hiddenColumns}
-                              rowData={row.original}
-                            />
-                          )}
-                        </div>
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </TableCell>
                     )
                   })}
                   
-                  {/* Add hidden columns indicator if we have hidden columns but no actions column */}
-                  {isResponsive && !hasActionsColumn && hiddenColumns.length > 0 && (
-                    <TableCell className="sticky right-0 z-10 w-[4rem] min-w-[4rem] max-w-[4rem] text-right">
-                      <HiddenColumnsDisplay 
-                        hiddenColumns={hiddenColumns}
-                        rowData={row.original}
-                      />
-                    </TableCell>
-                  )}
                 </TableRow>
               )
             })
           ) : (
             <TableRow>
               <TableCell
-                colSpan={visibleColumns.length + (isResponsive && !hasActionsColumn && hiddenColumns.length > 0 ? 1 : 0)}
+                colSpan={allVisibleColumns.length}
                 className="h-24 text-center"
               >
                 No results.

@@ -37,7 +37,7 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
   }, [actionHandlers.onSelectProject]);
 
   const columns = useMemo(() => [
-    // Custom clickable name column - highest priority, always visible
+    // Custom clickable name column - pinned to left
     createColumn(column.custom<ProjectShallowType>(
       'name',
       'Project Name',
@@ -45,13 +45,14 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
       { 
         sortable: true,
         responsive: {
-          alwaysVisible: true,
-          priority: 0
+          pinned: 'left',
+          priority: 0,
+          minWidth: 200
         }
       }
     )),
     
-    // Document count as badge - high priority
+    // Document count as badge - scrollable, high priority
     createColumn(column.create<ProjectShallowType>(
       'document_count', 
       'Documents',
@@ -62,12 +63,13 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
         ),
         responsive: {
           priority: 1,
-          minWidth: 100
+          minWidth: 100,
+          pinned: false
         }
       }
     )),
     
-    // Updated date - medium priority
+    // Updated date - scrollable, medium priority
     createColumn(column.create<ProjectShallowType>(
       'updated_at',
       'Last Updated',
@@ -78,12 +80,13 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
         ),
         responsive: {
           priority: 2,
-          minWidth: 120
+          minWidth: 120,
+          pinned: false
         }
       }
     )),
     
-    // Description with truncation - lower priority
+    // Description with truncation - scrollable, lower priority
     createColumn(column.create<ProjectShallowType>(
       'description',
       'Description',
@@ -93,12 +96,13 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
         ),
         responsive: {
           priority: 3,
-          minWidth: 200
+          minWidth: 200,
+          pinned: false
         }
       }
     )),
     
-    // Contact person with truncation - lower priority
+    // Contact person with truncation - scrollable, lower priority
     createColumn(column.create<ProjectShallowType>(
       'contact_name',
       'Contact Person',
@@ -108,12 +112,13 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
         ),
         responsive: {
           priority: 4,
-          minWidth: 150
+          minWidth: 150,
+          pinned: false
         }
       }
     )),
     
-    // Version as badge - lower priority
+    // Version as badge - scrollable, lower priority
     createColumn(column.create<ProjectShallowType>(
       'version',
       'Version',
@@ -124,12 +129,13 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
         ),
         responsive: {
           priority: 5,
-          minWidth: 80
+          minWidth: 80,
+          pinned: false
         }
       }
     )),
     
-    // Email with truncation - lower priority
+    // Email with truncation - scrollable, lower priority
     createColumn(column.create<ProjectShallowType>(
       'contact_email',
       'Email Address',
@@ -139,12 +145,13 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
         ),
         responsive: {
           priority: 6,
-          minWidth: 180
+          minWidth: 180,
+          pinned: false
         }
       }
     )),
     
-    // Created date - lowest priority
+    // Created date - scrollable, lowest priority
     createColumn(column.create<ProjectShallowType>(
       'created_at',
       'Created',
@@ -155,7 +162,8 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
         ),
         responsive: {
           priority: 7,
-          minWidth: 120
+          minWidth: 120,
+          pinned: false
         }
       }
     )),
