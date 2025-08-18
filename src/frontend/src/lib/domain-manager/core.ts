@@ -71,8 +71,10 @@ export class CoreDomainManager<T, CreateT = Omit<T, 'id'>> implements DomainMana
     // Bind methods to state for behaviors
     this.bindMethodsToState();
     
-    // Capture initial state
-    this.dispatch({ type: 'CAPTURE_INITIAL_STATE' });
+    // Capture initial state only if changeTracking behavior is enabled
+    if (this.config.behaviors.includes('changeTracking')) {
+      this.dispatch({ type: 'CAPTURE_INITIAL_STATE' });
+    }
   }
 
   // =============================================================================
@@ -187,7 +189,10 @@ export class CoreDomainManager<T, CreateT = Omit<T, 'id'>> implements DomainMana
           : result.value;
           
         this.dispatch({ type: 'LOAD_SAVED_ITEMS', payload: items });
-        this.dispatch({ type: 'CAPTURE_INITIAL_STATE' });
+        // Capture initial state only if changeTracking behavior is enabled
+        if (this.config.behaviors.includes('changeTracking')) {
+          this.dispatch({ type: 'CAPTURE_INITIAL_STATE' });
+        }
       } else {
         this.dispatch({ type: 'SET_ERROR', payload: 'Failed to load items' });
       }
