@@ -1,10 +1,11 @@
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Save, Trash2, Plus, Undo2 } from "lucide-react";
+import { Save, Trash2, Plus, Undo2, RotateCcw, AlertCircle } from "lucide-react";
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { toast } from "sonner";
 import type { MinimalDocumentType } from "@/types";
 import AddPromptDialog from "../dialogs/AddPromptDialog";
+import SavePromptChangesConfirmationDialog from "../dialogs/SavePromptChangesConfirmationDialog";
 import PromptsList from "./PromptsList";
 import { usePrompts } from "../core/PromptProvider";
 
@@ -18,12 +19,20 @@ interface PromptControlsProps {
  */
 export default function PromptManagement({ document }: PromptControlsProps) {
   const {
-    state: { prompts, isLoading, isCreating, error },
+    state: { savedPrompts, newPrompts, isSaving, error },
     loadPrompts,
-    createPrompt
+    saveAllChanges,
+    addPromptLocally,
+    clearAll,
+    discardAllChanges,
+    getAllPrompts,
+    hasUnsavedChanges,
+    pendingChangesCount,
+    isAnyOperationInProgress
   } = usePrompts();
   
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showSaveConfirmDialog, setShowSaveConfirmDialog] = useState(false);
   
   // Load prompts when component mounts
   useEffect(() => {
@@ -32,14 +41,21 @@ export default function PromptManagement({ document }: PromptControlsProps) {
 
   // Calculate prompt statistics
   const promptStats = useMemo(() => {
-    const totalCount = prompts?.length || 0;
+    const allPrompts = getAllPrompts();
+    const totalCount = allPrompts.length;
+    const savedCount = savedPrompts.length;
+    const newCount = newPrompts.length;
     return {
       totalCount,
+      savedCount,
+      newCount,
+      hasUnsavedChanges,
+      totalUnsavedChanges: pendingChangesCount,
     };
-  }, [prompts]);
+  }, [getAllPrompts, savedPrompts.length, newPrompts.length, hasUnsavedChanges, pendingChangesCount]);
 
-  // Add new rule using PromptManager
-  const handleAddRule = useCallback(async (ruleData: {
+  // Add new rule locally (not saved to server until saveAllChanges is called)
+  const handleAddRule = useCallback((ruleData: {
     type: string;
     title: string;
     rule: string;
@@ -64,43 +80,70 @@ export default function PromptManagement({ document }: PromptControlsProps) {
         text: promptText,
         languages: ['english', 'castillian'],
         temperature: temperatureMap[ruleData.priority],
-        document_id: document.id
       };
       
-      const result = await createPrompt(promptData);
-      
-      if (result.ok) {
-        toast.success(`${ruleData.title} rule added successfully`);
-        setShowAddDialog(false);
-      } else {
-        toast.error('Failed to add AI rule');
-      }
+      addPromptLocally(promptData);
+      toast.success(`${ruleData.title} rule added (not yet saved)`);
+      setShowAddDialog(false);
       
     } catch (error) {
       console.error('Error adding rule:', error);
       toast.error('Failed to add AI rule');
     }
-  }, [createPrompt, document.id]);
+  }, [addPromptLocally]);
 
-  // Save all prompts (placeholder)
+  // Save all pending changes with confirmation
   const handleSaveAllPrompts = useCallback(() => {
-    toast.info('Save all prompts functionality to be implemented');
+    if (promptStats.totalUnsavedChanges === 0) {
+      toast.info('No pending changes to save');
+      return;
+    }
+    setShowSaveConfirmDialog(true);
+  }, [promptStats.totalUnsavedChanges]);
+  
+  // Handler to close save confirmation dialog
+  const handleCloseSaveConfirmDialog = useCallback(() => {
+    setShowSaveConfirmDialog(false);
   }, []);
-
-  // Discard all unsaved changes (placeholder)
+  
+  // Handler for confirmed save action
+  const handleConfirmedSave = useCallback(async () => {
+    try {
+      const result = await saveAllChanges();
+      if (result.ok) {
+        const savedCount = promptStats.totalUnsavedChanges;
+        toast.success(`Successfully saved ${savedCount} change${savedCount === 1 ? '' : 's'}`);
+        setShowSaveConfirmDialog(false);
+      } else {
+        toast.error('Failed to save changes');
+      }
+    } catch (error) {
+      console.error('Error saving changes:', error);
+      toast.error('Failed to save changes');
+    }
+  }, [saveAllChanges, promptStats.totalUnsavedChanges]);
+  
+  // Discard all unsaved changes
   const handleDiscardAllChanges = useCallback(() => {
-    toast.info('Discard changes functionality to be implemented');
-  }, []);
-
-  // Clear all prompts (placeholder)
+    if (promptStats.totalUnsavedChanges === 0) {
+      toast.info('No unsaved changes to discard');
+      return;
+    }
+    
+    discardAllChanges();
+    toast.success(`Discarded ${promptStats.totalUnsavedChanges} unsaved change${promptStats.totalUnsavedChanges === 1 ? '' : 's'}`);
+  }, [discardAllChanges, promptStats.totalUnsavedChanges]);
+  
+  // Clear all prompts
   const handleClearAll = useCallback(() => {
     if (promptStats.totalCount === 0) {
       toast.info('No prompts to clear');
       return;
     }
     
-    toast.info('Clear all prompts functionality to be implemented');
-  }, [promptStats.totalCount]);
+    clearAll();
+    toast.success(`Cleared all ${promptStats.totalCount} prompts`);
+  }, [clearAll, promptStats.totalCount]);
 
   // Handle add prompt button
   const handleOpenAddDialog = useCallback(() => {
@@ -127,6 +170,26 @@ export default function PromptManagement({ document }: PromptControlsProps) {
           <span className="text-xs text-muted-foreground">Total Prompts</span>
           <span className="text-xs font-mono">{promptStats.totalCount}</span>
         </div>
+        
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-muted-foreground">Saved Prompts</span>
+          <span className="text-xs font-mono">{promptStats.savedCount}</span>
+        </div>
+        
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-muted-foreground">New Prompts</span>
+          <span className="text-xs font-mono">{promptStats.newCount}</span>
+        </div>
+        
+        {promptStats.hasUnsavedChanges && (
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1">
+              <span className="text-xs text-muted-foreground">Unsaved Changes</span>
+              <AlertCircle className="h-3 w-3 text-amber-500" />
+            </div>
+            <span className="text-xs font-mono">{promptStats.totalUnsavedChanges}</span>
+          </div>
+        )}
       </div>
       
       <Separator />
@@ -137,7 +200,7 @@ export default function PromptManagement({ document }: PromptControlsProps) {
           variant="default"
           size="sm"
           onClick={handleOpenAddDialog}
-          disabled={isLoading || isCreating}
+          disabled={isAnyOperationInProgress}
           className="w-full justify-start h-9 text-xs"
         >
           <Plus className="mr-2 h-3 w-3" />
@@ -145,13 +208,17 @@ export default function PromptManagement({ document }: PromptControlsProps) {
         </Button>
         
         <Button
-          variant="outline"
+          variant="default"
           size="sm"
           onClick={handleSaveAllPrompts}
-          disabled={isLoading || promptStats.totalCount === 0}
+          disabled={isAnyOperationInProgress || promptStats.totalUnsavedChanges === 0}
           className="w-full justify-start h-9 text-xs"
         >
-          <Save className="mr-2 h-3 w-3" />
+          {isSaving ? (
+            <RotateCcw className="mr-2 h-3 w-3 animate-spin" />
+          ) : (
+            <Save className="mr-2 h-3 w-3" />
+          )}
           Save all changes
         </Button>
         
@@ -159,7 +226,7 @@ export default function PromptManagement({ document }: PromptControlsProps) {
           variant="outline"
           size="sm"
           onClick={handleDiscardAllChanges}
-          disabled={isLoading || promptStats.totalCount === 0}
+          disabled={promptStats.totalUnsavedChanges === 0}
           className="w-full justify-start h-9 text-xs"
         >
           <Undo2 className="mr-2 h-3 w-3" />
@@ -170,7 +237,7 @@ export default function PromptManagement({ document }: PromptControlsProps) {
           variant="destructive"
           size="sm"
           onClick={handleClearAll}
-          disabled={isLoading || promptStats.totalCount === 0}
+          disabled={promptStats.totalCount === 0}
           className="w-full justify-start h-9 text-xs"
         >
           <Trash2 className="mr-2 h-3 w-3" />
@@ -189,7 +256,16 @@ export default function PromptManagement({ document }: PromptControlsProps) {
         isOpen={showAddDialog}
         onClose={handleCloseAddDialog}
         onConfirm={handleAddRule}
-        isSubmitting={isCreating}
+        isSubmitting={false}
+      />
+      
+      {/* Save Confirmation Dialog */}
+      <SavePromptChangesConfirmationDialog
+        isOpen={showSaveConfirmDialog}
+        onClose={handleCloseSaveConfirmDialog}
+        onConfirm={handleConfirmedSave}
+        changesCount={promptStats.totalUnsavedChanges}
+        isSaving={isSaving}
       />
     </div>
   );

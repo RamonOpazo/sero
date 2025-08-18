@@ -7,7 +7,8 @@
 import React, { createContext, useContext, useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import PromptManager, { 
   type PromptManagerState, 
-  type PromptManagerAction 
+  type PromptManagerAction,
+  type PendingPromptChanges 
 } from './PromptManager';
 import { type PromptType, type PromptCreateType } from '@/types';
 import { type Result } from '@/lib/result';
@@ -21,17 +22,28 @@ interface PromptContextValue {
   
   // API methods
   loadPrompts: () => Promise<Result<PromptType[], unknown>>;
-  createPrompt: (promptData: PromptCreateType) => Promise<Result<PromptType, unknown>>;
-  deletePrompt: (promptId: string) => Promise<Result<void, unknown>>;
+  saveAllChanges: () => Promise<Result<void, unknown>>;
+  
+  // Local operations (don't hit server immediately)
+  addPromptLocally: (promptData: Omit<PromptCreateType, 'document_id'>) => PromptType;
+  updatePrompt: (id: string, updates: Partial<PromptType>) => boolean;
+  deletePromptLocally: (id: string) => boolean;
+  clearAll: () => void;
+  discardAllChanges: () => void;
   
   // Convenience methods
   getPromptById: (id: string) => PromptType | undefined;
+  getAllPrompts: () => PromptType[];
   clearError: () => void;
   
   // Computed values
   promptCount: number;
   hasPrompts: boolean;
+  hasUnsavedChanges: boolean;
+  pendingChanges: PendingPromptChanges;
+  pendingChangesCount: number;
   isOperationInProgress: boolean;
+  isAnyOperationInProgress: boolean;
 }
 
 const PromptContext = createContext<PromptContextValue | null>(null);
@@ -42,14 +54,14 @@ interface PromptProviderProps {
   initialPrompts?: PromptType[];
 }
 
-export function PromptProvider({ children, documentId, initialPrompts }: PromptProviderProps) {
+export function PromptProvider({ children, documentId }: PromptProviderProps) {
   // Create manager instance (only once per documentId)
   const managerRef = useRef<PromptManager | null>(null);
   const currentDocumentId = useRef<string>(documentId);
 
   // Re-create manager if document ID changes
   if (!managerRef.current || currentDocumentId.current !== documentId) {
-    managerRef.current = new PromptManager(documentId, initialPrompts);
+    managerRef.current = new PromptManager(documentId);
     currentDocumentId.current = documentId;
   }
   
@@ -73,17 +85,38 @@ export function PromptProvider({ children, documentId, initialPrompts }: PromptP
     return manager.loadPrompts();
   }, [manager]);
   
-  const createPrompt = useCallback(async (promptData: PromptCreateType) => {
-    return manager.createPrompt(promptData);
+  const saveAllChanges = useCallback(async () => {
+    return manager.saveAllChanges();
   }, [manager]);
   
-  const deletePrompt = useCallback(async (promptId: string) => {
-    return manager.deletePrompt(promptId);
+  // Local operations (don't hit server immediately)
+  const addPromptLocally = useCallback((promptData: Omit<PromptCreateType, 'document_id'>) => {
+    return manager.addPromptLocally(promptData);
+  }, [manager]);
+  
+  const updatePrompt = useCallback((id: string, updates: Partial<PromptType>) => {
+    return manager.updatePrompt(id, updates);
+  }, [manager]);
+  
+  const deletePromptLocally = useCallback((id: string) => {
+    return manager.deletePromptLocally(id);
+  }, [manager]);
+  
+  const clearAll = useCallback(() => {
+    manager.clearAll();
+  }, [manager]);
+  
+  const discardAllChanges = useCallback(() => {
+    manager.discardAllChanges();
   }, [manager]);
   
   // Convenience methods
   const getPromptById = useCallback((id: string) => {
     return manager.getPromptById(id);
+  }, [manager]);
+  
+  const getAllPrompts = useCallback(() => {
+    return manager.getAllPrompts();
   }, [manager]);
   
   const clearError = useCallback(() => {
@@ -93,33 +126,58 @@ export function PromptProvider({ children, documentId, initialPrompts }: PromptP
   // Computed values
   const promptCount = useMemo(() => manager.getPromptCount(), [manager, state]);
   const hasPrompts = useMemo(() => manager.hasPrompts(), [manager, state]);
+  const hasUnsavedChanges = useMemo(() => manager.hasUnsavedChanges(), [manager, state]);
+  const pendingChanges = useMemo(() => manager.getPendingChanges(), [manager, state]);
+  const pendingChangesCount = useMemo(() => manager.getPendingChangesCount(), [manager, state]);
   const isOperationInProgress = useMemo(() => 
     state.isLoading || state.isCreating || state.isDeleting !== null, 
     [state.isLoading, state.isCreating, state.isDeleting]
+  );
+  const isAnyOperationInProgress = useMemo(() => 
+    state.isLoading || state.isCreating || state.isDeleting !== null || state.isClearing || state.isSaving, 
+    [state.isLoading, state.isCreating, state.isDeleting, state.isClearing, state.isSaving]
   );
   
   const contextValue: PromptContextValue = useMemo(() => ({
     state,
     dispatch,
     loadPrompts,
-    createPrompt,
-    deletePrompt,
+    saveAllChanges,
+    addPromptLocally,
+    updatePrompt,
+    deletePromptLocally,
+    clearAll,
+    discardAllChanges,
     getPromptById,
+    getAllPrompts,
     clearError,
     promptCount,
     hasPrompts,
+    hasUnsavedChanges,
+    pendingChanges,
+    pendingChangesCount,
     isOperationInProgress,
+    isAnyOperationInProgress,
   }), [
     state,
     dispatch,
     loadPrompts,
-    createPrompt,
-    deletePrompt,
+    saveAllChanges,
+    addPromptLocally,
+    updatePrompt,
+    deletePromptLocally,
+    clearAll,
+    discardAllChanges,
     getPromptById,
+    getAllPrompts,
     clearError,
     promptCount,
     hasPrompts,
+    hasUnsavedChanges,
+    pendingChanges,
+    pendingChangesCount,
     isOperationInProgress,
+    isAnyOperationInProgress,
   ]);
   
   return (

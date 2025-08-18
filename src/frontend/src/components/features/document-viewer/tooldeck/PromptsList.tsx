@@ -9,20 +9,18 @@ type Props = { documentId: string };
 
 export default function PromptList({}: Props) {
   const {
-    state: { prompts, isLoading, isDeleting, error },
-    deletePrompt
+    state: { isLoading, isDeleting, error },
+    getAllPrompts,
+    deletePromptLocally
   } = usePrompts();
   
-  const handleDeletePrompt = async (promptId: string) => {
-    try {
-      const result = await deletePrompt(promptId);
-      if (result.ok) {
-        toast.success('Prompt deleted successfully');
-      } else {
-        toast.error('Failed to delete prompt');
-      }
-    } catch (error) {
-      console.error('Error deleting prompt:', error);
+  const prompts = getAllPrompts();
+  
+  const handleDeletePrompt = (promptId: string) => {
+    const success = deletePromptLocally(promptId);
+    if (success) {
+      toast.success('Prompt deleted (not yet saved)');
+    } else {
       toast.error('Failed to delete prompt');
     }
   };
