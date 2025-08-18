@@ -1,6 +1,6 @@
 import { useMemo, useCallback } from 'react';
 import { Eye, Plus, CheckCircle2, AlertCircle } from 'lucide-react';
-import { DataTable, ColumnBuilder as Column, Actions } from '@/components/shared/DataTable';
+import { DataTable, ColumnBuilder as Column, Actions } from '@/components/features/data-table';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { Badge } from '@/components/ui/badge';
 import { useWorkspace } from '@/providers/workspace-provider';

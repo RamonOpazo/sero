@@ -5,6 +5,9 @@ import { cn } from "@/lib/utils";
 import { usePrompts } from "../../providers/prompt-provider";
 import { toast } from "sonner";
 import { useMemo } from "react";
+import type { PromptType, PromptCreateType } from "@/types";
+
+type Prompt = PromptType | (PromptCreateType & { id: string });
 
 type Props = { 
   documentId: string;
@@ -30,9 +33,9 @@ export default function PromptList({ onEditPrompt }: Props) {
   const promptsWithTypeInfo = useMemo(() => {
     const initialSavedPrompts = initialState.savedItems;
 
-    const saved = savedPrompts.map((prompt) => {
+    const saved = savedPrompts.map((prompt: Prompt) => {
       // Check if this saved prompt was modified from its initial state
-      const initialPrompt = initialSavedPrompts?.find(initial => initial.id === prompt.id);
+      const initialPrompt = initialSavedPrompts?.find((initial: Prompt) => initial.id === prompt.id);
       const isModified = initialPrompt && (
         prompt.text !== initialPrompt.text ||
         prompt.temperature !== initialPrompt.temperature ||
@@ -46,7 +49,7 @@ export default function PromptList({ onEditPrompt }: Props) {
       };
     });
 
-    const newOnes = newPrompts.map((prompt) => ({
+    const newOnes = newPrompts.map((prompt: Prompt) => ({
       ...prompt,
       type: 'new' as const,
       isModified: false,

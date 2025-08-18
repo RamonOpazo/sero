@@ -15,7 +15,7 @@ import {
  * Development component to test RSA encryption functionality
  * This should be removed in production builds
  */
-export function CryptoTest() {
+export function CryptoTestView() {
   const [testPassword, setTestPassword] = useState('test123')
   const [loading, setLoading] = useState(false)
   const [encryptedData, setEncryptedData] = useState<EncryptedPassword | null>(null)

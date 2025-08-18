@@ -168,7 +168,7 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
     return false;
   }, [dispatch, state.selectedItemId]);
   
-  const toggleSelectionGlobal = useCallback((id: string, currentPageNumber?: number | null) => {
+  const toggleSelectionGlobal = useCallback((id: string) => {
     dispatch({ type: 'TOGGLE_ITEM_GLOBAL', payload: id });
   }, [dispatch]);
   

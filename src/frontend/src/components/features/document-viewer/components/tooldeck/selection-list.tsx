@@ -6,7 +6,7 @@ import { useViewportState } from "../../providers/viewport-provider";
 import { useMemo, useRef, useEffect, useState, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { PageSelectionDialog } from "../dialogs";
-import type { Selection } from "../types/viewer";
+import type { Selection } from "../../types/viewer";
 
 
 export default function SelectionList() {
@@ -48,9 +48,9 @@ export default function SelectionList() {
   const selectionsWithTypeInfo = useMemo(() => {
     const initialSavedSelections = selectionState.initialState.savedItems;
     
-    const saved = (selectionState.savedItems || []).map((sel) => {
+    const saved = (selectionState.savedItems || []).map((sel: Selection) => {
       // Check if this saved selection was modified from its initial state
-      const initialSelection = initialSavedSelections?.find(initial => initial.id === sel.id);
+      const initialSelection = initialSavedSelections?.find((initial: Selection) => initial.id === sel.id);
       const isModified = initialSelection && (
         sel.x !== initialSelection.x ||
         sel.y !== initialSelection.y ||
@@ -67,7 +67,7 @@ export default function SelectionList() {
       };
     });
     
-    const newOnes = (selectionState.newItems || []).map((sel) => ({
+    const newOnes = (selectionState.newItems || []).map((sel: Selection) => ({
       ...sel,
       type: 'new' as const,
       isModified: false,

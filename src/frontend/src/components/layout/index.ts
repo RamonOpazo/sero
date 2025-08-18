@@ -1,4 +1,4 @@
-export { MainLayout } from './MainLayout';
-export { SiteHeader } from './SiteHeader';
+export { MainLayout } from './main-layout';
+export { SiteHeader } from './site-header';
 export * from './sidebar';
 export * from './navigation';

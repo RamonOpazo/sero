@@ -1,8 +1,9 @@
-import { DataTableToolbar } from './DataTableToolbar'
-import { DataTableContent } from './DataTableContent'
-import { DataTablePagination } from './DataTablePagination'
-import { useDataTable, type UseDataTableProps } from '@/components/shared/DataTable/useDataTable'
+import { DataTableToolbar } from './data-table-toolbar'
+import { DataTableContent } from './data-table-content'
+import { DataTablePagination } from './data-table-pagination'
+import { useDataTable, type UseDataTableProps } from './hooks/use-data-table'
 
+// Main DataTable Component
 export function DataTable<TData, TValue>(props: UseDataTableProps<TData, TValue>) {
   const {
     columns,
@@ -67,3 +68,10 @@ export function DataTable<TData, TValue>(props: UseDataTableProps<TData, TValue>
     </div>
   )
 }
+
+// Export sub-components and utilities
+export { DataTableContent } from './data-table-content';
+export { DataTablePagination } from './data-table-pagination';
+export { DataTableToolbar } from './data-table-toolbar';
+export * from './hooks';
+export * from './builders';

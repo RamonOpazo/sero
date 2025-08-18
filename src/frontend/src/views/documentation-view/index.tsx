@@ -10,11 +10,11 @@ import { loadMarkdownDoc, docExists } from '@/utils/markdown'
 // Import highlight.js theme
 import 'highlight.js/styles/github-dark.css'
 
-interface DocumentationRendererProps {
+interface DocumentationViewProps {
   docName?: string
 }
 
-export function DocumentationRenderer({ docName }: DocumentationRendererProps) {
+export function DocumentationView({ docName }: DocumentationViewProps) {
   const params = useParams()
   const [content, setContent] = useState<string>('')
   const [loading, setLoading] = useState(true)

@@ -9,9 +9,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { useColumnNavigation } from '@/hooks/useColumnNavigation'
+import { useColumnNavigation } from './hooks/use-column-navigation'
 import type { Table, Cell } from '@tanstack/react-table'
-import './DataTable.css'
+import "./data-table.css";
 
 interface DataTableContentProps<TData> {
   table: Table<TData>
