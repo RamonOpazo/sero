@@ -247,7 +247,7 @@ export default function PromptManagement({ document }: PromptControlsProps) {
 
       <Separator />
 
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2 w-full min-w-0">
         <PromptsList documentId={document.id} />
       </div>
       
