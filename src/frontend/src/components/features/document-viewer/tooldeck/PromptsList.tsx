@@ -7,7 +7,7 @@ import { toast } from "sonner";
 
 type Props = { documentId: string };
 
-export default function PromptList({ documentId }: Props) {
+export default function PromptList({}: Props) {
   const {
     state: { prompts, isLoading, isDeleting, error },
     deletePrompt
@@ -16,7 +16,7 @@ export default function PromptList({ documentId }: Props) {
   const handleDeletePrompt = async (promptId: string) => {
     try {
       const result = await deletePrompt(promptId);
-      if (result.success) {
+      if (result.ok) {
         toast.success('Prompt deleted successfully');
       } else {
         toast.error('Failed to delete prompt');

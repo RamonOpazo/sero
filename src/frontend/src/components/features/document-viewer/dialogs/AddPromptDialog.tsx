@@ -17,7 +17,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import React, { useState, useEffect } from "react";
@@ -25,7 +24,6 @@ import {
   Info,
   AlertTriangle
 } from "lucide-react";
-import { type PromptCreateType } from "@/types";
 
 // Actionable rule types for AI document processing
 const RULE_TYPES = {
@@ -76,37 +74,11 @@ interface RuleData {
   enabled: boolean;
 }
 
-// Utility function to transform our UI rule data to backend prompt format
-function transformRuleToPrompt(rule: RuleData, documentId: string): PromptCreateType {
-  // Build comprehensive prompt text
-  let promptText = `Rule Type: ${RULE_TYPES[rule.type].label}\n`;
-  promptText += `Priority: ${rule.priority.toUpperCase()}\n`;
-  promptText += `Title: ${rule.title}\n\n`;
-  promptText += `Instructions:\n${rule.rule}`;
-  
-  // Map priority to temperature (AI creativity level)
-  const temperatureMap = {
-    'high': 0.1,    // Low creativity for critical compliance rules
-    'medium': 0.3,  // Moderate creativity for important rules
-    'low': 0.5      // Higher creativity for optional rules
-  };
-  
-  // Default languages (could be made configurable later)
-  const defaultLanguages = ['english', 'castillian'];
-  
-  return {
-    text: promptText,
-    languages: defaultLanguages,
-    temperature: temperatureMap[rule.priority],
-    document_id: documentId
-  };
-}
 
 interface AddPromptDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: (rule: RuleData) => void;
-  documentId: string;
   isSubmitting?: boolean;
 }
 
@@ -114,7 +86,6 @@ export default function AddPromptDialog({
   isOpen,
   onClose,
   onConfirm,
-  documentId,
   isSubmitting = false
 }: AddPromptDialogProps) {
   const [selectedType, setSelectedType] = useState<RuleType>('identify-and-mark');

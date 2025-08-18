@@ -128,8 +128,8 @@ class PromptManager {
     try {
       const result = await api.safe.get<PromptType[]>(`/documents/id/${this.state.documentId}/prompts`);
       
-      if (result.success) {
-        this.dispatch({ type: 'LOAD_PROMPTS', payload: result.data });
+      if (result.ok) {
+        this.dispatch({ type: 'LOAD_PROMPTS', payload: result.value });
         return result;
       } else {
         const errorMessage = 'Failed to load prompts';
@@ -141,7 +141,7 @@ class PromptManager {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       this.dispatch({ type: 'SET_ERROR', payload: errorMessage });
       this.dispatch({ type: 'SET_LOADING', payload: false });
-      return { success: false, error } as Result<PromptType[], unknown>;
+      return { ok: false, error };
     }
   }
 
@@ -158,8 +158,8 @@ class PromptManager {
 
       const result = await api.safe.post<PromptType>(`/documents/id/${this.state.documentId}/prompts`, createData);
       
-      if (result.success) {
-        this.dispatch({ type: 'ADD_PROMPT', payload: result.data });
+      if (result.ok) {
+        this.dispatch({ type: 'ADD_PROMPT', payload: result.value });
         return result;
       } else {
         const errorMessage = 'Failed to create prompt';
@@ -171,7 +171,7 @@ class PromptManager {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       this.dispatch({ type: 'SET_ERROR', payload: errorMessage });
       this.dispatch({ type: 'SET_CREATING', payload: false });
-      return { success: false, error } as Result<PromptType, unknown>;
+      return { ok: false, error };
     }
   }
 
@@ -182,9 +182,9 @@ class PromptManager {
     try {
       const result = await api.safe.delete(`/prompts/id/${promptId}`);
       
-      if (result.success) {
+      if (result.ok) {
         this.dispatch({ type: 'REMOVE_PROMPT', payload: promptId });
-        return { success: true, data: undefined };
+        return { ok: true, value: undefined };
       } else {
         const errorMessage = 'Failed to delete prompt';
         this.dispatch({ type: 'SET_ERROR', payload: errorMessage });
@@ -195,7 +195,7 @@ class PromptManager {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       this.dispatch({ type: 'SET_ERROR', payload: errorMessage });
       this.dispatch({ type: 'SET_DELETING', payload: null });
-      return { success: false, error } as Result<void, unknown>;
+      return { ok: false, error };
     }
   }
 

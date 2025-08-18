@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Save, RotateCcw, AlertCircle, Trash2, Plus, Undo2 } from "lucide-react";
+import { Save, Trash2, Plus, Undo2 } from "lucide-react";
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { toast } from "sonner";
 import type { MinimalDocumentType } from "@/types";
@@ -20,8 +20,7 @@ export default function PromptManagement({ document }: PromptControlsProps) {
   const {
     state: { prompts, isLoading, isCreating, error },
     loadPrompts,
-    createPrompt,
-    clearError
+    createPrompt
   } = usePrompts();
   
   const [showAddDialog, setShowAddDialog] = useState(false);
@@ -70,7 +69,7 @@ export default function PromptManagement({ document }: PromptControlsProps) {
       
       const result = await createPrompt(promptData);
       
-      if (result.success) {
+      if (result.ok) {
         toast.success(`${ruleData.title} rule added successfully`);
         setShowAddDialog(false);
       } else {
@@ -190,7 +189,6 @@ export default function PromptManagement({ document }: PromptControlsProps) {
         isOpen={showAddDialog}
         onClose={handleCloseAddDialog}
         onConfirm={handleAddRule}
-        documentId={document.id}
         isSubmitting={isCreating}
       />
     </div>
