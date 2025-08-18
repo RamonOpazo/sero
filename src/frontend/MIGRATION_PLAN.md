@@ -24,14 +24,14 @@ This document outlines the **MANDATORY** step-by-step migration from the current
 - [x] **Phase 5**: DocumentEditor Module Migration (20 min) ✅ COMPLETE
 - [x] **Phase 6**: Shared Components Reorganization (15 min) ✅ COMPLETE
 - [x] **Phase 7**: Layout Components Migration (10 min) ✅ COMPLETE
-- [ ] **Phase 8**: Hook Encapsulation Enforcement (15 min)
+- [x] **Phase 8**: Hook Encapsulation Enforcement (15 min) ✅ COMPLETE
 - [ ] **Phase 9**: Import Path Updates & Compliance (25 min)
 - [ ] **Phase 10**: Dialog Export Cleanup (10 min)
 - [ ] **Phase 11**: Build Validation & Testing (15 min)
 
 **Total Estimated Time**: 165 minutes (~2.75 hours)
-**Completed**: 7/11 phases (105 minutes) ✅
-**Remaining**: 4 phases (~1 hour)
+**Completed**: 8/11 phases (120 minutes) ✅
+**Remaining**: 3 phases (~45 minutes)
 
 ## ✅ **PROGRESS SUMMARY**
 
@@ -43,6 +43,7 @@ This document outlines the **MANDATORY** step-by-step migration from the current
 5. ✅ **Phase 5**: DocumentEditor complete - Full component encapsulation with useDocumentEditor hook and contextual dialog renaming
 6. ✅ **Phase 6**: Shared Components complete - All shared components properly encapsulated with clean APIs and semantic organization
 7. ✅ **Phase 7**: Layout Components complete - All layout components organized with semantic naming and proper domain separation
+8. ✅ **Phase 8**: Hook Encapsulation complete - Strict hook encapsulation enforced with component-specific hooks moved to domains
 
 ### **Current Status:**
 - **Build Status**: ✅ Passing (`pnpm build` successful)
@@ -51,14 +52,15 @@ This document outlines the **MANDATORY** step-by-step migration from the current
 - **DocumentEditor Module**: ✅ 100% compliant with DIRECTORY_STRUCTURE.md
 - **Shared Components**: ✅ 100% compliant with DIRECTORY_STRUCTURE.md (EmptyState, ConfirmationDialog, ThemeToggle, SettingsToggle, Widget, DataTable)
 - **Layout Components**: ✅ 100% compliant with DIRECTORY_STRUCTURE.md (MainLayout, SiteHeader, AppSidebar, AppNavigation, UserMenu, ApiLinks, Breadcrumbs)
+- **Hook Encapsulation**: ✅ Strict encapsulation enforced - Component-specific hooks moved to domains (useDataTable, useDocumentViewerState, usePDFPages, useDocumentData)
+- **Global Hooks**: ✅ Only cross-cutting utilities and multi-component API hooks remain global
 - **Import Hygiene**: ✅ Clean imports via co-located dialogs, shared components, and layout domains
-- **Hook Encapsulation**: ✅ Business logic properly co-located
 - **Semantic Naming**: ✅ All components use clear, descriptive names (NavMain→AppNavigation, NavUser→UserMenu, NavApi→ApiLinks)
 - **Domain Separation**: ✅ Sidebar and Navigation properly separated with clean boundaries
 - **Features Migration**: ✅ DataTable moved from features to shared, Breadcrumbs moved from features to layout
 
 ### **Next Steps:**
-- **Phase 8**: Hook Encapsulation Enforcement (validate global vs component-specific hooks)
+- **Phase 9**: Import Path Updates & Compliance (eliminate legacy import violations)
 - Continue with remaining phases...
 
 ---
@@ -454,42 +456,44 @@ export * from './DataTable'
 - [x] Verify structure: `tree src/components/Layout/` shows proper organization
 - [x] Ready for Phase 8: YES
 
-### Phase 8: Hook Encapsulation Enforcement (15 minutes)
+### Phase 8: Hook Encapsulation Enforcement (15 minutes) ✅ COMPLETE
 **COMPLIANCE TARGET**: Enforce strict hook encapsulation per directive #4
 
 #### 8.1 Audit Global Hook Usage
-- [ ] List all global hooks: `ls src/hooks/`
-- [ ] Document output for reference
-- [ ] **MANDATORY**: Identify hooks that violate encapsulation rules
-- [ ] **COMPLIANCE CHECK**: Only cross-cutting and 3+ component usage hooks remain global
+- [x] List all global hooks: `ls src/hooks/`
+- [x] Document output for reference
+- [x] **MANDATORY**: Identify hooks that violate encapsulation rules
+- [x] **COMPLIANCE CHECK**: Only cross-cutting and 3+ component usage hooks remain global
 
 #### 8.2 Validate Hook Compliance
 **MANDATORY**: Apply strict hook encapsulation per architectural directives:
 
 **Keep in global `/hooks/` (cross-cutting UI utilities):**
-- [ ] Verify exists: `ls src/hooks/use-mobile.ts` ✅ (UI utility)
-- [ ] Verify exists: `ls src/hooks/useColumnNavigation.ts` ✅ (navigation utility)
-- [ ] **COMPLIANCE CHECK**: UI utilities correctly placed in global scope
+- [x] Verify exists: `ls src/hooks/use-mobile.ts` ✅ (UI utility)
+- [x] Verify exists: `ls src/hooks/useColumnNavigation.tsx` ✅ (navigation utility)
+- [x] **COMPLIANCE CHECK**: UI utilities correctly placed in global scope
 
 **Keep in global `/hooks/` (API hooks used by 3+ components):**
-- [ ] Verify exists: `ls src/hooks/useProjects.ts` ✅ (used by ProjectsView, ProjectsPage, DocumentsView)
-- [ ] Verify exists: `ls src/hooks/useDocuments.ts` ✅ (used by DocumentsView, DocumentEditor, ProjectsView)
-- [ ] Verify exists: `ls src/hooks/useFiles.ts` ✅ (used by DocumentEditor, DocumentsView, FileViewer)
-- [ ] Verify exists: `ls src/hooks/usePrompts.ts` ✅ (used by DocumentEditor, DocumentViewer, PromptsView)
-- [ ] Verify exists: `ls src/hooks/useSelections.ts` ✅ (used by DocumentEditor, DocumentViewer, SelectionsView)
-- [ ] **COMPLIANCE CHECK**: Multi-component API hooks correctly remain global
+- [x] Verify exists: `ls src/hooks/useProjects.ts` ✅ (used by ProjectsView, ProjectsPage, DocumentsView)
+- [x] Verify exists: `ls src/hooks/useDocuments.ts` ✅ (used by DocumentsView, DocumentEditor, ProjectsView)
+- [x] Verify exists: `ls src/hooks/useFiles.ts` ✅ (used by DocumentEditor, DocumentsView, FileViewer)
+- [x] Verify exists: `ls src/hooks/usePrompts.ts` ✅ (used by DocumentEditor, DocumentViewer, PromptsView)
+- [x] Verify exists: `ls src/hooks/useSelections.ts` ✅ (used by DocumentEditor, DocumentViewer, SelectionsView)
+- [x] **COMPLIANCE CHECK**: Multi-component API hooks correctly remain global
 
-#### 8.3 Handle Potential Hook Violations
-- [ ] Check for component-specific hooks in global: `find src/hooks -name "use*.ts" | grep -E "(View|Editor|Dialog|Component)"`
-- [ ] If violations found, note for component encapsulation
-- [ ] **MANDATORY COMPLIANCE**: Follow hook encapsulation rules per directive #4
-- [ ] **COMPLIANCE CHECK**: No business logic leakage between components
+#### 8.3 Handle Hook Violations
+- [x] **MOVED**: `useDataTable.tsx` → `shared/DataTable/useDataTable.tsx` (DataTable-specific)
+- [x] **MOVED**: `useDocumentViewerState.ts` → `features/document-viewer/useDocumentViewerState.ts` (viewer-specific)
+- [x] **MOVED**: `usePDFPages.tsx` → `features/document-viewer/usePDFPages.tsx` (PDF-specific)
+- [x] **MOVED**: `useDocumentData.ts` → `DocumentEditor/useDocumentData.ts` (document editor-specific)
+- [x] **MANDATORY COMPLIANCE**: Follow hook encapsulation rules per directive #4
+- [x] **COMPLIANCE CHECK**: No business logic leakage between components
 
 #### 8.4 Create Global Hooks Index
-- [ ] Create `src/hooks/index.ts` with content:
+- [x] Create `src/hooks/index.ts` with content:
 ```typescript
 // Cross-cutting UI utilities
-export { useMobile } from './use-mobile'
+export { useIsMobile } from './use-mobile'
 export { useColumnNavigation } from './useColumnNavigation'
 
 // Multi-component API hooks (3+ component usage)
@@ -497,17 +501,24 @@ export { useProjects } from './useProjects'
 export { useDocuments } from './useDocuments'
 export { useFiles } from './useFiles'
 export { usePrompts } from './usePrompts'
-export { useSelections } from './useSelections'
+export { useSelection } from './useSelections'
 ```
-- [ ] Verify file created: `ls src/hooks/index.ts`
-- [ ] **COMPLIANCE CHECK**: Clean public API per directive #6
+- [x] Verify file created: `ls src/hooks/index.ts`
+- [x] **COMPLIANCE CHECK**: Clean public API per directive #6
 
-#### 8.5 Phase 8 Validation
-- [ ] **MANDATORY**: Hook encapsulation rules enforced
-- [ ] **MANDATORY**: Only cross-cutting and multi-component hooks remain global
-- [ ] **MANDATORY**: Component-specific hooks moved to component domains
-- [ ] **MANDATORY**: Clean public API created
-- [ ] Ready for Phase 9: YES / NO
+#### 8.5 Update Component Index Files
+- [x] Update `shared/DataTable/index.ts` to export `useDataTable`
+- [x] Update `DocumentEditor/index.ts` to export `useDocumentPrompts`, `useDocumentSelections`
+- [x] Update `features/document-viewer/index.ts` to export `useDocumentViewerState`, `usePDFPages`
+- [x] **COMPLIANCE CHECK**: All moved hooks available via clean public APIs
+
+#### 8.6 Phase 8 Validation
+- [x] **MANDATORY**: Hook encapsulation rules enforced
+- [x] **MANDATORY**: Only cross-cutting and multi-component hooks remain global
+- [x] **MANDATORY**: Component-specific hooks moved to component domains
+- [x] **MANDATORY**: Clean public API created
+- [x] **MANDATORY**: Build passes successfully (`pnpm build`)
+- [x] Ready for Phase 9: YES
 
 ### Phase 9: Import Path Updates & Compliance (25 minutes)
 **COMPLIANCE TARGET**: Enforce import hygiene and eliminate violations per directive #6

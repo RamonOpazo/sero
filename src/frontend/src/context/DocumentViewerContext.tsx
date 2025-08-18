@@ -1,5 +1,5 @@
 import { createContext, useContext } from "react";
-import { useDocumentViewerState } from "@/hooks/useDocumentViewerState";
+import { useDocumentViewerState } from "@/components/features/document-viewer/useDocumentViewerState";
 
 const DocumentViewerContext = createContext<ReturnType<typeof useDocumentViewerState> | null>(null);
 

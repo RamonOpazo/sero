@@ -7,7 +7,7 @@ import { api } from "@/lib/axios";
 import { toast } from "sonner";
 import { useState, useCallback, useMemo } from "react";
 import type { MinimalDocumentType } from "@/types";
-import { useDocumentSelections } from "@/hooks/useDocumentData";
+import { useDocumentSelections } from "@/components/DocumentEditor/useDocumentData";
 import SaveConfirmationDialog from "../dialogs/SaveConfirmationDialog";
 import SelectionsList from "./SelectionsList";
 

@@ -28,6 +28,8 @@ export { screenToViewport, screenToDocument, documentToViewport, clampPan, calcu
 
 // Hooks
 export { useSelectionLoader } from './hooks/useSelectionLoader';
+export { useDocumentViewerState } from './useDocumentViewerState';
+export { usePDFPages } from './usePDFPages';
 
 // Types
 export type { Selection, SelectionCreateType } from "./types/viewer";

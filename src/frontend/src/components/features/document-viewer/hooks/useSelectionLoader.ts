@@ -4,7 +4,7 @@
  */
 
 import { useEffect } from 'react';
-import { useDocumentSelections } from '@/hooks/useDocumentData';
+import { useDocumentSelections } from '@/components/DocumentEditor/useDocumentData';
 import { useSelections } from '../core/SelectionProvider';
 
 export function useSelectionLoader(documentId: string) {

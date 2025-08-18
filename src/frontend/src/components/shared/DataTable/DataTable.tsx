@@ -1,7 +1,7 @@
 import { DataTableToolbar } from './DataTableToolbar'
 import { DataTableContent } from './DataTableContent'
 import { DataTablePagination } from './DataTablePagination'
-import { useDataTable, type UseDataTableProps } from '@/hooks/useDataTable'
+import { useDataTable, type UseDataTableProps } from '@/components/shared/DataTable/useDataTable'
 
 export function DataTable<TData, TValue>(props: UseDataTableProps<TData, TValue>) {
   const {
