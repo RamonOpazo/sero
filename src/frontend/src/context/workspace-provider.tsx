@@ -120,52 +120,52 @@ function workspaceReducer(state: WorkspaceState, action: WorkspaceAction): Works
   }
 }
 
-// Persistence utilities
-const STORAGE_KEY = 'sero-refactor-state';
+// Workspace persistence utilities
+const STORAGE_KEY = 'sero-workspace-state';
 
-interface PersistedState {
+interface PersistedWorkspaceState {
   currentProject: ProjectShallowType | null;
   currentDocument: DocumentShallowType | null;
   // Note: we don't persist currentFile as it contains blobs which can't be serialized
 }
 
-function saveStateToStorage(state: WorkspaceState) {
+function saveWorkspaceToStorage(state: WorkspaceState) {
   try {
-    const persistedState: PersistedState = {
+    const persistedState: PersistedWorkspaceState = {
       currentProject: state.currentProject,
       currentDocument: state.currentDocument,
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(persistedState));
   } catch (error) {
-    console.warn('Failed to save state to localStorage:', error);
+    console.warn('Failed to save workspace state to localStorage:', error);
   }
 }
 
-function loadStateFromStorage(): PersistedState | null {
+function loadWorkspaceFromStorage(): PersistedWorkspaceState | null {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
-      return JSON.parse(stored) as PersistedState;
+      return JSON.parse(stored) as PersistedWorkspaceState;
     }
   } catch (error) {
-    console.warn('Failed to load state from localStorage:', error);
+    console.warn('Failed to load workspace state from localStorage:', error);
   }
   return null;
 }
 
-function clearStoredState() {
+function clearWorkspaceStorage() {
   try {
     localStorage.removeItem(STORAGE_KEY);
   } catch (error) {
-    console.warn('Failed to clear stored state:', error);
+    console.warn('Failed to clear workspace state:', error);
   }
 }
 
-// Workspace context interface
+// Workspace context interface - provides access to app-wide workspace state and actions
 interface WorkspaceContextType {
   state: WorkspaceState;
   
-  // Project actions
+  // Project management actions
   loadProjects: () => Promise<void>;
   selectProject: (project: ProjectShallowType) => void;
   clearProjectSelection: () => void;
@@ -173,16 +173,16 @@ interface WorkspaceContextType {
   updateProject: (projectId: string, projectData: ProjectUpdateType) => Promise<void>;
   deleteProjects: (projects: ProjectShallowType[]) => Promise<void>;
   
-  // Document actions
+  // Document management actions  
   loadDocuments: (projectId: string) => Promise<void>;
   selectDocument: (document: DocumentShallowType) => void;
   clearDocumentSelection: () => void;
   
-  // File actions
+  // File management actions
   loadFile: (fileId: string, password: string) => Promise<void>;
   clearFileSelection: () => void;
   
-  // Utility actions
+  // Workspace utility actions
   clearAllErrors: () => void;
   resetState: () => void;
 }
@@ -203,25 +203,25 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
   const documentsHook = useDocuments();
   const filesHook = useFiles();
 
-  // Initialize state from localStorage on mount
+  // Initialize workspace state from localStorage on mount
   useEffect(() => {
-    const persistedState = loadStateFromStorage();
-    if (persistedState) {
-      console.log('🔄 Restoring persisted state:', persistedState);
-      dispatch({ type: 'RESTORE_PERSISTED_STATE', payload: persistedState });
+    const persistedWorkspace = loadWorkspaceFromStorage();
+    if (persistedWorkspace) {
+      console.log('🔄 Restoring persisted workspace:', persistedWorkspace);
+      dispatch({ type: 'RESTORE_PERSISTED_STATE', payload: persistedWorkspace });
       
-      // Show notification about state restoration
-      if (persistedState.currentProject) {
+      // Show notification about workspace restoration
+      if (persistedWorkspace.currentProject) {
         toast.info('Restored previous session', {
-          description: `Returning to project "${persistedState.currentProject.name}"`,
+          description: `Returning to project "${persistedWorkspace.currentProject.name}"`,
         });
       }
     }
   }, []);
 
-  // Re-fetch data based on restored state
+  // Re-fetch data based on restored workspace state
   useEffect(() => {
-    const initializeFromPersistedState = async () => {
+    const initializeFromPersistedWorkspace = async () => {
       // Always load projects first
       await projectsHook.refreshProjects();
       
@@ -232,14 +232,14 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
       }
     };
 
-    initializeFromPersistedState();
+    initializeFromPersistedWorkspace();
   }, [state.currentProject?.id]); // Only depend on project ID to avoid infinite loops
 
-  // Persist state changes to localStorage
+  // Persist workspace state changes to localStorage
   useEffect(() => {
-    // Only persist if we have meaningful state changes (not during initial load)
+    // Only persist if we have meaningful workspace changes (not during initial load)
     if (state.currentProject || state.currentDocument) {
-      saveStateToStorage(state);
+      saveWorkspaceToStorage(state);
     }
   }, [state.currentProject, state.currentDocument]);
 
@@ -286,7 +286,7 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
 
   const clearProjectSelection = useCallback(() => {
     dispatch({ type: 'SET_CURRENT_PROJECT', payload: null });
-    clearStoredState(); // Clear persisted state when manually clearing
+    clearWorkspaceStorage(); // Clear persisted workspace when manually clearing
   }, []);
 
   // Document actions
@@ -319,7 +319,7 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
 
   const resetState = useCallback(() => {
     dispatch({ type: 'RESET_STATE' });
-    clearStoredState(); // Clear persisted state when resetting
+    clearWorkspaceStorage(); // Clear persisted workspace when resetting
   }, []);
 
   // CRUD operations
