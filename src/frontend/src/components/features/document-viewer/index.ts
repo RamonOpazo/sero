@@ -19,9 +19,16 @@ export { default as HelpOverlay } from "./viewport/HelpOverlay";
 // Core system
 export { default as UnifiedViewport } from "./core/UnifiedViewport";
 export { ViewportProvider, useViewportState, useViewportActions } from "./core/ViewportState";
-export { default as SelectionManager } from './core/SelectionManager';
 export { SelectionProvider, useSelections } from './core/SelectionProvider';
-export type { SelectionManagerState, SelectionManagerAction } from './core/SelectionManager';
+export { PromptProvider, usePrompts } from './core/PromptProvider';
+
+// Domain Managers (new configuration-driven system)
+export { 
+  createPromptManager, 
+  createSelectionManager,
+  type PromptManagerInstance,
+  type SelectionManagerInstance
+} from './managers';
 
 // Utilities
 export { screenToViewport, screenToDocument, documentToViewport, clampPan, calculateCenterFit } from "./core/CoordinateSystem";
@@ -32,4 +39,4 @@ export { useDocumentViewerState } from './useDocumentViewerState';
 export { usePDFPages } from './usePDFPages';
 
 // Types
-export type { Selection, SelectionCreateType } from "./types/viewer";
+export type { Selection, SelectionCreateType } from "./managers/types/viewer";

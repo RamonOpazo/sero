@@ -13,7 +13,7 @@ type Props = {
 
 export default function PromptList({ onEditPrompt }: Props) {
   const {
-    state: { savedPrompts, newPrompts, isLoading, isDeleting, error, initialState },
+    state: { savedItems: savedPrompts, newItems: newPrompts, isLoading, isDeleting, error, initialState },
     deletePromptLocally
   } = usePrompts();
 
@@ -28,11 +28,11 @@ export default function PromptList({ onEditPrompt }: Props) {
 
   // Enhanced prompts with type information and modification status
   const promptsWithTypeInfo = useMemo(() => {
-    const initialSavedPrompts = initialState.savedPrompts;
+    const initialSavedPrompts = initialState.savedItems;
 
     const saved = savedPrompts.map((prompt) => {
       // Check if this saved prompt was modified from its initial state
-      const initialPrompt = initialSavedPrompts.find(initial => initial.id === prompt.id);
+      const initialPrompt = initialSavedPrompts?.find(initial => initial.id === prompt.id);
       const isModified = initialPrompt && (
         prompt.text !== initialPrompt.text ||
         prompt.temperature !== initialPrompt.temperature ||
@@ -53,7 +53,7 @@ export default function PromptList({ onEditPrompt }: Props) {
     }));
 
     return [...newOnes, ...saved]; // New prompts first
-  }, [savedPrompts, newPrompts, initialState.savedPrompts]);
+  }, [savedPrompts, newPrompts, initialState.savedItems]);
 
   if (isLoading) {
     return (

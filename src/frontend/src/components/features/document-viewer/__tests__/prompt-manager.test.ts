@@ -2,7 +2,7 @@
 // Verifies that promptManagerConfig works correctly with the domain manager library
 
 import { createDomainManager } from '@/lib/domain-manager';
-import { promptManagerConfig, type PromptType } from '../prompt-manager-config';
+import { promptManagerConfig, type PromptType } from '../managers/configs/prompt-manager-config';
 
 const TEST_DOCUMENT_ID = 'test-prompt-doc-123';
 
@@ -77,7 +77,7 @@ describe('PromptManager Configuration', () => {
         }
       });
 
-      const updatedPrompt = promptManager.getItemById('prompt-1');
+      const updatedPrompt = promptManager.getItemById('prompt-1') as PromptType | undefined;
       expect(updatedPrompt?.text).toBe('Updated text');
       expect(updatedPrompt?.temperature).toBe(0.8);
     });

@@ -89,10 +89,14 @@ export const changeTrackingBehavior: Behavior = {
       };
     },
     COMMIT_CHANGES: (state) => {
+      // Move new items to saved items and clear new items
+      state.savedItems = [...state.savedItems, ...state.newItems];
+      state.newItems = [];
+      
       // Update initial state to current state
       state.initialState = {
         savedItems: [...state.savedItems],
-        newItems: [...state.newItems],
+        newItems: [],
         timestamp: Date.now()
       };
     },
@@ -123,7 +127,10 @@ export const changeTrackingBehavior: Behavior = {
       const changes = state.getPendingChanges();
       return changes.creates.length + changes.updates.length + changes.deletes.length;
     },
-    hasUnsavedChanges: (state) => state.getPendingChangesCount() > 0
+    hasUnsavedChanges: (state) => {
+      const changes = state.getPendingChanges();
+      return changes.creates.length > 0 || changes.updates.length > 0 || changes.deletes.length > 0;
+    }
   }
 };
 
@@ -139,6 +146,11 @@ export const historyBehavior: Behavior = {
   },
   actionHandlers: {
     ADD_TO_HISTORY: (state, payload: StateSnapshot<any>) => {
+      // Don't add to history if it's the initial empty state
+      if (payload.savedItems.length === 0 && payload.newItems.length === 0 && state.changeHistory.length === 0) {
+        return;
+      }
+      
       // Truncate future history if we're not at the end
       if (state.currentHistoryIndex < state.changeHistory.length - 1) {
         state.changeHistory = state.changeHistory.slice(0, state.currentHistoryIndex + 1);

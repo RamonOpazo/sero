@@ -216,7 +216,7 @@ export class CoreDomainManager<T, CreateT = Omit<T, 'id'>> implements DomainMana
         if (!result.ok) {
           this.dispatch({ type: 'SET_ERROR', payload: 'Failed to create item' });
           this.dispatch({ type: 'SET_SAVING', payload: false });
-          return result;
+          return { ok: false, error: result.error };
         }
         
         // Replace in newItems with saved item

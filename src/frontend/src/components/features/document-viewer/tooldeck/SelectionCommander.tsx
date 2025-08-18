@@ -42,7 +42,7 @@ export default function SelectionManagement({ document }: SelectionControlsProps
   // Calculate selection statistics using the clean PendingChanges API
   const selectionStats = useMemo(() => {
     const newCount = pendingChanges.creates.length;
-    const existingCount = selectionState.savedSelections.length;
+    const existingCount = selectionState.savedItems?.length || 0;
     const totalCount = allSelections.length;
     const modifiedSavedCount = pendingChanges.updates.length;
     const pendingDeletionsCount = pendingChanges.deletes.length;
@@ -58,7 +58,7 @@ export default function SelectionManagement({ document }: SelectionControlsProps
       totalUnsavedChanges,
       hasUnsavedChanges
     };
-  }, [pendingChanges, pendingChangesCount, selectionState.savedSelections.length, allSelections.length]);
+  }, [pendingChanges, pendingChangesCount, selectionState.savedItems?.length, allSelections.length]);
 
   // Save all pending changes using SelectionManager
   const performSaveAllSelections = useCallback(async () => {

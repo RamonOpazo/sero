@@ -1,6 +1,6 @@
 // SelectionManager Configuration for Domain Manager Library
 import type { SelectionType, SelectionCreateType } from '@/types';
-import { type Selection } from './types/viewer';
+import { type Selection } from '../types/viewer';
 import { DocumentViewerAPI } from '@/lib/document-viewer-api';
 import type { 
   DomainManagerConfig, 
@@ -134,8 +134,10 @@ const selectionActionHandlers = {
       };
       state.newItems.push(selectionWithId);
       
-      // Add to history if not in batch mode
-      if (!state.isBatchOperation && state.addToHistory) {
+      // Only add to history if not in batch mode AND we already have some history or multiple items
+      // This prevents the very first item from creating initial redo history in fresh managers
+      if (!state.isBatchOperation && state.addToHistory && 
+          (state.changeHistory?.length > 0 || state.savedItems.length > 0 || state.newItems.length > 1)) {
         state.addToHistory();
       }
       
@@ -262,5 +264,5 @@ export const selectionManagerConfig: DomainManagerConfig<Selection, Omit<Selecti
 export type SelectionManagerInstance = ReturnType<typeof import('@/lib/domain-manager').createDomainManager<Selection, Omit<SelectionCreateType, 'document_id'>>>;
 
 // Re-export for convenience
-export { type Selection } from './types/viewer';
+export { type Selection } from '../types/viewer';
 export type { SelectionType, SelectionCreateType } from '@/types';

@@ -46,11 +46,11 @@ export default function SelectionList() {
 
   // Use all selections from the manager with type information and modification status
   const selectionsWithTypeInfo = useMemo(() => {
-    const initialSavedSelections = selectionState.initialState.savedSelections;
+    const initialSavedSelections = selectionState.initialState.savedItems;
     
-    const saved = selectionState.savedSelections.map((sel) => {
+    const saved = (selectionState.savedItems || []).map((sel) => {
       // Check if this saved selection was modified from its initial state
-      const initialSelection = initialSavedSelections.find(initial => initial.id === sel.id);
+      const initialSelection = initialSavedSelections?.find(initial => initial.id === sel.id);
       const isModified = initialSelection && (
         sel.x !== initialSelection.x ||
         sel.y !== initialSelection.y ||
@@ -67,7 +67,7 @@ export default function SelectionList() {
       };
     });
     
-    const newOnes = selectionState.newSelections.map((sel) => ({
+    const newOnes = (selectionState.newItems || []).map((sel) => ({
       ...sel,
       type: 'new' as const,
       isModified: false,

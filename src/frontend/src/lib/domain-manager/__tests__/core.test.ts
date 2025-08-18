@@ -1,8 +1,7 @@
 // Domain Manager Library Core Tests
 // Tests the generic domain manager implementation with mock configurations
 
-import { createDomainManager, type DomainManagerConfig } from '../index';
-import type { Result } from '@/lib/result';
+import { createDomainManager, type DomainManagerConfig, type BehaviorKey } from '../index';
 
 // Mock types for testing
 interface MockItem {
@@ -208,12 +207,12 @@ describe('Domain Manager Core', () => {
     it('should support different behavior combinations', () => {
       const minimalConfig = {
         ...mockConfig,
-        behaviors: ['crud'] as const
+        behaviors: ['crud'] as BehaviorKey[]
       };
 
       const fullConfig = {
         ...mockConfig,
-        behaviors: ['crud', 'changeTracking', 'history', 'selection'] as const
+        behaviors: ['crud', 'changeTracking', 'history', 'selection'] as BehaviorKey[]
       };
 
       const minimalManager = createDomainManager(minimalConfig, TEST_DOCUMENT_ID);

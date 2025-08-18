@@ -1,17 +1,19 @@
 /**
  * Prompt Context Provider
  * 
- * Provides a clean React interface to the PromptManager following the same pattern as SelectionProvider
+ * Provides a clean React interface using the new domain manager library
+ * Maintains identical external interface for seamless migration
  */
 
 import React, { createContext, useContext, useEffect, useState, useRef, useMemo, useCallback } from 'react';
-import PromptManager, { 
-  type PromptManagerState, 
-  type PromptManagerAction,
-  type PendingPromptChanges 
-} from './PromptManager';
-import { type PromptType, type PromptCreateType } from '@/types';
+import { createDomainManager, type DomainManager, type PendingChanges } from '@/lib/domain-manager';
+import { promptManagerConfig, type PromptType, type PromptCreateType } from '../managers/configs/prompt-manager-config';
 import { type Result } from '@/lib/result';
+
+// Legacy type aliases for backward compatibility
+type PromptManagerState = ReturnType<DomainManager<PromptType>['getState']>;
+type PromptManagerAction = { type: string; payload?: any };
+type PendingPromptChanges = PendingChanges<PromptType>;
 
 interface PromptContextValue {
   // State
@@ -55,13 +57,13 @@ interface PromptProviderProps {
 }
 
 export function PromptProvider({ children, documentId }: PromptProviderProps) {
-  // Create manager instance (only once per documentId)
-  const managerRef = useRef<PromptManager | null>(null);
+  // Create domain manager instance (only once per documentId)
+  const managerRef = useRef<DomainManager<PromptType> | null>(null);
   const currentDocumentId = useRef<string>(documentId);
 
   // Re-create manager if document ID changes
   if (!managerRef.current || currentDocumentId.current !== documentId) {
-    managerRef.current = new PromptManager(documentId);
+    managerRef.current = createDomainManager(promptManagerConfig, documentId);
     currentDocumentId.current = documentId;
   }
   
@@ -82,50 +84,72 @@ export function PromptProvider({ children, documentId }: PromptProviderProps) {
   
   // API methods
   const loadPrompts = useCallback(async () => {
-    return manager.loadPrompts();
+    return manager.loadItems();
   }, [manager]);
   
   const saveAllChanges = useCallback(async () => {
     return manager.saveAllChanges();
   }, [manager]);
   
-  // Local operations (don't hit server immediately)
+  // Local operations (don't hit server immediately) - Adapter methods
   const addPromptLocally = useCallback((promptData: Omit<PromptCreateType, 'document_id'>) => {
-    return manager.addPromptLocally(promptData);
-  }, [manager]);
+    const promptWithId: PromptType = {
+      id: `prompt-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      ...promptData,
+      document_id: documentId,
+      created_at: new Date().toISOString(),
+      updated_at: null
+    };
+    
+    manager.dispatch({ type: 'ADD_ITEM', payload: promptWithId });
+    return promptWithId;
+  }, [manager, documentId]);
   
   const updatePrompt = useCallback((id: string, updates: Partial<PromptType>) => {
-    return manager.updatePrompt(id, updates);
+    const existingPrompt = manager.getItemById(id);
+    if (existingPrompt) {
+      manager.dispatch({ 
+        type: 'UPDATE_ITEM', 
+        payload: { id, updates }
+      });
+      return true;
+    }
+    return false;
   }, [manager]);
   
   const deletePromptLocally = useCallback((id: string) => {
-    return manager.deletePromptLocally(id);
+    const existingPrompt = manager.getItemById(id);
+    if (existingPrompt) {
+      manager.dispatch({ type: 'DELETE_ITEM', payload: id });
+      return true;
+    }
+    return false;
   }, [manager]);
   
   const clearAll = useCallback(() => {
-    manager.clearAll();
+    manager.dispatch({ type: 'CLEAR_ALL' });
   }, [manager]);
   
   const discardAllChanges = useCallback(() => {
-    manager.discardAllChanges();
+    manager.dispatch({ type: 'DISCARD_ALL_CHANGES' });
   }, [manager]);
   
-  // Convenience methods
+  // Convenience methods - Use domain manager methods
   const getPromptById = useCallback((id: string) => {
-    return manager.getPromptById(id);
+    return manager.getItemById(id);
   }, [manager]);
   
   const getAllPrompts = useCallback(() => {
-    return manager.getAllPrompts();
+    return manager.getAllItems();
   }, [manager]);
   
   const clearError = useCallback(() => {
     dispatch({ type: 'SET_ERROR', payload: null });
   }, [dispatch]);
   
-  // Computed values
-  const promptCount = useMemo(() => manager.getPromptCount(), [manager, state]);
-  const hasPrompts = useMemo(() => manager.hasPrompts(), [manager, state]);
+  // Computed values - Use state methods from domain manager
+  const promptCount = useMemo(() => (state as any).getPromptCount?.() || manager.getItemCount(), [manager, state]);
+  const hasPrompts = useMemo(() => (state as any).hasPrompts?.() || manager.hasItems(), [manager, state]);
   const hasUnsavedChanges = useMemo(() => manager.hasUnsavedChanges(), [manager, state]);
   const pendingChanges = useMemo(() => manager.getPendingChanges(), [manager, state]);
   const pendingChangesCount = useMemo(() => manager.getPendingChangesCount(), [manager, state]);

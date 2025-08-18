@@ -2,7 +2,7 @@
 // Verifies that selectionManagerConfig works correctly with the domain manager library
 
 import { createDomainManager } from '@/lib/domain-manager';
-import { selectionManagerConfig, type Selection } from '../selection-manager-config';
+import { selectionManagerConfig, type Selection } from '../managers/configs/selection-manager-config';
 
 const TEST_DOCUMENT_ID = 'test-selection-doc-123';
 
@@ -12,6 +12,7 @@ describe('SelectionManager Configuration', () => {
   beforeEach(() => {
     selectionManager = createDomainManager(selectionManagerConfig, TEST_DOCUMENT_ID);
   });
+
 
   describe('Initialization', () => {
     it('should initialize with correct domain configuration', () => {
@@ -174,15 +175,20 @@ describe('SelectionManager Configuration', () => {
 
   describe('History Management', () => {
     it('should support undo/redo operations', () => {
-      const state = selectionManager.getState();
+      // Create a fresh manager for this test to avoid interference from previous tests
+      const freshManager = createDomainManager(selectionManagerConfig, TEST_DOCUMENT_ID);
+      const state = freshManager.getState();
       
       // Check history methods exist
       expect(typeof (state as any).canUndo).toBe('function');
       expect(typeof (state as any).canRedo).toBe('function');
       expect(typeof (state as any).addToHistory).toBe('function');
 
-      // Initially no history
+
+      // Initially no history (fresh manager should have no history)
       expect((state as any).canUndo()).toBe(false);
+      
+      // Check if we can redo (should be false for fresh manager)
       expect((state as any).canRedo()).toBe(false);
     });
   });
@@ -220,7 +226,7 @@ describe('SelectionManager Configuration', () => {
         }
       });
 
-      const updatedSelection = selectionManager.getItemById('selection-1');
+      const updatedSelection = selectionManager.getItemById('selection-1') as Selection | undefined;
       expect(updatedSelection?.x).toBe(0.5);
       expect(updatedSelection?.y).toBe(0.6);
 

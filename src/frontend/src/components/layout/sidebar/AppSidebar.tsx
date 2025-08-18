@@ -23,7 +23,8 @@ import {
 } from "@/components/ui/sidebar"
 
 // Helper to determine if we're in development mode
-const isDev = import.meta.env.DEV || window.location.hostname === 'localhost';
+const isDev = (typeof window !== 'undefined' && window.location.hostname === 'localhost') || 
+              (process.env.NODE_ENV === 'development');
 
 const data = {
   user: { name: "example", email: "m@example.com", avatar: "/avatars/shadcn.jpg", },

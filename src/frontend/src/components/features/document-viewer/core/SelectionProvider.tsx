@@ -1,16 +1,17 @@
 /**
  * Selection Context Provider
  * 
- * Provides a clean React interface to the SelectionManager
+ * Provides a clean React interface using the new domain manager library
+ * Maintains identical external interface for seamless migration
  */
 
 import React, { createContext, useContext, useEffect, useState, useRef, useMemo, useCallback } from 'react';
-import SelectionManager, { 
-  type SelectionManagerState, 
-  type SelectionManagerAction,
-  type PendingChanges
-} from './SelectionManager';
-import { type Selection, type SelectionCreateType } from '../types/viewer';
+import { createDomainManager, type DomainManager, type PendingChanges } from '@/lib/domain-manager';
+import { selectionManagerConfig, type Selection, type SelectionCreateType } from '../managers/configs/selection-manager-config';
+
+// Legacy type aliases for backward compatibility
+type SelectionManagerState = ReturnType<DomainManager<Selection>['getState']>;
+type SelectionManagerAction = { type: string; payload?: any };
 
 interface SelectionContextValue {
   // State
@@ -53,7 +54,7 @@ interface SelectionContextValue {
   canUndo: boolean;
   canRedo: boolean;
   hasUnsavedChanges: boolean;
-  pendingChanges: PendingChanges;
+  pendingChanges: PendingChanges<Selection>;
   pendingChangesCount: number;
 }
 
@@ -69,13 +70,24 @@ interface SelectionProviderProps {
 }
 
 export function SelectionProvider({ children, documentId, initialSelections }: SelectionProviderProps) {
-  // Create manager instance (only once)
-  const managerRef = useRef<SelectionManager | null>(null);
-  if (!managerRef.current) {
-    managerRef.current = new SelectionManager(documentId, {
-      savedSelections: initialSelections?.saved || [],
-      newSelections: initialSelections?.new || [],
-    });
+  // Create domain manager instance (only once per documentId)
+  const managerRef = useRef<DomainManager<Selection> | null>(null);
+  const currentDocumentId = useRef<string>(documentId);
+
+  // Re-create manager if document ID changes
+  if (!managerRef.current || currentDocumentId.current !== documentId) {
+    managerRef.current = createDomainManager(selectionManagerConfig, documentId);
+    currentDocumentId.current = documentId;
+    
+    // Initialize with saved/new selections if provided
+    if (initialSelections?.saved?.length) {
+      managerRef.current.dispatch({ type: 'LOAD_SAVED_ITEMS', payload: initialSelections.saved });
+    }
+    if (initialSelections?.new?.length) {
+      initialSelections.new.forEach(selection => {
+        managerRef.current!.dispatch({ type: 'ADD_ITEM', payload: selection });
+      });
+    }
   }
   
   const manager = managerRef.current;
@@ -129,15 +141,15 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
   }, [dispatch]);
   
   const selectSelection = useCallback((id: string | null) => {
-    dispatch({ type: 'SELECT_SELECTION', payload: id });
+    dispatch({ type: 'SELECT_ITEM', payload: id });
   }, [dispatch]);
   
   const updateSelection = useCallback((id: string, selection: Selection) => {
-    dispatch({ type: 'UPDATE_SELECTION', payload: { id, selection } });
+    dispatch({ type: 'UPDATE_ITEM', payload: { id, updates: selection } });
   }, [dispatch]);
   
   const updateSelectionBatch = useCallback((id: string, selection: Selection) => {
-    dispatch({ type: 'UPDATE_SELECTION_BATCH', payload: { id, selection } });
+    dispatch({ type: 'UPDATE_ITEM_BATCH', payload: { id, updates: selection } });
   }, [dispatch]);
   
   const finishBatchOperation = useCallback(() => {
@@ -145,27 +157,27 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
   }, [dispatch]);
   
   const deleteSelection = useCallback((id: string) => {
-    dispatch({ type: 'DELETE_SELECTION', payload: id });
+    dispatch({ type: 'DELETE_ITEM', payload: id });
   }, [dispatch]);
   
   const deleteSelectedSelection = useCallback(() => {
-    if (state.selectedSelectionId) {
-      dispatch({ type: 'DELETE_SELECTION', payload: state.selectedSelectionId });
+    if (state.selectedItemId) {
+      dispatch({ type: 'DELETE_ITEM', payload: state.selectedItemId });
       return true;
     }
     return false;
-  }, [dispatch, state.selectedSelectionId]);
+  }, [dispatch, state.selectedItemId]);
   
   const toggleSelectionGlobal = useCallback((id: string, currentPageNumber?: number | null) => {
-    dispatch({ type: 'TOGGLE_SELECTION_GLOBAL', payload: { id, currentPageNumber } });
+    dispatch({ type: 'TOGGLE_ITEM_GLOBAL', payload: id });
   }, [dispatch]);
   
   const setSelectionPage = useCallback((id: string, pageNumber: number | null) => {
-    dispatch({ type: 'SET_SELECTION_PAGE', payload: { id, pageNumber } });
+    dispatch({ type: 'SET_ITEM_PAGE', payload: { id, page: pageNumber } });
   }, [dispatch]);
   
   const loadSavedSelections = useCallback((selections: Selection[]) => {
-    dispatch({ type: 'LOAD_SAVED_SELECTIONS', payload: selections });
+    dispatch({ type: 'LOAD_SAVED_ITEMS', payload: selections });
   }, [dispatch]);
   
   const undo = useCallback(() => {
@@ -197,11 +209,14 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
     return manager.saveAllChanges();
   }, [manager]);
   
-  // Computed values - these methods use the manager's internal state which we get updates for via subscription
-  const allSelections = useMemo(() => manager.getAllSelections(), [manager, state]);
-  const selectedSelection = useMemo(() => manager.getSelectedSelection(), [manager, state]);
-  const canUndo = useMemo(() => manager.canUndo(), [manager, state]);
-  const canRedo = useMemo(() => manager.canRedo(), [manager, state]);
+  // Computed values - Use domain manager methods and state methods
+  const allSelections = useMemo(() => manager.getAllItems(), [manager, state]);
+  const selectedSelection = useMemo(() => {
+    const selectedId = state.selectedItemId;
+    return selectedId ? manager.getItemById(selectedId) || null : null;
+  }, [manager, state]);
+  const canUndo = useMemo(() => (state as any).canUndo?.() || false, [state]);
+  const canRedo = useMemo(() => (state as any).canRedo?.() || false, [state]);
   const hasUnsavedChanges = useMemo(() => manager.hasUnsavedChanges(), [manager, state]);
   const pendingChanges = useMemo(() => manager.getPendingChanges(), [manager, state]);
   const pendingChangesCount = useMemo(() => manager.getPendingChangesCount(), [manager, state]);

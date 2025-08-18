@@ -9,7 +9,7 @@ import React, { useState, useCallback, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { useSelections } from '../core/SelectionProvider';
 import { useViewportState } from '../core/ViewportState';
-import type { Selection, SelectionCreateType } from '../types/viewer';
+import type { Selection, SelectionCreateType } from '../managers/types/viewer';
 
 type Props = { 
   documentSize: { width: number; height: number };
@@ -315,8 +315,8 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     
     // Check if this saved selection has been modified from its initial state
     const isModified = !isNew && (() => {
-      const initialSavedSelections = selectionState.initialState.savedSelections;
-      const initialSelection = initialSavedSelections.find(initial => initial.id === selection.id);
+      const initialSavedSelections = selectionState.initialState.savedItems;
+      const initialSelection = initialSavedSelections?.find(initial => initial.id === selection.id);
       return initialSelection && (
         selection.x !== initialSelection.x ||
         selection.y !== initialSelection.y ||

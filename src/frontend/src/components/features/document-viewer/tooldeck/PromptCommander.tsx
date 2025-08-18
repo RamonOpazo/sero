@@ -18,7 +18,7 @@ interface PromptControlsProps {
  */
 export default function PromptManagement({ document }: PromptControlsProps) {
   const {
-    state: { savedPrompts, newPrompts, isSaving, error },
+    state: { savedItems: savedPrompts, newItems: newPrompts, isSaving, error },
     loadPrompts,
     saveAllChanges,
     addPromptLocally,
