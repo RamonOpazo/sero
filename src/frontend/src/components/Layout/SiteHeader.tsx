@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
-import { Breadcrumbs } from '@/components/features/breadcrumbs/Breadcrumbs'
+import { Breadcrumbs } from './navigation'
 
 export function SiteHeader() {
   return (

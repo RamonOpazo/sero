@@ -10,8 +10,7 @@ import {
   Code,
 } from "lucide-react"
 
-import { NavMain } from "@/views/NavMain"
-import { NavUser } from "@/views/NavUser"
+import { AppNavigation, UserMenu } from "@/components/Layout/navigation"
 import {
   Sidebar,
   SidebarContent,
@@ -100,13 +99,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
+        <AppNavigation items={data.navMain} />
         {data.navDev.length > 0 && (
-          <NavMain items={data.navDev} />
+          <AppNavigation items={data.navDev} />
         )}
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <UserMenu user={data.user} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

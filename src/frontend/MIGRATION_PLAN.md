@@ -23,15 +23,15 @@ This document outlines the **MANDATORY** step-by-step migration from the current
 - [x] **Phase 4**: DocumentsView Module Migration (20 min) ✅ COMPLETE
 - [x] **Phase 5**: DocumentEditor Module Migration (20 min) ✅ COMPLETE
 - [x] **Phase 6**: Shared Components Reorganization (15 min) ✅ COMPLETE
-- [ ] **Phase 7**: Layout Components Migration (10 min)
+- [x] **Phase 7**: Layout Components Migration (10 min) ✅ COMPLETE
 - [ ] **Phase 8**: Hook Encapsulation Enforcement (15 min)
 - [ ] **Phase 9**: Import Path Updates & Compliance (25 min)
 - [ ] **Phase 10**: Dialog Export Cleanup (10 min)
 - [ ] **Phase 11**: Build Validation & Testing (15 min)
 
 **Total Estimated Time**: 165 minutes (~2.75 hours)
-**Completed**: 6/11 phases (90 minutes) ✅
-**Remaining**: 5 phases (~1.25 hours)
+**Completed**: 7/11 phases (105 minutes) ✅
+**Remaining**: 4 phases (~1 hour)
 
 ## ✅ **PROGRESS SUMMARY**
 
@@ -42,6 +42,7 @@ This document outlines the **MANDATORY** step-by-step migration from the current
 4. ✅ **Phase 4**: DocumentsView complete - Full component encapsulation with useDocumentsView hook and semantic UploadDocumentsDialog naming
 5. ✅ **Phase 5**: DocumentEditor complete - Full component encapsulation with useDocumentEditor hook and contextual dialog renaming
 6. ✅ **Phase 6**: Shared Components complete - All shared components properly encapsulated with clean APIs and semantic organization
+7. ✅ **Phase 7**: Layout Components complete - All layout components organized with semantic naming and proper domain separation
 
 ### **Current Status:**
 - **Build Status**: ✅ Passing (`pnpm build` successful)
@@ -49,13 +50,15 @@ This document outlines the **MANDATORY** step-by-step migration from the current
 - **DocumentsView Module**: ✅ 100% compliant with DIRECTORY_STRUCTURE.md
 - **DocumentEditor Module**: ✅ 100% compliant with DIRECTORY_STRUCTURE.md
 - **Shared Components**: ✅ 100% compliant with DIRECTORY_STRUCTURE.md (EmptyState, ConfirmationDialog, ThemeToggle, SettingsToggle, Widget, DataTable)
-- **Import Hygiene**: ✅ Clean imports via co-located dialogs and shared components
+- **Layout Components**: ✅ 100% compliant with DIRECTORY_STRUCTURE.md (MainLayout, SiteHeader, AppSidebar, AppNavigation, UserMenu, ApiLinks, Breadcrumbs)
+- **Import Hygiene**: ✅ Clean imports via co-located dialogs, shared components, and layout domains
 - **Hook Encapsulation**: ✅ Business logic properly co-located
-- **Semantic Naming**: ✅ All dialogs and components provide better context
-- **Features Migration**: ✅ DataTable moved from features to shared with proper encapsulation
+- **Semantic Naming**: ✅ All components use clear, descriptive names (NavMain→AppNavigation, NavUser→UserMenu, NavApi→ApiLinks)
+- **Domain Separation**: ✅ Sidebar and Navigation properly separated with clean boundaries
+- **Features Migration**: ✅ DataTable moved from features to shared, Breadcrumbs moved from features to layout
 
 ### **Next Steps:**
-- **Phase 7**: Layout Components Migration (requires breadcrumbs evaluation)
+- **Phase 8**: Hook Encapsulation Enforcement (validate global vs component-specific hooks)
 - Continue with remaining phases...
 
 ---
@@ -400,38 +403,56 @@ export * from './DataTable'
 - [x] Verify structure: `tree src/components/shared/` shows proper organization
 - [x] Ready for Phase 7: YES
 
-### Phase 7: Layout Components Migration (10 minutes)
+### Phase 7: Layout Components Migration (10 minutes) ✅ COMPLETE
 **COMPLIANCE TARGET**: Establish layout component domain per directive #2
 
-#### 7.1 Migrate Features Breadcrumbs
-- [ ] Check if breadcrumbs exists: `ls src/components/features/breadcrumbs/Breadcrumbs.tsx` (may not exist)
-- [ ] If exists, execute: `mv src/components/features/breadcrumbs/Breadcrumbs.tsx src/components/Layout/Breadcrumbs.tsx`
-- [ ] If moved, verify: `ls src/components/Layout/Breadcrumbs.tsx`
-- [ ] If not exists, note for potential future creation
-- [ ] **COMPLIANCE CHECK**: Layout components in dedicated domain per directive #2
+#### 7.1 Comprehensive Layout Components Migration
+- [x] Migrate Breadcrumbs: `features/breadcrumbs/Breadcrumbs.tsx` → `Layout/navigation/Breadcrumbs.tsx`
+- [x] Migrate & Rename: `views/NavMain.tsx` → `Layout/navigation/AppNavigation.tsx`
+- [x] Migrate & Rename: `views/NavUser.tsx` → `Layout/navigation/UserMenu.tsx`
+- [x] Migrate & Rename: `views/NavApi.tsx` → `Layout/navigation/ApiLinks.tsx`
+- [x] Migrate: `views/AppSidebar.tsx` → `Layout/sidebar/AppSidebar.tsx`
+- [x] Migrate: `views/MainLayout.tsx` → `Layout/MainLayout.tsx`
+- [x] Migrate: `views/SiteHeader.tsx` → `Layout/SiteHeader.tsx`
+- [x] **COMPLIANCE CHECK**: All layout components in dedicated domains per directive #2
 
-#### 7.2 Clean Up Empty Features Directory
-- [ ] Check if features/breadcrumbs is empty: `ls src/components/features/breadcrumbs/` (may fail if moved)
-- [ ] If empty, remove: `rmdir src/components/features/breadcrumbs/`
-- [ ] Check if features is empty: `ls src/components/features/` (may contain other items)
-- [ ] If completely empty, remove: `rmdir src/components/features/`
-- [ ] **COMPLIANCE CHECK**: No empty legacy directories remain
+#### 7.2 Create Semantic Directory Structure
+- [x] Create `Layout/sidebar/` domain for sidebar-related components
+- [x] Create `Layout/navigation/` domain for navigation-related components
+- [x] Create test directories: `__tests__/` folders for each domain
+- [x] **COMPLIANCE CHECK**: Proper separation of concerns between sidebar and navigation
 
-#### 7.3 Create Layout Index
-- [ ] Create `src/components/Layout/index.ts` with content:
-```typescript
-export { Breadcrumbs } from './Breadcrumbs'
-// TODO: Add AppLayout and Navigation when created
-```
-- [ ] Verify file created: `ls src/components/Layout/index.ts`
-- [ ] **COMPLIANCE CHECK**: Clean public API per directive #6
+#### 7.3 Semantic Component Renaming
+- [x] Rename `NavMain` → `AppNavigation` (clearer purpose)
+- [x] Rename `NavUser` → `UserMenu` (more descriptive)
+- [x] Rename `NavApi` → `ApiLinks` (better context)
+- [x] **COMPLIANCE CHECK**: All component names are semantic and descriptive
 
-#### 7.4 Phase 7 Validation
-- [ ] **MANDATORY**: All layout components properly located
-- [ ] **MANDATORY**: Legacy features directories cleaned up
-- [ ] **MANDATORY**: Clean public API created
-- [ ] Verify structure: `tree src/components/Layout/`
-- [ ] Ready for Phase 8: YES / NO
+#### 7.4 Create Clean Public APIs
+- [x] Create `Layout/navigation/index.ts` with clean exports
+- [x] Create `Layout/sidebar/index.ts` with clean exports
+- [x] Update `Layout/index.ts` with comprehensive exports
+- [x] **COMPLIANCE CHECK**: Clean public APIs per directive #6
+
+#### 7.5 Update Import References
+- [x] Update AppSidebar imports to use clean index-based imports
+- [x] Update MainLayout imports to use relative index imports
+- [x] Update SiteHeader imports to use relative index imports
+- [x] **COMPLIANCE CHECK**: All imports use clean index-based patterns
+
+#### 7.6 Clean Up Legacy Directories
+- [x] Remove empty `features/breadcrumbs/` directory
+- [x] Remove exports from `features/index.ts`
+- [x] **COMPLIANCE CHECK**: No empty legacy directories remain
+
+#### 7.7 Phase 7 Validation
+- [x] **MANDATORY**: All layout components properly located in semantic domains
+- [x] **MANDATORY**: Semantic component naming enforced
+- [x] **MANDATORY**: Clean public APIs created with index files
+- [x] **MANDATORY**: Import hygiene enforced with clean index-based imports
+- [x] **MANDATORY**: Build passes successfully (`pnpm build`)
+- [x] Verify structure: `tree src/components/Layout/` shows proper organization
+- [x] Ready for Phase 8: YES
 
 ### Phase 8: Hook Encapsulation Enforcement (15 minutes)
 **COMPLIANCE TARGET**: Enforce strict hook encapsulation per directive #4

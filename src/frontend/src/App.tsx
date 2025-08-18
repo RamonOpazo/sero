@@ -1,7 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { ThemeProvider } from '@/context';
-import { MainLayout } from '@/views/MainLayout';
+import { MainLayout } from '@/components/Layout/MainLayout';
 import { HomePage } from '@/pages/HomePage';
 import { ProjectsView } from '@/components/ProjectsView/ProjectsView';
 import { DocumentsView } from '@/components/DocumentsView/DocumentsView';

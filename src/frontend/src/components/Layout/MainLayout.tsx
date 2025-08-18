@@ -3,9 +3,9 @@ import { Toaster } from '@/components/ui/sonner';
 import { ProjectProvider } from '@/context/ProjectProvider';
 import { ThemeToggle } from '@/components/shared';
 import { Separator } from '@/components/ui/separator';
-import { Breadcrumbs } from '@/components/features/breadcrumbs/Breadcrumbs';
+import { Breadcrumbs } from './navigation';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
-import { AppSidebar } from './AppSidebar';
+import { AppSidebar } from './sidebar';
 
 interface LayoutProps {
   children: ReactNode
