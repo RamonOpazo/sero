@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useReducer, useCallback, useMemo, type ReactNode, useEffect } from 'react';
 import { toast } from 'sonner';
-import { useProjects } from '@/hooks/useProjects';
 import { useDocuments } from '@/hooks/useDocuments';
 import { useFiles } from '@/hooks/useFiles';
 import type { 
@@ -9,11 +8,9 @@ import type {
   FileType,
   PromptType,
   SelectionType,
-  ProjectCreateType,
-  ProjectUpdateType,
 } from '@/types';
 
-// Workspace state structure - manages projects, documents, and files across the application
+// Workspace state structure - manages current selections and document/file state across the application
 interface WorkspaceState {
   // Current selections
   currentProject: ProjectShallowType | null;
@@ -26,31 +23,25 @@ interface WorkspaceState {
   } | null;
   
   // Lists for datatables
-  projects: ProjectShallowType[];
   documents: DocumentShallowType[];
   
   // Loading states
-  isLoadingProjects: boolean;
   isLoadingDocuments: boolean;
   isLoadingFile: boolean;
   
   // Error states
-  projectsError: string | null;
   documentsError: string | null;
   fileError: string | null;
 }
 
 // Workspace action types
 type WorkspaceAction =
-  | { type: 'SET_LOADING_PROJECTS'; payload: boolean }
   | { type: 'SET_LOADING_DOCUMENTS'; payload: boolean }
   | { type: 'SET_LOADING_FILE'; payload: boolean }
-  | { type: 'SET_PROJECTS'; payload: ProjectShallowType[] }
   | { type: 'SET_DOCUMENTS'; payload: DocumentShallowType[] }
   | { type: 'SET_CURRENT_PROJECT'; payload: ProjectShallowType | null }
   | { type: 'SET_CURRENT_DOCUMENT'; payload: DocumentShallowType | null }
   | { type: 'SET_CURRENT_FILE'; payload: { file: FileType; blob: Blob; prompts: PromptType[]; selections: SelectionType[] } | null }
-  | { type: 'SET_PROJECTS_ERROR'; payload: string | null }
   | { type: 'SET_DOCUMENTS_ERROR'; payload: string | null }
   | { type: 'SET_FILE_ERROR'; payload: string | null }
   | { type: 'CLEAR_ALL_ERRORS' }
@@ -62,12 +53,9 @@ const initialState: WorkspaceState = {
   currentProject: null,
   currentDocument: null,
   currentFile: null,
-  projects: [],
   documents: [],
-  isLoadingProjects: false,
   isLoadingDocuments: false,
   isLoadingFile: false,
-  projectsError: null,
   documentsError: null,
   fileError: null,
 };
@@ -75,14 +63,10 @@ const initialState: WorkspaceState = {
 // Workspace state reducer
 function workspaceReducer(state: WorkspaceState, action: WorkspaceAction): WorkspaceState {
   switch (action.type) {
-    case 'SET_LOADING_PROJECTS':
-      return { ...state, isLoadingProjects: action.payload };
     case 'SET_LOADING_DOCUMENTS':
       return { ...state, isLoadingDocuments: action.payload };
     case 'SET_LOADING_FILE':
       return { ...state, isLoadingFile: action.payload };
-    case 'SET_PROJECTS':
-      return { ...state, projects: action.payload, projectsError: null };
     case 'SET_DOCUMENTS':
       return { ...state, documents: action.payload, documentsError: null };
     case 'SET_CURRENT_PROJECT':
@@ -103,14 +87,12 @@ function workspaceReducer(state: WorkspaceState, action: WorkspaceAction): Works
       };
     case 'SET_CURRENT_FILE':
       return { ...state, currentFile: action.payload };
-    case 'SET_PROJECTS_ERROR':
-      return { ...state, projectsError: action.payload, isLoadingProjects: false };
     case 'SET_DOCUMENTS_ERROR':
       return { ...state, documentsError: action.payload, isLoadingDocuments: false };
     case 'SET_FILE_ERROR':
       return { ...state, fileError: action.payload, isLoadingFile: false };
     case 'CLEAR_ALL_ERRORS':
-      return { ...state, projectsError: null, documentsError: null, fileError: null };
+      return { ...state, documentsError: null, fileError: null };
     case 'RESET_STATE':
       return initialState;
     case 'RESTORE_PERSISTED_STATE':
@@ -165,13 +147,9 @@ function clearWorkspaceStorage() {
 interface WorkspaceContextType {
   state: WorkspaceState;
   
-  // Project management actions
-  loadProjects: () => Promise<void>;
+  // Project selection management (not CRUD - that's handled by components)
   selectProject: (project: ProjectShallowType) => void;
   clearProjectSelection: () => void;
-  createProject: (projectData: ProjectCreateType) => Promise<void>;
-  updateProject: (projectId: string, projectData: ProjectUpdateType) => Promise<void>;
-  deleteProjects: (projects: ProjectShallowType[]) => Promise<void>;
   
   // Document management actions  
   loadDocuments: (projectId: string) => Promise<void>;
@@ -198,8 +176,7 @@ interface WorkspaceProviderProps {
 export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
   const [state, dispatch] = useReducer(workspaceReducer, initialState);
   
-  // Use the hooks for API calls
-  const projectsHook = useProjects();
+  // Use the hooks for API calls (no longer need projects hook)
   const documentsHook = useDocuments();
   const filesHook = useFiles();
 
@@ -222,9 +199,6 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
   // Re-fetch data based on restored workspace state
   useEffect(() => {
     const initializeFromPersistedWorkspace = async () => {
-      // Always load projects first
-      await projectsHook.refreshProjects();
-      
       // If we have a persisted project, load its documents
       if (state.currentProject) {
         console.log('🔄 Re-loading documents for persisted project:', state.currentProject.name);
@@ -243,12 +217,7 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
     }
   }, [state.currentProject, state.currentDocument]);
 
-  // Sync hook state with provider state
-  React.useEffect(() => {
-    dispatch({ type: 'SET_PROJECTS', payload: projectsHook.projects });
-    dispatch({ type: 'SET_LOADING_PROJECTS', payload: projectsHook.loading });
-    dispatch({ type: 'SET_PROJECTS_ERROR', payload: projectsHook.error ? String(projectsHook.error) : null });
-  }, [projectsHook.projects, projectsHook.loading, projectsHook.error]);
+  // Sync hook state with provider state (no longer sync projects - components handle that)
 
   React.useEffect(() => {
     dispatch({ type: 'SET_DOCUMENTS', payload: documentsHook.documents });
@@ -274,11 +243,7 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
     dispatch({ type: 'SET_FILE_ERROR', payload: filesHook.error ? String(filesHook.error) : null });
   }, [filesHook.currentFileData, filesHook.loading, filesHook.error]);
 
-  // Project actions
-  const loadProjects = useCallback(async () => {
-    await projectsHook.refreshProjects();
-  }, [projectsHook.refreshProjects]);
-
+  // Project selection actions (not CRUD - components handle that)
   const selectProject = useCallback((project: ProjectShallowType) => {
     dispatch({ type: 'SET_CURRENT_PROJECT', payload: project });
     toast.success(`Selected project: ${project.name}`);
@@ -322,49 +287,12 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
     clearWorkspaceStorage(); // Clear persisted workspace when resetting
   }, []);
 
-  // CRUD operations
-  const createProject = useCallback(async (projectData: ProjectCreateType) => {
-    const result = await projectsHook.createProject(projectData);
-    if (result.ok) {
-      // Project list will be automatically refreshed by the hook
-      return Promise.resolve();
-    } else {
-      return Promise.reject(result.error);
-    }
-  }, [projectsHook.createProject]);
-
-  const updateProject = useCallback(async (projectId: string, projectData: ProjectUpdateType) => {
-    const result = await projectsHook.updateProject(projectId, projectData);
-    if (result.ok) {
-      // Project list will be automatically refreshed by the hook
-      return Promise.resolve();
-    } else {
-      return Promise.reject(result.error);
-    }
-  }, [projectsHook.updateProject]);
-
-  const deleteProjects = useCallback(async (projects: ProjectShallowType[]) => {
-    const result = await projectsHook.deleteProjects(projects);
-    if (result.ok) {
-      // Project list will be automatically refreshed by the hook
-      // Clear current project if it was deleted
-      if (state.currentProject && projects.some(p => p.id === state.currentProject?.id)) {
-        dispatch({ type: 'SET_CURRENT_PROJECT', payload: null });
-      }
-      return Promise.resolve();
-    } else {
-      return Promise.reject(result.error);
-    }
-  }, [projectsHook.deleteProjects, state.currentProject]);
+  // No project CRUD operations - components handle these directly
 
   const contextValue: WorkspaceContextType = useMemo(() => ({
     state,
-    loadProjects,
     selectProject,
     clearProjectSelection,
-    createProject,
-    updateProject,
-    deleteProjects,
     loadDocuments,
     selectDocument,
     clearDocumentSelection,
@@ -374,12 +302,8 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
     resetState,
   }), [
     state,
-    loadProjects,
     selectProject,
     clearProjectSelection,
-    createProject,
-    updateProject,
-    deleteProjects,
     loadDocuments,
     selectDocument,
     clearDocumentSelection,

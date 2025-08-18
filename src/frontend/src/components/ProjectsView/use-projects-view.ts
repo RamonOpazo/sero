@@ -1,10 +1,36 @@
-import { useMemo, useCallback, useState } from 'react';
+import { useMemo, useCallback, useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useWorkspace } from '@/context/workspace-provider';
+import { ProjectsAPI } from '@/lib/projects-api';
 import type { ProjectShallowType, ProjectCreateType, ProjectUpdateType } from '@/types';
 
 export function useProjectsView(onProjectSelect?: (project: ProjectShallowType) => void) {
-  const { state, createProject, updateProject, deleteProjects } = useWorkspace();
+  const { state, selectProject } = useWorkspace();
+  
+  // Own project state management
+  const [projects, setProjects] = useState<ProjectShallowType[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Load projects on mount
+  useEffect(() => {
+    const loadProjects = async () => {
+      setIsLoading(true);
+      setError(null);
+      
+      const result = await ProjectsAPI.fetchProjects();
+      
+      if (result.ok) {
+        setProjects(result.value);
+      } else {
+        setError(result.error instanceof Error ? result.error.message : 'Failed to load projects');
+      }
+      
+      setIsLoading(false);
+    };
+
+    loadProjects();
+  }, []);
   
   // Dialog state management
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -13,26 +39,48 @@ export function useProjectsView(onProjectSelect?: (project: ProjectShallowType) 
   const [selectedProjectForEdit, setSelectedProjectForEdit] = useState<ProjectShallowType | null>(null);
   const [selectedProjectForDelete, setSelectedProjectForDelete] = useState<ProjectShallowType | null>(null);
 
+  // Load projects utility
+  const refreshProjects = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    
+    const result = await ProjectsAPI.fetchProjects();
+    
+    if (result.ok) {
+      setProjects(result.value);
+    } else {
+      setError(result.error instanceof Error ? result.error.message : 'Failed to load projects');
+    }
+    
+    setIsLoading(false);
+  }, []);
+
   // Business logic handlers
   const handleSelectProject = useCallback(async (project: ProjectShallowType) => {
+    // Update workspace current project selection
+    selectProject(project);
+    
     if (onProjectSelect) {
       onProjectSelect(project);
     }
-  }, [onProjectSelect]);
+  }, [onProjectSelect, selectProject]);
 
   const handleCreateProject = useCallback(() => {
     setIsCreateDialogOpen(true);
   }, []);
 
   const handleCreateProjectSubmit = useCallback(async (projectData: ProjectCreateType) => {
-    try {
-      await createProject(projectData);
+    const result = await ProjectsAPI.createProject(projectData);
+    
+    if (result.ok) {
       setIsCreateDialogOpen(false);
-    } catch (error) {
-      // Error handling is done in the context, just re-throw to keep dialog open
-      throw error;
+      // Refresh the projects list
+      await refreshProjects();
+    } else {
+      // Error handling is done in the API, just re-throw to keep dialog open
+      throw result.error;
     }
-  }, [createProject]);
+  }, [refreshProjects]);
 
   const handleEditProject = useCallback((project: ProjectShallowType) => {
     setSelectedProjectForEdit(project);
@@ -42,21 +90,24 @@ export function useProjectsView(onProjectSelect?: (project: ProjectShallowType) 
   const handleEditProjectSubmit = useCallback(async (projectData: { name: string; description: string }) => {
     if (!selectedProjectForEdit) return;
     
-    try {
-      // Transform dialog data to API format
-      const updateData: ProjectUpdateType = {
-        name: projectData.name,
-        description: projectData.description || undefined,
-      };
-      
-      await updateProject(selectedProjectForEdit.id, updateData);
+    // Transform dialog data to API format
+    const updateData: ProjectUpdateType = {
+      name: projectData.name,
+      description: projectData.description || undefined,
+    };
+    
+    const result = await ProjectsAPI.updateProject(selectedProjectForEdit.id, updateData);
+    
+    if (result.ok) {
       setIsEditDialogOpen(false);
       setSelectedProjectForEdit(null);
-    } catch (error) {
-      // Error handling is done in the context, just re-throw to keep dialog open
-      throw error;
+      // Refresh the projects list
+      await refreshProjects();
+    } else {
+      // Error handling is done in the API, just re-throw to keep dialog open
+      throw result.error;
     }
-  }, [selectedProjectForEdit, updateProject]);
+  }, [selectedProjectForEdit, refreshProjects]);
 
   const handleDeleteProject = useCallback((project: ProjectShallowType) => {
     setSelectedProjectForDelete(project);
@@ -66,15 +117,18 @@ export function useProjectsView(onProjectSelect?: (project: ProjectShallowType) 
   const handleDeleteProjectConfirm = useCallback(async () => {
     if (!selectedProjectForDelete) return;
     
-    try {
-      await deleteProjects([selectedProjectForDelete]);
+    const result = await ProjectsAPI.deleteProjects([selectedProjectForDelete]);
+    
+    if (result.ok) {
       setIsDeleteDialogOpen(false);
       setSelectedProjectForDelete(null);
-    } catch (error) {
-      // Error handling is done in the context, just re-throw to keep dialog open
-      throw error;
+      // Refresh the projects list
+      await refreshProjects();
+    } else {
+      // Error handling is done in the API, just re-throw to keep dialog open
+      throw result.error;
     }
-  }, [selectedProjectForDelete, deleteProjects]);
+  }, [selectedProjectForDelete, refreshProjects]);
 
   const handleCloseDeleteDialog = useCallback(() => {
     setIsDeleteDialogOpen(false);
@@ -135,16 +189,19 @@ export function useProjectsView(onProjectSelect?: (project: ProjectShallowType) 
   ]);
 
   return {
-    // State from context
-    projects: state.projects,
+    // Own state management
+    projects,
     currentProject: state.currentProject,
-    isLoading: state.isLoadingProjects,
-    error: state.projectsError,
+    isLoading,
+    error,
     
     // Dialog state and handlers
     dialogState,
     
     // Action handlers
     actionHandlers,
+    
+    // Utility functions
+    refreshProjects,
   };
 }
