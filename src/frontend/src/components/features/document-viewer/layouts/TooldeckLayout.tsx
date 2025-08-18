@@ -6,7 +6,7 @@ import { useSelections } from "../core/SelectionProvider";
 import {
   DocumentControls,
   SelectionCommander,
-  PromptsList,
+  PromptCommander,
 } from "../tooldeck";
 
 interface ControlsLayoutProps {
@@ -61,7 +61,7 @@ export default function ControlsLayout({ document, className, ...props }: Contro
         value="prompts"
         title="AI Prompts"
       >
-        <PromptsList documentId={document.id} />
+        <PromptCommander document={document} />
       </Widget>
 
     </WidgetContainer>

@@ -1,5 +1,6 @@
 import { ViewportProvider } from "./core/ViewportState";
 import { SelectionProvider } from "./core/SelectionProvider";
+import { PromptProvider } from "./core/PromptProvider";
 import DocumentViewerLayout from "./layouts/MainLayout";
 import { type MinimalDocumentType } from "@/types";
 import { useSelectionLoader } from "./hooks/useSelectionLoader";
@@ -16,11 +17,13 @@ function ViewerWithNewSystem({ document }: { document: MinimalDocumentType }) {
   return <DocumentViewerLayout document={document} />;
 }
 
-// Main component with clean architecture - old system removed from selection logic
+// Main component with clean architecture - includes both Selection and Prompt managers
 function ViewerWithCleanArchitecture({ document }: { document: MinimalDocumentType }) {
   return (
     <SelectionProvider>
-      <ViewerWithNewSystem document={document} />
+      <PromptProvider documentId={document.id}>
+        <ViewerWithNewSystem document={document} />
+      </PromptProvider>
     </SelectionProvider>
   );
 }
