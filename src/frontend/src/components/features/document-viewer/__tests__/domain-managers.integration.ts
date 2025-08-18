@@ -1,9 +1,9 @@
-// Test Script for Domain Manager Library
-// This file tests that our configuration-driven managers work correctly
+// Document Viewer Domain Managers Integration Tests
+// Verifies that PromptManager and SelectionManager configurations work correctly
 
 import { createDomainManager } from '@/lib/domain-manager';
-import { promptManagerConfig } from './prompt-manager-config';
-import { selectionManagerConfig } from './selection-manager-config';
+import { promptManagerConfig } from '../prompt-manager-config';
+import { selectionManagerConfig } from '../selection-manager-config';
 
 // Test document ID
 const TEST_DOCUMENT_ID = 'test-doc-123';

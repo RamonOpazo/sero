@@ -1,0 +1,213 @@
+// PromptManager Configuration Tests
+// Verifies that promptManagerConfig works correctly with the domain manager library
+
+import { createDomainManager } from '@/lib/domain-manager';
+import { promptManagerConfig, type PromptType } from '../prompt-manager-config';
+
+const TEST_DOCUMENT_ID = 'test-prompt-doc-123';
+
+describe('PromptManager Configuration', () => {
+  let promptManager: ReturnType<typeof createDomainManager>;
+
+  beforeEach(() => {
+    promptManager = createDomainManager(promptManagerConfig, TEST_DOCUMENT_ID);
+  });
+
+  describe('Initialization', () => {
+    it('should initialize with correct domain configuration', () => {
+      const state = promptManager.getState();
+      
+      expect(state.documentId).toBe(TEST_DOCUMENT_ID);
+      expect(state.savedItems).toEqual([]);
+      expect(state.newItems).toEqual([]);
+      expect(state.isLoading).toBe(false);
+      expect(state.error).toBeNull();
+    });
+
+    it('should have prompt-specific state extensions', () => {
+      const state = promptManager.getState();
+      
+      // Check custom state extension
+      expect(state.isDeleting).toBeNull();
+    });
+  });
+
+  describe('CRUD Operations', () => {
+    it('should add new prompts correctly', () => {
+      const testPrompt: PromptType = {
+        id: 'prompt-1',
+        text: 'Test prompt text',
+        temperature: 0.7,
+        languages: ['en', 'es'],
+        document_id: TEST_DOCUMENT_ID,
+        created_at: new Date().toISOString(),
+        updated_at: null
+      };
+
+      promptManager.dispatch({
+        type: 'ADD_ITEM',
+        payload: testPrompt
+      });
+
+      const allPrompts = promptManager.getAllItems();
+      expect(allPrompts).toHaveLength(1);
+      expect(allPrompts[0]).toEqual(testPrompt);
+    });
+
+    it('should update existing prompts', () => {
+      // Add initial prompt
+      const testPrompt: PromptType = {
+        id: 'prompt-1',
+        text: 'Original text',
+        temperature: 0.7,
+        languages: ['en'],
+        document_id: TEST_DOCUMENT_ID,
+        created_at: new Date().toISOString(),
+        updated_at: null
+      };
+
+      promptManager.dispatch({ type: 'ADD_ITEM', payload: testPrompt });
+
+      // Update prompt
+      promptManager.dispatch({
+        type: 'UPDATE_ITEM',
+        payload: {
+          id: 'prompt-1',
+          updates: { text: 'Updated text', temperature: 0.8 }
+        }
+      });
+
+      const updatedPrompt = promptManager.getItemById('prompt-1');
+      expect(updatedPrompt?.text).toBe('Updated text');
+      expect(updatedPrompt?.temperature).toBe(0.8);
+    });
+
+    it('should delete prompts correctly', () => {
+      const testPrompt: PromptType = {
+        id: 'prompt-1',
+        text: 'Test prompt',
+        temperature: 0.7,
+        languages: ['en'],
+        document_id: TEST_DOCUMENT_ID,
+        created_at: new Date().toISOString(),
+        updated_at: null
+      };
+
+      promptManager.dispatch({ type: 'ADD_ITEM', payload: testPrompt });
+      expect(promptManager.getAllItems()).toHaveLength(1);
+
+      promptManager.dispatch({ type: 'DELETE_ITEM', payload: 'prompt-1' });
+      expect(promptManager.getAllItems()).toHaveLength(0);
+    });
+  });
+
+  describe('Custom Methods', () => {
+    it('should provide prompt-specific methods', () => {
+      const state = promptManager.getState();
+      
+      // Test custom methods
+      expect(typeof (state as any).hasPrompts).toBe('function');
+      expect(typeof (state as any).getPromptCount).toBe('function');
+      expect(typeof (state as any).getPromptById).toBe('function');
+    });
+
+    it('should track prompt count correctly', () => {
+      const state = promptManager.getState();
+      
+      expect((state as any).hasPrompts()).toBe(false);
+      expect((state as any).getPromptCount()).toBe(0);
+
+      // Add a prompt
+      promptManager.dispatch({
+        type: 'ADD_ITEM',
+        payload: {
+          id: 'prompt-1',
+          text: 'Test',
+          temperature: 0.7,
+          languages: ['en'],
+          document_id: TEST_DOCUMENT_ID,
+          created_at: new Date().toISOString(),
+          updated_at: null
+        }
+      });
+
+      const updatedState = promptManager.getState();
+      expect((updatedState as any).hasPrompts()).toBe(true);
+      expect((updatedState as any).getPromptCount()).toBe(1);
+    });
+  });
+
+  describe('Bulk Operations', () => {
+    it('should clear all prompts', () => {
+      // Add multiple prompts
+      for (let i = 1; i <= 3; i++) {
+        promptManager.dispatch({
+          type: 'ADD_ITEM',
+          payload: {
+            id: `prompt-${i}`,
+            text: `Prompt ${i}`,
+            temperature: 0.7,
+            languages: ['en'],
+            document_id: TEST_DOCUMENT_ID,
+            created_at: new Date().toISOString(),
+            updated_at: null
+          }
+        });
+      }
+
+      expect(promptManager.getAllItems()).toHaveLength(3);
+
+      promptManager.dispatch({ type: 'CLEAR_ALL' });
+      expect(promptManager.getAllItems()).toHaveLength(0);
+    });
+  });
+
+  describe('Change Tracking', () => {
+    it('should track pending changes correctly', () => {
+      // Add a new prompt
+      promptManager.dispatch({
+        type: 'ADD_ITEM',
+        payload: {
+          id: 'prompt-1',
+          text: 'Test prompt',
+          temperature: 0.7,
+          languages: ['en'],
+          document_id: TEST_DOCUMENT_ID,
+          created_at: new Date().toISOString(),
+          updated_at: null
+        }
+      });
+
+      const changes = promptManager.getPendingChanges();
+      expect(changes.creates).toHaveLength(1);
+      expect(changes.updates).toHaveLength(0);
+      expect(changes.deletes).toHaveLength(0);
+
+      expect(promptManager.hasUnsavedChanges()).toBe(true);
+      expect(promptManager.getPendingChangesCount()).toBe(1);
+    });
+  });
+
+  describe('Subscription', () => {
+    it('should notify subscribers of state changes', () => {
+      const mockListener = jest.fn();
+      const unsubscribe = promptManager.subscribe(mockListener);
+
+      promptManager.dispatch({
+        type: 'ADD_ITEM',
+        payload: {
+          id: 'prompt-1',
+          text: 'Test',
+          temperature: 0.7,
+          languages: ['en'],
+          document_id: TEST_DOCUMENT_ID,
+          created_at: new Date().toISOString(),
+          updated_at: null
+        }
+      });
+
+      expect(mockListener).toHaveBeenCalled();
+      unsubscribe();
+    });
+  });
+});
