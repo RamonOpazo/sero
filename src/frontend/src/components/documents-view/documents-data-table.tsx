@@ -1,11 +1,14 @@
 import { useMemo, useCallback } from 'react';
 import { Eye, Plus, CheckCircle2, AlertCircle } from 'lucide-react';
-import { toast } from 'sonner';
 import { DataTable, ColumnBuilder as Column, Actions } from '@/components/shared/DataTable';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { Badge } from '@/components/ui/badge';
 import { useWorkspace } from '@/context/workspace-provider';
-import type { DocumentShallowType } from '@/types';
+import { useDocumentsView } from './use-documents-view';
+import { UploadDocumentsDialog } from './dialogs/upload-documents-dialog';
+import { EditDocumentDialog } from './dialogs/edit-document-dialog';
+import { DeleteDocumentDialog } from './dialogs/delete-document-dialog';
+import type { DocumentShallowType, DocumentType } from '@/types';
 
 interface DocumentsDataTableProps {
   onDocumentSelect?: (document: DocumentShallowType) => void;
@@ -14,34 +17,16 @@ interface DocumentsDataTableProps {
 export function DocumentsDataTable({ onDocumentSelect }: DocumentsDataTableProps) {
   const { state } = useWorkspace();
   
-
-  const handleSelectDocument = useCallback((document: DocumentShallowType) => {
-    if (onDocumentSelect) {
-      onDocumentSelect(document);
-    }
-  }, [onDocumentSelect]);
-
-  const handleCreateDocument = useCallback(() => {
-    // TODO: Implement document creation
-    toast.info('Document creation not yet implemented');
-  }, []);
-
-  const handleEditDocument = useCallback((document: DocumentShallowType) => {
-    // TODO: Implement document editing
-    toast.info(`Edit document: ${document.name} - Not yet implemented`);
-  }, []);
-
-  const handleDeleteDocument = useCallback((document: DocumentShallowType) => {
-    // TODO: Implement document deletion
-    toast.info(`Delete document: ${document.name} - Not yet implemented`);
-  }, []);
-
-  const handleCopyDocumentId = useCallback((document: DocumentShallowType) => {
-    navigator.clipboard.writeText(document.id);
-    toast.success('Document ID copied to clipboard', {
-      description: `ID: ${document.id}`,
-    });
-  }, []);
+  // Extract all business logic to custom hook
+  const {
+    projectId,
+    documents,
+    currentDocument,
+    isLoading,
+    error,
+    dialogState,
+    actionHandlers,
+  } = useDocumentsView(onDocumentSelect);
 
 
   const processedStatusRenderer = useCallback((document: DocumentShallowType) => {
@@ -86,17 +71,18 @@ export function DocumentsDataTable({ onDocumentSelect }: DocumentsDataTableProps
     );
   }, []);
 
+  // Pure UI rendering functions
   const nameRenderer = useCallback((document: DocumentShallowType) => {
     return (
       <button
-        onClick={() => handleSelectDocument(document)}
+        onClick={() => actionHandlers.onSelectDocument(document)}
         className="text-left font-medium text-primary hover:text-primary/80 hover:underline focus:outline-none focus:underline transition-colors"
         title={`Select document: ${document.name}`}
       >
         {document.name.length > 25 ? `${document.name.slice(0, 25)}...` : document.name}
       </button>
     );
-  }, [handleSelectDocument]);
+  }, [actionHandlers.onSelectDocument]);
 
   const columns = useMemo(() => [
     // Custom clickable name column
@@ -156,15 +142,15 @@ export function DocumentsDataTable({ onDocumentSelect }: DocumentsDataTableProps
       .custom({
         label: 'Select Document',
         icon: Eye,
-        onClick: handleSelectDocument,
+        onClick: actionHandlers.onSelectDocument,
         variant: 'default'
       })
-      .edit(handleEditDocument, 'Edit document')
-      .delete(handleDeleteDocument, 'Delete document')
+      .edit(actionHandlers.onEditDocument, 'Edit document')
+      .delete(actionHandlers.onDeleteDocument, 'Delete document')
       .build()
-  ], [handleSelectDocument, handleEditDocument, handleDeleteDocument, handleCopyDocumentId, processedStatusRenderer, tagsRenderer, nameRenderer]);
+  ], [actionHandlers, processedStatusRenderer, tagsRenderer, nameRenderer]);
 
-  if (state.isLoadingDocuments) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
         <div className="text-center">
@@ -175,39 +161,74 @@ export function DocumentsDataTable({ onDocumentSelect }: DocumentsDataTableProps
     );
   }
 
-  if (state.documentsError) {
+  if (error) {
     return (
       <div className="flex items-center justify-center py-8">
         <div className="text-center">
           <p className="text-destructive mb-2">Failed to load documents</p>
-          <p className="text-sm text-muted-foreground">{state.documentsError}</p>
+          <p className="text-sm text-muted-foreground">{error}</p>
         </div>
       </div>
     );
   }
 
-  if (state.documents.length === 0) {
+  if (documents.length === 0) {
     return (
       <EmptyState
         message={`No documents found${state.currentProject ? ` in "${state.currentProject.name}"` : ''}`}
-        buttonText="Create your first document"
+        buttonText="Upload your first document"
         buttonIcon={<Plus className="h-4 w-4" />}
-        onButtonClick={handleCreateDocument}
+        onButtonClick={actionHandlers.onCreateDocument}
       />
     );
   }
 
   return (
-    <DataTable
-      columns={columns}
-      data={state.documents}
-      selection={state.currentDocument ? [state.currentDocument] : []}
-      searchKey="name"
-      searchPlaceholder="Search documents..."
-      onCreateEntries={handleCreateDocument}
-      enableRowSelection={false} // We handle selection through actions
-      enableDeleteSelection={false} // We handle deletion through actions
-      pageSize={10}
-    />
+    <>
+      <DataTable
+        columns={columns}
+        data={documents}
+        selection={currentDocument ? [currentDocument] : []}
+        searchKey="name"
+        searchPlaceholder="Search documents..."
+        onCreateEntries={actionHandlers.onCreateDocument}
+        enableRowSelection={false} // We handle selection through actions
+        enableDeleteSelection={false} // We handle deletion through actions
+        pageSize={10}
+      />
+      
+      {/* Document Upload Dialog */}
+      <UploadDocumentsDialog
+        projectId={projectId!}
+        isOpen={dialogState.upload.isOpen}
+        onClose={dialogState.upload.onClose}
+        onSubmit={dialogState.upload.onSubmit}
+      />
+      
+      {/* Document Edit Dialog */}
+      {dialogState.edit.document && (
+        <EditDocumentDialog
+          document={{
+            ...dialogState.edit.document,
+            files: [],
+            prompts: [],
+            selections: [],
+            original_file: null,
+            redacted_file: null,
+          } as DocumentType}
+          isOpen={dialogState.edit.isOpen}
+          onClose={dialogState.edit.onClose}
+          onSubmit={dialogState.edit.onSubmit}
+        />
+      )}
+      
+      {/* Document Deletion Dialog */}
+      <DeleteDocumentDialog
+        isOpen={dialogState.delete.isOpen}
+        onClose={dialogState.delete.onClose}
+        onConfirm={dialogState.delete.onConfirm}
+        selectedDocument={dialogState.delete.selectedDocument}
+      />
+    </>
   );
 }

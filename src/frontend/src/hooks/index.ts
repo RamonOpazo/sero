@@ -3,7 +3,6 @@ export { useIsMobile } from './use-mobile'
 export { useColumnNavigation } from './useColumnNavigation'
 
 // Multi-component API hooks (3+ component usage)
-export { useDocuments } from './useDocuments'
 export { useFiles } from './useFiles'
 export { usePrompts } from './usePrompts'
 export { useSelection } from './useSelections'

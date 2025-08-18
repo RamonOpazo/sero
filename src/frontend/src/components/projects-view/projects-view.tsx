@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { ProjectsDataTable } from './ProjectsDataTable';
+import { ProjectsDataTable } from './projects-data-table';
 import type { ProjectShallowType } from '@/types';
 
 export function ProjectsView() {

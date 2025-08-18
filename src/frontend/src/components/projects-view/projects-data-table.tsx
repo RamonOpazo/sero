@@ -4,7 +4,7 @@ import { DataTable, ColumnBuilder as Column, Actions } from '@/components/shared
 import { EmptyState } from '@/components/shared/EmptyState';
 import { CreateProjectDialog, EditProjectDialog } from './dialogs';
 import { ConfirmationDialog } from '@/components/shared/ConfirmationDialog';
-import { useProjectsView } from '@/components/ProjectsView/use-projects-view';
+import { useProjectsView } from '@/components/projects-view/use-projects-view';
 import type { ProjectShallowType } from '@/types';
 
 interface ProjectsDataTableProps {

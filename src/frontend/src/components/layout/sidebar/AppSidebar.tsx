@@ -10,7 +10,7 @@ import {
   Code,
 } from "lucide-react"
 
-import { AppNavigation, UserMenu } from "@/components/Layout/navigation"
+import { AppNavigation, UserMenu } from "@/components/layout/navigation"
 import {
   Sidebar,
   SidebarContent,

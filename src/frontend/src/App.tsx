@@ -1,10 +1,10 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { ThemeProvider } from '@/context';
-import { MainLayout } from '@/components/Layout';
+import { MainLayout } from '@/components/layout';
 import { HomePage } from '@/pages/HomePage';
-import { ProjectsView } from '@/components/ProjectsView';
-import { DocumentsView } from '@/components/DocumentsView';
+import { ProjectsView } from '@/components/projects-view';
+import { DocumentsView } from '@/components/documents-view';
 import { DocumentEditor } from '@/components/DocumentEditor';
 import { DocumentationRenderer } from '@/components/DocumentationRenderer';
 import { SettingsPage } from '@/pages/SettingsPage';
