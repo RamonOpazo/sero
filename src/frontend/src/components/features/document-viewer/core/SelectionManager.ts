@@ -9,6 +9,9 @@
  */
 
 import { type Selection } from '../types/viewer';
+import type { SelectionType } from '@/types';
+import type { Result } from '@/lib/result';
+import { DocumentViewerAPI } from '@/lib/document-viewer-api';
 
 export interface PendingChanges {
   creates: Selection[]; // New selections to be created
@@ -27,6 +30,16 @@ export interface SelectionManagerState {
   // Drawing state
   currentDraw: Selection | null;
   isDrawing: boolean;
+  
+  // Loading states
+  isLoading: boolean;
+  isSaving: boolean;
+  
+  // Error states
+  error: string | null;
+  
+  // Document reference
+  documentId: string;
   
   // History - tracks changes from initial state
   initialState: SelectionSnapshot; // The starting point (loaded selections or empty)
@@ -58,20 +71,27 @@ export type SelectionManagerAction =
   | { type: 'UNDO' }
   | { type: 'REDO' }
   | { type: 'CLEAR_ALL' }
-  | { type: 'CLEAR_PAGE'; payload: number };
+  | { type: 'CLEAR_PAGE'; payload: number }
+  | { type: 'SET_LOADING'; payload: boolean }
+  | { type: 'SET_SAVING'; payload: boolean }
+  | { type: 'SET_ERROR'; payload: string | null };
 
 class SelectionManager {
   private state: SelectionManagerState;
   private listeners: Set<(state: SelectionManagerState) => void> = new Set();
   private isBatchOperation: boolean = false;
 
-  constructor(initialState?: Partial<SelectionManagerState>) {
+  constructor(documentId: string, initialState?: Partial<SelectionManagerState>) {
     this.state = {
       savedSelections: [],
       newSelections: [],
       selectedSelectionId: null,
       currentDraw: null,
       isDrawing: false,
+      isLoading: false,
+      isSaving: false,
+      error: null,
+      documentId,
       initialState: {
         savedSelections: [],
         newSelections: [],
@@ -141,6 +161,17 @@ class SelectionManager {
   // Core actions
   dispatch(action: SelectionManagerAction) {
     switch (action.type) {
+      case 'SET_LOADING':
+        this.state.isLoading = action.payload;
+        break;
+
+      case 'SET_SAVING':
+        this.state.isSaving = action.payload;
+        break;
+
+      case 'SET_ERROR':
+        this.state.error = action.payload;
+        break;
       case 'START_DRAW':
         this.state.currentDraw = action.payload;
         this.state.isDrawing = true;
@@ -330,6 +361,8 @@ class SelectionManager {
         // Set the loaded selections as both current state AND initial state
         this.state.savedSelections = action.payload;
         this.state.selectedSelectionId = null;
+        this.state.isLoading = false;
+        this.state.error = null;
         
         // Clear new selections since they should now be part of saved selections
         this.state.newSelections = [];
@@ -357,6 +390,8 @@ class SelectionManager {
         
         // Clear new selections since they should now be part of saved selections
         this.state.newSelections = [];
+        this.state.isSaving = false;
+        this.state.error = null;
         
         // Don't reset history - users should still be able to undo/redo
         // but now the "clean" state is the post-save state
@@ -534,6 +569,147 @@ class SelectionManager {
   getPendingChangesCount(): number {
     const changes = this.getPendingChanges();
     return changes.creates.length + changes.updates.length + changes.deletes.length;
+  }
+
+  // API methods - matching PromptManager pattern
+  async loadSelections(): Promise<Result<SelectionType[], unknown>> {
+    this.dispatch({ type: 'SET_LOADING', payload: true });
+    this.dispatch({ type: 'SET_ERROR', payload: null });
+
+    const result = await DocumentViewerAPI.fetchDocumentSelections(this.state.documentId);
+    
+    if (result.ok) {
+      // Convert SelectionType[] to Selection[] for internal use
+      const selections: Selection[] = result.value.map(sel => ({
+        id: sel.id,
+        x: sel.x,
+        y: sel.y,
+        width: sel.width,
+        height: sel.height,
+        page_number: sel.page_number,
+        confidence: sel.confidence || undefined,
+        document_id: sel.document_id,
+      }));
+      this.dispatch({ type: 'LOAD_SAVED_SELECTIONS', payload: selections });
+    } else {
+      const errorMessage = 'Failed to load selections';
+      this.dispatch({ type: 'SET_ERROR', payload: errorMessage });
+      this.dispatch({ type: 'SET_LOADING', payload: false });
+    }
+    
+    return result;
+  }
+
+  // Save all pending changes to server
+  async saveAllChanges(): Promise<Result<void, unknown>> {
+    const pendingChanges = this.getPendingChanges();
+    
+    if (pendingChanges.creates.length === 0 && pendingChanges.updates.length === 0 && pendingChanges.deletes.length === 0) {
+      return { ok: true, value: undefined };
+    }
+
+    this.dispatch({ type: 'SET_SAVING', payload: true });
+    this.dispatch({ type: 'SET_ERROR', payload: null });
+
+    try {
+      const results = {
+        creates: 0,
+        updates: 0,
+        deletes: 0,
+        errors: 0,
+      };
+
+      // Handle creates (new selections)
+      for (const selection of pendingChanges.creates) {
+        try {
+          const selectionData = {
+            page_number: selection.page_number ?? null,
+            x: selection.x,
+            y: selection.y,
+            width: selection.width,
+            height: selection.height,
+            confidence: selection.confidence || null,
+          };
+
+          const result = await DocumentViewerAPI.createSelection(this.state.documentId, selectionData);
+          
+          if (result.ok) {
+            results.creates++;
+            // Update the local selection with the server-assigned ID
+            const updatedSelection: Selection = {
+              ...selection,
+              id: result.value.id,
+            };
+            this.dispatch({ type: 'UPDATE_SELECTION', payload: { id: selection.id, selection: updatedSelection } });
+          } else {
+            results.errors++;
+            console.error('Failed to create selection:', result.error);
+          }
+        } catch (error) {
+          results.errors++;
+          console.error('Error creating selection:', error);
+        }
+      }
+
+      // Handle updates (modified saved selections)
+      for (const selection of pendingChanges.updates) {
+        try {
+          const selectionData = {
+            page_number: selection.page_number ?? null,
+            x: selection.x,
+            y: selection.y,
+            width: selection.width,
+            height: selection.height,
+            confidence: selection.confidence || null,
+          };
+
+          const result = await DocumentViewerAPI.updateSelection(selection.id, selectionData);
+          
+          if (result.ok) {
+            results.updates++;
+          } else {
+            results.errors++;
+            console.error('Failed to update selection:', result.error);
+          }
+        } catch (error) {
+          results.errors++;
+          console.error('Error updating selection:', error);
+        }
+      }
+
+      // Handle deletes (removed saved selections)
+      for (const selection of pendingChanges.deletes) {
+        try {
+          const result = await DocumentViewerAPI.deleteSelection(selection.id);
+          
+          if (result.ok) {
+            results.deletes++;
+          } else {
+            results.errors++;
+            console.error('Failed to delete selection:', result.error);
+          }
+        } catch (error) {
+          results.errors++;
+          console.error('Error deleting selection:', error);
+        }
+      }
+
+      if (results.errors === 0) {
+        // All operations successful - commit changes
+        this.dispatch({ type: 'COMMIT_CHANGES' });
+        return { ok: true, value: undefined };
+      } else {
+        const errorMessage = `Failed to save ${results.errors} change(s)`;
+        this.dispatch({ type: 'SET_ERROR', payload: errorMessage });
+        this.dispatch({ type: 'SET_SAVING', payload: false });
+        return { ok: false, error: errorMessage };
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      this.dispatch({ type: 'SET_ERROR', payload: errorMessage });
+      this.dispatch({ type: 'SET_SAVING', payload: false });
+      return { ok: false, error };
+    }
   }
 }
 

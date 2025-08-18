@@ -40,6 +40,9 @@ interface SelectionContextValue {
   commitChanges: () => void;
   discardAllChanges: () => void;
   
+  // API methods
+  saveAllChanges: () => Promise<import('@/lib/result').Result<void, unknown>>;
+  
   // Event callbacks
   onSelectionDoubleClick?: (selection: Selection) => void;
   setOnSelectionDoubleClick: (callback: ((selection: Selection) => void) | undefined) => void;
@@ -58,17 +61,18 @@ const SelectionContext = createContext<SelectionContextValue | null>(null);
 
 interface SelectionProviderProps {
   children: React.ReactNode;
+  documentId: string;
   initialSelections?: {
     saved?: Selection[];
     new?: Selection[];
   };
 }
 
-export function SelectionProvider({ children, initialSelections }: SelectionProviderProps) {
+export function SelectionProvider({ children, documentId, initialSelections }: SelectionProviderProps) {
   // Create manager instance (only once)
   const managerRef = useRef<SelectionManager | null>(null);
   if (!managerRef.current) {
-    managerRef.current = new SelectionManager({
+    managerRef.current = new SelectionManager(documentId, {
       savedSelections: initialSelections?.saved || [],
       newSelections: initialSelections?.new || [],
     });
@@ -188,6 +192,11 @@ export function SelectionProvider({ children, initialSelections }: SelectionProv
     dispatch({ type: 'DISCARD_ALL_CHANGES' });
   }, [dispatch]);
   
+  // API methods
+  const saveAllChanges = useCallback(() => {
+    return manager.saveAllChanges();
+  }, [manager]);
+  
   // Computed values - these methods use the manager's internal state which we get updates for via subscription
   const allSelections = useMemo(() => manager.getAllSelections(), [manager, state]);
   const selectedSelection = useMemo(() => manager.getSelectedSelection(), [manager, state]);
@@ -219,6 +228,7 @@ export function SelectionProvider({ children, initialSelections }: SelectionProv
     clearPage,
     commitChanges,
     discardAllChanges,
+    saveAllChanges,
     onSelectionDoubleClick,
     setOnSelectionDoubleClick,
     allSelections,
@@ -250,6 +260,7 @@ export function SelectionProvider({ children, initialSelections }: SelectionProv
     clearPage,
     commitChanges,
     discardAllChanges,
+    saveAllChanges,
     onSelectionDoubleClick,
     setOnSelectionDoubleClick,
     allSelections,

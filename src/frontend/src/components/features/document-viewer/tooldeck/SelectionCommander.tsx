@@ -3,7 +3,6 @@ import { Separator } from "@/components/ui/separator";
 import { Save, RotateCcw, AlertCircle, Trash2, FileX, Undo2 } from "lucide-react";
 import { useViewportState } from "../core/ViewportState";
 import { useSelections } from "../core/SelectionProvider";
-import { api } from "@/lib/axios";
 import { toast } from "sonner";
 import { useState, useCallback, useMemo } from "react";
 import type { MinimalDocumentType } from "@/types";
@@ -27,11 +26,11 @@ export default function SelectionManagement({ document }: SelectionControlsProps
     allSelections,
     pendingChanges,
     pendingChangesCount,
-    commitChanges,
     loadSavedSelections,
     clearAll,
     clearPage,
     discardAllChanges,
+    saveAllChanges,
   } = useSelections();
   
   // Get fresh selections data for reload after save
@@ -61,7 +60,7 @@ export default function SelectionManagement({ document }: SelectionControlsProps
     };
   }, [pendingChanges, pendingChangesCount, selectionState.savedSelections.length, allSelections.length]);
 
-  // Save all pending changes (creates, updates, deletes)
+  // Save all pending changes using SelectionManager
   const performSaveAllSelections = useCallback(async () => {
     if (pendingChangesCount === 0) {
       toast.info('No pending changes to save');
@@ -71,95 +70,18 @@ export default function SelectionManagement({ document }: SelectionControlsProps
     setIsSaving(true);
     
     try {
-      const results = { creates: 0, updates: 0, deletes: 0, errors: 0 };
+      const result = await saveAllChanges();
       
-      // Handle creates (new selections)
-      for (const sel of pendingChanges.creates) {
-        try {
-          const selectionData = {
-            page_number: sel.page_number ?? null,
-            x: sel.x,
-            y: sel.y,
-            width: sel.width,
-            height: sel.height,
-            confidence: null,
-            document_id: document.id,
-          };
-
-          const result = await api.safe.post(
-            `/documents/id/${document.id}/selections`,
-            selectionData
-          );
-
-          if (result.ok) {
-            results.creates++;
-          } else {
-            results.errors++;
-            console.error('Failed to create selection:', result.error);
-          }
-        } catch (error) {
-          results.errors++;
-          console.error('Error creating selection:', error);
-        }
-      }
-
-      // Handle updates (modified saved selections)
-      for (const sel of pendingChanges.updates) {
-        try {
-          const selectionData = {
-            page_number: sel.page_number ?? null,
-            x: sel.x,
-            y: sel.y,
-            width: sel.width,
-            height: sel.height,
-            confidence: 'confidence' in sel ? sel.confidence : null,
-            document_id: document.id,
-          };
-
-          const result = await api.safe.put(
-            `/selections/id/${sel.id}`,
-            selectionData
-          );
-
-          if (result.ok) {
-            results.updates++;
-          } else {
-            results.errors++;
-            console.error('Failed to update selection:', result.error);
-          }
-        } catch (error) {
-          results.errors++;
-          console.error('Error updating selection:', error);
-        }
-      }
-
-      // Handle deletes (removed saved selections)
-      for (const sel of pendingChanges.deletes) {
-        try {
-          const result = await api.safe.delete(
-            `/selections/id/${sel.id}`
-          );
-
-          if (result.ok) {
-            results.deletes++;
-          } else {
-            results.errors++;
-            console.error('Failed to delete selection:', result.error);
-          }
-        } catch (error) {
-          results.errors++;
-          console.error('Error deleting selection:', error);
-        }
-      }
-
-      // Show results
-      const totalSuccess = results.creates + results.updates + results.deletes;
-      
-      if (totalSuccess > 0) {
+      if (result.ok) {
+        // Calculate statistics for user feedback
+        const creates = pendingChanges.creates.length;
+        const updates = pendingChanges.updates.length;
+        const deletes = pendingChanges.deletes.length;
+        
         const messages = [];
-        if (results.creates > 0) messages.push(`${results.creates} created`);
-        if (results.updates > 0) messages.push(`${results.updates} updated`);
-        if (results.deletes > 0) messages.push(`${results.deletes} deleted`);
+        if (creates > 0) messages.push(`${creates} created`);
+        if (updates > 0) messages.push(`${updates} updated`);
+        if (deletes > 0) messages.push(`${deletes} deleted`);
         
         toast.success(`Successfully saved changes: ${messages.join(', ')}`);
         
@@ -171,13 +93,11 @@ export default function SelectionManagement({ document }: SelectionControlsProps
           }
         } catch (reloadError) {
           console.warn('Failed to reload selections after save:', reloadError);
-          // Still commit changes even if reload fails
-          commitChanges();
+          // Changes were already committed by SelectionManager.saveAllChanges()
         }
-      }
-
-      if (results.errors > 0) {
-        toast.error(`Failed to save ${results.errors} change${results.errors === 1 ? '' : 's'}`);
+      } else {
+        console.error('Failed to save selections:', result.error);
+        toast.error('Failed to save selections');
       }
       
     } catch (error) {
@@ -186,7 +106,7 @@ export default function SelectionManagement({ document }: SelectionControlsProps
     } finally {
       setIsSaving(false);
     }
-  }, [pendingChanges, pendingChangesCount, document.id, commitChanges, refetchSelections, loadSavedSelections]);
+  }, [pendingChanges, pendingChangesCount, saveAllChanges, refetchSelections, loadSavedSelections]);
 
   // Handler to show confirmation dialog
   const handleSaveAllSelections = useCallback(() => {

@@ -20,7 +20,7 @@ function ViewerWithNewSystem({ document }: { document: MinimalDocumentType }) {
 // Main component with clean architecture - includes both Selection and Prompt managers
 function ViewerWithCleanArchitecture({ document }: { document: MinimalDocumentType }) {
   return (
-    <SelectionProvider>
+    <SelectionProvider documentId={document.id}>
       <PromptProvider documentId={document.id}>
         <ViewerWithNewSystem document={document} />
       </PromptProvider>
