@@ -180,218 +180,450 @@ export { EditProjectDialog } from './EditProjectDialog'
 - [ ] Verify structure: `tree src/components/ProjectsView/`
 - [ ] Ready for Phase 4: YES / NO
 
-### Phase 4: Create DocumentsView Module (15 minutes)
+### Phase 4: DocumentsView Module Migration (20 minutes)
+**COMPLIANCE TARGET**: Establish complete documents domain encapsulation per directive #1
 
 #### 4.1 Move Main Component
-```bash
-# Move main view component
-mv src/views/DocumentsView.tsx src/components/DocumentsView/
-```
+- [ ] Verify source exists: `ls src/views/DocumentsView.tsx`
+- [ ] Execute: `mv src/views/DocumentsView.tsx src/components/DocumentsView/`
+- [ ] Verify moved: `ls src/components/DocumentsView/DocumentsView.tsx`
+- [ ] **COMPLIANCE CHECK**: Main component in domain boundary per directive #2
 
-#### 4.2 Move Document Dialogs with Renaming
-```bash
-# Move document dialogs - keeping CreateDocumentDialog, adding DocumentUploadDialog alias
-mv src/components/dialogs/CreateDocumentDialog.tsx src/components/DocumentsView/dialogs/CreateDocumentDialog.tsx
-mv src/components/dialogs/EditDocumentDialog.tsx src/components/DocumentsView/dialogs/EditDocumentDialog.tsx
-```
+#### 4.2 Create DocumentsDataTable (if exists)
+- [ ] Check if DocumentsDataTable exists: `ls src/views/DocumentsDataTable.tsx` (may not exist yet)
+- [ ] If exists, execute: `mv src/views/DocumentsDataTable.tsx src/components/DocumentsView/`
+- [ ] If not exists, note for future creation during business logic extraction
+- [ ] **COMPLIANCE CHECK**: Complete component encapsulation per directive #1
 
-#### 4.3 Create DocumentsView Business Logic
-Create `src/components/DocumentsView/useDocumentsView.ts` (new file - extract logic from DocumentsView.tsx)
+#### 4.3 Move Document Dialogs
+- [ ] Verify source exists: `ls src/components/dialogs/CreateDocumentDialog.tsx`
+- [ ] Execute: `mv src/components/dialogs/CreateDocumentDialog.tsx src/components/DocumentsView/dialogs/`
+- [ ] Verify moved: `ls src/components/DocumentsView/dialogs/CreateDocumentDialog.tsx`
+- [ ] Verify source exists: `ls src/components/dialogs/EditDocumentDialog.tsx`
+- [ ] Execute: `mv src/components/dialogs/EditDocumentDialog.tsx src/components/DocumentsView/dialogs/`
+- [ ] Verify moved: `ls src/components/DocumentsView/dialogs/EditDocumentDialog.tsx`
+- [ ] **COMPLIANCE CHECK**: Dialog domain ownership per directive #3
 
-#### 4.4 Create DocumentsView Index
-Create `src/components/DocumentsView/index.ts`:
+#### 4.4 Create DocumentUploadDialog (per DIRECTORY_STRUCTURE)
+- [ ] Create `src/components/DocumentsView/dialogs/DocumentUploadDialog.tsx` by copying CreateDocumentDialog.tsx
+- [ ] Execute: `cp src/components/DocumentsView/dialogs/CreateDocumentDialog.tsx src/components/DocumentsView/dialogs/DocumentUploadDialog.tsx`
+- [ ] Verify created: `ls src/components/DocumentsView/dialogs/DocumentUploadDialog.tsx`
+- [ ] **COMPLIANCE CHECK**: Matches DIRECTORY_STRUCTURE.md line 46
+
+#### 4.5 Create DocumentsView Business Logic Hook
+- [ ] Create `src/components/DocumentsView/useDocumentsView.ts` (new file)
+- [ ] **MANDATORY**: Extract business logic from DocumentsView.tsx into this hook
+- [ ] Include: data fetching, state management, CRUD operations
+- [ ] Verify file created: `ls src/components/DocumentsView/useDocumentsView.ts`
+- [ ] **COMPLIANCE CHECK**: Business logic hook co-located per directive #4
+
+#### 4.6 Create DocumentsView Index
+- [ ] Create `src/components/DocumentsView/index.ts` with content:
 ```typescript
 export { DocumentsView } from './DocumentsView'
 export { useDocumentsView } from './useDocumentsView'
 export * from './dialogs'
 ```
+- [ ] Verify file created: `ls src/components/DocumentsView/index.ts`
+- [ ] **COMPLIANCE CHECK**: Clean public API per directive #6
 
-#### 4.5 Create DocumentsView Dialogs Index
-Create `src/components/DocumentsView/dialogs/index.ts`:
+#### 4.7 Create DocumentsView Dialogs Index
+- [ ] Create `src/components/DocumentsView/dialogs/index.ts` with content:
 ```typescript
 export { CreateDocumentDialog } from './CreateDocumentDialog'
 export { EditDocumentDialog } from './EditDocumentDialog'
-// Alias for semantic clarity
-export { CreateDocumentDialog as DocumentUploadDialog } from './CreateDocumentDialog'
+export { DocumentUploadDialog } from './DocumentUploadDialog'
 ```
+- [ ] Verify file created: `ls src/components/DocumentsView/dialogs/index.ts`
+- [ ] **COMPLIANCE CHECK**: Clean dialog exports per directive #6
 
-### Phase 5: Create DocumentEditor Module (15 minutes)
+#### 4.8 Phase 4 Validation
+- [ ] **MANDATORY**: All DocumentsView files moved to correct locations
+- [ ] **MANDATORY**: Business logic hook created and encapsulated
+- [ ] **MANDATORY**: Dialog domain ownership enforced
+- [ ] **MANDATORY**: All dialogs created per DIRECTORY_STRUCTURE
+- [ ] **MANDATORY**: Clean public APIs created
+- [ ] Verify structure: `tree src/components/DocumentsView/`
+- [ ] Ready for Phase 5: YES / NO
+
+### Phase 5: DocumentEditor Module Migration (20 minutes)
+**COMPLIANCE TARGET**: Establish complete document editing domain encapsulation per directive #1
 
 #### 5.1 Move and Rename Main Component
-```bash
-# Rename FileViewer to DocumentEditor
-mv src/views/FileViewer.tsx src/components/DocumentEditor/DocumentEditor.tsx
-```
+- [ ] Verify source exists: `ls src/views/FileViewer.tsx`
+- [ ] Execute: `mv src/views/FileViewer.tsx src/components/DocumentEditor/DocumentEditor.tsx`
+- [ ] Verify moved: `ls src/components/DocumentEditor/DocumentEditor.tsx`
+- [ ] **COMPLIANCE CHECK**: Semantic naming aligned with domain per directive #2
 
-#### 5.2 Move Editor Dialogs with Context Renaming
-```bash
-# Move password dialog with contextual naming
-mv src/components/dialogs/PasswordDialog.tsx src/components/DocumentEditor/dialogs/DocumentPasswordDialog.tsx
-```
+#### 5.2 Create DocumentViewer if exists
+- [ ] Check if DocumentViewer exists: `ls src/views/DocumentViewer.tsx` (may exist separately)
+- [ ] If exists, execute: `mv src/views/DocumentViewer.tsx src/components/DocumentEditor/`
+- [ ] If not exists, note for potential consolidation with DocumentEditor
+- [ ] **COMPLIANCE CHECK**: Complete editing domain consolidation per directive #1
 
-#### 5.3 Create DocumentEditor Business Logic
-Create `src/components/DocumentEditor/useDocumentEditor.ts` (new file - extract logic from DocumentEditor.tsx)
+#### 5.3 Move Editor Dialogs with Context Renaming
+- [ ] Verify source exists: `ls src/components/dialogs/PasswordDialog.tsx`
+- [ ] Execute: `mv src/components/dialogs/PasswordDialog.tsx src/components/DocumentEditor/dialogs/DocumentPasswordDialog.tsx`
+- [ ] Verify moved: `ls src/components/DocumentEditor/dialogs/DocumentPasswordDialog.tsx`
+- [ ] **COMPLIANCE CHECK**: Contextual naming and domain ownership per directive #3
 
-#### 5.4 Create DocumentEditor Index
-Create `src/components/DocumentEditor/index.ts`:
+#### 5.4 Extract Business Logic Hook
+- [ ] Create `src/components/DocumentEditor/useDocumentEditor.ts` (new file)
+- [ ] **MANDATORY**: Extract ALL business logic from DocumentEditor.tsx into this hook
+- [ ] Include: file loading, password handling, document state, editing operations
+- [ ] Verify file created: `ls src/components/DocumentEditor/useDocumentEditor.ts`
+- [ ] **COMPLIANCE CHECK**: Business logic hook co-located per directive #4
+
+#### 5.5 Create DocumentEditor Index
+- [ ] Create `src/components/DocumentEditor/index.ts` with content:
 ```typescript
 export { DocumentEditor } from './DocumentEditor'
 export { useDocumentEditor } from './useDocumentEditor'
 export * from './dialogs'
 ```
+- [ ] Verify file created: `ls src/components/DocumentEditor/index.ts`
+- [ ] **COMPLIANCE CHECK**: Clean public API per directive #6
 
-#### 5.5 Create DocumentEditor Dialogs Index
-Create `src/components/DocumentEditor/dialogs/index.ts`:
+#### 5.6 Create DocumentEditor Dialogs Index
+- [ ] Create `src/components/DocumentEditor/dialogs/index.ts` with content:
 ```typescript
 export { DocumentPasswordDialog } from './DocumentPasswordDialog'
 ```
+- [ ] Verify file created: `ls src/components/DocumentEditor/dialogs/index.ts`
+- [ ] **COMPLIANCE CHECK**: Clean dialog exports per directive #6
 
-### Phase 6: Organize Shared Components (10 minutes)
+#### 5.7 Phase 5 Validation
+- [ ] **MANDATORY**: All DocumentEditor files moved to correct locations
+- [ ] **MANDATORY**: Business logic hook created and encapsulated
+- [ ] **MANDATORY**: Dialog domain ownership enforced with contextual naming
+- [ ] **MANDATORY**: Clean public APIs created
+- [ ] Verify structure: `tree src/components/DocumentEditor/`
+- [ ] Ready for Phase 6: YES / NO
+
+### Phase 6: Shared Components Reorganization (15 minutes)
+**COMPLIANCE TARGET**: Establish truly shared components per directive #1
 
 #### 6.1 Move EmptyState Component
-```bash
-mv src/components/shared/EmptyState.tsx src/components/shared/EmptyState/EmptyState.tsx
-```
-Create `src/components/shared/EmptyState/index.ts`:
+- [ ] Verify source exists: `ls src/components/shared/EmptyState.tsx`
+- [ ] Execute: `mv src/components/shared/EmptyState.tsx src/components/shared/EmptyState/EmptyState.tsx`
+- [ ] Verify moved: `ls src/components/shared/EmptyState/EmptyState.tsx`
+- [ ] Create `src/components/shared/EmptyState/index.ts` with content:
 ```typescript
 export { EmptyState } from './EmptyState'
 ```
+- [ ] Verify file created: `ls src/components/shared/EmptyState/index.ts`
+- [ ] **COMPLIANCE CHECK**: Component encapsulation per directive #1
 
 #### 6.2 Move ConfirmationDialog Component
-```bash
-mv src/components/dialogs/ConfirmationDialog.tsx src/components/shared/ConfirmationDialog/ConfirmationDialog.tsx
-```
-Create `src/components/shared/ConfirmationDialog/index.ts`:
+- [ ] Verify source exists: `ls src/components/dialogs/ConfirmationDialog.tsx`
+- [ ] Execute: `mv src/components/dialogs/ConfirmationDialog.tsx src/components/shared/ConfirmationDialog/ConfirmationDialog.tsx`
+- [ ] Verify moved: `ls src/components/shared/ConfirmationDialog/ConfirmationDialog.tsx`
+- [ ] Create `src/components/shared/ConfirmationDialog/index.ts` with content:
 ```typescript
 export { ConfirmationDialog } from './ConfirmationDialog'
 ```
+- [ ] Verify file created: `ls src/components/shared/ConfirmationDialog/index.ts`
+- [ ] **COMPLIANCE CHECK**: Truly generic dialog in shared location per directive #3
 
 #### 6.3 Move ThemeToggle Component
-```bash
-mv src/components/shared/ThemeToggle.tsx src/components/shared/ThemeToggle/ThemeToggle.tsx
-```
-Create `src/components/shared/ThemeToggle/index.ts`:
+- [ ] Verify source exists: `ls src/components/shared/ThemeToggle.tsx`
+- [ ] Execute: `mv src/components/shared/ThemeToggle.tsx src/components/shared/ThemeToggle/ThemeToggle.tsx`
+- [ ] Verify moved: `ls src/components/shared/ThemeToggle/ThemeToggle.tsx`
+- [ ] Create `src/components/shared/ThemeToggle/index.ts` with content:
 ```typescript
 export { ThemeToggle } from './ThemeToggle'
 ```
+- [ ] Verify file created: `ls src/components/shared/ThemeToggle/index.ts`
+- [ ] **COMPLIANCE CHECK**: Component encapsulation per directive #1
 
-#### 6.4 Create Shared Components Index
-Update `src/components/shared/index.ts`:
+#### 6.4 Migrate Features Data-Table to Shared (if present)
+- [ ] Check if data-table exists: `ls -la src/components/features/data-table/` (may not exist)
+- [ ] If exists, move to shared: `mv src/components/features/data-table src/components/shared/DataTable`
+- [ ] If moved, rename main file: `mv src/components/shared/DataTable/data-table.tsx src/components/shared/DataTable/DataTable.tsx`
+- [ ] If moved, create index: `echo 'export { DataTable } from "./DataTable"' > src/components/shared/DataTable/index.ts`
+- [ ] **COMPLIANCE CHECK**: Shared components properly encapsulated per directive #1
+
+#### 6.5 Update Shared Components Index
+- [ ] Update `src/components/shared/index.ts` with content:
 ```typescript
 export * from './EmptyState'
-export * from './ConfirmationDialog'  
+export * from './ConfirmationDialog'
 export * from './ThemeToggle'
+// export * from './DataTable'  // Uncomment if data-table was moved
 ```
+- [ ] Verify file updated: `ls src/components/shared/index.ts`
+- [ ] **COMPLIANCE CHECK**: Clean public API per directive #6
 
-### Phase 7: Move Layout Components (10 minutes)
+#### 6.6 Phase 6 Validation
+- [ ] **MANDATORY**: All shared components properly encapsulated
+- [ ] **MANDATORY**: ConfirmationDialog moved from dialogs to shared
+- [ ] **MANDATORY**: Features components evaluated and relocated as needed
+- [ ] **MANDATORY**: Clean public APIs created
+- [ ] Verify structure: `tree src/components/shared/`
+- [ ] Ready for Phase 7: YES / NO
 
-#### 7.1 Move Breadcrumbs
-```bash
-mv src/components/features/breadcrumbs/Breadcrumbs.tsx src/components/Layout/Breadcrumbs.tsx
-```
+### Phase 7: Layout Components Migration (10 minutes)
+**COMPLIANCE TARGET**: Establish layout component domain per directive #2
 
-#### 7.2 Create Layout Index
-Create `src/components/Layout/index.ts`:
+#### 7.1 Migrate Features Breadcrumbs
+- [ ] Check if breadcrumbs exists: `ls src/components/features/breadcrumbs/Breadcrumbs.tsx` (may not exist)
+- [ ] If exists, execute: `mv src/components/features/breadcrumbs/Breadcrumbs.tsx src/components/Layout/Breadcrumbs.tsx`
+- [ ] If moved, verify: `ls src/components/Layout/Breadcrumbs.tsx`
+- [ ] If not exists, note for potential future creation
+- [ ] **COMPLIANCE CHECK**: Layout components in dedicated domain per directive #2
+
+#### 7.2 Clean Up Empty Features Directory
+- [ ] Check if features/breadcrumbs is empty: `ls src/components/features/breadcrumbs/` (may fail if moved)
+- [ ] If empty, remove: `rmdir src/components/features/breadcrumbs/`
+- [ ] Check if features is empty: `ls src/components/features/` (may contain other items)
+- [ ] If completely empty, remove: `rmdir src/components/features/`
+- [ ] **COMPLIANCE CHECK**: No empty legacy directories remain
+
+#### 7.3 Create Layout Index
+- [ ] Create `src/components/Layout/index.ts` with content:
 ```typescript
 export { Breadcrumbs } from './Breadcrumbs'
 // TODO: Add AppLayout and Navigation when created
 ```
+- [ ] Verify file created: `ls src/components/Layout/index.ts`
+- [ ] **COMPLIANCE CHECK**: Clean public API per directive #6
 
-### Phase 8: Clean Up Hooks (10 minutes)
+#### 7.4 Phase 7 Validation
+- [ ] **MANDATORY**: All layout components properly located
+- [ ] **MANDATORY**: Legacy features directories cleaned up
+- [ ] **MANDATORY**: Clean public API created
+- [ ] Verify structure: `tree src/components/Layout/`
+- [ ] Ready for Phase 8: YES / NO
 
-#### 8.1 Enforce Hook Encapsulation Rules
+### Phase 8: Hook Encapsulation Enforcement (15 minutes)
+**COMPLIANCE TARGET**: Enforce strict hook encapsulation per directive #4
+
+#### 8.1 Audit Global Hook Usage
+- [ ] List all global hooks: `ls src/hooks/`
+- [ ] Document output for reference
+- [ ] **MANDATORY**: Identify hooks that violate encapsulation rules
+- [ ] **COMPLIANCE CHECK**: Only cross-cutting and 3+ component usage hooks remain global
+
+#### 8.2 Validate Hook Compliance
 **MANDATORY**: Apply strict hook encapsulation per architectural directives:
 
-Keep in global `/hooks/` (cross-cutting UI utilities):
-- `use-mobile.ts` ✅ (UI utility)
-- `useColumnNavigation.ts` ✅ (navigation utility)
+**Keep in global `/hooks/` (cross-cutting UI utilities):**
+- [ ] Verify exists: `ls src/hooks/use-mobile.ts` ✅ (UI utility)
+- [ ] Verify exists: `ls src/hooks/useColumnNavigation.ts` ✅ (navigation utility)
+- [ ] **COMPLIANCE CHECK**: UI utilities correctly placed in global scope
 
-Keep in global `/hooks/` (API hooks used by 3+ components):
-- `useProjects.ts` ✅ (used by ProjectsView, ProjectsPage, DocumentsView)
-- `useDocuments.ts` ✅ (used by DocumentsView, DocumentEditor, ProjectsView)
-- `useFiles.ts` ✅ (used by DocumentEditor, DocumentsView, FileViewer)
-- `usePrompts.ts` ✅ (used by DocumentEditor, DocumentViewer, PromptsView)
-- `useSelections.ts` ✅ (used by DocumentEditor, DocumentViewer, SelectionsView)
+**Keep in global `/hooks/` (API hooks used by 3+ components):**
+- [ ] Verify exists: `ls src/hooks/useProjects.ts` ✅ (used by ProjectsView, ProjectsPage, DocumentsView)
+- [ ] Verify exists: `ls src/hooks/useDocuments.ts` ✅ (used by DocumentsView, DocumentEditor, ProjectsView)
+- [ ] Verify exists: `ls src/hooks/useFiles.ts` ✅ (used by DocumentEditor, DocumentsView, FileViewer)
+- [ ] Verify exists: `ls src/hooks/usePrompts.ts` ✅ (used by DocumentEditor, DocumentViewer, PromptsView)
+- [ ] Verify exists: `ls src/hooks/useSelections.ts` ✅ (used by DocumentEditor, DocumentViewer, SelectionsView)
+- [ ] **COMPLIANCE CHECK**: Multi-component API hooks correctly remain global
 
-#### 8.2 Handle API Hooks According to Usage
-**MANDATORY COMPLIANCE**: Follow hook encapsulation rules:
-- Keep API hooks in global `/hooks/` ONLY if used by 3+ components
-- Move component-specific API logic to component hooks
-- Ensure no business logic leakage between components
+#### 8.3 Handle Potential Hook Violations
+- [ ] Check for component-specific hooks in global: `find src/hooks -name "use*.ts" | grep -E "(View|Editor|Dialog|Component)"`
+- [ ] If violations found, note for component encapsulation
+- [ ] **MANDATORY COMPLIANCE**: Follow hook encapsulation rules per directive #4
+- [ ] **COMPLIANCE CHECK**: No business logic leakage between components
 
-Decision: Keep `useProjects.ts`, `useDocuments.ts`, `useFiles.ts` in global `/hooks/` as they meet the 3+ component usage criteria.
+#### 8.4 Create Global Hooks Index
+- [ ] Create `src/hooks/index.ts` with content:
+```typescript
+// Cross-cutting UI utilities
+export { useMobile } from './use-mobile'
+export { useColumnNavigation } from './useColumnNavigation'
 
-### Phase 9: Update Import Paths (20 minutes)
-
-#### 9.1 Update App.tsx Imports
-Update routing and component imports in `App.tsx`
-
-#### 9.2 Update Component Imports
-Search and replace import paths across the codebase:
-
-```bash
-# Find all TypeScript files and update imports
-find src -name "*.ts" -o -name "*.tsx" | xargs grep -l "from.*views/"
-find src -name "*.ts" -o -name "*.tsx" | xargs grep -l "from.*dialogs"
+// Multi-component API hooks (3+ component usage)
+export { useProjects } from './useProjects'
+export { useDocuments } from './useDocuments'
+export { useFiles } from './useFiles'
+export { usePrompts } from './usePrompts'
+export { useSelections } from './useSelections'
 ```
+- [ ] Verify file created: `ls src/hooks/index.ts`
+- [ ] **COMPLIANCE CHECK**: Clean public API per directive #6
 
-#### 9.3 Common Import Updates
+#### 8.5 Phase 8 Validation
+- [ ] **MANDATORY**: Hook encapsulation rules enforced
+- [ ] **MANDATORY**: Only cross-cutting and multi-component hooks remain global
+- [ ] **MANDATORY**: Component-specific hooks moved to component domains
+- [ ] **MANDATORY**: Clean public API created
+- [ ] Ready for Phase 9: YES / NO
+
+### Phase 9: Import Path Updates & Compliance (25 minutes)
+**COMPLIANCE TARGET**: Enforce import hygiene and eliminate violations per directive #6
+
+#### 9.1 Find Files with Legacy Imports
+- [ ] Find views imports: `find src -name "*.ts" -o -name "*.tsx" | xargs grep -l "from.*views/"`
+- [ ] Document files found for reference
+- [ ] Find dialogs imports: `find src -name "*.ts" -o -name "*.tsx" | xargs grep -l "from.*dialogs"`
+- [ ] Document files found for reference
+- [ ] **MANDATORY**: Update ALL found files to comply with new structure
+- [ ] **COMPLIANCE CHECK**: Identify import hygiene violations per directive #6
+
+#### 9.2 Update App.tsx Routing Imports
+- [ ] Open `src/App.tsx` for editing
+- [ ] **MANDATORY**: Replace all view imports with new paths:
+  - `@/views/HomePage` → `@/pages/HomePage`
+  - `@/views/SettingsPage` → `@/pages/SettingsPage`
+  - `@/views/ProjectsView` → `@/components/ProjectsView`
+  - `@/views/DocumentsView` → `@/components/DocumentsView`
+  - `@/views/FileViewer` → `@/components/DocumentEditor`
+  - All documentation pages → `@/pages/docs/`
+- [ ] Save file and verify: `grep -n "from.*@/" src/App.tsx`
+- [ ] **COMPLIANCE CHECK**: All routing imports use new structure
+
+#### 9.3 Update Component Internal Imports
+- [ ] **MANDATORY**: Update imports in ALL moved components:
+  - ProjectsView.tsx: Update internal business logic imports
+  - DocumentsView.tsx: Update dialog and hook imports
+  - DocumentEditor.tsx: Update dialog imports
+  - All dialogs: Update shared component imports
+- [ ] **COMPLIANCE CHECK**: No deep imports bypass index.ts files per directive #6
+
+#### 9.4 Enforce Import Hygiene Rules
 **MANDATORY**: Ensure compliance with import hygiene directive #6:
 
-```typescript
-// ✅ CORRECT: Clean imports via index.ts (per directive)
-import { ProjectsView } from '@/components/ProjectsView'
-import { CreateProjectDialog } from '@/components/ProjectsView'
-import { DocumentEditor } from '@/components/DocumentEditor'
-import { EmptyState } from '@/components/shared/EmptyState'
+**✅ CORRECT: Clean imports via index.ts (per directive)**
+- [ ] Verify pattern: `import { ProjectsView } from '@/components/ProjectsView'`
+- [ ] Verify pattern: `import { CreateProjectDialog } from '@/components/ProjectsView'`
+- [ ] Verify pattern: `import { DocumentEditor } from '@/components/DocumentEditor'`
+- [ ] Verify pattern: `import { EmptyState } from '@/components/shared/EmptyState'`
 
-// ❌ FORBIDDEN: Deep imports bypassing index.ts
-import { CreateProjectDialog } from '@/components/ProjectsView/dialogs/CreateProjectDialog'
-import { useProjectsView } from '@/components/ProjectsView/useProjectsView'
+**❌ FORBIDDEN: Deep imports bypassing index.ts**
+- [ ] Search and eliminate: `grep -r "dialogs/.*Dialog" src/`
+- [ ] Search and eliminate: `grep -r "useProjectsView" src/ | grep -v ProjectsView`
+- [ ] **COMPLIANCE CHECK**: Zero deep import violations found
 
-// ❌ FORBIDDEN: Cross-domain business logic imports
-import { useProjectsView } from '@/components/ProjectsView'
-// in DocumentsView component
+**❌ FORBIDDEN: Cross-domain business logic imports**
+- [ ] Verify no cross-domain hook imports between components
+- [ ] **COMPLIANCE CHECK**: No business logic leakage between domains per directive #4
 
-// Before (violations)
-import { ProjectsView } from '@/views/ProjectsView'
-import { CreateProjectDialog } from '@/components/dialogs'
+#### 9.5 Update Test File Imports
+- [ ] Find test files: `find src -name "*.test.ts*" -o -name "*.spec.ts*"`
+- [ ] Update all test imports to match new structure
+- [ ] **COMPLIANCE CHECK**: Test imports follow same hygiene rules
 
-// After (compliant)
-import { ProjectsView } from '@/components/ProjectsView'
-import { CreateProjectDialog } from '@/components/ProjectsView'
-```
+#### 9.6 Phase 9 Validation
+- [ ] **MANDATORY**: All legacy import paths updated
+- [ ] **MANDATORY**: Import hygiene rules enforced
+- [ ] **MANDATORY**: No deep imports bypass index.ts files
+- [ ] **MANDATORY**: No cross-domain business logic imports
+- [ ] Test build: `pnpm build` (should have fewer errors)
+- [ ] Ready for Phase 10: YES / NO
 
-### Phase 10: Update Dialog Exports (5 minutes)
+### Phase 10: Dialog Export Cleanup (10 minutes)
+**COMPLIANCE TARGET**: Eliminate legacy dialog exports and clean up empty directories
 
-#### 10.1 Update Main Dialogs Index
-Update `src/components/dialogs/index.ts` to remove moved dialogs:
-```typescript
-// Remove moved dialogs, keep only remaining ones
-export { AddPromptDialog } from './AddPromptDialog'
-// NOTE: This file might be empty after migration
-```
+#### 10.1 Audit Remaining Dialogs
+- [ ] List remaining dialogs: `ls src/components/dialogs/`
+- [ ] Document remaining dialogs for reference
+- [ ] **MANDATORY**: Verify all domain-specific dialogs have been moved
+- [ ] **COMPLIANCE CHECK**: Only truly generic dialogs remain in central location
 
-#### 10.2 Clean Up Empty Directories
-```bash
-# Remove empty dialogs directory if no files remain
-rmdir src/components/dialogs # Only if empty
-```
+#### 10.2 Update Main Dialogs Index
+- [ ] Open `src/components/dialogs/index.ts` for editing
+- [ ] Remove exports for moved dialogs:
+  - Remove: `export { CreateProjectDialog }`
+  - Remove: `export { EditProjectDialog }`
+  - Remove: `export { CreateDocumentDialog }`
+  - Remove: `export { EditDocumentDialog }`
+  - Remove: `export { PasswordDialog }`
+  - Remove: `export { ConfirmationDialog }`
+- [ ] Keep only remaining dialogs (e.g., `AddPromptDialog` if exists)
+- [ ] Save file and verify: `cat src/components/dialogs/index.ts`
+- [ ] **COMPLIANCE CHECK**: No references to moved dialogs remain
 
-### Phase 11: Build and Test (10 minutes)
+#### 10.3 Clean Up Empty Directories
+- [ ] Check if dialogs directory is empty: `ls src/components/dialogs/`
+- [ ] If empty except for index.ts, remove index: `rm src/components/dialogs/index.ts`
+- [ ] If completely empty, remove directory: `rmdir src/components/dialogs`
+- [ ] Check if views directory is empty: `ls src/views/`
+- [ ] If views is completely empty, remove: `rmdir src/views/`
+- [ ] **COMPLIANCE CHECK**: No empty legacy directories remain
 
-#### 11.1 Run TypeScript Check
-```bash
-pnpm run type-check  # or tsc --noEmit
-```
+#### 10.4 Phase 10 Validation
+- [ ] **MANDATORY**: All moved dialogs removed from central exports
+- [ ] **MANDATORY**: Empty legacy directories cleaned up
+- [ ] **MANDATORY**: Only truly generic or remaining dialogs in central location
+- [ ] Verify cleanup: `find src -type d -empty` (should be minimal)
+- [ ] Ready for Phase 11: YES / NO
 
-#### 11.2 Run Build
-```bash
-pnpm build
-```
+### Phase 11: Build Validation & Testing (15 minutes)
+**COMPLIANCE TARGET**: Verify architectural compliance and successful migration
 
-#### 11.3 Fix Import Errors
-Address any remaining import errors found during build.
+#### 11.1 Pre-Build Validation
+- [ ] Verify all directories exist: `tree src/`
+- [ ] Count total files: `find src -type f -name "*.ts*" | wc -l`
+- [ ] Document file count for comparison
+- [ ] **MANDATORY**: All expected files present in new structure
+- [ ] **COMPLIANCE CHECK**: Directory structure matches DIRECTORY_STRUCTURE.md
+
+#### 11.2 TypeScript Compliance Check
+- [ ] Execute: `pnpm run type-check` OR `tsc --noEmit`
+- [ ] Document TypeScript errors found
+- [ ] **MANDATORY**: Address ALL TypeScript errors before proceeding
+- [ ] **COMPLIANCE CHECK**: Zero TypeScript compilation errors
+
+#### 11.3 Build System Validation
+- [ ] Execute: `pnpm build`
+- [ ] Document build errors and warnings
+- [ ] **MANDATORY**: Successful build completion required
+- [ ] **COMPLIANCE CHECK**: Build system accepts new structure
+
+#### 11.4 Import Hygiene Final Audit
+- [ ] Check for remaining legacy imports: `grep -r "from.*views/" src/`
+- [ ] Check for deep import violations: `grep -r "dialogs/.*Dialog" src/`
+- [ ] Check for cross-domain violations: `grep -r "useProjectsView" src/ | grep -v ProjectsView`
+- [ ] **MANDATORY**: Zero violations found
+- [ ] **COMPLIANCE CHECK**: Complete import hygiene per directive #6
+
+#### 11.5 Architectural Compliance Final Verification
+**MANDATORY COMPLIANCE VERIFICATION**:
+
+- [ ] **Component encapsulation**: Each component fully self-contained
+- [ ] **Dialog domain ownership**: All dialogs in their respective domains
+- [ ] **Hook encapsulation**: Business logic hooks co-located with components
+- [ ] **Import hygiene**: All imports use index.ts, no deep imports
+- [ ] **Boundary enforcement**: No cross-domain business logic imports
+- [ ] **Testing colocation**: __tests__ folders created for all components
+- [ ] **Public APIs**: All index.ts files created with clean exports
+- [ ] **Files in correct locations**: Per DIRECTORY_STRUCTURE.md
+- [ ] **COMPLIANCE CHECK**: All architectural directives enforced
+
+#### 11.6 Final Application Test
+- [ ] Execute: `pnpm dev` (start development server)
+- [ ] Verify application loads without errors
+- [ ] Test basic navigation (if possible)
+- [ ] Check browser console for runtime errors
+- [ ] Stop development server
+- [ ] **COMPLIANCE CHECK**: Application runs correctly with new structure
+
+#### 11.7 Migration Completion Verification
+- [ ] **All 11 phases completed successfully**: YES / NO
+- [ ] **All compliance checks passed**: YES / NO
+- [ ] **Build system working**: YES / NO
+- [ ] **Application functional**: YES / NO
+- [ ] **Ready for commit**: YES / NO
+
+**🎉 MIGRATION COMPLETE** (if all checks pass)
+
+#### 11.8 Final Commit
+- [ ] Stage all changes: `git add .`
+- [ ] Verify staged changes: `git status`
+- [ ] Commit with descriptive message: `git commit -m "feat: migrate to component-centric architecture with strict separation of concerns
+
+- Establish complete component encapsulation per DIRECTORY_STRUCTURE.md
+- Enforce dialog domain ownership and contextual naming
+- Co-locate business logic hooks with components
+- Implement clean public APIs via index.ts files
+- Ensure import hygiene and eliminate deep imports
+- Create test directories for all components
+- Maintain strict architectural boundaries
+
+BREAKING CHANGE: All import paths updated to new structure"`
+- [ ] Verify commit: `git log -1 --oneline`
+- [ ] **FINAL COMPLIANCE CHECK**: Migration successfully committed
 
 ## Files That Need Manual Updates
 
