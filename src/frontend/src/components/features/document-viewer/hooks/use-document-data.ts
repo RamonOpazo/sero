@@ -1,10 +1,10 @@
 /**
  * Hooks for fetching document-specific data on-demand
- * This eliminates the need to include prompts/selections in DocumentType
+ * Used by document-viewer components for prompts and selections
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { api } from '@/lib/axios';
+import { EditorAPI } from '@/lib/editor-api';
 import type { PromptType, SelectionType } from '@/types';
 
 export function useDocumentPrompts(documentId: string) {
@@ -24,10 +24,10 @@ export function useDocumentPrompts(documentId: string) {
         setLoading(true);
         setError(null);
         
-        const result = await api.safe.get(`/documents/id/${documentId}/prompts`);
+        const result = await EditorAPI.fetchDocumentPrompts(documentId);
         
         if (result.ok) {
-          setPrompts(result.value as PromptType[]);
+          setPrompts(result.value);
         } else {
           console.error('Failed to fetch prompts:', result.error);
           setError('Failed to load prompts');
@@ -64,12 +64,11 @@ export function useDocumentSelections(documentId: string) {
       setLoading(true);
       setError(null);
       
-      const result = await api.safe.get(`/documents/id/${documentId}/selections`);
+      const result = await EditorAPI.fetchDocumentSelections(documentId);
       
       if (result.ok) {
-        const selectionsData = result.value as SelectionType[];
-        setSelections(selectionsData);
-        return selectionsData;
+        setSelections(result.value);
+        return result.value;
       } else {
         console.error('Failed to fetch selections:', result.error);
         setError('Failed to load selections');

@@ -1,7 +1,7 @@
 import { useMemo, useCallback, useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { useWorkspace } from '@/context/workspace-provider';
+import { useWorkspace } from '@/providers/workspace-provider';
 import { DocumentsAPI } from '@/lib/documents-api';
 import type { DocumentShallowType, DocumentUpdateType, DocumentBulkUploadRequestType } from '@/types';
 

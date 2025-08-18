@@ -3,7 +3,7 @@ import { Eye, Plus, CheckCircle2, AlertCircle } from 'lucide-react';
 import { DataTable, ColumnBuilder as Column, Actions } from '@/components/shared/DataTable';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { Badge } from '@/components/ui/badge';
-import { useWorkspace } from '@/context/workspace-provider';
+import { useWorkspace } from '@/providers/workspace-provider';
 import { useDocumentsView } from './use-documents-view';
 import { UploadDocumentsDialog } from './dialogs/upload-documents-dialog';
 import { EditDocumentDialog } from './dialogs/edit-document-dialog';

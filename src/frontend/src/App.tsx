@@ -1,11 +1,11 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from 'react-router-dom';
-import { ThemeProvider } from '@/context';
+import { ThemeProvider } from '@/providers';
 import { MainLayout } from '@/components/layout';
 import { HomePage } from '@/pages/HomePage';
 import { ProjectsView } from '@/components/projects-view';
 import { DocumentsView } from '@/components/documents-view';
-import { DocumentEditor } from '@/components/DocumentEditor';
+import { EditorView } from '@/components/editor-view';
 import { DocumentationRenderer } from '@/components/DocumentationRenderer';
 import { SettingsPage } from '@/pages/SettingsPage';
 import { CryptoTest } from '@/components/CryptoTest';
@@ -61,8 +61,8 @@ function App() {
             {/* Redirect /projects/:projectId/documents/:documentId to /projects/:projectId/documents/:documentId/original-file */}
             <Route path="/projects/:projectId/documents/:documentId" element={<DocumentRedirect />} />
 
-            <Route path="/projects/:projectId/documents/:documentId/original-file" element={<DocumentEditor fileType="original" />} />
-            <Route path="/projects/:projectId/documents/:documentId/redacted-file" element={<DocumentEditor fileType="redacted" />} />
+            <Route path="/projects/:projectId/documents/:documentId/original-file" element={<EditorView fileType="original" />} />
+            <Route path="/projects/:projectId/documents/:documentId/redacted-file" element={<EditorView fileType="redacted" />} />
 
             {/* Redirect all other routes to home */}
             <Route path="*" element={<Navigate to="/" replace />} />

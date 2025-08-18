@@ -1,6 +1,6 @@
 import { useMemo, useCallback, useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { useWorkspace } from '@/context/workspace-provider';
+import { useWorkspace } from '@/providers/workspace-provider';
 import { ProjectsAPI } from '@/lib/projects-api';
 import type { ProjectShallowType, ProjectCreateType, ProjectUpdateType } from '@/types';
 

@@ -1,0 +1,244 @@
+import { useMemo, useCallback, useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+import { useWorkspace } from '@/providers/workspace-provider';
+import { EditorAPI, type FileWithRelatedData } from '@/lib/editor-api';
+import type { DocumentShallowType, MinimalDocumentType } from '@/types';
+
+/**
+ * Business logic hook for EditorView component
+ * Handles document editor management, navigation, file operations, and state management for a specific document
+ */
+export function useEditorView(fileType: 'original' | 'redacted') {
+  const { projectId, documentId } = useParams<{ projectId: string; documentId: string }>();
+  const navigate = useNavigate();
+  const { state, selectDocument } = useWorkspace();
+  
+  // Own editor state management
+  const [documentMetadata, setDocumentMetadata] = useState<DocumentShallowType | null>(null);
+  const [fileData, setFileData] = useState<FileWithRelatedData | null>(null);
+  const [isLoadingMetadata, setIsLoadingMetadata] = useState(false);
+  const [isLoadingFile, setIsLoadingFile] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Password dialog state management
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [isValidatingPassword, setIsValidatingPassword] = useState(false);
+  const [userCancelledPassword, setUserCancelledPassword] = useState(false);
+
+  // Load document metadata for the current document
+  const refreshDocumentMetadata = useCallback(async () => {
+    if (!documentId) return;
+    
+    setIsLoadingMetadata(true);
+    setError(null);
+    
+    const result = await EditorAPI.fetchDocumentMetadata(documentId, projectId);
+    
+    if (result.ok) {
+      setDocumentMetadata(result.value);
+      // Update workspace current document selection
+      selectDocument(result.value);
+    } else {
+      setError(result.error instanceof Error ? result.error.message : 'Failed to load document metadata');
+    }
+    
+    setIsLoadingMetadata(false);
+  }, [documentId, projectId, selectDocument]);
+
+  // Load document metadata when component mounts or documentId changes
+  useEffect(() => {
+    if (documentId) {
+      refreshDocumentMetadata();
+    }
+  }, [documentId, refreshDocumentMetadata]);
+
+  // Auto-prompt for password on mount if we haven't cancelled and no file is loaded
+  useEffect(() => {
+    if (!userCancelledPassword && !fileData && documentId && fileType === 'original') {
+      setIsPasswordDialogOpen(true);
+    }
+  }, [documentId, userCancelledPassword, fileData, fileType]);
+
+  // Load file when it's redacted type and we have metadata
+  useEffect(() => {
+    if (fileType === 'redacted' && documentId && documentMetadata && !fileData && !isLoadingFile) {
+      handleLoadRedactedFile();
+    }
+  }, [fileType, documentId, documentMetadata, fileData, isLoadingFile]);
+
+  // Business logic handlers
+  const handleBackToDocuments = useCallback(() => {
+    navigate(`/projects/${projectId}/documents`);
+  }, [navigate, projectId]);
+
+  const handleLoadRedactedFile = useCallback(async () => {
+    if (!documentId) return;
+
+    setIsLoadingFile(true);
+    setError(null);
+
+    const result = await EditorAPI.loadRedactedFile(documentId);
+
+    if (result.ok) {
+      setFileData(result.value);
+    } else {
+      setError(result.error instanceof Error ? result.error.message : 'Failed to load redacted file');
+    }
+
+    setIsLoadingFile(false);
+  }, [documentId]);
+
+  const handlePasswordConfirm = useCallback(async (password: string) => {
+    if (!documentId) return;
+
+    setIsValidatingPassword(true);
+    setPasswordError(null);
+
+    try {
+      const result = await EditorAPI.loadOriginalFile(documentId, password);
+
+      if (result.ok) {
+        setFileData(result.value);
+        setIsPasswordDialogOpen(false);
+        setPasswordError(null);
+        toast.success('File loaded successfully!', {
+          description: `Loaded ${fileType} file`
+        });
+      } else {
+        setPasswordError('Failed to load file. Please check your password and try again.');
+      }
+    } catch (error) {
+      console.error('Password validation error:', error);
+      setPasswordError('Failed to load file. Please check your password and try again.');
+    } finally {
+      setIsValidatingPassword(false);
+    }
+  }, [documentId, fileType]);
+
+  const handlePasswordCancel = useCallback(() => {
+    setIsPasswordDialogOpen(false);
+    setPasswordError(null);
+    setUserCancelledPassword(true);
+  }, []);
+
+  const handleRetryPassword = useCallback(() => {
+    if (!userCancelledPassword) return;
+    setIsPasswordDialogOpen(true);
+    setPasswordError(null);
+    setUserCancelledPassword(false);
+  }, [userCancelledPassword]);
+
+  // Create a minimal document object compatible with DocumentViewer from loaded file data and metadata
+  const documentForViewer = useMemo((): MinimalDocumentType | null => {
+    if (!documentId || !fileData || !documentMetadata) {
+      return null;
+    }
+
+    // Create stable arrays and objects to prevent reference changes
+    // Attach the blob to the file for the document viewer to use
+    const fileWithBlob = {
+      ...fileData.file,
+      blob: fileData.blob
+    };
+    const stableFiles = [fileWithBlob];
+
+    // Since DocumentShallowType doesn't have files array, we determine
+    // original/redacted files based on the current loaded file and shallow metadata
+    const isCurrentFileOriginal = fileData.file.file_type === 'original';
+    const originalFile = isCurrentFileOriginal ? fileWithBlob : null;
+    const redactedFile = !isCurrentFileOriginal ? fileWithBlob : null;
+
+    // Create a minimal document object with real metadata instead of fallback data
+    const viewerDocument: MinimalDocumentType = {
+      id: documentMetadata.id,
+      name: documentMetadata.name,
+      description: documentMetadata.description,
+      created_at: documentMetadata.created_at,
+      updated_at: documentMetadata.updated_at,
+      project_id: documentMetadata.project_id,
+      tags: documentMetadata.tags,
+      files: stableFiles,
+      original_file: originalFile,
+      redacted_file: redactedFile,
+    };
+
+    return viewerDocument;
+  }, [
+    // Document metadata dependencies
+    documentMetadata?.id,
+    documentMetadata?.name,
+    documentMetadata?.description,
+    documentMetadata?.created_at,
+    documentMetadata?.updated_at,
+    documentMetadata?.project_id,
+    documentMetadata?.tags,
+    // Loaded file data dependencies
+    fileData?.file?.id,
+    fileData?.file?.file_hash,
+    fileData?.file?.file_size,
+    fileData?.file?.file_type,
+  ]);
+
+  // Password dialog state and handlers
+  const passwordDialogState = useMemo(() => ({
+    isOpen: isPasswordDialogOpen,
+    onClose: handlePasswordCancel,
+    onConfirm: handlePasswordConfirm,
+    error: passwordError,
+    isLoading: isValidatingPassword,
+  }), [
+    isPasswordDialogOpen,
+    handlePasswordCancel,
+    handlePasswordConfirm,
+    passwordError,
+    isValidatingPassword,
+  ]);
+
+  // Action handlers
+  const actionHandlers = useMemo(() => ({
+    onBackToDocuments: handleBackToDocuments,
+    onRetryPassword: handleRetryPassword,
+    onOpenPasswordDialog: () => setIsPasswordDialogOpen(true),
+  }), [
+    handleBackToDocuments,
+    handleRetryPassword,
+  ]);
+
+  // Utility function
+  const formatFileSize = useCallback((bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  }, []);
+
+  return {
+    // State
+    projectId,
+    documentId,
+    documentMetadata,
+    fileData,
+    currentDocument: state.currentDocument,
+    isLoadingMetadata,
+    isLoadingFile,
+    isLoading: isLoadingMetadata || isLoadingFile,
+    error,
+    userCancelledPassword,
+    
+    // Document viewer data
+    documentForViewer,
+    
+    // Password dialog state and handlers
+    passwordDialogState,
+    
+    // Action handlers
+    actionHandlers,
+    
+    // Utility functions
+    formatFileSize,
+    refreshDocumentMetadata,
+  };
+}

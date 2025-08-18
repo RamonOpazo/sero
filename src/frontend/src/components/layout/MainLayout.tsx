@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Toaster } from '@/components/ui/sonner';
-import { WorkspaceProvider } from '@/context/workspace-provider';
+import { WorkspaceProvider } from '@/providers/workspace-provider';
 import { ThemeToggle } from '@/components/shared';
 import { Separator } from '@/components/ui/separator';
 import { Breadcrumbs } from './navigation';
