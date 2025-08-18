@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Toaster } from '@/components/ui/sonner';
-import { ProjectProvider } from '@/context/ProjectProvider';
+import { WorkspaceProvider } from '@/context/workspace-provider';
 import { ThemeToggle } from '@/components/shared';
 import { Separator } from '@/components/ui/separator';
 import { Breadcrumbs } from './navigation';
@@ -13,7 +13,7 @@ interface LayoutProps {
 
 export function MainLayout({ children }: LayoutProps) {
   return (
-    <ProjectProvider>
+    <WorkspaceProvider>
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
@@ -36,6 +36,6 @@ export function MainLayout({ children }: LayoutProps) {
       </SidebarInset>
       <Toaster />
     </SidebarProvider>
-    </ProjectProvider>
+    </WorkspaceProvider>
   )
 }

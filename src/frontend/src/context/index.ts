@@ -1,2 +1,2 @@
 export * from './ThemeContext'
-export * from './ProjectProvider'
+export * from './workspace-provider'

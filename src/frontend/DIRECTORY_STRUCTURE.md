@@ -4,6 +4,26 @@
 
 **IMPERATIVE: This application follows STRICT separation of concerns principles. Every component, hook, dialog, and utility must be properly encapsulated within its domain boundaries. Violations of this architecture are not acceptable.**
 
+## File Naming Convention
+
+**MANDATORY DIRECTIVE: All files MUST use dashed-case naming convention (kebab-case)**
+
+✅ **CORRECT Examples:**
+- `workspace-provider.tsx` (files are dashed-case)
+- `projects-view.tsx` 
+- `document-editor.tsx`
+- `use-projects-view.ts`
+- `api-reference-page.tsx`
+
+❌ **FORBIDDEN Examples:**
+- `WorkspaceProvider.tsx` (PascalCase files)
+- `ProjectsView.tsx` 
+- `DocumentEditor.tsx`
+- `useProjectsView.ts` (camelCase files)
+- `ApiReferencePage.tsx`
+
+**Rationale**: Dashed-case file names provide visual distinction between files (dashed-case) and functions/objects/components (PascalCase/camelCase), improving code navigation and consistency.
+
 ### Architecture Overview
 
 ```
@@ -95,9 +115,8 @@ src/
 │   ├── 📄 useColumnNavigation.ts     # Navigation hooks
 │   └── 📄 index.ts
 ├── 📁 context/                       # Global contexts
-│   ├── 📄 ProjectProvider.tsx        # Main app context
-│   ├── 📄 ThemeContext.tsx          # Theme management
-│   ├── 📄 DocumentViewerContext.tsx  # Document viewer context
+│   ├── 📄 workspace-provider.tsx     # Main app workspace state (projects, documents, files)
+│   ├── 📄 theme-context.tsx          # Theme management
 │   └── 📄 index.ts
 ├── 📁 lib/                          # Utility libraries
 │   ├── 📄 api.ts                    # API client

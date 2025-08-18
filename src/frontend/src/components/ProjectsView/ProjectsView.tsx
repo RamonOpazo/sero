@@ -1,11 +1,11 @@
 import { useNavigate } from 'react-router-dom';
-import { useProject } from '@/context/ProjectProvider';
+import { useWorkspace } from '@/context/workspace-provider';
 import { ProjectsDataTable } from './ProjectsDataTable';
 import type { ProjectShallowType } from '@/types';
 
 export function ProjectsView() {
   const navigate = useNavigate();
-  const { state } = useProject();
+  const { state } = useWorkspace();
 
   // Custom navigation handler for the data table
   const handleSelectProject = (project: ProjectShallowType) => {

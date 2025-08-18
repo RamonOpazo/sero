@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { DataTable, ColumnBuilder as Column, Actions } from '@/components/shared/DataTable';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { Badge } from '@/components/ui/badge';
-import { useProject } from '@/context/ProjectProvider';
+import { useWorkspace } from '@/context/workspace-provider';
 import type { DocumentShallowType } from '@/types';
 
 interface DocumentsDataTableProps {
@@ -12,7 +12,7 @@ interface DocumentsDataTableProps {
 }
 
 export function DocumentsDataTable({ onDocumentSelect }: DocumentsDataTableProps) {
-  const { state } = useProject();
+  const { state } = useWorkspace();
   
 
   const handleSelectDocument = useCallback((document: DocumentShallowType) => {

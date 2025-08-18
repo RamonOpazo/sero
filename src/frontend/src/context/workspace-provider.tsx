@@ -13,8 +13,8 @@ import type {
   ProjectUpdateType,
 } from '@/types';
 
-// State structure
-interface ProjectState {
+// Workspace state structure - manages projects, documents, and files across the application
+interface WorkspaceState {
   // Current selections
   currentProject: ProjectShallowType | null;
   currentDocument: DocumentShallowType | null;
@@ -40,8 +40,8 @@ interface ProjectState {
   fileError: string | null;
 }
 
-// Action types
-type ProjectAction =
+// Workspace action types
+type WorkspaceAction =
   | { type: 'SET_LOADING_PROJECTS'; payload: boolean }
   | { type: 'SET_LOADING_DOCUMENTS'; payload: boolean }
   | { type: 'SET_LOADING_FILE'; payload: boolean }
@@ -55,10 +55,10 @@ type ProjectAction =
   | { type: 'SET_FILE_ERROR'; payload: string | null }
   | { type: 'CLEAR_ALL_ERRORS' }
   | { type: 'RESET_STATE' }
-  | { type: 'RESTORE_PERSISTED_STATE'; payload: Partial<ProjectState> };
+  | { type: 'RESTORE_PERSISTED_STATE'; payload: Partial<WorkspaceState> };
 
-// Initial state
-const initialState: ProjectState = {
+// Initial workspace state
+const initialState: WorkspaceState = {
   currentProject: null,
   currentDocument: null,
   currentFile: null,
@@ -72,8 +72,8 @@ const initialState: ProjectState = {
   fileError: null,
 };
 
-// Reducer
-function refactorProjectReducer(state: ProjectState, action: ProjectAction): ProjectState {
+// Workspace state reducer
+function workspaceReducer(state: WorkspaceState, action: WorkspaceAction): WorkspaceState {
   switch (action.type) {
     case 'SET_LOADING_PROJECTS':
       return { ...state, isLoadingProjects: action.payload };
@@ -129,7 +129,7 @@ interface PersistedState {
   // Note: we don't persist currentFile as it contains blobs which can't be serialized
 }
 
-function saveStateToStorage(state: ProjectState) {
+function saveStateToStorage(state: WorkspaceState) {
   try {
     const persistedState: PersistedState = {
       currentProject: state.currentProject,
@@ -161,9 +161,9 @@ function clearStoredState() {
   }
 }
 
-// Context interface
-interface ProjectContextType {
-  state: ProjectState;
+// Workspace context interface
+interface WorkspaceContextType {
+  state: WorkspaceState;
   
   // Project actions
   loadProjects: () => Promise<void>;
@@ -187,16 +187,16 @@ interface ProjectContextType {
   resetState: () => void;
 }
 
-// Create context
-const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
+// Create workspace context
+const WorkspaceContext = createContext<WorkspaceContextType | undefined>(undefined);
 
-// Provider component
-interface ProjectProviderProps {
+// Workspace provider component
+interface WorkspaceProviderProps {
   children: ReactNode;
 }
 
-export function ProjectProvider({ children }: ProjectProviderProps) {
-  const [state, dispatch] = useReducer(refactorProjectReducer, initialState);
+export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
+  const [state, dispatch] = useReducer(workspaceReducer, initialState);
   
   // Use the hooks for API calls
   const projectsHook = useProjects();
@@ -357,7 +357,7 @@ export function ProjectProvider({ children }: ProjectProviderProps) {
     }
   }, [projectsHook.deleteProjects, state.currentProject]);
 
-  const contextValue: ProjectContextType = useMemo(() => ({
+  const contextValue: WorkspaceContextType = useMemo(() => ({
     state,
     loadProjects,
     selectProject,
@@ -390,17 +390,17 @@ export function ProjectProvider({ children }: ProjectProviderProps) {
   ]);
 
   return (
-    <ProjectContext.Provider value={contextValue}>
+    <WorkspaceContext.Provider value={contextValue}>
       {children}
-    </ProjectContext.Provider>
+    </WorkspaceContext.Provider>
   );
 }
 
-// Custom hook to use the context
-export function useProject() {
-  const context = useContext(ProjectContext);
+// Custom hook to use the workspace context
+export function useWorkspace() {
+  const context = useContext(WorkspaceContext);
   if (context === undefined) {
-    throw new Error('useProject must be used within a ProjectProvider');
+    throw new Error('useWorkspace must be used within a WorkspaceProvider');
   }
   return context;
 }

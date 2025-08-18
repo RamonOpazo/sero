@@ -1,10 +1,10 @@
 import { useMemo, useCallback, useState } from 'react';
 import { toast } from 'sonner';
-import { useProject } from '@/context/ProjectProvider';
+import { useWorkspace } from '@/context/workspace-provider';
 import type { ProjectShallowType, ProjectCreateType, ProjectUpdateType } from '@/types';
 
 export function useProjectsView(onProjectSelect?: (project: ProjectShallowType) => void) {
-  const { state, createProject, updateProject, deleteProjects } = useProject();
+  const { state, createProject, updateProject, deleteProjects } = useWorkspace();
   
   // Dialog state management
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
