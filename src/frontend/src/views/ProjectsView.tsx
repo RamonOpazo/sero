@@ -1,23 +1,18 @@
-import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useProjects } from '@/hooks/useProjects';
+import { useProject } from '@/context/ProjectProvider';
 import { ProjectsDataTable } from './ProjectsDataTable';
 import type { ProjectShallowType } from '@/types';
 
 export function ProjectsView() {
   const navigate = useNavigate();
-  const { loading, error, refreshProjects } = useProjects();
-
-  useEffect(() => {
-    refreshProjects();
-  }, [refreshProjects]);
+  const { state } = useProject();
 
   // Custom navigation handler for the data table
   const handleSelectProject = (project: ProjectShallowType) => {
     navigate(`/projects/${project.id}/documents`);
   };
 
-  if (loading) {
+  if (state.isLoadingProjects) {
     return (
       <div className="flex items-center justify-center py-8">
         <div className="text-center">
@@ -28,12 +23,12 @@ export function ProjectsView() {
     );
   }
 
-  if (error) {
+  if (state.projectsError) {
     return (
       <div className="flex items-center justify-center py-8">
         <div className="text-center">
           <p className="text-destructive mb-2">Failed to load projects</p>
-          <p className="text-sm text-muted-foreground">{String(error)}</p>
+          <p className="text-sm text-muted-foreground">{state.projectsError}</p>
         </div>
       </div>
     );

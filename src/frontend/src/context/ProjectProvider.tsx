@@ -9,6 +9,8 @@ import type {
   FileType,
   PromptType,
   SelectionType,
+  ProjectCreateType,
+  ProjectUpdateType,
 } from '@/types';
 
 // State structure
@@ -167,6 +169,9 @@ interface ProjectContextType {
   loadProjects: () => Promise<void>;
   selectProject: (project: ProjectShallowType) => void;
   clearProjectSelection: () => void;
+  createProject: (projectData: ProjectCreateType) => Promise<void>;
+  updateProject: (projectId: string, projectData: ProjectUpdateType) => Promise<void>;
+  deleteProjects: (projects: ProjectShallowType[]) => Promise<void>;
   
   // Document actions
   loadDocuments: (projectId: string) => Promise<void>;
@@ -317,11 +322,49 @@ export function ProjectProvider({ children }: ProjectProviderProps) {
     clearStoredState(); // Clear persisted state when resetting
   }, []);
 
+  // CRUD operations
+  const createProject = useCallback(async (projectData: ProjectCreateType) => {
+    const result = await projectsHook.createProject(projectData);
+    if (result.ok) {
+      // Project list will be automatically refreshed by the hook
+      return Promise.resolve();
+    } else {
+      return Promise.reject(result.error);
+    }
+  }, [projectsHook.createProject]);
+
+  const updateProject = useCallback(async (projectId: string, projectData: ProjectUpdateType) => {
+    const result = await projectsHook.updateProject(projectId, projectData);
+    if (result.ok) {
+      // Project list will be automatically refreshed by the hook
+      return Promise.resolve();
+    } else {
+      return Promise.reject(result.error);
+    }
+  }, [projectsHook.updateProject]);
+
+  const deleteProjects = useCallback(async (projects: ProjectShallowType[]) => {
+    const result = await projectsHook.deleteProjects(projects);
+    if (result.ok) {
+      // Project list will be automatically refreshed by the hook
+      // Clear current project if it was deleted
+      if (state.currentProject && projects.some(p => p.id === state.currentProject?.id)) {
+        dispatch({ type: 'SET_CURRENT_PROJECT', payload: null });
+      }
+      return Promise.resolve();
+    } else {
+      return Promise.reject(result.error);
+    }
+  }, [projectsHook.deleteProjects, state.currentProject]);
+
   const contextValue: ProjectContextType = useMemo(() => ({
     state,
     loadProjects,
     selectProject,
     clearProjectSelection,
+    createProject,
+    updateProject,
+    deleteProjects,
     loadDocuments,
     selectDocument,
     clearDocumentSelection,
@@ -334,6 +377,9 @@ export function ProjectProvider({ children }: ProjectProviderProps) {
     loadProjects,
     selectProject,
     clearProjectSelection,
+    createProject,
+    updateProject,
+    deleteProjects,
     loadDocuments,
     selectDocument,
     clearDocumentSelection,

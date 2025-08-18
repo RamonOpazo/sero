@@ -1,9 +1,9 @@
 import { useMemo, useCallback } from 'react';
 import { Eye, Plus } from 'lucide-react';
-import { toast } from 'sonner';
 import { DataTable, Column, Actions } from '@/components/features/data-table';
 import { EmptyState } from '@/components/shared/EmptyState';
-import { useProject } from '@/context/ProjectProvider';
+import { CreateProjectDialog, EditProjectDialog, ConfirmationDialog } from '@/components/dialogs';
+import { useProjectsDataTable } from '@/hooks/useProjectsDataTable';
 import type { ProjectShallowType } from '@/types';
 
 interface ProjectsDataTableProps {
@@ -11,47 +11,28 @@ interface ProjectsDataTableProps {
 }
 
 export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
-  const { state } = useProject();
+  // Extract all business logic to custom hook
+  const {
+    projects,
+    currentProject,
+    isLoading,
+    error,
+    dialogState,
+    actionHandlers,
+  } = useProjectsDataTable(onProjectSelect);
 
-  const handleSelectProject = useCallback(async (project: ProjectShallowType) => {
-    if (onProjectSelect) {
-      onProjectSelect(project);
-    }
-  }, [onProjectSelect]);
-
-  const handleCreateProject = useCallback(() => {
-    // TODO: Implement project creation
-    toast.info('Project creation not yet implemented');
-  }, []);
-
-  const handleEditProject = useCallback((project: ProjectShallowType) => {
-    // TODO: Implement project editing
-    toast.info(`Edit project: ${project.name} - Not yet implemented`);
-  }, []);
-
-  const handleDeleteProject = useCallback((project: ProjectShallowType) => {
-    // TODO: Implement project deletion
-    toast.info(`Delete project: ${project.name} - Not yet implemented`);
-  }, []);
-
-  const handleCopyProjectId = useCallback((project: ProjectShallowType) => {
-    navigator.clipboard.writeText(project.id);
-    toast.success('Project ID copied to clipboard', {
-      description: `ID: ${project.id}`,
-    });
-  }, []);
-
+  // Pure UI rendering functions
   const nameRenderer = useCallback((project: ProjectShallowType) => {
     return (
       <button
-        onClick={() => handleSelectProject(project)}
+        onClick={() => actionHandlers.onSelectProject(project)}
         className="text-left font-medium text-primary hover:text-primary/80 hover:underline focus:outline-none focus:underline transition-colors"
         title={`Select project: ${project.name}`}
       >
         {project.name.length > 30 ? `${project.name.slice(0, 30)}...` : project.name}
       </button>
     );
-  }, [handleSelectProject]);
+  }, [actionHandlers.onSelectProject]);
 
   const columns = useMemo(() => [
     // Custom clickable name column
@@ -107,15 +88,15 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
       .custom({
         label: 'Select Project',
         icon: Eye,
-        onClick: handleSelectProject,
+        onClick: actionHandlers.onSelectProject,
         variant: 'default'
       })
-      .edit(handleEditProject, 'Edit project')
-      .delete(handleDeleteProject, 'Delete project')
+      .edit(actionHandlers.onEditProject, 'Edit project')
+      .delete(actionHandlers.onDeleteProject, 'Delete project')
       .build()
-  ], [handleSelectProject, handleEditProject, handleDeleteProject, handleCopyProjectId, nameRenderer]);
+  ], [actionHandlers, nameRenderer]);
 
-  if (state.isLoadingProjects) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
         <div className="text-center">
@@ -126,39 +107,68 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
     );
   }
 
-  if (state.projectsError) {
+  if (error) {
     return (
       <div className="flex items-center justify-center py-8">
         <div className="text-center">
           <p className="text-destructive mb-2">Failed to load projects</p>
-          <p className="text-sm text-muted-foreground">{state.projectsError}</p>
+          <p className="text-sm text-muted-foreground">{error}</p>
         </div>
       </div>
     );
   }
 
-  if (state.projects.length === 0) {
+  if (projects.length === 0) {
     return (
       <EmptyState
         message="No projects found"
         buttonText="Create your first project"
         buttonIcon={<Plus className="h-4 w-4" />}
-        onButtonClick={handleCreateProject}
+        onButtonClick={actionHandlers.onCreateProject}
       />
     );
   }
 
   return (
-    <DataTable
-      columns={columns}
-      data={state.projects}
-      selection={state.currentProject ? [state.currentProject] : []}
-      searchKey="name"
-      searchPlaceholder="Search projects..."
-      onCreateEntries={handleCreateProject}
-      enableRowSelection={false} // We handle selection through actions
-      enableDeleteSelection={false} // We handle deletion through actions
-      pageSize={10}
-    />
+    <>
+      <DataTable
+        columns={columns}
+        data={projects}
+        selection={currentProject ? [currentProject] : []}
+        searchKey="name"
+        searchPlaceholder="Search projects..."
+        onCreateEntries={actionHandlers.onCreateProject}
+        enableRowSelection={false} // We handle selection through actions
+        enableDeleteSelection={false} // We handle deletion through actions
+        pageSize={10}
+      />
+
+      {/* Project Creation Dialog */}
+      <CreateProjectDialog
+        isOpen={dialogState.create.isOpen}
+        onClose={dialogState.create.onClose}
+        onSubmit={dialogState.create.onSubmit}
+      />
+
+      {/* Project Edit Dialog */}
+      <EditProjectDialog
+        isOpen={dialogState.edit.isOpen}
+        onClose={dialogState.edit.onClose}
+        onSubmit={dialogState.edit.onSubmit}
+        project={dialogState.edit.project}
+      />
+
+      {/* Project Deletion Confirmation Dialog */}
+      <ConfirmationDialog
+        isOpen={dialogState.delete.isOpen}
+        onClose={dialogState.delete.onClose}
+        onConfirm={dialogState.delete.onConfirm}
+        title="Delete Project"
+        description={`Are you sure you want to delete the project "${dialogState.delete.selectedProject?.name}"? This action cannot be undone and will permanently delete all associated documents and files.`}
+        confirmationText="delete"
+        confirmButtonText="Delete Project"
+        variant="destructive"
+      />
+    </>
   );
 }
