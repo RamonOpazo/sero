@@ -115,8 +115,6 @@ src/
 ├── 📁 hooks/                         # Only global/shared hooks
 │   ├── 📄 use-mobile.ts              # UI utility hooks
 │   ├── 📄 useColumnNavigation.ts     # Navigation hooks
-│   ├── 📄 usePrompts.ts              # Global prompt management
-│   ├── 📄 useSelections.ts           # Global selection management
 │   └── 📄 index.ts
 ├── 📁 providers/                     # Global state providers
 │   ├── 📄 workspace-provider.tsx     # Main app workspace state (projects, documents)
@@ -127,7 +125,8 @@ src/
 │   ├── 📄 result.ts                 # Result type utilities
 │   ├── 📄 utils.ts                  # General utilities
 │   ├── 📄 crypto.ts                 # Crypto utilities
-│   └── 📄 editor-api.ts             # Editor-specific API functions
+│   ├── 📄 editor-api.ts             # Editor-specific API functions
+│   └── 📄 document-viewer-api.ts    # Document viewer API functions
 ├── 📁 types/                        # Global type definitions
 │   ├── 📄 project.ts                # Project-related types
 │   ├── 📄 document.ts               # Document-related types
