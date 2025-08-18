@@ -22,7 +22,7 @@ This document outlines the **MANDATORY** step-by-step migration from the current
 - [x] **Phase 3**: ProjectsView Module Migration (20 min) ✅ COMPLETE
 - [x] **Phase 4**: DocumentsView Module Migration (20 min) ✅ COMPLETE
 - [x] **Phase 5**: DocumentEditor Module Migration (20 min) ✅ COMPLETE
-- [ ] **Phase 6**: Shared Components Reorganization (15 min)
+- [x] **Phase 6**: Shared Components Reorganization (15 min) ✅ COMPLETE
 - [ ] **Phase 7**: Layout Components Migration (10 min)
 - [ ] **Phase 8**: Hook Encapsulation Enforcement (15 min)
 - [ ] **Phase 9**: Import Path Updates & Compliance (25 min)
@@ -30,8 +30,8 @@ This document outlines the **MANDATORY** step-by-step migration from the current
 - [ ] **Phase 11**: Build Validation & Testing (15 min)
 
 **Total Estimated Time**: 165 minutes (~2.75 hours)
-**Completed**: 5/11 phases (75 minutes) ✅
-**Remaining**: 6 phases (~1.5 hours)
+**Completed**: 6/11 phases (90 minutes) ✅
+**Remaining**: 5 phases (~1.25 hours)
 
 ## ✅ **PROGRESS SUMMARY**
 
@@ -41,18 +41,21 @@ This document outlines the **MANDATORY** step-by-step migration from the current
 3. ✅ **Phase 3**: ProjectsView complete - Full component encapsulation with useProjectsView hook and domain dialogs
 4. ✅ **Phase 4**: DocumentsView complete - Full component encapsulation with useDocumentsView hook and semantic UploadDocumentsDialog naming
 5. ✅ **Phase 5**: DocumentEditor complete - Full component encapsulation with useDocumentEditor hook and contextual dialog renaming
+6. ✅ **Phase 6**: Shared Components complete - All shared components properly encapsulated with clean APIs and semantic organization
 
 ### **Current Status:**
 - **Build Status**: ✅ Passing (`pnpm build` successful)
 - **ProjectsView Module**: ✅ 100% compliant with DIRECTORY_STRUCTURE.md
 - **DocumentsView Module**: ✅ 100% compliant with DIRECTORY_STRUCTURE.md
 - **DocumentEditor Module**: ✅ 100% compliant with DIRECTORY_STRUCTURE.md
-- **Import Hygiene**: ✅ Clean imports via co-located dialogs
+- **Shared Components**: ✅ 100% compliant with DIRECTORY_STRUCTURE.md (EmptyState, ConfirmationDialog, ThemeToggle, SettingsToggle, Widget, DataTable)
+- **Import Hygiene**: ✅ Clean imports via co-located dialogs and shared components
 - **Hook Encapsulation**: ✅ Business logic properly co-located
-- **Semantic Naming**: ✅ UploadDocumentsDialog and DocumentPasswordDialog provide better context
+- **Semantic Naming**: ✅ All dialogs and components provide better context
+- **Features Migration**: ✅ DataTable moved from features to shared with proper encapsulation
 
 ### **Next Steps:**
-- **Phase 6**: Shared Components Reorganization (requires file moves via IDE / refactoring)
+- **Phase 7**: Layout Components Migration (requires breadcrumbs evaluation)
 - Continue with remaining phases...
 
 ---
@@ -318,67 +321,84 @@ export { DocumentPasswordDialog } from './DocumentPasswordDialog'
 - [x] Verify structure: `tree src/components/DocumentEditor/`
 - [x] Ready for Phase 6: YES
 
-### Phase 6: Shared Components Reorganization (15 minutes)
+### Phase 6: Shared Components Reorganization (15 minutes) ✅ COMPLETE
 **COMPLIANCE TARGET**: Establish truly shared components per directive #1
 
 #### 6.1 Move EmptyState Component
-- [ ] Verify source exists: `ls src/components/shared/EmptyState.tsx`
-- [ ] Execute: `mv src/components/shared/EmptyState.tsx src/components/shared/EmptyState/EmptyState.tsx`
-- [ ] Verify moved: `ls src/components/shared/EmptyState/EmptyState.tsx`
-- [ ] Create `src/components/shared/EmptyState/index.ts` with content:
+- [x] Verify source exists: `ls src/components/shared/EmptyState.tsx`
+- [x] Execute: `mv src/components/shared/EmptyState.tsx src/components/shared/EmptyState/EmptyState.tsx`
+- [x] Verify moved: `ls src/components/shared/EmptyState/EmptyState.tsx`
+- [x] Create `src/components/shared/EmptyState/index.ts` with content:
 ```typescript
 export { EmptyState } from './EmptyState'
 ```
-- [ ] Verify file created: `ls src/components/shared/EmptyState/index.ts`
-- [ ] **COMPLIANCE CHECK**: Component encapsulation per directive #1
+- [x] Verify file created: `ls src/components/shared/EmptyState/index.ts`
+- [x] **COMPLIANCE CHECK**: Component encapsulation per directive #1
 
 #### 6.2 Move ConfirmationDialog Component
-- [ ] Verify source exists: `ls src/components/dialogs/ConfirmationDialog.tsx`
-- [ ] Execute: `mv src/components/dialogs/ConfirmationDialog.tsx src/components/shared/ConfirmationDialog/ConfirmationDialog.tsx`
-- [ ] Verify moved: `ls src/components/shared/ConfirmationDialog/ConfirmationDialog.tsx`
-- [ ] Create `src/components/shared/ConfirmationDialog/index.ts` with content:
+- [x] Verify source exists: `ls src/components/dialogs/ConfirmationDialog.tsx`
+- [x] Execute: `mv src/components/dialogs/ConfirmationDialog.tsx src/components/shared/ConfirmationDialog/ConfirmationDialog.tsx`
+- [x] Verify moved: `ls src/components/shared/ConfirmationDialog/ConfirmationDialog.tsx`
+- [x] Create `src/components/shared/ConfirmationDialog/index.ts` with content:
 ```typescript
 export { ConfirmationDialog } from './ConfirmationDialog'
 ```
-- [ ] Verify file created: `ls src/components/shared/ConfirmationDialog/index.ts`
-- [ ] **COMPLIANCE CHECK**: Truly generic dialog in shared location per directive #3
+- [x] Verify file created: `ls src/components/shared/ConfirmationDialog/index.ts`
+- [x] **COMPLIANCE CHECK**: Truly generic dialog in shared location per directive #3
 
 #### 6.3 Move ThemeToggle Component
-- [ ] Verify source exists: `ls src/components/shared/ThemeToggle.tsx`
-- [ ] Execute: `mv src/components/shared/ThemeToggle.tsx src/components/shared/ThemeToggle/ThemeToggle.tsx`
-- [ ] Verify moved: `ls src/components/shared/ThemeToggle/ThemeToggle.tsx`
-- [ ] Create `src/components/shared/ThemeToggle/index.ts` with content:
+- [x] Verify source exists: `ls src/components/shared/ThemeToggle.tsx`
+- [x] Execute: `mv src/components/shared/ThemeToggle.tsx src/components/shared/ThemeToggle/ThemeToggle.tsx`
+- [x] Verify moved: `ls src/components/shared/ThemeToggle/ThemeToggle.tsx`
+- [x] Create `src/components/shared/ThemeToggle/index.ts` with content:
 ```typescript
 export { ThemeToggle } from './ThemeToggle'
 ```
-- [ ] Verify file created: `ls src/components/shared/ThemeToggle/index.ts`
-- [ ] **COMPLIANCE CHECK**: Component encapsulation per directive #1
+- [x] Verify file created: `ls src/components/shared/ThemeToggle/index.ts`
+- [x] **COMPLIANCE CHECK**: Component encapsulation per directive #1
 
-#### 6.4 Migrate Features Data-Table to Shared (if present)
-- [ ] Check if data-table exists: `ls -la src/components/features/data-table/` (may not exist)
-- [ ] If exists, move to shared: `mv src/components/features/data-table src/components/shared/DataTable`
-- [ ] If moved, rename main file: `mv src/components/shared/DataTable/data-table.tsx src/components/shared/DataTable/DataTable.tsx`
-- [ ] If moved, create index: `echo 'export { DataTable } from "./DataTable"' > src/components/shared/DataTable/index.ts`
-- [ ] **COMPLIANCE CHECK**: Shared components properly encapsulated per directive #1
+#### 6.4 Move Additional Shared Components (SettingsToggle, Widget)
+- [x] Move SettingsToggle: `mv src/components/shared/SettingsToggle.tsx src/components/shared/SettingsToggle/SettingsToggle.tsx`
+- [x] Move Widget: `mv src/components/shared/Widget.tsx src/components/shared/Widget/Widget.tsx`
+- [x] Create respective index files with proper exports
+- [x] **COMPLIANCE CHECK**: All shared components properly encapsulated
 
-#### 6.5 Update Shared Components Index
-- [ ] Update `src/components/shared/index.ts` with content:
+#### 6.5 Migrate Features Data-Table to Shared
+- [x] Check if data-table exists: `ls -la src/components/features/data-table/` (existed)
+- [x] Move to shared: `mv src/components/features/data-table src/components/shared/DataTable`
+- [x] Rename CSS file: `data-table.css` → `DataTable.css`
+- [x] Create comprehensive index with all DataTable exports including builders
+- [x] Update import paths in ProjectsDataTable and DocumentsDataTable
+- [x] **COMPLIANCE CHECK**: DataTable properly migrated with all dependencies
+
+#### 6.6 Update Shared Components Index
+- [x] Update `src/components/shared/index.ts` with content:
 ```typescript
 export * from './EmptyState'
 export * from './ConfirmationDialog'
 export * from './ThemeToggle'
-// export * from './DataTable'  // Uncomment if data-table was moved
+export * from './SettingsToggle'
+export * from './Widget'
+export * from './DataTable'
 ```
-- [ ] Verify file updated: `ls src/components/shared/index.ts`
-- [ ] **COMPLIANCE CHECK**: Clean public API per directive #6
+- [x] Verify file updated: `ls src/components/shared/index.ts`
+- [x] **COMPLIANCE CHECK**: Clean public API per directive #6
 
-#### 6.6 Phase 6 Validation
-- [ ] **MANDATORY**: All shared components properly encapsulated
-- [ ] **MANDATORY**: ConfirmationDialog moved from dialogs to shared
-- [ ] **MANDATORY**: Features components evaluated and relocated as needed
-- [ ] **MANDATORY**: Clean public APIs created
-- [ ] Verify structure: `tree src/components/shared/`
-- [ ] Ready for Phase 7: YES / NO
+#### 6.7 Update Import References
+- [x] Update ProjectsDataTable: Change ConfirmationDialog import to shared location
+- [x] Update DocumentsDataTable: Change DataTable imports to shared location
+- [x] Fix CSS import path in DataTableContent: `data-table.css` → `DataTable.css`
+- [x] Remove old data-table export from features index
+- [x] **COMPLIANCE CHECK**: All imports point to new shared locations
+
+#### 6.8 Phase 6 Validation
+- [x] **MANDATORY**: All shared components properly encapsulated
+- [x] **MANDATORY**: ConfirmationDialog moved from dialogs to shared
+- [x] **MANDATORY**: DataTable migrated from features to shared with all dependencies
+- [x] **MANDATORY**: Clean public APIs created for all components
+- [x] **MANDATORY**: Build passes successfully (`pnpm build`)
+- [x] Verify structure: `tree src/components/shared/` shows proper organization
+- [x] Ready for Phase 7: YES
 
 ### Phase 7: Layout Components Migration (10 minutes)
 **COMPLIANCE TARGET**: Establish layout component domain per directive #2

@@ -1,7 +1,7 @@
 import { useMemo, useCallback } from 'react';
 import { Eye, Plus, CheckCircle2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
-import { DataTable, Column, Actions } from '@/components/features/data-table';
+import { DataTable, ColumnBuilder as Column, Actions } from '@/components/shared/DataTable';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { Badge } from '@/components/ui/badge';
 import { useProject } from '@/context/ProjectProvider';

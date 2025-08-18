@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/table'
 import { useColumnNavigation } from '@/hooks/useColumnNavigation'
 import type { Table, Cell } from '@tanstack/react-table'
-import './data-table.css'
+import './DataTable.css'
 
 interface DataTableContentProps<TData> {
   table: Table<TData>

@@ -1,9 +1,9 @@
 import { useMemo, useCallback } from 'react';
 import { Eye, Plus } from 'lucide-react';
-import { DataTable, Column, Actions } from '@/components/features/data-table';
+import { DataTable, ColumnBuilder as Column, Actions } from '@/components/shared/DataTable';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { CreateProjectDialog, EditProjectDialog } from './dialogs';
-import { ConfirmationDialog } from '@/components/dialogs';
+import { ConfirmationDialog } from '@/components/shared/ConfirmationDialog';
 import { useProjectsView } from '@/components/ProjectsView/useProjectsView';
 import type { ProjectShallowType } from '@/types';
 
