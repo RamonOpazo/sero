@@ -41,6 +41,35 @@ def get_list(db: Session, skip: int, limit: int) -> list[projects_schema.Project
     return [ projects_schema.Project.model_validate(i) for i in projects ]
 
 
+def get_shallow_list(db: Session, skip: int, limit: int) -> list[projects_schema.ProjectShallow]:
+    """Get shallow list of projects without document data for efficient listing."""
+    projects_with_count = projects_crud.search_shallow(
+        db=db,
+        skip=skip,
+        limit=limit,
+        order_by=[("name", "asc")]
+    )
+    
+    # Convert to shallow schema with metadata
+    shallow_projects = []
+    for project, doc_count in projects_with_count:
+        shallow_data = {
+            "id": project.id,
+            "created_at": project.created_at,
+            "updated_at": project.updated_at,
+            "name": project.name,
+            "description": project.description,
+            "version": project.version,
+            "contact_name": project.contact_name,
+            "contact_email": project.contact_email,
+            "document_count": doc_count,
+            "has_documents": doc_count > 0
+        }
+        shallow_projects.append(projects_schema.ProjectShallow.model_validate(shallow_data))
+    
+    return shallow_projects
+
+
 def search_list(db: Session, skip: int, limit: int, name: str | None, version: int | None) -> list[projects_schema.Project]:
     projects = projects_crud.search(
         db=db,

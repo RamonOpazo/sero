@@ -60,6 +60,53 @@ class TestDocumentsAPI:
         data = response.json()
         assert isinstance(data, list)
         assert len(data) >= 1
+    
+    def test_list_documents_shallow_empty(self, client):
+        """Test listing shallow documents when none exist."""
+        response = client.get("/api/documents/shallow")
+        
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert isinstance(data, list)
+        assert len(data) == 0
+    
+    def test_list_documents_shallow_with_document(self, client, created_document):
+        """Test listing shallow documents with existing document."""
+        response = client.get("/api/documents/shallow")
+        
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert isinstance(data, list)
+        assert len(data) >= 1
+        
+        # Verify shallow structure
+        document = data[0]
+        assert "id" in document
+        assert "name" in document
+        assert "description" in document
+        assert "project_id" in document
+        assert "tags" in document
+        assert "created_at" in document
+        assert "file_count" in document
+        assert "prompt_count" in document
+        assert "selection_count" in document
+        assert "has_original_file" in document
+        assert "has_redacted_file" in document
+        assert "is_processed" in document
+        
+        # Verify no nested data is loaded
+        assert "files" not in document
+        assert "prompts" not in document
+        assert "selections" not in document
+    
+    def test_list_documents_shallow_with_pagination(self, client, created_document):
+        """Test listing shallow documents with pagination parameters."""
+        response = client.get("/api/documents/shallow?skip=0&limit=5")
+        
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert isinstance(data, list)
+        assert len(data) >= 1
 
     def test_get_document_by_id_success(self, client, created_document):
         """Test getting a specific document by ID."""

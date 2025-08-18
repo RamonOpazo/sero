@@ -1,5 +1,6 @@
 from uuid import UUID
 from fastapi import APIRouter, Depends, File, UploadFile, Form
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from backend.core.database import get_db_session
@@ -18,6 +19,16 @@ async def list_documents(
 ):
     """Get paginated list of all documents."""
     return documents_controller.get_list(db=db, skip=skip, limit=limit)
+
+
+@router.get("/shallow", response_model=list[documents_schema.DocumentShallow])
+async def list_documents_shallow(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db_session)
+):
+    """Get paginated shallow list of documents without file, prompt, or selection data for efficient listing."""
+    return documents_controller.get_shallow_list(db=db, skip=skip, limit=limit)
 
 
 @router.get("/search", response_model=list[documents_schema.Document])
@@ -131,6 +142,19 @@ async def get_document_tags(
     return documents_controller.get_tags(db=db, document_id=document_id)
 
 
+
+
+@router.get("/id/{document_id}/prompts", response_model=list[prompts_schema.Prompt])
+async def get_document_prompts(
+    document_id: UUID,
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db_session)
+):
+    """Get prompts for a document."""
+    return documents_controller.get_prompts(db=db, document_id=document_id, skip=skip, limit=limit)
+
+
 @router.post("/id/{document_id}/prompts", response_model=prompts_schema.Prompt)
 async def add_prompt_to_document(
     document_id: UUID,
@@ -139,6 +163,17 @@ async def add_prompt_to_document(
 ):
     """Add a prompt to a document."""
     return documents_controller.add_prompt(db=db, document_id=document_id, prompt_data=prompt_data)
+
+
+@router.get("/id/{document_id}/selections", response_model=list[selections_schema.Selection])
+async def get_document_selections(
+    document_id: UUID,
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db_session)
+):
+    """Get selections for a document."""
+    return documents_controller.get_selections(db=db, document_id=document_id, skip=skip, limit=limit)
 
 
 @router.post("/id/{document_id}/selections", response_model=selections_schema.Selection)
@@ -159,3 +194,59 @@ async def process_document(
 ):
     """Process a document to generate redacted version."""
     return documents_controller.process(db=db, document_id=document_id, password=password)
+
+
+@router.post("/id/{document_id}/download/original", response_class=StreamingResponse)
+async def download_original_file(
+    document_id: UUID,
+    request: files_schema.EncryptedFileDownloadRequest,
+    db: Session = Depends(get_db_session)
+) -> StreamingResponse:
+    """Download the original file for a document using encrypted password.
+    
+    This endpoint provides document-centric file access without requiring
+    separate file ID lookups. Original files are encrypted and require
+    password verification.
+    
+    Args:
+        document_id: UUID of the document
+        request: Contains encrypted password and key metadata
+        db: Database session
+        
+    Returns:
+        StreamingResponse: The decrypted original file
+        
+    Raises:
+        HTTPException: If document not found, no original file, or invalid password
+    """
+    return documents_controller.download_original_file(
+        db=db, 
+        document_id=document_id, 
+        request=request
+    )
+
+
+@router.get("/id/{document_id}/download/redacted", response_class=StreamingResponse)
+async def download_redacted_file(
+    document_id: UUID,
+    db: Session = Depends(get_db_session)
+) -> StreamingResponse:
+    """Download the redacted file for a document.
+    
+    This endpoint provides direct access to redacted files without password
+    requirements since redacted files are not encrypted.
+    
+    Args:
+        document_id: UUID of the document
+        db: Database session
+        
+    Returns:
+        StreamingResponse: The redacted file
+        
+    Raises:
+        HTTPException: If document not found or no redacted file exists
+    """
+    return documents_controller.download_redacted_file(
+        db=db, 
+        document_id=document_id
+    )

@@ -63,6 +63,25 @@ class ProjectUpdate(BaseModel):
     contact_email: str | None = Field(None, min_length=1, max_length=100)
 
 
+class ProjectShallow(BaseModel):
+    """Shallow project schema without nested document data for efficient listing."""
+    id: UUID4
+    created_at: AwareDatetime
+    updated_at: AwareDatetime | None
+    name: str
+    description: str | None
+    version: int
+    contact_name: str
+    contact_email: str
+    
+    # Metadata about next level without loading full data
+    document_count: int
+    has_documents: bool
+    
+    class Config:
+        from_attributes = True
+
+
 class ProjectSummary(BaseModel):
     """Comprehensive summary of a project including all documents and processing analytics."""
     project_id: UUID4

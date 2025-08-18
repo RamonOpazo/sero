@@ -29,10 +29,10 @@ export const ProjectShallowSchema = z.object({
   version: z.number().int(),
   contact_name: z.string(),
   contact_email: z.string(),
-  password_hash: z.string(), // base64 encoded bytes
-  document_ids: z.array(UUIDSchema),
-  document_count: z.number().int(), // computed field
-  status: ProjectStatusEnumSchema, // computed field
+  
+  // Metadata about next level without loading full data
+  document_count: z.number().int(),
+  has_documents: z.boolean(),
 });
 
 export const ProjectCreateSchema = z.object({

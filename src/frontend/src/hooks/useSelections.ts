@@ -20,7 +20,7 @@ export function useSelection(documentId: string) {
       y,
       width: 0,
       height: 0,
-      page_number: pageIndex + 1,
+      page_number: pageIndex,
       document_id: documentId,
     });
     setIsDrawing(true);

@@ -24,13 +24,13 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2 } from 'lucide-react';
-import type { ProjectType } from '@/types';
+import type { ProjectShallowType } from '@/types';
 
 interface EditProjectDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (projectData: { name: string; description: string }) => Promise<void>;
-  project: ProjectType | null;
+  project: ProjectShallowType | null;
 }
 
 const editFormSchema = z.object({

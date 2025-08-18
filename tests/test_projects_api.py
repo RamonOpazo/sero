@@ -68,6 +68,49 @@ class TestProjectsAPI:
         data = response.json()
         assert isinstance(data, list)
         assert len(data) >= 1
+    
+    def test_list_projects_shallow_empty(self, client):
+        """Test listing shallow projects when none exist."""
+        response = client.get("/api/projects/shallow")
+        
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert isinstance(data, list)
+        assert len(data) == 0
+    
+    def test_list_projects_shallow_with_project(self, client, created_project):
+        """Test listing shallow projects with existing project."""
+        response = client.get("/api/projects/shallow")
+        
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert isinstance(data, list)
+        assert len(data) >= 1
+        
+        # Verify shallow structure
+        project = data[0]
+        assert "id" in project
+        assert "name" in project
+        assert "description" in project
+        assert "version" in project
+        assert "contact_name" in project
+        assert "contact_email" in project
+        assert "created_at" in project
+        assert "document_count" in project
+        assert "has_documents" in project
+        
+        # Verify no nested documents are loaded
+        assert "documents" not in project
+        assert "password_hash" not in project
+    
+    def test_list_projects_shallow_with_pagination(self, client, created_project):
+        """Test listing shallow projects with pagination parameters."""
+        response = client.get("/api/projects/shallow?skip=0&limit=5")
+        
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert isinstance(data, list)
+        assert len(data) >= 1
 
     def test_get_project_by_id_success(self, client, created_project):
         """Test getting a specific project by ID."""

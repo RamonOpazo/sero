@@ -20,6 +20,16 @@ async def list_projects(
     return projects_controller.get_list(db=db, skip=skip, limit=limit)
 
 
+@router.get("/shallow", response_model=list[projects_schema.ProjectShallow])
+async def list_projects_shallow(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db_session)
+):
+    """Get paginated shallow list of projects without document data for efficient listing."""
+    return projects_controller.get_shallow_list(db=db, skip=skip, limit=limit)
+
+
 @router.get("/search", response_model=list[projects_schema.Project])
 async def search_projects(
     skip: int = 0,
