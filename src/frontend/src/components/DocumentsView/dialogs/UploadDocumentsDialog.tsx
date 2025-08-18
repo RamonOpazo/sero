@@ -25,7 +25,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Loader2 } from 'lucide-react';
 import type { DocumentBulkUploadRequestType } from '@/types';
 
-interface CreateDocumentDialogProps {
+interface UploadDocumentsDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (uploadData: DocumentBulkUploadRequestType) => Promise<void>;
@@ -44,7 +44,7 @@ type FormData = {
   password: string;
 };
 
-export function CreateDocumentDialog({ isOpen, onClose, onSubmit, projectId }: CreateDocumentDialogProps) {
+export function UploadDocumentsDialog({ isOpen, onClose, onSubmit, projectId }: UploadDocumentsDialogProps) {
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {

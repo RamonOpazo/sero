@@ -41,9 +41,8 @@ src/
 │   │   ├── 📄 DocumentsDataTable.tsx  # Documents table with logic
 │   │   ├── 📄 useDocumentsView.ts     # Business logic hook
 │   │   ├── 📁 dialogs/               # Document-specific dialogs
-│   │   │   ├── 📄 CreateDocumentDialog.tsx
 │   │   │   ├── 📄 EditDocumentDialog.tsx
-│   │   │   ├── 📄 DocumentUploadDialog.tsx  # Renamed from CreateDocumentDialog
+│   │   │   ├── 📄 UploadDocumentsDialog.tsx  # Renamed from CreateDocumentDialog for better semantics
 │   │   │   └── 📄 index.ts
 │   │   ├── 📁 __tests__/
 │   │   └── 📄 index.ts

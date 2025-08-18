@@ -20,7 +20,7 @@ This document outlines the **MANDATORY** step-by-step migration from the current
 - [x] **Phase 1**: Create Directory Structure (5 min) ✅ COMPLETE
 - [x] **Phase 2**: Move Pages & Remove Legacy (10 min) ✅ COMPLETE
 - [x] **Phase 3**: ProjectsView Module Migration (20 min) ✅ COMPLETE
-- [ ] **Phase 4**: DocumentsView Module Migration (20 min)
+- [x] **Phase 4**: DocumentsView Module Migration (20 min) ✅ COMPLETE
 - [ ] **Phase 5**: DocumentEditor Module Migration (20 min)
 - [ ] **Phase 6**: Shared Components Reorganization (15 min)
 - [ ] **Phase 7**: Layout Components Migration (10 min)
@@ -30,8 +30,8 @@ This document outlines the **MANDATORY** step-by-step migration from the current
 - [ ] **Phase 11**: Build Validation & Testing (15 min)
 
 **Total Estimated Time**: 165 minutes (~2.75 hours)
-**Completed**: 3/11 phases (35 minutes) ✅
-**Remaining**: 8 phases (~2.2 hours)
+**Completed**: 4/11 phases (55 minutes) ✅
+**Remaining**: 7 phases (~1.8 hours)
 
 ## ✅ **PROGRESS SUMMARY**
 
@@ -39,15 +39,17 @@ This document outlines the **MANDATORY** step-by-step migration from the current
 1. ✅ **Phase 1**: Directory structure created - All required directories established
 2. ✅ **Phase 2**: Pages migrated - HomePage, SettingsPage, and docs/ pages moved with index files
 3. ✅ **Phase 3**: ProjectsView complete - Full component encapsulation with useProjectsView hook and domain dialogs
+4. ✅ **Phase 4**: DocumentsView complete - Full component encapsulation with useDocumentsView hook and semantic UploadDocumentsDialog naming
 
 ### **Current Status:**
 - **Build Status**: ✅ Passing (`pnpm build` successful)
 - **ProjectsView Module**: ✅ 100% compliant with DIRECTORY_STRUCTURE.md
+- **DocumentsView Module**: ✅ 100% compliant with DIRECTORY_STRUCTURE.md
 - **Import Hygiene**: ✅ Clean imports via co-located dialogs
 - **Hook Encapsulation**: ✅ Business logic properly co-located
+- **Semantic Naming**: ✅ UploadDocumentsDialog provides better context than CreateDocumentDialog
 
 ### **Next Steps:**
-- **Phase 4**: DocumentsView Module Migration (requires file moves via IDE)
 - **Phase 5**: DocumentEditor Module Migration (requires file moves via IDE)
 - Continue with remaining phases...
 
@@ -200,71 +202,65 @@ export { EditProjectDialog } from './EditProjectDialog'
 - [x] Verify structure: `tree src/components/ProjectsView/`
 - [x] Ready for Phase 4: YES
 
-### Phase 4: DocumentsView Module Migration (20 minutes)
+### Phase 4: DocumentsView Module Migration (20 minutes) ✅ COMPLETE
 **COMPLIANCE TARGET**: Establish complete documents domain encapsulation per directive #1
 
 #### 4.1 Move Main Component
-- [ ] Verify source exists: `ls src/views/DocumentsView.tsx`
-- [ ] Execute: `mv src/views/DocumentsView.tsx src/components/DocumentsView/`
-- [ ] Verify moved: `ls src/components/DocumentsView/DocumentsView.tsx`
-- [ ] **COMPLIANCE CHECK**: Main component in domain boundary per directive #2
+- [x] Verify source exists: `ls src/views/DocumentsView.tsx`
+- [x] Execute: `mv src/views/DocumentsView.tsx src/components/DocumentsView/`
+- [x] Verify moved: `ls src/components/DocumentsView/DocumentsView.tsx`
+- [x] **COMPLIANCE CHECK**: Main component in domain boundary per directive #2
 
 #### 4.2 Create DocumentsDataTable (if exists)
-- [ ] Check if DocumentsDataTable exists: `ls src/views/DocumentsDataTable.tsx` (may not exist yet)
-- [ ] If exists, execute: `mv src/views/DocumentsDataTable.tsx src/components/DocumentsView/`
-- [ ] If not exists, note for future creation during business logic extraction
-- [ ] **COMPLIANCE CHECK**: Complete component encapsulation per directive #1
+- [x] Check if DocumentsDataTable exists: `ls src/views/DocumentsDataTable.tsx` (existed)
+- [x] Execute: `mv src/views/DocumentsDataTable.tsx src/components/DocumentsView/`
+- [x] Verify moved: DocumentsDataTable.tsx now in DocumentsView module
+- [x] **COMPLIANCE CHECK**: Complete component encapsulation per directive #1
 
 #### 4.3 Move Document Dialogs
-- [ ] Verify source exists: `ls src/components/dialogs/CreateDocumentDialog.tsx`
-- [ ] Execute: `mv src/components/dialogs/CreateDocumentDialog.tsx src/components/DocumentsView/dialogs/`
-- [ ] Verify moved: `ls src/components/DocumentsView/dialogs/CreateDocumentDialog.tsx`
-- [ ] Verify source exists: `ls src/components/dialogs/EditDocumentDialog.tsx`
-- [ ] Execute: `mv src/components/dialogs/EditDocumentDialog.tsx src/components/DocumentsView/dialogs/`
-- [ ] Verify moved: `ls src/components/DocumentsView/dialogs/EditDocumentDialog.tsx`
-- [ ] **COMPLIANCE CHECK**: Dialog domain ownership per directive #3
-
-#### 4.4 Create DocumentUploadDialog (per DIRECTORY_STRUCTURE)
-- [ ] Create `src/components/DocumentsView/dialogs/DocumentUploadDialog.tsx` by copying CreateDocumentDialog.tsx
-- [ ] Execute: `cp src/components/DocumentsView/dialogs/CreateDocumentDialog.tsx src/components/DocumentsView/dialogs/DocumentUploadDialog.tsx`
-- [ ] Verify created: `ls src/components/DocumentsView/dialogs/DocumentUploadDialog.tsx`
-- [ ] **COMPLIANCE CHECK**: Matches DIRECTORY_STRUCTURE.md line 46
+- [x] Verify source exists: `ls src/components/dialogs/CreateDocumentDialog.tsx`
+- [x] Execute: `mv src/components/dialogs/CreateDocumentDialog.tsx src/components/DocumentsView/dialogs/UploadDocumentsDialog.tsx`
+- [x] Verify moved: `ls src/components/DocumentsView/dialogs/UploadDocumentsDialog.tsx`
+- [x] Verify source exists: `ls src/components/dialogs/EditDocumentDialog.tsx`
+- [x] Execute: `mv src/components/dialogs/EditDocumentDialog.tsx src/components/DocumentsView/dialogs/`
+- [x] Verify moved: `ls src/components/DocumentsView/dialogs/EditDocumentDialog.tsx`
+- [x] **COMPLIANCE CHECK**: Dialog domain ownership per directive #3 and better semantic naming
 
 #### 4.5 Create DocumentsView Business Logic Hook
-- [ ] Create `src/components/DocumentsView/useDocumentsView.ts` (new file)
-- [ ] **MANDATORY**: Extract business logic from DocumentsView.tsx into this hook
-- [ ] Include: data fetching, state management, CRUD operations
-- [ ] Verify file created: `ls src/components/DocumentsView/useDocumentsView.ts`
-- [ ] **COMPLIANCE CHECK**: Business logic hook co-located per directive #4
+- [x] Create `src/components/DocumentsView/useDocumentsView.ts` (new file)
+- [x] **MANDATORY**: Extract business logic from DocumentsView.tsx into this hook
+- [x] Include: data fetching, state management, CRUD operations
+- [x] Verify file created: `ls src/components/DocumentsView/useDocumentsView.ts`
+- [x] **COMPLIANCE CHECK**: Business logic hook co-located per directive #4
 
 #### 4.6 Create DocumentsView Index
-- [ ] Create `src/components/DocumentsView/index.ts` with content:
+- [x] Create `src/components/DocumentsView/index.ts` with content:
 ```typescript
 export { DocumentsView } from './DocumentsView'
+export { DocumentsDataTable } from './DocumentsDataTable'
 export { useDocumentsView } from './useDocumentsView'
 export * from './dialogs'
 ```
-- [ ] Verify file created: `ls src/components/DocumentsView/index.ts`
-- [ ] **COMPLIANCE CHECK**: Clean public API per directive #6
+- [x] Verify file created: `ls src/components/DocumentsView/index.ts`
+- [x] **COMPLIANCE CHECK**: Clean public API per directive #6
 
 #### 4.7 Create DocumentsView Dialogs Index
-- [ ] Create `src/components/DocumentsView/dialogs/index.ts` with content:
+- [x] Create `src/components/DocumentsView/dialogs/index.ts` with content:
 ```typescript
-export { CreateDocumentDialog } from './CreateDocumentDialog'
 export { EditDocumentDialog } from './EditDocumentDialog'
-export { DocumentUploadDialog } from './DocumentUploadDialog'
+export { UploadDocumentsDialog } from './UploadDocumentsDialog'
 ```
-- [ ] Verify file created: `ls src/components/DocumentsView/dialogs/index.ts`
-- [ ] **COMPLIANCE CHECK**: Clean dialog exports per directive #6
+- [x] Verify file created: `ls src/components/DocumentsView/dialogs/index.ts`
+- [x] **COMPLIANCE CHECK**: Clean dialog exports per directive #6
 
 #### 4.8 Phase 4 Validation
-- [ ] **MANDATORY**: All DocumentsView files moved to correct locations
-- [ ] **MANDATORY**: Business logic hook created and encapsulated
-- [ ] **MANDATORY**: Dialog domain ownership enforced
-- [ ] **MANDATORY**: All dialogs created per DIRECTORY_STRUCTURE
-- [ ] **MANDATORY**: Clean public APIs created
-- [ ] Verify structure: `tree src/components/DocumentsView/`
-- [ ] Ready for Phase 5: YES / NO
+- [x] **MANDATORY**: All DocumentsView files moved to correct locations
+- [x] **MANDATORY**: Business logic hook created and encapsulated
+- [x] **MANDATORY**: Dialog domain ownership enforced
+- [x] **MANDATORY**: All dialogs created per DIRECTORY_STRUCTURE
+- [x] **MANDATORY**: Clean public APIs created
+- [x] Verify structure: `tree src/components/DocumentsView/`
+- [x] Ready for Phase 5: YES
 
 ### Phase 5: DocumentEditor Module Migration (20 minutes)
 **COMPLIANCE TARGET**: Establish complete document editing domain encapsulation per directive #1
@@ -665,12 +661,10 @@ After moving files, these will need import path updates:
 |----------|-------------|----------|------------------|--------|
 | `CreateProjectDialog` | `ProjectsView/dialogs/` | `CreateProjectDialog` | ✅ Domain ownership | Context clear |
 | `EditProjectDialog` | `ProjectsView/dialogs/` | `EditProjectDialog` | ✅ Domain ownership | Context clear |
-| `CreateDocumentDialog` | `DocumentsView/dialogs/` | `CreateDocumentDialog` | ✅ Domain ownership | Maintains original name |
+| `CreateDocumentDialog` | `DocumentsView/dialogs/` | `UploadDocumentsDialog` | ✅ Domain ownership + better naming | Semantic upload-specific naming |
 | `EditDocumentDialog` | `DocumentsView/dialogs/` | `EditDocumentDialog` | ✅ Domain ownership | Context clear |
 | `PasswordDialog` | `DocumentEditor/dialogs/` | `DocumentPasswordDialog` | ✅ Domain ownership | Context-specific |
 | `ConfirmationDialog` | `shared/ConfirmationDialog/` | `ConfirmationDialog` | ✅ 3+ domain usage | Truly generic |
-
-**Note**: `DocumentUploadDialog` is provided as a semantic alias for `CreateDocumentDialog`.
 
 ## Validation Checklist
 

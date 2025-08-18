@@ -4,7 +4,7 @@ import { ThemeProvider } from '@/context';
 import { MainLayout } from '@/views/MainLayout';
 import { HomePage } from '@/pages/HomePage';
 import { ProjectsView } from '@/components/ProjectsView/ProjectsView';
-import { DocumentsView } from '@/views/DocumentsView';
+import { DocumentsView } from '@/components/DocumentsView/DocumentsView';
 import { FileViewer } from '@/views/FileViewer';
 import { DocumentationRenderer } from '@/components/DocumentationRenderer';
 import { SettingsPage } from '@/pages/SettingsPage';
