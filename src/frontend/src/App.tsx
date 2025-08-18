@@ -1,11 +1,11 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { ThemeProvider } from '@/context';
-import { MainLayout } from '@/components/Layout/MainLayout';
+import { MainLayout } from '@/components/Layout';
 import { HomePage } from '@/pages/HomePage';
-import { ProjectsView } from '@/components/ProjectsView/ProjectsView';
-import { DocumentsView } from '@/components/DocumentsView/DocumentsView';
-import { DocumentEditor } from '@/components/DocumentEditor/DocumentEditor';
+import { ProjectsView } from '@/components/ProjectsView';
+import { DocumentsView } from '@/components/DocumentsView';
+import { DocumentEditor } from '@/components/DocumentEditor';
 import { DocumentationRenderer } from '@/components/DocumentationRenderer';
 import { SettingsPage } from '@/pages/SettingsPage';
 import { CryptoTest } from '@/components/CryptoTest';

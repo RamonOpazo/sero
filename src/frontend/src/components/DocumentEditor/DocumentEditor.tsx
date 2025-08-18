@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { FileText, ArrowLeft, Lock } from 'lucide-react';
 import { toast } from 'sonner';
-import { DocumentPasswordDialog } from '@/components/DocumentEditor/dialogs/DocumentPasswordDialog';
+import { DocumentPasswordDialog } from './dialogs';
 import DocumentViewer from '@/components/features/document-viewer/DocumentViewer';
 import { useFiles } from '@/hooks/useFiles';
 import { api } from '@/lib/axios';
