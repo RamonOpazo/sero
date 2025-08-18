@@ -2,12 +2,12 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { ThemeProvider } from '@/context';
 import { MainLayout } from '@/views/MainLayout';
-import { HomePage } from '@/views/HomePage';
-import { ProjectsView } from '@/views/ProjectsView';
+import { HomePage } from '@/pages/HomePage';
+import { ProjectsView } from '@/components/ProjectsView/ProjectsView';
 import { DocumentsView } from '@/views/DocumentsView';
 import { FileViewer } from '@/views/FileViewer';
 import { DocumentationRenderer } from '@/components/DocumentationRenderer';
-import { SettingsPage } from '@/views/SettingsPage';
+import { SettingsPage } from '@/pages/SettingsPage';
 import { CryptoTest } from '@/components/CryptoTest';
 
 // Redirect component for /projects/:projectId -> /projects/:projectId/documents

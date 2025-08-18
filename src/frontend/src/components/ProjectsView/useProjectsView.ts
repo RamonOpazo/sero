@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 import { useProject } from '@/context/ProjectProvider';
 import type { ProjectShallowType, ProjectCreateType, ProjectUpdateType } from '@/types';
 
-export function useProjectsDataTable(onProjectSelect?: (project: ProjectShallowType) => void) {
+export function useProjectsView(onProjectSelect?: (project: ProjectShallowType) => void) {
   const { state, createProject, updateProject, deleteProjects } = useProject();
   
   // Dialog state management

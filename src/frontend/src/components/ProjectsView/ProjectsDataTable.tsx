@@ -2,8 +2,9 @@ import { useMemo, useCallback } from 'react';
 import { Eye, Plus } from 'lucide-react';
 import { DataTable, Column, Actions } from '@/components/features/data-table';
 import { EmptyState } from '@/components/shared/EmptyState';
-import { CreateProjectDialog, EditProjectDialog, ConfirmationDialog } from '@/components/dialogs';
-import { useProjectsDataTable } from '@/hooks/useProjectsDataTable';
+import { CreateProjectDialog, EditProjectDialog } from './dialogs';
+import { ConfirmationDialog } from '@/components/dialogs';
+import { useProjectsView } from '@/components/ProjectsView/useProjectsView';
 import type { ProjectShallowType } from '@/types';
 
 interface ProjectsDataTableProps {
@@ -19,7 +20,7 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
     error,
     dialogState,
     actionHandlers,
-  } = useProjectsDataTable(onProjectSelect);
+  } = useProjectsView(onProjectSelect);
 
   // Pure UI rendering functions
   const nameRenderer = useCallback((project: ProjectShallowType) => {
