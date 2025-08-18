@@ -24,6 +24,51 @@
 
 **Rationale**: Dashed-case file names provide visual distinction between files (dashed-case) and functions/objects/components (PascalCase/camelCase), improving code navigation and consistency.
 
+## Module Entry Point Convention
+
+**MANDATORY DIRECTIVE: For all component modules encapsulated behind a single directory, use index.tsx as the consolidated entry point**
+
+✅ **PREFERRED Pattern: Consolidated index.tsx**
+```
+component-module/
+├── index.tsx              # Main component + all exports (REQUIRED)
+├── providers/             # Internal structure
+├── components/
+├── hooks/
+└── utils/
+```
+
+❌ **AVOID: Separate component + index files**
+```
+component-module/
+├── index.ts               # Just exports
+├── main-component.tsx     # Separate component file
+├── providers/
+└── components/
+```
+
+**Applies to:**
+- **Feature modules**: `features/document-viewer/`, `features/data-table/`
+- **View modules**: `views/projects-view/`, `views/editor-view/`
+- **Shared components**: `shared/EmptyState/`, `shared/ConfirmationDialog/`
+- **Layout components**: `layout/main-layout/` (if it becomes a directory)
+- **Any component** that has its own directory with sub-structure
+
+**Benefits:**
+- **Single entry point**: `import Component from './component-module'` automatically resolves
+- **Standard convention**: Follows React ecosystem best practices  
+- **Reduced files**: Eliminates redundancy between index.ts and main component
+- **Cleaner imports**: No need to specify component filenames
+- **Encapsulation**: Internal structure is hidden from consumers
+
+**Export Pattern:**
+```tsx
+// index.tsx
+export default function ComponentName() { /* main component */ }
+export { ComponentName }; // named export for flexibility
+export * from './sub-modules'; // re-exports
+```
+
 ### Architecture Overview
 
 ```
@@ -97,16 +142,18 @@ src/
 │       │   └── 📄 index.ts
 │       └── 📄 index.ts
 ├── 📁 features/                       # Complex self-contained features
-│   ├── 📁 document-viewer/           # PDF viewer feature (PRESERVE STRUCTURE)
-│   │   ├── 📁 core/                  # Core state management
-│   │   ├── 📁 dialogs/               # Feature-specific dialogs
+│   ├── 📁 document-viewer/           # PDF viewer feature (UPDATED STRUCTURE)
+│   │   ├── 📄 index.tsx              # Main component + all exports (CONSOLIDATED)
+│   │   ├── 📁 providers/             # State management
+│   │   ├── 📁 components/            # Internal UI components
+│   │   │   ├── 📁 dialogs/           # Feature-specific dialogs
+│   │   │   ├── 📁 layouts/           # Layout components
+│   │   │   ├── 📁 tooldeck/          # Toolbar components
+│   │   │   └── 📁 viewport/          # Rendering layers
 │   │   ├── 📁 hooks/                 # Feature-specific hooks
-│   │   ├── 📁 layouts/               # Layout components
-│   │   ├── 📁 tooldeck/              # Toolbar components
+│   │   ├── 📁 utils/                 # Feature utilities
 │   │   ├── 📁 types/                 # Feature types
-│   │   ├── 📁 viewport/              # Rendering layers
-│   │   ├── 📄 DocumentViewer.tsx     # Main component
-│   │   └── 📄 index.ts               # Public API
+│   │   └── 📁 managers/              # Domain managers
 │   └── 📁 data-table/               # Reusable data table feature
 │       ├── 📄 DataTable.tsx
 │       ├── 📄 DataTablePagination.tsx

@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { FileText, ArrowLeft, Lock } from 'lucide-react';
 import { useEditorView } from './use-editor-view';
 import { DocumentPasswordDialog } from './dialogs';
-import DocumentViewer from '@/components/features/document-viewer/DocumentViewer';
+import DocumentViewer from '@/components/features/document-viewer';
 
 interface EditorViewProps {
   fileType: 'original' | 'redacted';

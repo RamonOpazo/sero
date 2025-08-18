@@ -1,6 +1,6 @@
 // SelectionManager Configuration for Domain Manager Library
 import type { SelectionType, SelectionCreateType } from '@/types';
-import { type Selection } from '../types/viewer';
+import { type Selection } from '../../types/viewer';
 import { DocumentViewerAPI } from '@/lib/document-viewer-api';
 import type { 
   DomainManagerConfig, 
@@ -264,5 +264,5 @@ export const selectionManagerConfig: DomainManagerConfig<Selection, Omit<Selecti
 export type SelectionManagerInstance = ReturnType<typeof import('@/lib/domain-manager').createDomainManager<Selection, Omit<SelectionCreateType, 'document_id'>>>;
 
 // Re-export for convenience
-export { type Selection } from '../types/viewer';
+export { type Selection } from '../../types/viewer';
 export type { SelectionType, SelectionCreateType } from '@/types';
