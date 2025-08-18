@@ -4,8 +4,7 @@ import { Save, Trash2, Plus, Undo2, RotateCcw, AlertCircle } from "lucide-react"
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { toast } from "sonner";
 import type { MinimalDocumentType } from "@/types";
-import AddPromptDialog from "../dialogs/AddPromptDialog";
-import SavePromptChangesConfirmationDialog from "../dialogs/SavePromptChangesConfirmationDialog";
+import { AddPromptDialog, SavePromptChangesConfirmationDialog } from "../dialogs";
 import PromptsList from "./PromptsList";
 import { usePrompts } from "../core/PromptProvider";
 

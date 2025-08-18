@@ -8,5 +8,3 @@ export * from './prompt';
 export * from './selection';
 export * from './api';
 
-// Export additional API client types
-export * from './api-client';

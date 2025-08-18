@@ -5,7 +5,7 @@ import { useSelections } from "../core/SelectionProvider";
 import { useViewportState } from "../core/ViewportState";
 import { useMemo, useRef, useEffect, useState, useCallback } from "react";
 import { cn } from "@/lib/utils";
-import PageSelectionDialog from "../dialogs/PageSelectionDialog";
+import { PageSelectionDialog } from "../dialogs";
 import type { Selection } from "../types/viewer";
 
 
