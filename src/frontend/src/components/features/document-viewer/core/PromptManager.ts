@@ -8,9 +8,9 @@
  * - No UI state mixed with business logic
  */
 
-import { type PromptType, type PromptCreateType } from '@/types';
-import { api } from '@/lib/axios';
-import { type Result } from '@/lib/result';
+import type { PromptType, PromptCreateType } from '@/types';
+import type { Result } from '@/lib/result';
+import { DocumentViewerAPI } from '@/lib/document-viewer-api';
 
 export interface PendingPromptChanges {
   creates: PromptType[]; // New prompts to be created
@@ -294,24 +294,18 @@ class PromptManager {
     this.dispatch({ type: 'SET_LOADING', payload: true });
     this.dispatch({ type: 'SET_ERROR', payload: null });
 
-    try {
-      const result = await api.safe.get<PromptType[]>(`/documents/id/${this.state.documentId}/prompts`);
-      
-      if (result.ok) {
-        this.dispatch({ type: 'LOAD_SAVED_PROMPTS', payload: result.value });
-        return result;
-      } else {
-        const errorMessage = 'Failed to load prompts';
-        this.dispatch({ type: 'SET_ERROR', payload: errorMessage });
-        this.dispatch({ type: 'SET_LOADING', payload: false });
-        return result;
-      }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    const result = await DocumentViewerAPI.fetchDocumentPrompts(this.state.documentId);
+    
+    if (result.ok) {
+      this.dispatch({ type: 'LOAD_SAVED_PROMPTS', payload: result.value });
+      this.dispatch({ type: 'SET_LOADING', payload: false });
+    } else {
+      const errorMessage = 'Failed to load prompts';
       this.dispatch({ type: 'SET_ERROR', payload: errorMessage });
       this.dispatch({ type: 'SET_LOADING', payload: false });
-      return { ok: false, error };
     }
+    
+    return result;
   }
 
   // Add prompt locally (not saved to server until saveAllChanges is called)
@@ -393,7 +387,7 @@ class PromptManager {
             document_id: this.state.documentId,
           };
 
-          const result = await api.safe.post<PromptType>(`/documents/id/${this.state.documentId}/prompts`, createData);
+          const result = await DocumentViewerAPI.createPrompt(this.state.documentId, createData);
           
           if (result.ok) {
             results.creates++;
@@ -418,7 +412,7 @@ class PromptManager {
             languages: prompt.languages,
           };
 
-          const result = await api.safe.put(`/prompts/id/${prompt.id}`, updateData);
+          const result = await DocumentViewerAPI.updatePrompt(prompt.id, updateData);
           
           if (result.ok) {
             results.updates++;
@@ -435,7 +429,7 @@ class PromptManager {
       // Handle deletes (removed saved prompts)
       for (const prompt of pendingChanges.deletes) {
         try {
-          const result = await api.safe.delete(`/prompts/id/${prompt.id}`);
+          const result = await DocumentViewerAPI.deletePrompt(prompt.id);
           
           if (result.ok) {
             results.deletes++;
