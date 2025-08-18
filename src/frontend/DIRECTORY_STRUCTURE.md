@@ -42,45 +42,47 @@ src/
 │       ├── 📄 SecurityPage.tsx        # Security documentation
 │       ├── 📄 TroubleshootingPage.tsx # Troubleshooting guide
 │       └── 📄 index.ts                # Clean exports
-├── 📁 components/                     # Component-centric organization
-│   ├── 📁 ProjectsView/              # Complete projects component module
-│   │   ├── 📄 ProjectsView.tsx        # Main view component (entry from ProjectsPage)
-│   │   ├── 📄 ProjectsDataTable.tsx   # Data table with business logic
-│   │   ├── 📄 useProjectsView.ts      # Business logic hook
+├── 📁 views/                         # Application view components
+│   ├── 📁 projects-view/            # Complete projects view module
+│   │   ├── 📄 projects-view.tsx       # Main view component (entry from pages)
+│   │   ├── 📄 projects-data-table.tsx # Data table with business logic
+│   │   ├── 📄 use-projects-view.ts    # Business logic hook
 │   │   ├── 📁 dialogs/               # Project-specific dialogs
-│   │   │   ├── 📄 CreateProjectDialog.tsx
-│   │   │   ├── 📄 EditProjectDialog.tsx
+│   │   │   ├── 📄 create-project-dialog.tsx
+│   │   │   ├── 📄 edit-project-dialog.tsx
 │   │   │   └── 📄 index.ts
 │   │   ├── 📁 __tests__/              # Co-located tests
-│   │   │   ├── 📄 ProjectsView.test.tsx
-│   │   │   ├── 📄 useProjectsView.test.ts
-│   │   │   └── 📄 ProjectsDataTable.test.tsx
+│   │   │   ├── 📄 projects-view.test.tsx
+│   │   │   ├── 📄 use-projects-view.test.ts
+│   │   │   └── 📄 projects-data-table.test.tsx
 │   │   └── 📄 index.ts               # Public API
-│   ├── 📁 DocumentsView/             # Complete documents component module
-│   │   ├── 📄 DocumentsView.tsx       # Main view component
-│   │   ├── 📄 DocumentsDataTable.tsx  # Documents table with logic
-│   │   ├── 📄 useDocumentsView.ts     # Business logic hook
+│   ├── 📁 documents-view/           # Complete documents view module
+│   │   ├── 📄 documents-view.tsx      # Main view component
+│   │   ├── 📄 documents-data-table.tsx # Documents table with logic
+│   │   ├── 📄 use-documents-view.ts   # Business logic hook
 │   │   ├── 📁 dialogs/               # Document-specific dialogs
-│   │   │   ├── 📄 EditDocumentDialog.tsx
-│   │   │   ├── 📄 UploadDocumentsDialog.tsx  # Renamed from CreateDocumentDialog for better semantics
+│   │   │   ├── 📄 edit-document-dialog.tsx
+│   │   │   ├── 📄 upload-documents-dialog.tsx
+│   │   │   ├── 📄 delete-document-dialog.tsx
 │   │   │   └── 📄 index.ts
 │   │   ├── 📁 __tests__/
 │   │   └── 📄 index.ts
-│   ├── 📁 DocumentEditor/            # Document editing component module (renamed from FileViewer)
-│   │   ├── 📄 DocumentEditor.tsx      # Main editor component
-│   │   ├── 📄 useDocumentEditor.ts    # Editor business logic hook
+│   ├── 📁 editor-view/              # Document editor view module
+│   │   ├── 📄 editor-view.tsx         # Main editor component
+│   │   ├── 📄 use-editor-view.ts      # Editor business logic hook
 │   │   ├── 📁 dialogs/               # Editor-specific dialogs
-│   │   │   ├── 📄 DocumentPasswordDialog.tsx  # Context-specific name
+│   │   │   ├── 📄 document-password-dialog.tsx
 │   │   │   └── 📄 index.ts
 │   │   ├── 📁 __tests__/
 │   │   └── 📄 index.ts
-│   ├── 📁 Layout/                    # Layout components
-│   │   ├── 📄 AppLayout.tsx           # Main app layout
-│   │   ├── 📄 Navigation.tsx          # Navigation component
-│   │   ├── 📄 Breadcrumbs.tsx         # Breadcrumb navigation
+│   └── 📄 index.ts                   # Views public API
+├── 📁 components/                     # Reusable UI components
+│   ├── 📁 layout/                    # Layout components
+│   │   ├── 📄 main-layout.tsx         # Main app layout
+│   │   ├── 📄 site-header.tsx         # Site header/navigation
 │   │   ├── 📁 __tests__/
 │   │   └── 📄 index.ts
-│   └── 📁 shared/                    # Truly shared components
+│   ├── 📁 shared/                    # Truly shared components
 │       ├── 📁 EmptyState/            # Empty state component
 │       │   ├── 📄 EmptyState.tsx
 │       │   ├── 📁 __tests__/
@@ -113,17 +115,19 @@ src/
 ├── 📁 hooks/                         # Only global/shared hooks
 │   ├── 📄 use-mobile.ts              # UI utility hooks
 │   ├── 📄 useColumnNavigation.ts     # Navigation hooks
+│   ├── 📄 usePrompts.ts              # Global prompt management
+│   ├── 📄 useSelections.ts           # Global selection management
 │   └── 📄 index.ts
-├── 📁 context/                       # Global contexts
-│   ├── 📄 workspace-provider.tsx     # Main app workspace state (projects, documents, files)
-│   ├── 📄 theme-context.tsx          # Theme management
+├── 📁 providers/                     # Global state providers
+│   ├── 📄 workspace-provider.tsx     # Main app workspace state (projects, documents)
+│   ├── 📄 theme-provider.tsx         # Theme management
 │   └── 📄 index.ts
 ├── 📁 lib/                          # Utility libraries
-│   ├── 📄 api.ts                    # API client
+│   ├── 📄 axios.ts                  # HTTP client
 │   ├── 📄 result.ts                 # Result type utilities
 │   ├── 📄 utils.ts                  # General utilities
 │   ├── 📄 crypto.ts                 # Crypto utilities
-│   └── 📄 axios.ts                  # HTTP client
+│   └── 📄 editor-api.ts             # Editor-specific API functions
 ├── 📁 types/                        # Global type definitions
 │   ├── 📄 project.ts                # Project-related types
 │   ├── 📄 document.ts               # Document-related types
@@ -162,10 +166,10 @@ src/
 
 ### 3. Dialog Domain Ownership
 **MANDATORY**: Dialogs belong to their respective domains:
-- Project dialogs → `ProjectsView/dialogs/`
-- Document dialogs → `DocumentsView/dialogs/`
-- Editor dialogs → `DocumentEditor/dialogs/`
-- Generic dialogs → `shared/` (ONLY if used across 3+ domains)
+- Project dialogs → `views/projects-view/dialogs/`
+- Document dialogs → `views/documents-view/dialogs/`
+- Editor dialogs → `views/editor-view/dialogs/`
+- Generic dialogs → `components/shared/` (ONLY if used across 3+ domains)
 
 ### 4. Hook Encapsulation Rules
 **MANDATORY**: Business logic isolation:
@@ -194,10 +198,10 @@ src/
 Every component module MUST export a clean public API:
 
 ```typescript
-// components/ProjectsView/index.ts
-export { ProjectsView } from './ProjectsView'
-export { useProjectsView } from './useProjectsView'
-export type { ProjectsViewProps } from './ProjectsView'
+// views/projects-view/index.ts
+export { ProjectsView } from './projects-view'
+export { useProjectsView } from './use-projects-view'
+export type { ProjectsViewProps } from './projects-view'
 export * from './dialogs'
 ```
 
@@ -206,31 +210,33 @@ export * from './dialogs'
 
 ```typescript
 // ✅ CORRECT: Clean imports via index.ts
-import { ProjectsView } from '@/components/ProjectsView'
-import { DocumentEditor } from '@/components/DocumentEditor'
+import { ProjectsView } from '@/views/projects-view'
+import { EditorView } from '@/views/editor-view'
 import { EmptyState } from '@/components/shared/EmptyState'
 
 // ❌ FORBIDDEN: Deep imports
-import { ProjectsView } from '@/components/ProjectsView/ProjectsView'
-import { useProjectsView } from '@/components/ProjectsView/useProjectsView'
+import { ProjectsView } from '@/views/projects-view/projects-view'
+import { useProjectsView } from '@/views/projects-view/use-projects-view'
 
 // ❌ FORBIDDEN: Cross-domain business logic imports
-import { useProjectsView } from '@/components/ProjectsView/useProjectsView'
-// in DocumentsView component
+import { useProjectsView } from '@/views/projects-view/use-projects-view'
+// in documents-view component
 ```
 
 ## Domain Boundaries
 
 ### Allowed Dependencies
-- ✅ Components can import from `@/ui/`
-- ✅ Components can import from `@/lib/`
-- ✅ Components can import from `@/types/`
-- ✅ Components can import from `@/components/shared/`
-- ✅ Components can import from global `@/hooks/` (UI utilities only)
-- ✅ Components can import from global `@/context/`
+- ✅ Views can import from `@/components/ui/`
+- ✅ Views can import from `@/lib/`
+- ✅ Views can import from `@/types/`
+- ✅ Views can import from `@/components/shared/`
+- ✅ Views can import from global `@/hooks/` (UI utilities only)
+- ✅ Views can import from global `@/providers/`
+- ✅ Components can import from all of the above
 
 ### Forbidden Dependencies
-- ❌ Components cannot import from other component domains
+- ❌ Views cannot import from other view domains
+- ❌ Components cannot import from view domains
 - ❌ Business logic hooks cannot be shared between domains
 - ❌ Deep imports bypassing index.ts files
 - ❌ Circular dependencies

@@ -3,9 +3,9 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from 'rea
 import { ThemeProvider } from '@/providers';
 import { MainLayout } from '@/components/layout';
 import { HomePage } from '@/pages/HomePage';
-import { ProjectsView } from '@/components/projects-view';
-import { DocumentsView } from '@/components/documents-view';
-import { EditorView } from '@/components/editor-view';
+import { ProjectsView } from '@/views/projects-view';
+import { DocumentsView } from '@/views/documents-view';
+import { EditorView } from '@/views/editor-view';
 import { DocumentationRenderer } from '@/components/DocumentationRenderer';
 import { SettingsPage } from '@/pages/SettingsPage';
 import { CryptoTest } from '@/components/CryptoTest';
