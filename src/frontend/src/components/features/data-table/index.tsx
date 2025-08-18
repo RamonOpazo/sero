@@ -1,5 +1,5 @@
 import { DataTableToolbar } from './data-table-toolbar'
-import { DataTableContent } from './data-table-content'
+import { ResponsiveDataTableContent } from './responsive-data-table-content'
 import { DataTablePagination } from './data-table-pagination'
 import { useDataTable, type UseDataTableProps } from './hooks/use-data-table'
 
@@ -22,6 +22,7 @@ export function DataTable<TData, TValue>(props: UseDataTableProps<TData, TValue>
     enableDeleteSelection = true,
     enableCreateEntries = true,
     pageSize = 10,
+    minTableWidth = 800,
   } = props
 
   const { table } = useDataTable({
@@ -57,8 +58,9 @@ export function DataTable<TData, TValue>(props: UseDataTableProps<TData, TValue>
         enableDeleteSelection={enableDeleteSelection}
         enableCreateEntries={enableCreateEntries}
       />
-      <DataTableContent<TData> 
-        table={table} 
+      <ResponsiveDataTableContent<TData> 
+        table={table}
+        minTableWidth={minTableWidth}
       />
       <DataTablePagination<TData> 
         table={table}
@@ -71,7 +73,10 @@ export function DataTable<TData, TValue>(props: UseDataTableProps<TData, TValue>
 
 // Export sub-components and utilities
 export { DataTableContent } from './data-table-content';
+export { ResponsiveDataTableContent } from './responsive-data-table-content';
 export { DataTablePagination } from './data-table-pagination';
 export { DataTableToolbar } from './data-table-toolbar';
+export { HiddenColumnsDisplay } from './hidden-columns-display';
 export * from './hooks';
 export * from './builders';
+export * from './column-config';

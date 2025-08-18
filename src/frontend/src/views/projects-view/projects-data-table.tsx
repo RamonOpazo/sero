@@ -1,6 +1,7 @@
 import { useMemo, useCallback } from 'react';
 import { Eye, Plus } from 'lucide-react';
-import { DataTable, ColumnBuilder as Column, Actions } from '@/components/features/data-table';
+import { DataTable, createColumn, column, Actions } from '@/components/features/data-table';
+import { DateDisplay, CountBadge, TextDisplay } from '@/components/features/data-table/ui-utils';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { CreateProjectDialog, EditProjectDialog } from './dialogs';
 import { ConfirmationDialog } from '@/components/shared/ConfirmationDialog';
@@ -15,7 +16,7 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
   // Extract all business logic to custom hook
   const {
     projects,
-    currentProject,
+    selectedProjects,
     isLoading,
     error,
     dialogState,
@@ -36,49 +37,128 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
   }, [actionHandlers.onSelectProject]);
 
   const columns = useMemo(() => [
-    // Custom clickable name column
-    {
-      id: 'name',
-      header: 'Name',
-      accessorKey: 'name',
-      cell: ({ row }) => nameRenderer(row.original),
-      enableSorting: true,
-    },
+    // Custom clickable name column - highest priority, always visible
+    createColumn(column.custom<ProjectShallowType>(
+      'name',
+      'Project Name',
+      (_, row) => nameRenderer(row),
+      { 
+        sortable: true,
+        responsive: {
+          alwaysVisible: true,
+          priority: 0
+        }
+      }
+    )),
     
-    Column.text<ProjectShallowType>('description')
-      .header('Description')
-      .truncate(40)
-      .build(),
+    // Document count as badge - high priority
+    createColumn(column.create<ProjectShallowType>(
+      'document_count', 
+      'Documents',
+      {
+        sortable: true,
+        render: (value) => (
+          <CountBadge count={value as number} />
+        ),
+        responsive: {
+          priority: 1,
+          minWidth: 100
+        }
+      }
+    )),
     
-    Column.badge<ProjectShallowType>('document_count')
-      .header('Documents')
-      .sortable()
-      .build(),
+    // Updated date - medium priority
+    createColumn(column.create<ProjectShallowType>(
+      'updated_at',
+      'Last Updated',
+      {
+        sortable: true,
+        render: (value) => (
+          <DateDisplay date={value as string} />
+        ),
+        responsive: {
+          priority: 2,
+          minWidth: 120
+        }
+      }
+    )),
     
-    Column.text<ProjectShallowType>('contact_name')
-      .header('Contact')
-      .truncate(20)
-      .build(),
+    // Description with truncation - lower priority
+    createColumn(column.create<ProjectShallowType>(
+      'description',
+      'Description',
+      {
+        render: (value) => (
+          <TextDisplay text={value as string} truncate={40} />
+        ),
+        responsive: {
+          priority: 3,
+          minWidth: 200
+        }
+      }
+    )),
     
-    Column.text<ProjectShallowType>('contact_email')
-      .header('Email')
-      .truncate(25)
-      .build(),
+    // Contact person with truncation - lower priority
+    createColumn(column.create<ProjectShallowType>(
+      'contact_name',
+      'Contact Person',
+      {
+        render: (value) => (
+          <TextDisplay text={value as string} truncate={20} />
+        ),
+        responsive: {
+          priority: 4,
+          minWidth: 150
+        }
+      }
+    )),
     
-    Column.badge<ProjectShallowType>('version')
-      .header('Version')
-      .sortable()
-      .build(),
+    // Version as badge - lower priority
+    createColumn(column.create<ProjectShallowType>(
+      'version',
+      'Version',
+      {
+        sortable: true,
+        render: (value) => (
+          <CountBadge count={value as string} variant="outline" />
+        ),
+        responsive: {
+          priority: 5,
+          minWidth: 80
+        }
+      }
+    )),
     
-    Column.date<ProjectShallowType>('created_at')
-      .header('Created')
-      .sortable()
-      .build(),
+    // Email with truncation - lower priority
+    createColumn(column.create<ProjectShallowType>(
+      'contact_email',
+      'Email Address',
+      {
+        render: (value) => (
+          <TextDisplay text={value as string} truncate={25} />
+        ),
+        responsive: {
+          priority: 6,
+          minWidth: 180
+        }
+      }
+    )),
     
-    Column.date<ProjectShallowType>('updated_at')
-      .header('Updated')
-      .sortable()
-      .build(),
+    // Created date - lowest priority
+    createColumn(column.create<ProjectShallowType>(
+      'created_at',
+      'Created',
+      {
+        sortable: true,
+        render: (value) => (
+          <DateDisplay date={value as string} />
+        ),
+        responsive: {
+          priority: 7,
+          minWidth: 120
+        }
+      }
+    )),
 
     Actions.create<ProjectShallowType>()
       .copy(
@@ -135,12 +215,14 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
       <DataTable
         columns={columns}
         data={projects}
-        selection={currentProject ? [currentProject] : []}
+        selection={selectedProjects}
         searchKey="name"
         searchPlaceholder="Search projects..."
+        onRowSelectionChange={actionHandlers.onRowSelectionChange}
         onCreateEntries={actionHandlers.onCreateProject}
-        enableRowSelection={false} // We handle selection through actions
-        enableDeleteSelection={false} // We handle deletion through actions
+        onDeleteSelection={actionHandlers.onBulkDelete}
+        enableRowSelection={true} // Enable checkboxes for bulk operations
+        enableDeleteSelection={selectedProjects.length > 0} // Enable bulk delete when items are selected
         pageSize={10}
       />
 
@@ -168,6 +250,18 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
         description={`Are you sure you want to delete the project "${dialogState.delete.selectedProject?.name}"? This action cannot be undone and will permanently delete all associated documents and files.`}
         confirmationText="delete"
         confirmButtonText="Delete Project"
+        variant="destructive"
+      />
+
+      {/* Bulk Deletion Confirmation Dialog */}
+      <ConfirmationDialog
+        isOpen={dialogState.bulkDelete.isOpen}
+        onClose={dialogState.bulkDelete.onClose}
+        onConfirm={dialogState.bulkDelete.onConfirm}
+        title={`Delete ${selectedProjects.length} Project${selectedProjects.length === 1 ? '' : 's'}`}
+        description={`Are you sure you want to delete ${selectedProjects.length} selected project${selectedProjects.length === 1 ? '' : 's'}? This action cannot be undone and will permanently delete all associated documents and files.`}
+        confirmationText="delete all"
+        confirmButtonText={`Delete ${selectedProjects.length} Project${selectedProjects.length === 1 ? '' : 's'}`}
         variant="destructive"
       />
     </>

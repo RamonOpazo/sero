@@ -29,6 +29,7 @@ export interface UseDataTableProps<TData, TValue> {
   enableDeleteSelection?: boolean
   enableCreateEntries?: boolean
   pageSize?: number
+  minTableWidth?: number
 }
 
 export function useDataTable<TData, TValue>({

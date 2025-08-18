@@ -9,6 +9,7 @@ export function useProjectsView(onProjectSelect?: (project: ProjectShallowType) 
   
   // Own project state management
   const [projects, setProjects] = useState<ProjectShallowType[]>([]);
+  const [selectedProjects, setSelectedProjects] = useState<ProjectShallowType[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,6 +37,7 @@ export function useProjectsView(onProjectSelect?: (project: ProjectShallowType) 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
   const [selectedProjectForEdit, setSelectedProjectForEdit] = useState<ProjectShallowType | null>(null);
   const [selectedProjectForDelete, setSelectedProjectForDelete] = useState<ProjectShallowType | null>(null);
 
@@ -142,6 +144,41 @@ export function useProjectsView(onProjectSelect?: (project: ProjectShallowType) 
     });
   }, []);
 
+  // Bulk selection handlers
+  const handleRowSelectionChange = useCallback((selectedRows: ProjectShallowType[]) => {
+    setSelectedProjects(selectedRows);
+  }, []);
+
+  const handleBulkDelete = useCallback(() => {
+    if (selectedProjects.length === 0) {
+      toast.error('No projects selected for deletion');
+      return;
+    }
+    setIsBulkDeleteDialogOpen(true);
+  }, [selectedProjects]);
+
+  const handleBulkDeleteConfirm = useCallback(async () => {
+    if (selectedProjects.length === 0) return;
+    
+    const result = await ProjectsAPI.deleteProjects(selectedProjects);
+    
+    if (result.ok) {
+      setIsBulkDeleteDialogOpen(false);
+      setSelectedProjects([]);
+      toast.success(`Successfully deleted ${selectedProjects.length} project(s)`);
+      // Refresh the projects list
+      await refreshProjects();
+    } else {
+      toast.error('Failed to delete selected projects', {
+        description: result.error instanceof Error ? result.error.message : 'Unknown error'
+      });
+    }
+  }, [selectedProjects, refreshProjects]);
+
+  const handleCloseBulkDeleteDialog = useCallback(() => {
+    setIsBulkDeleteDialogOpen(false);
+  }, []);
+
   // Dialog state and handlers
   const dialogState = useMemo(() => ({
     create: {
@@ -161,16 +198,26 @@ export function useProjectsView(onProjectSelect?: (project: ProjectShallowType) 
       onConfirm: handleDeleteProjectConfirm,
       selectedProject: selectedProjectForDelete,
     },
+    bulkDelete: {
+      isOpen: isBulkDeleteDialogOpen,
+      onClose: handleCloseBulkDeleteDialog,
+      onConfirm: handleBulkDeleteConfirm,
+      selectedProjects,
+    },
   }), [
     isCreateDialogOpen,
     isEditDialogOpen,
     isDeleteDialogOpen,
+    isBulkDeleteDialogOpen,
     selectedProjectForEdit,
     selectedProjectForDelete,
+    selectedProjects,
     handleCreateProjectSubmit,
     handleEditProjectSubmit,
     handleDeleteProjectConfirm,
     handleCloseDeleteDialog,
+    handleBulkDeleteConfirm,
+    handleCloseBulkDeleteDialog,
   ]);
 
   // Action handlers for table
@@ -180,17 +227,22 @@ export function useProjectsView(onProjectSelect?: (project: ProjectShallowType) 
     onEditProject: handleEditProject,
     onDeleteProject: handleDeleteProject,
     onCopyProjectId: handleCopyProjectId,
+    onRowSelectionChange: handleRowSelectionChange,
+    onBulkDelete: handleBulkDelete,
   }), [
     handleSelectProject,
     handleCreateProject,
     handleEditProject,
     handleDeleteProject,
     handleCopyProjectId,
+    handleRowSelectionChange,
+    handleBulkDelete,
   ]);
 
   return {
     // Own state management
     projects,
+    selectedProjects,
     currentProject: state.currentProject,
     isLoading,
     error,
