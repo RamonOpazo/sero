@@ -75,18 +75,33 @@ interface RuleData {
 }
 
 
+
+interface InitialRuleData {
+  id: string;
+  type: RuleType;
+  title: string;
+  rule: string;
+  priority: 'high' | 'medium' | 'low';
+  temperature: number;
+  languages: string[];
+}
+
 interface AddPromptDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: (rule: RuleData) => void;
   isSubmitting?: boolean;
+  initialData?: InitialRuleData; // For editing mode
+  mode?: 'create' | 'edit';
 }
 
 export default function AddPromptDialog({
   isOpen,
   onClose,
   onConfirm,
-  isSubmitting = false
+  isSubmitting = false,
+  initialData,
+  mode = 'create'
 }: AddPromptDialogProps) {
   const [selectedType, setSelectedType] = useState<RuleType>('identify-and-mark');
   const [title, setTitle] = useState('');
@@ -128,16 +143,26 @@ export default function AddPromptDialog({
     setTitle(e.target.value);
   };
 
-  // Reset form when dialog opens
+  // Reset/populate form when dialog opens
   useEffect(() => {
     if (isOpen) {
-      setSelectedType('identify-and-mark');
-      setTitle('');
-      setRule('');
-      setPriority('high');
-      setError('');
+      if (mode === 'edit' && initialData) {
+        // Populate form with existing data
+        setSelectedType(initialData.type);
+        setTitle(initialData.title);
+        setRule(initialData.rule);
+        setPriority(initialData.priority);
+        setError('');
+      } else {
+        // Reset form for create mode
+        setSelectedType('identify-and-mark');
+        setTitle('');
+        setRule('');
+        setPriority('high');
+        setError('');
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, mode, initialData]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -190,10 +215,13 @@ export default function AddPromptDialog({
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>
-              AI Rules Management
+              {mode === 'edit' ? 'Edit AI Rule' : 'AI Rules Management'}
             </DialogTitle>
             <DialogDescription>
-              Create intelligent rules for automated document processing and content management.
+              {mode === 'edit' 
+                ? 'Modify the AI processing rule settings and instructions.'
+                : 'Create intelligent rules for automated document processing and content management.'
+              }
             </DialogDescription>
           </DialogHeader>
           
@@ -341,7 +369,10 @@ export default function AddPromptDialog({
               type="submit"
               disabled={!title.trim() || !rule.trim() || isSubmitting}
             >
-              {isSubmitting ? "Adding..." : "Add Rule"}
+              {isSubmitting 
+                ? (mode === 'edit' ? "Modifying..." : "Adding...") 
+                : (mode === 'edit' ? "Modify Rule" : "Add Rule")
+              }
             </Button>
           </DialogFooter>
         </form>

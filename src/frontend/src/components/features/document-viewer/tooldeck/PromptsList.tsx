@@ -6,9 +6,12 @@ import { usePrompts } from "../core/PromptProvider";
 import { toast } from "sonner";
 import { useMemo } from "react";
 
-type Props = { documentId: string };
+type Props = { 
+  documentId: string;
+  onEditPrompt?: (promptId: string) => void;
+};
 
-export default function PromptList({ }: Props) {
+export default function PromptList({ onEditPrompt }: Props) {
   const {
     state: { savedPrompts, newPrompts, isLoading, isDeleting, error, initialState },
     deletePromptLocally
@@ -188,6 +191,13 @@ export default function PromptList({ }: Props) {
                 "flex flex-col w-full min-w-0"
               )}
               tabIndex={0}
+              onClick={() => onEditPrompt?.(prompt.id)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  onEditPrompt?.(prompt.id);
+                }
+              }}
             >
               {/* Line 1: Title and delete button */}
               <div className="grid grid-cols-[1fr_auto] gap-2 items-center mb-2">

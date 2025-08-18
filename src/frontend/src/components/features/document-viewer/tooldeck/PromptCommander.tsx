@@ -23,15 +23,19 @@ export default function PromptManagement({ document }: PromptControlsProps) {
     loadPrompts,
     saveAllChanges,
     addPromptLocally,
+    updatePrompt,
     clearAll,
     discardAllChanges,
     getAllPrompts,
+    getPromptById,
     hasUnsavedChanges,
     pendingChangesCount,
     isAnyOperationInProgress
   } = usePrompts();
   
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editingPromptId, setEditingPromptId] = useState<string | null>(null);
   const [showSaveConfirmDialog, setShowSaveConfirmDialog] = useState(false);
   
   // Load prompts when component mounts
@@ -154,6 +158,61 @@ export default function PromptManagement({ document }: PromptControlsProps) {
     setShowAddDialog(false);
   }, []);
 
+  // Handle edit prompt
+  const handleEditPrompt = useCallback((promptId: string) => {
+    setEditingPromptId(promptId);
+    setShowEditDialog(true);
+  }, []);
+
+  const handleCloseEditDialog = useCallback(() => {
+    setShowEditDialog(false);
+    setEditingPromptId(null);
+  }, []);
+
+  // Handle edit rule submission
+  const handleEditRule = useCallback((ruleData: {
+    type: string;
+    title: string;
+    rule: string;
+    priority: 'high' | 'medium' | 'low';
+    enabled: boolean;
+  }) => {
+    if (!editingPromptId) return;
+    
+    try {
+      // Transform rule data to prompt format
+      const promptText = `Rule Type: ${ruleData.type}\n` +
+                        `Priority: ${ruleData.priority.toUpperCase()}\n` +
+                        `Title: ${ruleData.title}\n\n` +
+                        `Instructions:\n${ruleData.rule}`;
+      
+      // Map priority to temperature (AI creativity level)
+      const temperatureMap = {
+        'high': 0.1,    // Low creativity for critical compliance rules
+        'medium': 0.3,  // Moderate creativity for important rules
+        'low': 0.5      // Higher creativity for optional rules
+      };
+      
+      const success = updatePrompt(editingPromptId, {
+        text: promptText,
+        temperature: temperatureMap[ruleData.priority],
+        languages: ['english', 'castillian']
+      });
+      
+      if (success) {
+        toast.success(`${ruleData.title} rule updated (not yet saved)`);
+        setShowEditDialog(false);
+        setEditingPromptId(null);
+      } else {
+        toast.error('Failed to update AI rule - prompt not found');
+      }
+      
+    } catch (error) {
+      console.error('Error updating rule:', error);
+      toast.error('Failed to update AI rule');
+    }
+  }, [editingPromptId, updatePrompt]);
+
   if (error) {
     return (
       <div className="text-xs text-destructive p-3 border border-destructive/20 bg-destructive/5 rounded-md">
@@ -248,7 +307,7 @@ export default function PromptManagement({ document }: PromptControlsProps) {
       <Separator />
 
       <div className="flex flex-col gap-2 w-full min-w-0">
-        <PromptsList documentId={document.id} />
+        <PromptsList documentId={document.id} onEditPrompt={handleEditPrompt} />
       </div>
       
       {/* Add Rule Dialog */}
@@ -258,6 +317,79 @@ export default function PromptManagement({ document }: PromptControlsProps) {
         onConfirm={handleAddRule}
         isSubmitting={false}
       />
+      
+      {/* Edit Rule Dialog */}
+      {editingPromptId && (() => {
+        const editingPrompt = getPromptById(editingPromptId);
+        if (!editingPrompt) return null;
+        
+        // Parse the prompt text to extract form data
+        const parsePromptText = (text: string) => {
+          const lines = text.split('\n');
+          let ruleType: string = 'custom';
+          let priority: string = 'medium';
+          let title: string = 'AI Rule';
+          let instructions: string = text;
+          
+          lines.forEach((line, index) => {
+            if (line.startsWith('Rule Type: ')) {
+              ruleType = line.replace('Rule Type: ', '').trim();
+            } else if (line.startsWith('Priority: ')) {
+              priority = line.replace('Priority: ', '').toLowerCase().trim();
+            } else if (line.startsWith('Title: ')) {
+              title = line.replace('Title: ', '').trim();
+            } else if (line.startsWith('Instructions:')) {
+              instructions = lines.slice(index + 1).join('\n').trim();
+            }
+          });
+          
+          // Map rule type strings to enum values
+          const getRuleType = (typeStr: string) => {
+            const normalizedType = typeStr.toLowerCase();
+            if (normalizedType.includes('identify-and-mark') || normalizedType.includes('identify and mark')) return 'identify-and-mark';
+            if (normalizedType.includes('redact-content') || normalizedType.includes('redact content')) return 'redact-content';
+            if (normalizedType.includes('preserve-content') || normalizedType.includes('preserve content')) return 'preserve-content';
+            if (normalizedType.includes('exclude-content') || normalizedType.includes('exclude content')) return 'exclude-content';
+            return 'custom';
+          };
+          
+          // Map priority strings
+          const getPriority = (priorityStr: string) => {
+            const normalizedPriority = priorityStr.toLowerCase();
+            if (normalizedPriority === 'high') return 'high';
+            if (normalizedPriority === 'low') return 'low';
+            return 'medium';
+          };
+          
+          return {
+            type: getRuleType(ruleType),
+            title,
+            rule: instructions,
+            priority: getPriority(priority)
+          };
+        };
+        
+        const parsedData = parsePromptText(editingPrompt.text);
+        
+        return (
+          <AddPromptDialog
+            isOpen={showEditDialog}
+            onClose={handleCloseEditDialog}
+            onConfirm={handleEditRule}
+            isSubmitting={false}
+            mode="edit"
+            initialData={{
+              id: editingPrompt.id,
+              type: parsedData.type as any,
+              title: parsedData.title,
+              rule: parsedData.rule,
+              priority: parsedData.priority as any,
+              temperature: editingPrompt.temperature,
+              languages: editingPrompt.languages
+            }}
+          />
+        );
+      })()}
       
       {/* Save Confirmation Dialog */}
       <SavePromptChangesConfirmationDialog
