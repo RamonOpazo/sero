@@ -79,7 +79,9 @@ export function TableContent<T extends Record<string, any>>({
   // Separate columns by type and apply CSS classes
   const checkboxColumn = showCheckboxes
   const pinnedColumns = columns.filter((col: Column<T>) => col.pinFirstColumn === true)
-  const scrollableColumns = columns.filter((col: Column<T>) => col.type === 'scrollable' || !col.type)
+  const scrollableColumns = columns.filter((col: Column<T>) => 
+    !col.pinFirstColumn && (col.type === 'scrollable' || !col.type)
+  )
   const actionsColumn = showActions
 
   // Helper function to get CSS class based on column type

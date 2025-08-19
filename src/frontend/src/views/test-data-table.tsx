@@ -77,6 +77,90 @@ const sampleData: User[] = [
     phone: "777-888-9999",
     hired: "2022-11-01",
     lastLogin: "2023-12-07",
+  },
+  {
+    id: 6,
+    name: "Fiona Green",
+    email: "fiona@example.com",
+    role: "Admin",
+    status: "Active",
+    department: "IT",
+    location: "Boston",
+    phone: "111-222-3333",
+    hired: "2021-03-15",
+    lastLogin: "2023-12-08",
+  },
+  {
+    id: 7,
+    name: "George Wilson",
+    email: "george@example.com",
+    role: "Manager",
+    status: "Active",
+    department: "Sales",
+    location: "Miami",
+    phone: "222-333-4444",
+    hired: "2020-05-20",
+    lastLogin: "2023-12-09",
+  },
+  {
+    id: 8,
+    name: "Hannah Davis",
+    email: "hannah@example.com",
+    role: "Developer",
+    status: "Active",
+    department: "Engineering",
+    location: "Portland",
+    phone: "333-444-5555",
+    hired: "2022-08-10",
+    lastLogin: "2023-12-10",
+  },
+  {
+    id: 9,
+    name: "Ian Thompson",
+    email: "ian@example.com",
+    role: "User",
+    status: "Inactive",
+    department: "Support",
+    location: "Denver",
+    phone: "444-555-6666",
+    hired: "2023-01-15",
+    lastLogin: "2023-12-11",
+  },
+  {
+    id: 10,
+    name: "Julia Martinez",
+    email: "julia@example.com",
+    role: "Editor",
+    status: "Active",
+    department: "Content",
+    location: "Phoenix",
+    phone: "555-666-7777",
+    hired: "2021-09-30",
+    lastLogin: "2023-12-12",
+  },
+  {
+    id: 11,
+    name: "Kevin Lee",
+    email: "kevin@example.com",
+    role: "Developer",
+    status: "Active",
+    department: "Engineering",
+    location: "San Diego",
+    phone: "666-777-8888",
+    hired: "2022-02-14",
+    lastLogin: "2023-12-13",
+  },
+  {
+    id: 12,
+    name: "Laura Clark",
+    email: "laura@example.com",
+    role: "Manager",
+    status: "Active",
+    department: "HR",
+    location: "Atlanta",
+    phone: "777-888-9999",
+    hired: "2020-11-05",
+    lastLogin: "2023-12-14",
   }
 ]
 
@@ -84,6 +168,10 @@ export function TestDataTable() {
   const [searchValue, setSearchValue] = useState('')
   const [selectedRows, setSelectedRows] = useState<User[]>([])
   const [roleFilter, setRoleFilter] = useState('all')
+  
+  // Pagination state
+  const [pageIndex, setPageIndex] = useState(0)
+  const [pageSize, setPageSize] = useState(10)
 
   // Define columns using declarative builders
   const columns: Column<User>[] = [
@@ -148,6 +236,11 @@ export function TestDataTable() {
     
     return matchesSearch && matchesRole
   })
+  
+  // Paginate data
+  const startIndex = pageIndex * pageSize
+  const endIndex = startIndex + pageSize
+  const paginatedData = filteredData.slice(startIndex, endIndex)
 
   // Define actions using declarative builder
   const tableActions = Actions.create<User>()
@@ -191,7 +284,7 @@ export function TestDataTable() {
   return (
     <div className="container mx-auto py-8">
       <DataTable
-        data={filteredData}
+        data={paginatedData}
         columns={columns}
         title="User Management"
         searchPlaceholder="Search users..."
@@ -222,6 +315,15 @@ export function TestDataTable() {
         ]}
         actions={tableActions}
         columnWidths={customColumnWidths}
+        pagination={{
+          pageIndex,
+          pageSize,
+          totalItems: filteredData.length,
+          onPageChange: setPageIndex,
+          onPageSizeChange: setPageSize,
+          showPagination: true,
+          pageSizeOptions: [5, 10, 20, 50]
+        }}
       />
 
       {/* Debug info */}
@@ -229,7 +331,8 @@ export function TestDataTable() {
         <h3 className="font-semibold mb-2">Debug Info:</h3>
         <p>Search: "{searchValue}"</p>
         <p>Role Filter: {roleFilter}</p>
-        <p>Filtered Results: {filteredData.length}</p>
+        <p>Total Results: {filteredData.length}</p>
+        <p>Showing: {paginatedData.length} (Page {pageIndex + 1} of {Math.ceil(filteredData.length / pageSize)})</p>
         <p>Selected Rows: {selectedRows.length}</p>
         {selectedRows.length > 0 && (
           <p>Selected Users: {selectedRows.map(r => r.name).join(', ')}</p>

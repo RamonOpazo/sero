@@ -1,6 +1,7 @@
 import { cn } from '@/lib/utils'
 import { TableToolbar } from './table-toolbar'
 import { TableContent } from './table-content'
+import { TablePagination } from './table-pagination'
 import type { DataTableProps } from '../types'
 import '../data-table.css'
 
@@ -25,8 +26,13 @@ export function DataTable<T extends Record<string, any>>({
   onAddNew,
   addNewLabel,
   className,
-  columnWidths
+  columnWidths,
+  pagination
 }: DataTableProps<T>) {
+  const totalItems = pagination?.totalItems ?? data.length
+  const showPagination = pagination?.showPagination ?? false
+  const selectedCount = selectedRows?.length ?? 0
+
   return (
     <div className={cn('dt-v2-container', className)}>
       {/* Toolbar */}
@@ -56,6 +62,21 @@ export function DataTable<T extends Record<string, any>>({
           columnWidths={columnWidths}
         />
       </div>
+      
+      {/* Pagination */}
+      {pagination && (
+        <TablePagination
+          pageIndex={pagination.pageIndex}
+          pageSize={pagination.pageSize}
+          totalItems={totalItems}
+          selectedCount={selectedCount}
+          showSelection={showCheckboxes}
+          onPageChange={pagination.onPageChange}
+          onPageSizeChange={pagination.onPageSizeChange}
+          pageSizeOptions={pagination.pageSizeOptions}
+          showPagination={showPagination}
+        />
+      )}
     </div>
   )
 }

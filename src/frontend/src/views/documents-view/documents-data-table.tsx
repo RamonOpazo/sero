@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useState } from 'react';
 import { Eye, Plus, CheckCircle2, AlertCircle } from 'lucide-react';
 import { DataTable, ColumnBuilder as Column, Actions } from '@/components/features/data-table';
 import { EmptyState } from '@/components/shared/EmptyState';
@@ -16,6 +16,10 @@ interface DocumentsDataTableProps {
 
 export function DocumentsDataTable({ onDocumentSelect }: DocumentsDataTableProps) {
   const { state } = useWorkspace();
+  
+  // Pagination state
+  const [pageIndex, setPageIndex] = useState(0)
+  const [pageSize, setPageSize] = useState(10)
   
   // Extract all business logic to custom hook
   const {
@@ -138,6 +142,11 @@ export function DocumentsDataTable({ onDocumentSelect }: DocumentsDataTableProps
       .build(),
   ], [processedStatusRenderer, tagsRenderer, nameRenderer]);
 
+  // Paginate data
+  const startIndex = pageIndex * pageSize
+  const endIndex = startIndex + pageSize
+  const paginatedDocuments = documents.slice(startIndex, endIndex)
+
   const tableActions = useMemo(() => Actions.create<DocumentShallowType>()
     .copy(
       (document) => document.id,
@@ -194,7 +203,7 @@ export function DocumentsDataTable({ onDocumentSelect }: DocumentsDataTableProps
     <>
       <DataTable
         columns={columns}
-        data={documents}
+        data={paginatedDocuments}
         selectedRows={currentDocument ? [currentDocument] : []}
         onRowSelect={() => {}}
         searchPlaceholder="Search documents..."
@@ -202,6 +211,15 @@ export function DocumentsDataTable({ onDocumentSelect }: DocumentsDataTableProps
         actions={tableActions}
         showCheckboxes={false}
         showActions={true}
+        pagination={{
+          pageIndex,
+          pageSize,
+          totalItems: documents.length,
+          onPageChange: setPageIndex,
+          onPageSizeChange: setPageSize,
+          showPagination: true,
+          pageSizeOptions: [5, 10, 20, 50]
+        }}
       />
       
       {/* Document Upload Dialog */}

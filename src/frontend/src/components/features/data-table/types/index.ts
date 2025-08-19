@@ -52,6 +52,17 @@ export interface DataTableProps<T = any> {
   className?: string
   /** Configure default widths for different column types */
   columnWidths?: ColumnWidthConfig
+  
+  // Pagination props
+  pagination?: {
+    pageIndex: number
+    pageSize: number
+    totalItems?: number // Optional - if not provided, will use data.length
+    onPageChange: (pageIndex: number) => void
+    onPageSizeChange: (pageSize: number) => void
+    pageSizeOptions?: number[]
+    showPagination?: boolean
+  }
 }
 
 export interface TableToolbarProps {

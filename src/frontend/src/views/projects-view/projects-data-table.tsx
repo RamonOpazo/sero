@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useState } from 'react';
 import { Eye, Plus } from 'lucide-react';
 import { DataTable, createColumn, Actions } from '@/components/features/data-table';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +13,10 @@ interface ProjectsDataTableProps {
 }
 
 export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
+  // Pagination state
+  const [pageIndex, setPageIndex] = useState(0)
+  const [pageSize, setPageSize] = useState(10)
+
   // Extract all business logic to custom hook
   const {
     projects,
@@ -48,6 +52,13 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
       pinFirstColumn: true,
     },
     
+    // Description
+    createColumn.text<ProjectShallowType>('description')
+      .header('Description')
+      .truncate(40)
+      .width('200px')
+      .build(),
+    
     // Document count
     createColumn.badge<ProjectShallowType>('document_count')
       .header('Documents')
@@ -60,13 +71,6 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
       .header('Last Updated')
       .sortable()
       .width('150px')
-      .build(),
-    
-    // Description
-    createColumn.text<ProjectShallowType>('description')
-      .header('Description')
-      .truncate(40)
-      .width('200px')
       .build(),
     
     // Contact person
@@ -101,8 +105,12 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
       .sortable()
       .width('150px')
       .build(),
+  ], [nameRenderer]);
 
-  ], [actionHandlers, nameRenderer]);
+  // Paginate data
+  const startIndex = pageIndex * pageSize
+  const endIndex = startIndex + pageSize
+  const paginatedProjects = projects.slice(startIndex, endIndex)
 
   const tableActions = useMemo(() => Actions.create<ProjectShallowType>()
     .copy(
@@ -160,7 +168,7 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
     <>
       <DataTable
         columns={columns}
-        data={projects}
+        data={paginatedProjects}
         selectedRows={selectedProjects}
         onRowSelect={actionHandlers.onRowSelectionChange}
         searchPlaceholder="Search projects..."
@@ -168,6 +176,15 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
         actions={tableActions}
         showCheckboxes={true}
         showActions={true}
+        pagination={{
+          pageIndex,
+          pageSize,
+          totalItems: projects.length,
+          onPageChange: setPageIndex,
+          onPageSizeChange: setPageSize,
+          showPagination: true,
+          pageSizeOptions: [5, 10, 20, 50]
+        }}
       />
 
       {/* Project Creation Dialog */}
