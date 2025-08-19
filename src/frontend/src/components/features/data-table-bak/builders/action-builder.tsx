@@ -1,23 +1,31 @@
-import { Edit, Trash2, Download, Copy, Eye } from 'lucide-react'
+import { type ColumnDef } from '@tanstack/react-table'
+import { MoreVertical, Edit, Trash2, Download, Copy, Eye } from 'lucide-react'
 import { toast } from 'sonner'
+import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 interface ActionConfig<TData> {
   label: string
-  value: string
-  icon?: React.ComponentType<{ className?: string }>
-  onClick?: (item: TData) => void
+  icon: React.ComponentType<{ className?: string }>
+  onClick: (item: TData) => void
   variant?: 'default' | 'destructive'
   separator?: boolean
 }
 
-export class ActionBuilder<TData> {
+class ActionBuilder<TData> {
   private actions: ActionConfig<TData>[] = []
 
   // Predefined action helpers
   view(href: (item: TData) => string, label = 'View'): this {
     this.actions.push({
       label,
-      value: 'view',
       icon: Eye,
       onClick: (item) => {
         const url = href(item)
@@ -31,7 +39,6 @@ export class ActionBuilder<TData> {
   edit(onEdit: (item: TData) => void, label = 'Edit'): this {
     this.actions.push({
       label,
-      value: 'edit',
       icon: Edit,
       onClick: onEdit,
       variant: 'default'
@@ -42,7 +49,6 @@ export class ActionBuilder<TData> {
   delete(onDelete: (item: TData) => void, label = 'Delete'): this {
     this.actions.push({
       label,
-      value: 'delete',
       icon: Trash2,
       onClick: onDelete,
       variant: 'destructive',
@@ -54,7 +60,6 @@ export class ActionBuilder<TData> {
   download(onDownload: (item: TData) => void, label = 'Download'): this {
     this.actions.push({
       label,
-      value: 'download',
       icon: Download,
       onClick: onDownload,
       variant: 'default'
@@ -69,7 +74,6 @@ export class ActionBuilder<TData> {
   ): this {
     this.actions.push({
       label,
-      value: 'copy',
       icon: Copy,
       onClick: (item) => {
         const value = getValue(item)
@@ -91,19 +95,8 @@ export class ActionBuilder<TData> {
     return this
   }
 
-  custom(label: string, value: string, onClick: (item: TData) => void, options?: {
-    icon?: React.ComponentType<{ className?: string }>
-    variant?: 'default' | 'destructive'
-    separator?: boolean
-  }): this {
-    this.actions.push({
-      label,
-      value,
-      onClick,
-      icon: options?.icon,
-      variant: options?.variant || 'default',
-      separator: options?.separator
-    })
+  custom(action: ActionConfig<TData>): this {
+    this.actions.push(action)
     return this
   }
 
@@ -114,8 +107,50 @@ export class ActionBuilder<TData> {
     return this
   }
 
-  build(): ActionConfig<TData>[] {
-    return this.actions
+  build(): ColumnDef<TData, unknown> {
+    return {
+      id: 'actions',
+      header: () => null,
+      enableHiding: false,
+      cell: ({ row }) => {
+        const item = row.original
+
+        return (
+          <div className="text-center">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="h-8 w-8 p-0">
+                  <span className="sr-only">Open menu</span>
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                {this.actions.map((action, index) => {
+                  const Icon = action.icon
+                  
+                  return (
+                    <div key={index}>
+                      {action.separator && index > 0 && <DropdownMenuSeparator />}
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.preventDefault()
+                          action.onClick(item)
+                        }}
+                        className={action.variant === 'destructive' ? 'text-destructive' : ''}
+                      >
+                        <Icon className="mr-2 h-4 w-4" />
+                        {action.label}
+                      </DropdownMenuItem>
+                    </div>
+                  )
+                })}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )
+      },
+    }
   }
 }
 
@@ -125,3 +160,5 @@ export const Actions = {
     return new ActionBuilder<TData>()
   }
 }
+
+export { ActionBuilder }

@@ -88,10 +88,12 @@ export function DocumentsDataTable({ onDocumentSelect }: DocumentsDataTableProps
     // Custom clickable name column
     {
       id: 'name',
+      key: 'name',
       header: 'Name',
       accessorKey: 'name',
-      cell: ({ row }) => nameRenderer(row.original),
+      cell: (_: any, row: DocumentShallowType) => nameRenderer(row),
       enableSorting: true,
+      pinFirstColumn: true,
     },
     
     Column.text<DocumentShallowType>('description')
@@ -102,8 +104,9 @@ export function DocumentsDataTable({ onDocumentSelect }: DocumentsDataTableProps
     // Custom Tags column
     {
       id: 'tags',
+      key: 'tags',
       header: 'Tags',
-      cell: ({ row }) => tagsRenderer(row.original),
+      cell: (_: any, row: DocumentShallowType) => tagsRenderer(row),
     },
     
     Column.badge<DocumentShallowType>('file_count')
@@ -124,31 +127,35 @@ export function DocumentsDataTable({ onDocumentSelect }: DocumentsDataTableProps
     // Custom Status column
     {
       id: 'status',
+      key: 'status',
       header: 'Status',
-      cell: ({ row }) => processedStatusRenderer(row.original),
+      cell: (_: any, row: DocumentShallowType) => processedStatusRenderer(row),
     },
     
     Column.date<DocumentShallowType>('created_at')
       .header('Created')
       .sortable()
       .build(),
+  ], [processedStatusRenderer, tagsRenderer, nameRenderer]);
 
-    Actions.create<DocumentShallowType>()
-      .copy(
-        (document) => document.id,
-        'Copy document ID'
-      )
-      .separator()
-      .custom({
-        label: 'Select Document',
+  const tableActions = useMemo(() => Actions.create<DocumentShallowType>()
+    .copy(
+      (document) => document.id,
+      'Copy document ID'
+    )
+    .separator()
+    .custom(
+      'Select Document',
+      'select',
+      actionHandlers.onSelectDocument,
+      {
         icon: Eye,
-        onClick: actionHandlers.onSelectDocument,
         variant: 'default'
-      })
-      .edit(actionHandlers.onEditDocument, 'Edit document')
-      .delete(actionHandlers.onDeleteDocument, 'Delete document')
-      .build()
-  ], [actionHandlers, processedStatusRenderer, tagsRenderer, nameRenderer]);
+      }
+    )
+    .edit(actionHandlers.onEditDocument, 'Edit document')
+    .delete(actionHandlers.onDeleteDocument, 'Delete document')
+    .build(), [actionHandlers]);
 
   if (isLoading) {
     return (
@@ -188,13 +195,13 @@ export function DocumentsDataTable({ onDocumentSelect }: DocumentsDataTableProps
       <DataTable
         columns={columns}
         data={documents}
-        selection={currentDocument ? [currentDocument] : []}
-        searchKey="name"
+        selectedRows={currentDocument ? [currentDocument] : []}
+        onRowSelect={() => {}}
         searchPlaceholder="Search documents..."
-        onCreateEntries={actionHandlers.onCreateDocument}
-        enableRowSelection={false} // We handle selection through actions
-        enableDeleteSelection={false} // We handle deletion through actions
-        pageSize={10}
+        onAddNew={actionHandlers.onCreateDocument}
+        actions={tableActions}
+        showCheckboxes={false}
+        showActions={true}
       />
       
       {/* Document Upload Dialog */}

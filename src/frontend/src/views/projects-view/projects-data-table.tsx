@@ -1,7 +1,7 @@
 import { useMemo, useCallback } from 'react';
 import { Eye, Plus } from 'lucide-react';
-import { DataTable, createColumn, column, Actions } from '@/components/features/data-table';
-import { DateDisplay, CountBadge, TextDisplay } from '@/components/features/data-table/ui-utils';
+import { DataTable, createColumn, Actions } from '@/components/features/data-table';
+import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { CreateProjectDialog, EditProjectDialog } from './dialogs';
 import { ConfirmationDialog } from '@/components/shared/ConfirmationDialog';
@@ -37,153 +37,91 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
   }, [actionHandlers.onSelectProject]);
 
   const columns = useMemo(() => [
-    // Custom clickable name column - pinned to left
-    createColumn(column.custom<ProjectShallowType>(
-      'name',
-      'Project Name',
-      (_, row) => nameRenderer(row),
-      { 
-        sortable: true,
-        responsive: {
-          pinned: 'left',
-          priority: 0,
-          minWidth: 200
-        }
-      }
-    )),
+    // Name column - pinned and clickable
+    {
+      id: 'name',
+      key: 'name',
+      header: 'Project Name',
+      accessorKey: 'name',
+      cell: (_: any, row: ProjectShallowType) => nameRenderer(row),
+      enableSorting: true,
+      pinFirstColumn: true,
+    },
     
-    // Document count as badge - scrollable, high priority
-    createColumn(column.create<ProjectShallowType>(
-      'document_count', 
-      'Documents',
-      {
-        sortable: true,
-        render: (value) => (
-          <CountBadge count={value as number} />
-        ),
-        responsive: {
-          priority: 1,
-          minWidth: 100,
-          pinned: false
-        }
-      }
-    )),
+    // Document count
+    createColumn.badge<ProjectShallowType>('document_count')
+      .header('Documents')
+      .sortable()
+      .width('120px')
+      .build(),
     
-    // Updated date - scrollable, medium priority
-    createColumn(column.create<ProjectShallowType>(
-      'updated_at',
-      'Last Updated',
-      {
-        sortable: true,
-        render: (value) => (
-          <DateDisplay date={value as string} />
-        ),
-        responsive: {
-          priority: 2,
-          minWidth: 120,
-          pinned: false
-        }
-      }
-    )),
+    // Updated date
+    createColumn.date<ProjectShallowType>('updated_at')
+      .header('Last Updated')
+      .sortable()
+      .width('150px')
+      .build(),
     
-    // Description with truncation - scrollable, lower priority
-    createColumn(column.create<ProjectShallowType>(
-      'description',
-      'Description',
-      {
-        render: (value) => (
-          <TextDisplay text={value as string} truncate={40} />
-        ),
-        responsive: {
-          priority: 3,
-          minWidth: 200,
-          pinned: false
-        }
-      }
-    )),
+    // Description
+    createColumn.text<ProjectShallowType>('description')
+      .header('Description')
+      .truncate(40)
+      .width('200px')
+      .build(),
     
-    // Contact person with truncation - scrollable, lower priority
-    createColumn(column.create<ProjectShallowType>(
-      'contact_name',
-      'Contact Person',
-      {
-        render: (value) => (
-          <TextDisplay text={value as string} truncate={20} />
-        ),
-        responsive: {
-          priority: 4,
-          minWidth: 150,
-          pinned: false
-        }
-      }
-    )),
+    // Contact person
+    createColumn.text<ProjectShallowType>('contact_name')
+      .header('Contact Person')
+      .truncate(20)
+      .width('150px')
+      .build(),
     
-    // Version as badge - scrollable, lower priority
-    createColumn(column.create<ProjectShallowType>(
-      'version',
-      'Version',
-      {
-        sortable: true,
-        render: (value) => (
-          <CountBadge count={value as string} variant="outline" />
-        ),
-        responsive: {
-          priority: 5,
-          minWidth: 80,
-          pinned: false
-        }
-      }
-    )),
+    // Version
+    {
+      id: 'version',
+      key: 'version',
+      header: 'Version',
+      accessorKey: 'version',
+      cell: (_: any, row: ProjectShallowType) => (
+        <Badge variant="outline">{row.version}</Badge>
+      ),
+      enableSorting: true,
+    },
     
-    // Email with truncation - scrollable, lower priority
-    createColumn(column.create<ProjectShallowType>(
-      'contact_email',
-      'Email Address',
-      {
-        render: (value) => (
-          <TextDisplay text={value as string} truncate={25} />
-        ),
-        responsive: {
-          priority: 6,
-          minWidth: 180,
-          pinned: false
-        }
-      }
-    )),
+    // Contact email
+    createColumn.text<ProjectShallowType>('contact_email')
+      .header('Email Address')
+      .truncate(25)
+      .width('180px')
+      .build(),
     
-    // Created date - scrollable, lowest priority
-    createColumn(column.create<ProjectShallowType>(
-      'created_at',
-      'Created',
-      {
-        sortable: true,
-        render: (value) => (
-          <DateDisplay date={value as string} />
-        ),
-        responsive: {
-          priority: 7,
-          minWidth: 120,
-          pinned: false
-        }
-      }
-    )),
+    // Created date
+    createColumn.date<ProjectShallowType>('created_at')
+      .header('Created')
+      .sortable()
+      .width('150px')
+      .build(),
 
-    Actions.create<ProjectShallowType>()
-      .copy(
-        (project) => project.id,
-        'Copy project ID'
-      )
-      .separator()
-      .custom({
-        label: 'Select Project',
-        icon: Eye,
-        onClick: actionHandlers.onSelectProject,
-        variant: 'default'
-      })
-      .edit(actionHandlers.onEditProject, 'Edit project')
-      .delete(actionHandlers.onDeleteProject, 'Delete project')
-      .build()
   ], [actionHandlers, nameRenderer]);
+
+  const tableActions = useMemo(() => Actions.create<ProjectShallowType>()
+    .copy(
+      (project) => project.id,
+      'Copy project ID'
+    )
+    .separator()
+    .custom(
+      'Select Project',
+      'select',
+      actionHandlers.onSelectProject,
+      {
+        icon: Eye,
+        variant: 'default'
+      }
+    )
+    .edit(actionHandlers.onEditProject, 'Edit project')
+    .delete(actionHandlers.onDeleteProject, 'Delete project')
+    .build(), [actionHandlers]);
 
   if (isLoading) {
     return (
@@ -223,15 +161,13 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
       <DataTable
         columns={columns}
         data={projects}
-        selection={selectedProjects}
-        searchKey="name"
+        selectedRows={selectedProjects}
+        onRowSelect={actionHandlers.onRowSelectionChange}
         searchPlaceholder="Search projects..."
-        onRowSelectionChange={actionHandlers.onRowSelectionChange}
-        onCreateEntries={actionHandlers.onCreateProject}
-        onDeleteSelection={actionHandlers.onBulkDelete}
-        enableRowSelection={true} // Enable checkboxes for bulk operations
-        enableDeleteSelection={selectedProjects.length > 0} // Enable bulk delete when items are selected
-        pageSize={10}
+        onAddNew={actionHandlers.onCreateProject}
+        actions={tableActions}
+        showCheckboxes={true}
+        showActions={true}
       />
 
       {/* Project Creation Dialog */}

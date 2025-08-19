@@ -1,7 +1,8 @@
-import { type ColumnDef } from '@tanstack/react-table'
+import { type ReactNode } from 'react'
 import { ArrowUpDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import type { Column as ColumnType } from '../types'
 
 // Utility function for date formatting
 const formatDate = (dateString: string) => {
@@ -34,52 +35,53 @@ const statusColors = {
   error: 'bg-red-50 text-red-700 border-red-200',
 } as const
 
-class ColumnBuilder<TData, TValue = unknown> {
-  private columnDef: Partial<ColumnDef<TData, TValue>> & { accessorKey: string }
+export class ColumnBuilder<TData extends Record<string, any>, TValue = unknown> {
+  private column: Partial<ColumnType<TData>>
 
-  constructor(accessor: string) {
-    this.columnDef = { accessorKey: accessor }
+  constructor(key: string) {
+    this.column = { key }
   }
 
-  // Basic column types
-  static text<TData>(accessor: string): ColumnBuilder<TData, string> {
-    return new ColumnBuilder<TData, string>(accessor)
-  }
-
-  static number<TData>(accessor: string): ColumnBuilder<TData, number> {
-    return new ColumnBuilder<TData, number>(accessor)
-  }
-
-  static date<TData>(accessor: string): ColumnBuilder<TData, string> {
-    const builder = new ColumnBuilder<TData, string>(accessor)
-    builder.columnDef.cell = ({ row }) => {
-      const value = row.getValue(accessor) as string
-      return (
-        <div className="text-muted-foreground text-sm">
-          {formatDate(value)}
-        </div>
-      )
-    }
+  // Basic column types with automatic CSS class assignment
+  static text<TData extends Record<string, any>>(key: string): ColumnBuilder<TData, string> {
+    const builder = new ColumnBuilder<TData, string>(key)
+    builder.column.type = 'scrollable' // Default to scrollable
     return builder
   }
 
-  static badge<TData>(accessor: string): ColumnBuilder<TData, string> {
-    const builder = new ColumnBuilder<TData, string>(accessor)
-    builder.columnDef.cell = ({ row }) => {
-      const value = row.getValue(accessor) as string
-      return (
-        <div className="text-left">
-          <Badge variant="secondary">{value || 0}</Badge>
-        </div>
-      )
-    }
+  static number<TData extends Record<string, any>>(key: string): ColumnBuilder<TData, number> {
+    const builder = new ColumnBuilder<TData, number>(key)
+    builder.column.type = 'scrollable'
     return builder
   }
 
-  static status<TData>(accessor: string): ColumnBuilder<TData, string> {
-    const builder = new ColumnBuilder<TData, string>(accessor)
-    builder.columnDef.cell = ({ row }) => {
-      const status = row.getValue(accessor) as string
+  static date<TData extends Record<string, any>>(key: string): ColumnBuilder<TData, string> {
+    const builder = new ColumnBuilder<TData, string>(key)
+    builder.column.type = 'scrollable'
+    builder.column.cell = (value: any) => (
+      <div className="text-muted-foreground text-sm">
+        {formatDate(value as string)}
+      </div>
+    )
+    return builder
+  }
+
+  static badge<TData extends Record<string, any>>(key: string): ColumnBuilder<TData, string> {
+    const builder = new ColumnBuilder<TData, string>(key)
+    builder.column.type = 'scrollable'
+    builder.column.cell = (value: any) => (
+      <div className="text-left">
+        <Badge variant="secondary">{value || 0}</Badge>
+      </div>
+    )
+    return builder
+  }
+
+  static status<TData extends Record<string, any>>(key: string): ColumnBuilder<TData, string> {
+    const builder = new ColumnBuilder<TData, string>(key)
+    builder.column.type = 'scrollable'
+    builder.column.cell = (value: any) => {
+      const status = value as string
       if (typeof status !== 'string' || !status) {
         return <Badge variant="outline">Unknown</Badge>
       }
@@ -91,108 +93,124 @@ class ColumnBuilder<TData, TValue = unknown> {
         </Badge>
       )
     }
-    
-    // Add custom sorting for statuses
-    builder.columnDef.sortingFn = (rowA, rowB) => {
-      const getStatusPriority = (status: string) => {
-        switch (status) {
-          case 'awaiting': return 0
-          case 'pending': return 0
-          case 'in_progress': return 1
-          case 'completed': return 2
-          case 'processed': return 2
-          default: return 3
-        }
-      }
-      
-      const statusA = rowA.getValue(accessor) as string
-      const statusB = rowB.getValue(accessor) as string
-      
-      return getStatusPriority(statusA) - getStatusPriority(statusB)
-    }
-    
     return builder
   }
 
+  // Positioning modifiers - these set CSS classes
+  pinned(): this {
+    this.column.pinFirstColumn = true
+    return this
+  }
 
-  // Modifiers
+  checkbox(): this {
+    this.column.type = 'checkbox'
+    return this
+  }
+
+  actions(): this {
+    this.column.type = 'actions'
+    return this
+  }
+
+  // Content modifiers
   header(title: string): this {
-    this.columnDef.header = title
+    this.column.header = title
     return this
   }
 
   sortable(title?: string): this {
-    const headerTitle = title || (this.columnDef.accessorKey as string)
-    this.columnDef.header = ({ column }) => (
+    const headerTitle = title || (this.column.key as string)
+    this.column.header = (
       <div className="flex items-center">
         {headerTitle.charAt(0).toUpperCase() + headerTitle.slice(1)}
         <Button
           className="h-6 w-6 ml-2 p-2"
           variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          onClick={() => {
+            // This will be handled by the table implementation
+            console.log('Sort clicked for', this.column.key)
+          }}
         >
           <ArrowUpDown className="h-4 w-4" />
         </Button>
       </div>
     )
+    this.column.sortable = true
     return this
   }
 
   align(position: "left" | "center" | "right" = "left"): this {
-    const originalCell = this.columnDef.cell
-    this.columnDef.cell = originalCell ? 
-      (props) => <div className={`text-${position}`}>{(originalCell as any)(props)}</div> :
-      ({ row }) => <div className={`text-${position}`}>{row.getValue(this.columnDef.accessorKey as string)}</div>
+    const originalCell = this.column.cell
+    this.column.cell = originalCell ? 
+      (value: any, row: any, index: any) => <div className={`text-${position}`}>{originalCell(value, row, index)}</div> :
+      (value: any) => <div className={`text-${position}`}>{value}</div>
     
-    const originalHeader = this.columnDef.header
+    const originalHeader = this.column.header
     if (typeof originalHeader === 'string') {
-      this.columnDef.header = () => <div className={`text-${position}`}>{originalHeader}</div>
+      this.column.header = <div className={`text-${position}`}>{originalHeader}</div>
     }
     return this
   }
 
   truncate(maxChars = 15): this {
-    const originalCell = this.columnDef.cell;
-    const cellStyle = { maxWidth: `${maxChars}ch` };
+    const originalCell = this.column.cell
+    const cellStyle = { maxWidth: `${maxChars}ch` }
 
-    this.columnDef.cell = originalCell
-      ? (props) => (
+    this.column.cell = originalCell
+      ? (value: any, row: any, index: any) => (
           <div className="text-muted-foreground truncate" style={cellStyle}>
-            {(originalCell as any)(props) || 'No description'}
+            {originalCell(value, row, index) || 'No description'}
           </div>
         )
-      : ({ row }) => {
-          const value = row.getValue(this.columnDef.accessorKey as string) as string;
-          return (
-            <div className="text-muted-foreground truncate" style={cellStyle}>
-              {value || 'No description'}
-            </div>
-          );
-        };
-    return this;
-  }
-
-  format(formatter: (value: TValue) => React.ReactNode): this {
-    this.columnDef.cell = ({ row }) => {
-      const value = row.getValue(this.columnDef.accessorKey as string) as TValue
-      return formatter(value)
-    }
+      : (value: any) => (
+          <div className="text-muted-foreground truncate" style={cellStyle}>
+            {(value as string) || 'No description'}
+          </div>
+        )
     return this
   }
 
-  withClass(className: string | undefined = undefined): this {
-    this.columnDef.cell = ({ row }) => {
-      const value = row.getValue(this.columnDef.accessorKey as string) as string
-      return <div className={className}>{value}</div>
-    }
+  format(formatter: (value: TValue) => ReactNode): this {
+    this.column.cell = (value: any) => formatter(value as TValue)
     return this
   }
 
-  build(): ColumnDef<TData, TValue> {
-    return this.columnDef as ColumnDef<TData, TValue>
+  withClass(className: string): this {
+    const originalCell = this.column.cell
+    this.column.cell = originalCell ?
+      (value: any, row: any, index: any) => (
+        <div className={className}>{originalCell(value, row, index)}</div>
+      ) :
+      (value: any) => <div className={className}>{value}</div>
+    return this
+  }
+
+  // Width modifiers
+  width(w: string | number): this {
+    this.column.width = w
+    return this
+  }
+
+  minWidth(w: string | number): this {
+    this.column.minWidth = w
+    return this
+  }
+
+  // Accessor modifiers
+  accessor(fn: (row: TData) => ReactNode): this {
+    this.column.accessor = fn
+    return this
+  }
+
+  build(): ColumnType<TData> {
+    // Set default header if not provided
+    if (!this.column.header) {
+      this.column.header = this.column.key
+    }
+
+    return this.column as ColumnType<TData>
   }
 }
 
-// Export both the class and a convenience function
-export { ColumnBuilder }
+// Export convenience function
 export const Column = ColumnBuilder

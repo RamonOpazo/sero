@@ -1,49 +1,113 @@
+/**
+ * Data Table V2 - Clean sticky positioning with HTML/CSS
+ * Simple, maintainable approach using native CSS sticky positioning
+ */
+
 @reference "../../../index.css";
 
-@layer components { 
-  @keyframes slide-in-left {
-    from {
-      transform: translateX(-100%);
-      opacity: 0;
+@layer components {
+  /* Base table container */
+  .dt-v2-container {
+    @apply w-full space-y-4;
+  }
+
+  .dt-v2-content {
+    @apply w-full;
+  }
+
+  .dt-v2-scroll-area {
+    @apply w-full overflow-x-auto rounded-lg border;
+  }
+
+  .dt-v2-table {
+    @apply min-w-[1200px] relative;
+  }
+
+  /* Header styling */
+  .dt-v2-header {
+    @apply bg-muted sticky top-0 z-10;
+  }
+
+  .dt-v2-row {
+    @apply hover:bg-muted/50 transition-colors;
+  }
+
+  .dt-v2-row[data-state="selected"] {
+    @apply bg-muted;
+  }
+
+  /* Sticky columns - widths now handled by inline styles */
+  .dt-v2-col-checkbox {
+    position: sticky;
+    left: 0;
+    z-index: 20;
+    background: hsl(var(--muted));
+  }
+
+  .dt-v2-col-pinned-first {
+    position: sticky;
+    z-index: 10;
+    background: hsl(var(--muted));
+  }
+
+  .dt-v2-col-actions {
+    position: sticky;
+    right: 0;
+    z-index: 20;
+    background: hsl(var(--muted));
+  }
+
+  /* Sticky body cells - widths now handled by inline styles */
+  .dt-v2-cell-checkbox {
+    position: sticky;
+    left: 0;
+    z-index: 10;
+    background: hsl(var(--background));
+  }
+
+  .dt-v2-cell-pinned-first {
+    position: sticky;
+    z-index: 10;
+    font-weight: 500;
+    background: hsl(var(--background));
+  }
+
+  .dt-v2-cell-actions {
+    position: sticky;
+    right: 0;
+    z-index: 10;
+    background: hsl(var(--background));
+  }
+
+  /* Toolbar styling */
+  .dt-v2-toolbar {
+    @apply flex flex-col gap-4 md:flex-row md:items-center md:justify-between p-4 bg-card rounded-lg border;
+  }
+
+  .dt-v2-toolbar-title {
+    @apply text-xl font-semibold;
+  }
+
+  .dt-v2-toolbar-controls {
+    @apply flex flex-col md:flex-row gap-2 w-full md:w-auto;
+  }
+
+  .dt-v2-search-input {
+    @apply md:w-[250px];
+  }
+
+  .dt-v2-filter-select {
+    @apply md:w-[180px];
+  }
+
+  .dt-v2-add-button {
+    @apply md:ml-auto;
+  }
+
+  /* Responsive enhancements */
+  @media (max-width: 768px) {
+    .dt-v2-table {
+      min-width: 600px;
     }
-    to {
-      transform: translateX(0);
-      opacity: 1;
-    }
-  }
-
-  @keyframes slide-in-right {
-    from {
-      transform: translateX(100%);
-      opacity: 0;
-    }
-    to {
-      transform: translateX(0);
-      opacity: 1;
-    }
-  }
-
-  .animate-slide-left {
-    animation: slide-in-left 0.5s forwards;
-  }
-
-  .animate-slide-right {
-    animation: slide-in-right 0.5s forwards;
-  }
-
-  /* Hide scrollbar for Chrome, Safari and Opera */
-  .hide-scrollbar::-webkit-scrollbar {
-      display: none;
-  }
-
-  /* Hide scrollbar for IE, Edge and Firefox */
-  .hide-scrollbar {
-      -ms-overflow-style: none;  /* IE and Edge */
-      scrollbar-width: none;  /* Firefox */
-  }
-
-  [data-slot="table-container"] {
-    overflow-x: hidden !important;
-    @apply relative rounded-md border;
   }
 }

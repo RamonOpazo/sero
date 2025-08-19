@@ -1,2 +1,2 @@
-export * from './column-builder'
-export * from './action-builder'
+export { ColumnBuilder, Column } from './column-builder'
+export { ActionBuilder, Actions } from './action-builder'

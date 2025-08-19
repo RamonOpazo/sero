@@ -70,6 +70,7 @@ const data = {
       items: [
         { title: "API Swagger", url: "/dev/api-swagger" },
         { title: "Crypto Test", url: "/dev/crypto-test" },
+        { title: "DataTable V2", url: "/dev/data-table-v2" },
       ],
     },
   ] : [],
