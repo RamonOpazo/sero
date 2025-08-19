@@ -142,6 +142,24 @@
   * {
     @apply border-border outline-ring/50;
   }
+  
+  *::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  
+  *::-webkit-scrollbar-track {
+    @apply bg-background;
+  }
+  
+  *::-webkit-scrollbar-thumb {
+    @apply bg-primary/15 rounded-4xl;
+  }
+  
+  *::-webkit-scrollbar-thumb:hover {
+    @apply bg-primary/15;
+  }
+
   body {
     @apply bg-background text-foreground;
   }

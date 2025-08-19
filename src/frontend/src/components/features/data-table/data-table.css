@@ -5,6 +5,13 @@
 
 @reference "../../../index.css";
 
+@layer base {
+  /* Override shadcn/ui table row hover behavior for data tables */
+  .data-table-table [data-slot="table-row"]:hover {
+    background-color: transparent !important;
+  }
+}
+
 @layer components {
   /* Base table container */
   .data-table-container {

@@ -1,5 +1,6 @@
 import { useMemo, useCallback, useState } from 'react';
 import { Eye, Plus, CheckCircle2, AlertCircle, Copy, Edit, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { DataTable } from '@/components/features/data-table';
 import { columns, adaptColumns } from '@/components/features/data-table/columns';
 import { EmptyState } from '@/components/shared/EmptyState';
@@ -11,6 +12,7 @@ import { EditDocumentDialog } from './dialogs/edit-document-dialog';
 import { DeleteDocumentDialog } from './dialogs/delete-document-dialog';
 import type { DocumentShallowType, DocumentType } from '@/types';
 import type { ColumnConfig } from '@/components/features/data-table/columns';
+import type { ColumnOption, CustomButtonOption } from '@/components/features/data-table/types';
 
 interface DocumentsDataTableProps {
   onDocumentSelect?: (document: DocumentShallowType) => void;
@@ -22,6 +24,15 @@ export function DocumentsDataTable({ onDocumentSelect }: DocumentsDataTableProps
   // Pagination state
   const [pageIndex, setPageIndex] = useState(0)
   const [pageSize, setPageSize] = useState(10)
+  
+  // Search state
+  const [searchValue, setSearchValue] = useState('')
+  
+  // Column visibility state - exclude pinned columns from state management
+  const [visibleColumns, setVisibleColumns] = useState<string[]>([
+    'description', 'tags', 'file_count', 'prompt_count', 
+    'selection_count', 'status', 'created_at'
+  ])
   
   // Selection state for checkboxes
   const [selectedDocuments, setSelectedDocuments] = useState<DocumentShallowType[]>([])
@@ -182,13 +193,21 @@ export function DocumentsDataTable({ onDocumentSelect }: DocumentsDataTableProps
           icon: Copy,
           onClick: (document) => {
             navigator.clipboard.writeText(document.id)
+            toast.success('Document ID copied to clipboard', {
+              description: `ID: ${document.id}`,
+            })
           }
         },
         {
           id: 'select',
           label: 'Select Document',
           icon: Eye,
-          onClick: actionHandlers.onSelectDocument
+          onClick: (document) => {
+            actionHandlers.onSelectDocument(document)
+            toast.success('Document selected', {
+              description: `Selected document: ${document.name}`,
+            })
+          }
         },
         {
           id: 'edit',
@@ -206,14 +225,75 @@ export function DocumentsDataTable({ onDocumentSelect }: DocumentsDataTableProps
       ]
     })
   ], [processedStatusRenderer, tagsRenderer, nameRenderer, actionHandlers]);
+  
+  // Column options for visibility toggle - exclude pinned columns
+  const tableColumns: ColumnOption[] = useMemo(() => [
+    { key: 'description', header: 'Description' },
+    { key: 'tags', header: 'Tags' },
+    { key: 'file_count', header: 'Files' },
+    { key: 'prompt_count', header: 'Prompts' },
+    { key: 'selection_count', header: 'Selections' },
+    { key: 'status', header: 'Status' },
+    { key: 'created_at', header: 'Created' }
+  ], []);
+  
+  // Custom buttons for the toolbar - delete button always visible
+  const customButtons: CustomButtonOption[] = useMemo(() => [
+    {
+      label: 'Delete Selection',
+      icon: Trash2,
+      variant: 'destructive' as const,
+      disabled: selectedDocuments.length === 0,
+      onClick: () => {
+        // Handle bulk delete - this would need to be implemented in the documents hook
+        toast.success(`Deleting ${selectedDocuments.length} document${selectedDocuments.length === 1 ? '' : 's'}...`)
+      }
+    }
+  ], [selectedDocuments]);
+  
+  // Filter documents based on search - always search all columns
+  const filteredDocuments = useMemo(() => {
+    if (!searchValue.trim()) return documents;
+    
+    return documents.filter(document => {
+      const searchTerm = searchValue.toLowerCase();
+      
+      return (
+        document.name.toLowerCase().includes(searchTerm) ||
+        (document.description?.toLowerCase().includes(searchTerm)) ||
+        document.tags.some(tag => tag.toLowerCase().includes(searchTerm))
+      );
+    });
+  }, [documents, searchValue]);
+  
+  // Filter columns based on visibility - always include pinned and actions columns
+  const visibleDocumentColumns = useMemo(() => {
+    return documentColumns.filter(col => {
+      // Always include actions column and pinned columns (name)
+      if (col.id === 'actions' || col.id === 'name') {
+        return true;
+      }
+      // Include other columns based on visibility state
+      return visibleColumns.includes(col.id);
+    });
+  }, [documentColumns, visibleColumns]);
+  
+  // Convert new column configs to legacy format for DataTable compatibility
+  const legacyColumns = useMemo(() => adaptColumns(visibleDocumentColumns), [visibleDocumentColumns]);
 
-  // Paginate data
+  // Handle column visibility changes
+  const handleColumnVisibilityChange = useCallback((columnKey: string, visible: boolean) => {
+    setVisibleColumns(prev => 
+      visible
+        ? [...prev, columnKey]
+        : prev.filter(key => key !== columnKey)
+    );
+  }, []);
+  
+  // Paginate filtered data
   const startIndex = pageIndex * pageSize
   const endIndex = startIndex + pageSize
-  const paginatedDocuments = documents.slice(startIndex, endIndex)
-
-  // Convert new column configs to legacy format for DataTable compatibility
-  const legacyColumns = useMemo(() => adaptColumns(documentColumns), [documentColumns]);
+  const paginatedDocuments = filteredDocuments.slice(startIndex, endIndex)
 
   if (isLoading) {
     return (
@@ -256,13 +336,22 @@ export function DocumentsDataTable({ onDocumentSelect }: DocumentsDataTableProps
         selectedRows={selectedDocuments}
         onRowSelect={setSelectedDocuments}
         searchPlaceholder="Search documents..."
+        searchValue={searchValue}
+        onSearch={setSearchValue}
         onAddNew={actionHandlers.onCreateDocument}
+        addNewLabel="Upload Document"
         showCheckboxes={true}
         showActions={true}
+        // Column visibility features
+        tableColumns={tableColumns}
+        visibleColumns={visibleColumns}
+        onColumnVisibilityChange={handleColumnVisibilityChange}
+        // Custom buttons
+        customButtons={customButtons}
         pagination={{
           pageIndex,
           pageSize,
-          totalItems: documents.length,
+          totalItems: filteredDocuments.length,
           onPageChange: setPageIndex,
           onPageSizeChange: setPageSize,
           showPagination: true,
