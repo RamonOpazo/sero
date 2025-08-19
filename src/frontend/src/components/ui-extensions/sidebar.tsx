@@ -8,8 +8,9 @@ import {
 import { cn } from '@/lib/utils'
 import './ui-extensions.css'
 
-// Create a context to override the layout variant behavior
+// Create enhanced contexts for grid layout
 const SidebarLayoutContext = React.createContext<{ layout?: string }>({ layout: undefined })
+const GridSidebarStateContext = React.createContext<{ state?: 'expanded' | 'collapsed' }>({ state: undefined })
 
 // Custom useSidebar hook that can be overridden based on layout
 export function useSidebar() {
@@ -17,72 +18,80 @@ export function useSidebar() {
   const originalContext = originalUseSidebar()
   
   if (layout === 'grid') {
-    // For grid layout, we might need to override some behaviors
-    // For now, return the original context but we could customize it
-    return {
-      ...originalContext,
-      // Override specific behaviors for grid layout if needed
-      // For example, different toggle behavior, etc.
-    }
+    // For grid layout, return the enhanced context
+    return originalContext
   }
   
   return originalContext
 }
 
-// Grid-specific SidebarProvider - use original but with grid classes and layout context
-function GridSidebarProvider(props: React.ComponentProps<typeof OriginalSidebarProvider>) {
-  const { className, ...restProps } = props
+// Comprehensive Grid SidebarProvider that manages its own state and DOM
+function GridSidebarProvider({
+  defaultOpen = true,
+  open: openProp,
+  onOpenChange: setOpenProp,
+  className,
+  children,
+  ...props
+}: React.ComponentProps<typeof OriginalSidebarProvider> & {
+  defaultOpen?: boolean
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+}) {
+  const [internalOpen, setInternalOpen] = React.useState(defaultOpen)
+  const open = openProp ?? internalOpen
+  const setOpen = setOpenProp ?? setInternalOpen
+  const state = open ? 'expanded' : 'collapsed'
+  
+  // Create a wrapper div that will have our grid classes and state
+  const wrapperRef = React.useRef<HTMLDivElement>(null)
+  
+  // Update the wrapper's data-state when state changes
+  React.useEffect(() => {
+    if (wrapperRef.current) {
+      wrapperRef.current.setAttribute('data-state', state)
+    }
+  }, [state])
   
   return (
     <SidebarLayoutContext.Provider value={{ layout: 'grid' }}>
-      <OriginalSidebarProvider 
-        className={cn(
-          'uix-sidebar-grid-provider',
-          // Force grid layout with !important via CSS
-          className
-        )}
-        {...restProps}
-      />
+      <GridSidebarStateContext.Provider value={{ state }}>
+        <OriginalSidebarProvider 
+          open={open}
+          onOpenChange={setOpen}
+          defaultOpen={defaultOpen}
+          {...props}
+        >
+          <div 
+            ref={wrapperRef}
+            className={cn('uix-sidebar-grid-provider', className)}
+            data-state={state}
+          >
+            {children}
+          </div>
+        </OriginalSidebarProvider>
+      </GridSidebarStateContext.Provider>
     </SidebarLayoutContext.Provider>
   )
 }
 
-// Grid-specific Sidebar that bypasses the complex structure
+// Grid-specific Sidebar that uses the original but styled for grid
 function GridSidebar(props: React.ComponentProps<typeof OriginalSidebar>) {
-  const { className, children, ...restProps } = props
-  
   return (
-    <div 
-      className={cn(
-        'uix-sidebar-grid-child',
-        'bg-sidebar text-sidebar-foreground',
-        'flex flex-col h-screen overflow-hidden',
-        className
-      )}
-      data-slot="sidebar"
-      {...restProps}
-    >
-      {children}
+    <div className="uix-sidebar-grid-child">
+      <OriginalSidebar {...props} />
     </div>
   )
 }
 
 // Grid-specific SidebarInset
-function GridSidebarInset(props: React.ComponentProps<typeof OriginalSidebarInset>) {
-  const { className, children, ...restProps } = props
-  
+function GridSidebarInset({ className, ...restProps }: React.ComponentProps<typeof OriginalSidebarInset>) {
   return (
     <main
-      className={cn(
-        'uix-sidebar-grid-inset',
-        'bg-background relative flex w-full h-full flex-col overflow-hidden',
-        className
-      )}
+      className={cn('uix-sidebar-grid-inset', className)}
       data-slot="sidebar-inset"
       {...restProps}
-    >
-      {children}
-    </main>
+    />
   )
 }
 
