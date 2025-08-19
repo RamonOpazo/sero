@@ -32,44 +32,19 @@
     @apply transition-colors;
   }
 
-  /* Sticky header cells */
-  .dt-v2-col-checkbox {
-    @apply sticky left-0 z-40 bg-muted w-[var(--checkbox-col)] min-w-[var(--checkbox-col)];
-  }
-
-  .dt-v2-col-pinned-first {
-    @apply sticky left-[var(--checkbox-col)] z-30 bg-muted w-[var(--first-col)] min-w-[var(--first-col)];
-  }
+  /* Note: Checkbox and pinned columns are now combined into a single sticky column */
 
   .dt-v2-col-actions {
     @apply sticky right-0 z-40 bg-muted w-[var(--actions-col)] min-w-[var(--actions-col)];
   }
 
-  /* Sticky body cells */
-  .dt-v2-cell-checkbox {
-    @apply sticky left-0 z-30 bg-background w-[var(--checkbox-col)] min-w-[var(--checkbox-col)];
-  }
-
-  .dt-v2-cell-pinned-first {
-    @apply sticky left-[var(--checkbox-col)] z-20 bg-background w-[var(--first-col)] min-w-[var(--first-col)];
-  }
+  /* Note: Checkbox and pinned cells are now combined into a single sticky column */
 
   .dt-v2-cell-actions {
     @apply sticky right-0 z-30 bg-background w-[var(--actions-col)] min-w-[var(--actions-col)];
   }
 
-  /* Hover state overrides for sticky cells */
-  .dt-v2-row:hover .dt-v2-cell-checkbox,
-  .dt-v2-row:hover .dt-v2-cell-pinned-first,
-  .dt-v2-row:hover .dt-v2-cell-actions {
-    @apply bg-muted/50;
-  }
-
-  .dt-v2-row[data-state="selected"] .dt-v2-cell-checkbox,
-  .dt-v2-row[data-state="selected"] .dt-v2-cell-pinned-first,
-  .dt-v2-row[data-state="selected"] .dt-v2-cell-actions {
-    @apply bg-muted;
-  }
+  /* Note: Hover states are now handled via inline Tailwind classes */
 
   /* Toolbar styling */
   .dt-v2-toolbar {
@@ -113,17 +88,7 @@
     border-right: none !important;
   }
 
-  /* Remove padding from sticky columns for precise positioning */
-  .sticky-no-padding {
-    padding-left: 0 !important;
-    padding-right: 0 !important;
-  }
-
-  /* Special case: checkbox columns can keep some internal padding for the checkbox itself */
-  .sticky-checkbox-padding {
-    padding-left: 0.5rem !important;
-    padding-right: 0.5rem !important;
-  }
+  /* Note: Padding is now handled via flex layout in combined sticky column */
 
   /* Responsive enhancements */
   @media (max-width: 768px) {

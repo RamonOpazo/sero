@@ -34,7 +34,6 @@ export function TableContent<T extends Record<string, any>>({
   columnWidths
 }: TableContentProps<T>) {
   const [allSelected, setAllSelected] = useState(false)
-  // const [hoveredRowIndex, setHoveredRowIndex] = useState<number | null>(null)
   
   // Merge user-provided column widths with defaults
   const widthConfig = mergeColumnWidths(columnWidths)
@@ -63,9 +62,6 @@ export function TableContent<T extends Record<string, any>>({
     "--actions-col": typeof widthConfig.actions === 'number' ? `${widthConfig.actions}px` : widthConfig.actions,
   } as React.CSSProperties
 
-  // Conditional sticky classes like ChatGPT's approach
-  // const pinnedHeadSticky = "sticky left-[var(--checkbox-col)] z-30 bg-muted"
-  // const pinnedCellSticky = "sticky left-[var(--checkbox-col)] z-20 bg-background"
 
   // Helper function to get cell value
   const getCellValue = (row: T, column: Column<T>) => {
@@ -145,20 +141,16 @@ export function TableContent<T extends Record<string, any>>({
 
   // Helper function to get CSS class based on column type
   const getColumnHeaderClass = (column: Column<T>) => {
-    if (column.pinFirstColumn) return 'dt-v2-col-pinned-first'
     switch (column.type) {
-      case 'checkbox': return 'dt-v2-col-checkbox'
       case 'actions': return 'dt-v2-col-actions'
-      default: return 'dt-v2-col-scrollable'
+      default: return '' // Use inline Tailwind classes instead
     }
   }
 
   const getColumnCellClass = (column: Column<T>) => {
-    if (column.pinFirstColumn) return 'dt-v2-cell-pinned-first'
     switch (column.type) {
-      case 'checkbox': return 'dt-v2-cell-checkbox'
       case 'actions': return 'dt-v2-cell-actions'
-      default: return 'dt-v2-cell-scrollable'
+      default: return '' // Use inline Tailwind classes instead
     }
   }
 
@@ -184,17 +176,6 @@ export function TableContent<T extends Record<string, any>>({
     }
   }
 
-  // Helper function to get width for special columns (checkbox, actions)
-  // const getSpecialColumnWidth = (type: 'checkbox' | 'actions') => {
-  //   const width = widthConfig[type]
-  //   return typeof width === 'number' ? `${width}px` : width
-  // }
-
-  // Helper function to calculate left position for pinned columns
-  // const getPinnedLeftPosition = () => {
-  //   if (!showCheckboxes) return '0px'
-  //   return getSpecialColumnWidth('checkbox')
-  // }
 
   return (
     <div className="w-full overflow-x-auto rounded-lg" style={stickyVars}>
@@ -250,8 +231,6 @@ export function TableContent<T extends Record<string, any>>({
                 key={index}
                 className="dt-v2-row"
                 data-state={isRowSelected(row) ? 'selected' : undefined}
-                // onMouseEnter={() => setHoveredRowIndex(index)}
-                // onMouseLeave={() => setHoveredRowIndex(null)}
               >
                 {/* Combined checkbox + first column cell */}
                 {(checkboxColumn || pinnedColumns.length > 0) && (
