@@ -19,9 +19,6 @@ export function TableToolbar({
   filters,
   onAddNew,
   addNewLabel = 'Add New',
-  searchColumns = [],
-  selectedSearchColumn,
-  onSearchColumnChange,
   columns = [],
   visibleColumns = [],
   onColumnVisibilityChange,
@@ -38,37 +35,14 @@ export function TableToolbar({
         {/* Left side - Search and Filters */}
         <div className="flex items-center gap-2">
           {onSearch && (
-            <div className="flex items-center gap-2">
-              {/* Advanced Search Box */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                <Input
-                  placeholder={searchPlaceholder}
-                  value={searchValue}
-                  onChange={(e) => onSearch(e.target.value)}
-                  className="pl-10 w-[250px] lg:w-[300px]"
-                />
-              </div>
-              
-              {/* Search Column Selector */}
-              {searchColumns.length > 0 && (
-                <Select
-                  value={selectedSearchColumn}
-                  onValueChange={onSearchColumnChange}
-                >
-                  <SelectTrigger className="w-[120px] lg:w-[150px]">
-                    <SelectValue placeholder="All" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All columns</SelectItem>
-                    {searchColumns.map((column) => (
-                      <SelectItem key={column.key} value={column.key}>
-                        {column.header}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input
+                placeholder={searchPlaceholder}
+                value={searchValue}
+                onChange={(e) => onSearch(e.target.value)}
+                className="pl-10 w-[250px] lg:w-[300px]"
+              />
             </div>
           )}
           
@@ -95,34 +69,6 @@ export function TableToolbar({
         
         {/* Right side - Actions */}
         <div className="flex items-center gap-2">
-          {/* Column Visibility Selector */}
-          {columns.length > 0 && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <Columns3 className="h-4 w-4" />
-                  <span className="hidden lg:inline ml-2">Customize Columns</span>
-                  <span className="lg:hidden ml-2">Columns</span>
-                  <ChevronDown className="ml-2 h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                {columns.map((column) => (
-                  <DropdownMenuCheckboxItem
-                    key={column.key}
-                    className="capitalize"
-                    checked={visibleColumns.includes(column.key)}
-                    onCheckedChange={(checked) => 
-                      onColumnVisibilityChange?.(column.key, checked)
-                    }
-                  >
-                    {column.header}
-                  </DropdownMenuCheckboxItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-          
           {/* Custom Action Buttons */}
           {customButtons.map((button, index) => (
             <Button
@@ -147,6 +93,33 @@ export function TableToolbar({
               <span className="hidden lg:inline ml-2">{addNewLabel}</span>
               <span className="lg:hidden ml-2">Add</span>
             </Button>
+          )}
+          
+          {/* Column Visibility Selector */}
+          {columns.length > 0 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Columns3 className="h-4 w-4" />
+                  <span className="ml-2">Columns</span>
+                  <ChevronDown className="ml-2 h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                {columns.map((column) => (
+                  <DropdownMenuCheckboxItem
+                    key={column.key}
+                    className="capitalize"
+                    checked={visibleColumns.includes(column.key)}
+                    onCheckedChange={(checked) => 
+                      onColumnVisibilityChange?.(column.key, checked)
+                    }
+                  >
+                    {column.header}
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
         </div>
       </div>

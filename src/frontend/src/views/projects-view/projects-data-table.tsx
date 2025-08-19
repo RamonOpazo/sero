@@ -1,5 +1,6 @@
 import { useMemo, useCallback, useState } from 'react';
 import { Eye, Plus, Copy, Edit, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { DataTable } from '@/components/features/data-table';
 import { columns, adaptColumns } from '@/components/features/data-table/columns';
 import { Badge } from '@/components/ui/badge';
@@ -9,7 +10,7 @@ import { ConfirmationDialog } from '@/components/shared/ConfirmationDialog';
 import { useProjectsView } from './use-projects-view';
 import type { ProjectShallowType } from '@/types';
 import type { ColumnConfig } from '@/components/features/data-table/columns';
-import type { SearchColumnOption, ColumnOption, CustomButtonOption } from '@/components/features/data-table/types';
+import type { ColumnOption, CustomButtonOption } from '@/components/features/data-table/types';
 
 interface ProjectsDataTableProps {
   onProjectSelect?: (project: ProjectShallowType) => void;
@@ -22,11 +23,10 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
   
   // Search state
   const [searchValue, setSearchValue] = useState('')
-  const [selectedSearchColumn, setSelectedSearchColumn] = useState('all')
   
-  // Column visibility state
+  // Column visibility state - exclude pinned columns from state management
   const [visibleColumns, setVisibleColumns] = useState<string[]>([
-    'name', 'description', 'document_count', 'updated_at', 
+    'description', 'document_count', 'updated_at', 
     'contact_name', 'version', 'contact_email', 'created_at'
   ])
 
@@ -131,22 +131,30 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
     // Actions column - modern action definitions
     columns.actions<ProjectShallowType>('actions', {
       header: 'Actions',
-      width: '100px',
+      width: '120px',
       align: 'center',
       actions: [
         {
           id: 'copy',
-          label: 'Copy project ID',
+          label: 'Copy ID',
           icon: Copy,
           onClick: (project) => {
             navigator.clipboard.writeText(project.id)
+            toast.success('Project ID copied to clipboard', {
+              description: `ID: ${project.id}`,
+            })
           }
         },
         {
           id: 'select',
-          label: 'Select Project',
+          label: 'Select project',
           icon: Eye,
-          onClick: actionHandlers.onSelectProject
+          onClick: (project) => {
+            actionHandlers.onSelectProject(project)
+            toast.success('Project selected', {
+              description: `Switched to project: ${project.name}`,
+            })
+          }
         },
         {
           id: 'edit',
@@ -165,17 +173,9 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
     })
   ], [nameRenderer, actionHandlers]);
   
-  // Search column options for the toolbar
-  const searchColumns: SearchColumnOption[] = useMemo(() => [
-    { key: 'name', header: 'Project Name' },
-    { key: 'description', header: 'Description' },
-    { key: 'contact_name', header: 'Contact Person' },
-    { key: 'contact_email', header: 'Email Address' }
-  ], []);
   
-  // Column options for visibility toggle
+  // Column options for visibility toggle - exclude pinned columns
   const tableColumns: ColumnOption[] = useMemo(() => [
-    { key: 'name', header: 'Project Name' },
     { key: 'description', header: 'Description' },
     { key: 'document_count', header: 'Documents' },
     { key: 'updated_at', header: 'Last Updated' },
@@ -185,44 +185,43 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
     { key: 'created_at', header: 'Created' }
   ], []);
   
-  // Custom buttons for the toolbar - only bulk delete when items are selected
+  // Custom buttons for the toolbar - delete button always visible
   const customButtons: CustomButtonOption[] = useMemo(() => [
-    ...(selectedProjects.length > 0 ? [
-      {
-        label: `Delete ${selectedProjects.length} selected`,
-        icon: Trash2,
-        variant: 'destructive' as const,
-        onClick: () => actionHandlers.onBulkDelete()
-      }
-    ] : [])
+    {
+      label: 'Delete Selection',
+      icon: Trash2,
+      variant: 'destructive' as const,
+      disabled: selectedProjects.length === 0,
+      onClick: () => actionHandlers.onBulkDelete()
+    }
   ], [selectedProjects, actionHandlers]);
   
-  // Filter projects based on search
+  // Filter projects based on search - always search all columns
   const filteredProjects = useMemo(() => {
     if (!searchValue.trim()) return projects;
     
     return projects.filter(project => {
       const searchTerm = searchValue.toLowerCase();
       
-      if (selectedSearchColumn === 'all') {
-        return (
-          project.name.toLowerCase().includes(searchTerm) ||
-          (project.description?.toLowerCase().includes(searchTerm)) ||
-          (project.contact_name?.toLowerCase().includes(searchTerm)) ||
-          (project.contact_email?.toLowerCase().includes(searchTerm))
-        );
-      }
-      
-      const fieldValue = project[selectedSearchColumn as keyof ProjectShallowType];
-      return fieldValue?.toString().toLowerCase().includes(searchTerm) || false;
+      return (
+        project.name.toLowerCase().includes(searchTerm) ||
+        (project.description?.toLowerCase().includes(searchTerm)) ||
+        (project.contact_name?.toLowerCase().includes(searchTerm)) ||
+        (project.contact_email?.toLowerCase().includes(searchTerm))
+      );
     });
-  }, [projects, searchValue, selectedSearchColumn]);
+  }, [projects, searchValue]);
   
-  // Filter columns based on visibility
+  // Filter columns based on visibility - always include pinned and actions columns
   const visibleProjectColumns = useMemo(() => {
-    return projectColumns.filter(col => 
-      col.id === 'actions' || visibleColumns.includes(col.id)
-    );
+    return projectColumns.filter(col => {
+      // Always include actions column and pinned columns (name)
+      if (col.id === 'actions' || col.id === 'name') {
+        return true;
+      }
+      // Include other columns based on visibility state
+      return visibleColumns.includes(col.id);
+    });
   }, [projectColumns, visibleColumns]);
   
   // Convert new column configs to legacy format for DataTable compatibility
@@ -289,10 +288,6 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
         addNewLabel="Add Project"
         showCheckboxes={true}
         showActions={true}
-        // Advanced search features
-        searchColumns={searchColumns}
-        selectedSearchColumn={selectedSearchColumn}
-        onSearchColumnChange={setSelectedSearchColumn}
         // Column visibility features
         tableColumns={tableColumns}
         visibleColumns={visibleColumns}
