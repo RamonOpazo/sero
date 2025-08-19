@@ -1,5 +1,5 @@
 import { useMemo, useCallback, useState } from 'react';
-import { Eye, Plus, Copy, Edit, Trash2 } from 'lucide-react';
+import { Eye, Plus, Copy, Edit, Trash2, Download, RefreshCw } from 'lucide-react';
 import { DataTable } from '@/components/features/data-table';
 import { columns, adaptColumns } from '@/components/features/data-table/columns';
 import { Badge } from '@/components/ui/badge';
@@ -9,6 +9,7 @@ import { ConfirmationDialog } from '@/components/shared/ConfirmationDialog';
 import { useProjectsView } from './use-projects-view';
 import type { ProjectShallowType } from '@/types';
 import type { ColumnConfig } from '@/components/features/data-table/columns';
+import type { SearchColumnOption, ColumnOption, CustomButtonOption } from '@/components/features/data-table/types';
 
 interface ProjectsDataTableProps {
   onProjectSelect?: (project: ProjectShallowType) => void;
@@ -18,6 +19,16 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
   // Pagination state
   const [pageIndex, setPageIndex] = useState(0)
   const [pageSize, setPageSize] = useState(10)
+  
+  // Search state
+  const [searchValue, setSearchValue] = useState('')
+  const [selectedSearchColumn, setSelectedSearchColumn] = useState('all')
+  
+  // Column visibility state
+  const [visibleColumns, setVisibleColumns] = useState<string[]>([
+    'name', 'description', 'document_count', 'updated_at', 
+    'contact_name', 'version', 'contact_email', 'created_at'
+  ])
 
   // Extract all business logic to custom hook
   const {
@@ -154,13 +165,110 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
     })
   ], [nameRenderer, actionHandlers]);
   
+  // Search column options for the toolbar
+  const searchColumns: SearchColumnOption[] = useMemo(() => [
+    { key: 'name', header: 'Project Name' },
+    { key: 'description', header: 'Description' },
+    { key: 'contact_name', header: 'Contact Person' },
+    { key: 'contact_email', header: 'Email Address' }
+  ], []);
+  
+  // Column options for visibility toggle
+  const tableColumns: ColumnOption[] = useMemo(() => [
+    { key: 'name', header: 'Project Name' },
+    { key: 'description', header: 'Description' },
+    { key: 'document_count', header: 'Documents' },
+    { key: 'updated_at', header: 'Last Updated' },
+    { key: 'contact_name', header: 'Contact Person' },
+    { key: 'version', header: 'Version' },
+    { key: 'contact_email', header: 'Email Address' },
+    { key: 'created_at', header: 'Created' }
+  ], []);
+  
+  // Custom buttons for the toolbar
+  const customButtons: CustomButtonOption[] = useMemo(() => [
+    {
+      label: 'Export Projects',
+      icon: Download,
+      variant: 'outline',
+      onClick: () => {
+        // Export projects as CSV
+        const csvContent = projects.map(p => 
+          `"${p.name}","${p.description || ''}",${p.document_count},"${p.contact_name || ''}","${p.contact_email || ''}"`
+        ).join('\n');
+        const header = 'Name,Description,Documents,Contact,Email\n';
+        const blob = new Blob([header + csvContent], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'projects.csv';
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    },
+    {
+      label: 'Refresh',
+      icon: RefreshCw,
+      variant: 'ghost',
+      onClick: () => {
+        // Trigger refresh - you might want to add this to your useProjectsView hook
+        window.location.reload();
+      }
+    },
+    ...(selectedProjects.length > 0 ? [
+      {
+        label: `Delete ${selectedProjects.length} selected`,
+        icon: Trash2,
+        variant: 'destructive' as const,
+        onClick: () => actionHandlers.onBulkDelete()
+      }
+    ] : [])
+  ], [projects, selectedProjects, actionHandlers]);
+  
+  // Filter projects based on search
+  const filteredProjects = useMemo(() => {
+    if (!searchValue.trim()) return projects;
+    
+    return projects.filter(project => {
+      const searchTerm = searchValue.toLowerCase();
+      
+      if (selectedSearchColumn === 'all') {
+        return (
+          project.name.toLowerCase().includes(searchTerm) ||
+          (project.description?.toLowerCase().includes(searchTerm)) ||
+          (project.contact_name?.toLowerCase().includes(searchTerm)) ||
+          (project.contact_email?.toLowerCase().includes(searchTerm))
+        );
+      }
+      
+      const fieldValue = project[selectedSearchColumn as keyof ProjectShallowType];
+      return fieldValue?.toString().toLowerCase().includes(searchTerm) || false;
+    });
+  }, [projects, searchValue, selectedSearchColumn]);
+  
+  // Filter columns based on visibility
+  const visibleProjectColumns = useMemo(() => {
+    return projectColumns.filter(col => 
+      col.id === 'actions' || visibleColumns.includes(col.id)
+    );
+  }, [projectColumns, visibleColumns]);
+  
   // Convert new column configs to legacy format for DataTable compatibility
-  const legacyColumns = useMemo(() => adaptColumns(projectColumns), [projectColumns]);
+  const legacyColumns = useMemo(() => adaptColumns(visibleProjectColumns), [visibleProjectColumns]);
 
-  // Paginate data
+  // Handle column visibility changes
+  const handleColumnVisibilityChange = useCallback((columnKey: string, visible: boolean) => {
+    setVisibleColumns(prev => 
+      visible 
+        ? [...prev, columnKey]
+        : prev.filter(key => key !== columnKey)
+    );
+  }, []);
+  
+  // Paginate filtered data
   const startIndex = pageIndex * pageSize
   const endIndex = startIndex + pageSize
-  const paginatedProjects = projects.slice(startIndex, endIndex)
+  const paginatedProjects = filteredProjects.slice(startIndex, endIndex)
 
   if (isLoading) {
     return (
@@ -203,13 +311,25 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
         selectedRows={selectedProjects}
         onRowSelect={actionHandlers.onRowSelectionChange}
         searchPlaceholder="Search projects..."
+        searchValue={searchValue}
+        onSearch={setSearchValue}
         onAddNew={actionHandlers.onCreateProject}
         showCheckboxes={true}
         showActions={true}
+        // Advanced search features
+        searchColumns={searchColumns}
+        selectedSearchColumn={selectedSearchColumn}
+        onSearchColumnChange={setSelectedSearchColumn}
+        // Column visibility features
+        tableColumns={tableColumns}
+        visibleColumns={visibleColumns}
+        onColumnVisibilityChange={handleColumnVisibilityChange}
+        // Custom buttons
+        customButtons={customButtons}
         pagination={{
           pageIndex,
           pageSize,
-          totalItems: projects.length,
+          totalItems: filteredProjects.length,
           onPageChange: setPageIndex,
           onPageSizeChange: setPageSize,
           showPagination: true,

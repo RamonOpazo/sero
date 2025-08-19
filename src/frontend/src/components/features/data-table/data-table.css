@@ -7,92 +7,74 @@
 
 @layer components {
   /* Base table container */
-  .dt-v2-container {
+  .data-table-container {
     @apply w-full space-y-4;
   }
 
-  .dt-v2-content {
+  .data-table-content {
     @apply w-full;
   }
 
-  .dt-v2-scroll-area {
-    @apply w-full overflow-x-auto rounded-lg;
+  .data-table-scroll-area {
+    @apply w-full overflow-x-auto rounded-lg border border-border;
   }
 
-  .dt-v2-table {
+  .data-table-table {
     @apply min-w-[1800px] relative;
   }
 
   /* Header styling */
-  .dt-v2-header {
+  .data-table-header {
     @apply bg-muted sticky top-0 z-40;
   }
 
-  .dt-v2-row {
+  .data-table-row {
     @apply transition-colors;
   }
 
-  /* Note: Checkbox and pinned columns are now combined into a single sticky column */
-
-  .dt-v2-col-actions {
+  .data-table-col-actions {
     @apply sticky right-0 z-40 bg-muted w-[var(--actions-col)] min-w-[var(--actions-col)];
   }
 
-  /* Note: Checkbox and pinned cells are now combined into a single sticky column */
-
-  .dt-v2-cell-actions {
+  .data-table-cell-actions {
     @apply sticky right-0 z-30 bg-background w-[var(--actions-col)] min-w-[var(--actions-col)];
   }
 
-  /* Note: Hover states are now handled via inline Tailwind classes */
-
   /* Toolbar styling */
-  .dt-v2-toolbar {
+  .data-table-toolbar {
     @apply flex flex-col gap-4 md:flex-row md:items-center md:justify-between p-4 bg-card rounded-lg border;
   }
 
-  .dt-v2-toolbar-title {
+  .data-table-toolbar-title {
     @apply text-xl font-semibold;
   }
 
-  .dt-v2-toolbar-controls {
+  .data-table-toolbar-controls {
     @apply flex flex-col md:flex-row gap-2 w-full md:w-auto;
   }
 
-  .dt-v2-search-input {
+  .data-table-search-input {
     @apply md:w-[250px];
   }
 
-  .dt-v2-filter-select {
+  .data-table-filter-select {
     @apply md:w-[180px];
   }
 
-  .dt-v2-add-button {
+  .data-table-add-button {
     @apply md:ml-auto;
   }
 
-  /* Remove vertical borders */
-  .dt-v2-table th,
-  .dt-v2-table td {
-    @apply border-l-0 border-r-0;
-  }
-
-  .dt-v2-table {
-    @apply border-separate border-spacing-0;
-  }
-
-  /* Ensure no vertical borders on any table elements */
-  .dt-v2-table,
-  .dt-v2-table * {
+  /* Remove only vertical borders, preserve horizontal borders */
+  .data-table-table th,
+  .data-table-table td {
     border-left: none !important;
     border-right: none !important;
   }
 
-  /* Note: Padding is now handled via flex layout in combined sticky column */
-
   /* Responsive enhancements */
   @media (max-width: 768px) {
-    .dt-v2-table {
+    .data-table-table {
       min-width: 1200px;
     }
   }

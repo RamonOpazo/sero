@@ -54,6 +54,19 @@ export interface DataTableProps<T = any> {
   /** Configure default widths for different column types */
   columnWidths?: ColumnWidthConfig
   
+  // Advanced search features
+  searchColumns?: SearchColumnOption[]
+  selectedSearchColumn?: string
+  onSearchColumnChange?: (columnKey: string) => void
+  
+  // Column visibility features
+  tableColumns?: ColumnOption[]
+  visibleColumns?: string[]
+  onColumnVisibilityChange?: (columnKey: string, visible: boolean) => void
+  
+  // Custom buttons
+  customButtons?: CustomButtonOption[]
+  
   // Pagination props
   pagination?: {
     pageIndex: number
@@ -64,6 +77,29 @@ export interface DataTableProps<T = any> {
     pageSizeOptions?: number[]
     showPagination?: boolean
   }
+}
+
+// Search column configuration for toolbar
+export interface SearchColumnOption {
+  key: string
+  header: string
+}
+
+// Column configuration for visibility toggle
+export interface ColumnOption {
+  key: string
+  header: string
+}
+
+// Custom button configuration for toolbar
+export interface CustomButtonOption {
+  label: string
+  onClick: () => void
+  icon?: React.ComponentType<{ className?: string }>
+  variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link'
+  size?: 'default' | 'sm' | 'lg' | 'icon'
+  className?: string
+  disabled?: boolean
 }
 
 export interface TableToolbarProps {
@@ -80,6 +116,19 @@ export interface TableToolbarProps {
   }>
   onAddNew?: () => void
   addNewLabel?: string
+  
+  // Advanced search features
+  searchColumns?: SearchColumnOption[]
+  selectedSearchColumn?: string
+  onSearchColumnChange?: (columnKey: string) => void
+  
+  // Column visibility features
+  columns?: ColumnOption[]
+  visibleColumns?: string[]
+  onColumnVisibilityChange?: (columnKey: string, visible: boolean) => void
+  
+  // Custom buttons
+  customButtons?: CustomButtonOption[]
 }
 
 export interface TableContentProps<T = any> {

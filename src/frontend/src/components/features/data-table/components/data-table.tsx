@@ -27,6 +27,13 @@ export function DataTable<T extends Record<string, any>>({
   addNewLabel,
   className,
   columnWidths,
+  searchColumns,
+  selectedSearchColumn,
+  onSearchColumnChange,
+  tableColumns,
+  visibleColumns,
+  onColumnVisibilityChange,
+  customButtons,
   pagination
 }: DataTableProps<T>) {
   const totalItems = pagination?.totalItems ?? data.length
@@ -34,9 +41,9 @@ export function DataTable<T extends Record<string, any>>({
   const selectedCount = selectedRows?.length ?? 0
 
   return (
-    <div className={cn('dt-v2-container', className)}>
+    <div className={cn('data-table-container', className)}>
       {/* Toolbar */}
-      {(title || onSearch || filters || onAddNew) && (
+      {(title || onSearch || filters || onAddNew || searchColumns || tableColumns || customButtons) && (
         <TableToolbar
           title={title}
           searchPlaceholder={searchPlaceholder}
@@ -45,11 +52,18 @@ export function DataTable<T extends Record<string, any>>({
           filters={filters}
           onAddNew={onAddNew}
           addNewLabel={addNewLabel}
+          searchColumns={searchColumns}
+          selectedSearchColumn={selectedSearchColumn}
+          onSearchColumnChange={onSearchColumnChange}
+          columns={tableColumns}
+          visibleColumns={visibleColumns}
+          onColumnVisibilityChange={onColumnVisibilityChange}
+          customButtons={customButtons}
         />
       )}
 
       {/* Table Content */}
-      <div className="dt-v2-content">
+      <div className="data-table-content">
         <TableContent
           data={data}
           columns={columns}

@@ -9,8 +9,6 @@ import { EditorView } from '@/views/editor-view';
 import { DocumentationView } from '@/views/documentation-view';
 import { SettingsPage } from '@/pages/SettingsPage';
 import { CryptoTestView } from '@/views/crypto-test-view';
-import { TestDataTable } from '@/views/test-data-table';
-import ResponsivePinnedTable from '@/pages/test-table';
 
 // Redirect component for /projects/:projectId -> /projects/:projectId/documents
 function ProjectRedirect() {
@@ -51,8 +49,6 @@ function App() {
             {/* Developer routes */}
             <Route path="/dev/api-swagger" element={<ApiDocsRedirect />} />
             <Route path="/dev/crypto-test" element={<CryptoTestView />} />
-            <Route path="/dev/data-table" element={<TestDataTable />} />
-            <Route path="/dev/test-table" element={<ResponsivePinnedTable />} />
 
             {/* Settings */}
             <Route path="/settings" element={<SettingsPage />} />

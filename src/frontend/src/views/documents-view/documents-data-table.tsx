@@ -1,6 +1,7 @@
 import { useMemo, useCallback, useState } from 'react';
-import { Eye, Plus, CheckCircle2, AlertCircle } from 'lucide-react';
-import { DataTable, ColumnBuilder as Column, Actions } from '@/components/features/data-table';
+import { Eye, Plus, CheckCircle2, AlertCircle, Copy, Edit, Trash2 } from 'lucide-react';
+import { DataTable } from '@/components/features/data-table';
+import { columns, adaptColumns } from '@/components/features/data-table/columns';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { Badge } from '@/components/ui/badge';
 import { useWorkspace } from '@/providers/workspace-provider';
@@ -9,6 +10,7 @@ import { UploadDocumentsDialog } from './dialogs/upload-documents-dialog';
 import { EditDocumentDialog } from './dialogs/edit-document-dialog';
 import { DeleteDocumentDialog } from './dialogs/delete-document-dialog';
 import type { DocumentShallowType, DocumentType } from '@/types';
+import type { ColumnConfig } from '@/components/features/data-table/columns';
 
 interface DocumentsDataTableProps {
   onDocumentSelect?: (document: DocumentShallowType) => void;
@@ -21,11 +23,13 @@ export function DocumentsDataTable({ onDocumentSelect }: DocumentsDataTableProps
   const [pageIndex, setPageIndex] = useState(0)
   const [pageSize, setPageSize] = useState(10)
   
+  // Selection state for checkboxes
+  const [selectedDocuments, setSelectedDocuments] = useState<DocumentShallowType[]>([])
+  
   // Extract all business logic to custom hook
   const {
     projectId,
     documents,
-    currentDocument,
     isLoading,
     error,
     dialogState,
@@ -88,83 +92,128 @@ export function DocumentsDataTable({ onDocumentSelect }: DocumentsDataTableProps
     );
   }, [actionHandlers.onSelectDocument]);
 
-  const columns = useMemo(() => [
-    // Custom clickable name column
-    {
-      id: 'name',
-      key: 'name',
-      header: 'Name',
-      accessorKey: 'name',
-      cell: (_: any, row: DocumentShallowType) => nameRenderer(row),
-      enableSorting: true,
-      pinFirstColumn: true,
-    },
+  // Define columns using the new modern column system
+  const documentColumns: ColumnConfig<DocumentShallowType>[] = useMemo(() => [
+    // Document name - pinned, clickable, and custom renderer
+    columns.custom<DocumentShallowType, string>(
+      'name',
+      'name',
+      {
+        header: 'Document Name',
+        pinned: true,
+        sortable: true,
+        width: '200px',
+        render: (_value, row) => nameRenderer(row)
+      }
+    ),
     
-    Column.text<DocumentShallowType>('description')
-      .header('Description')
-      .truncate(30)
-      .build(),
+    // Description - truncated for readability
+    columns.text<DocumentShallowType>('description', {
+      header: 'Description',
+      maxLength: 30,
+      width: '250px',
+      placeholder: 'No description'
+    }),
     
     // Custom Tags column
-    {
-      id: 'tags',
-      key: 'tags',
-      header: 'Tags',
-      cell: (_: any, row: DocumentShallowType) => tagsRenderer(row),
-    },
+    columns.custom<DocumentShallowType, string[]>(
+      'tags',
+      'tags',
+      {
+        header: 'Tags',
+        width: '180px',
+        render: (_value, row) => tagsRenderer(row)
+      }
+    ),
     
-    Column.badge<DocumentShallowType>('file_count')
-      .header('Files')
-      .sortable()
-      .build(),
+    // File count - displayed as badge
+    columns.badge<DocumentShallowType>('file_count', {
+      header: 'Files',
+      width: '100px',
+      align: 'center',
+      sortable: true
+    }),
     
-    Column.badge<DocumentShallowType>('prompt_count')
-      .header('Prompts')
-      .sortable()
-      .build(),
+    // Prompt count - displayed as badge
+    columns.badge<DocumentShallowType>('prompt_count', {
+      header: 'Prompts',
+      width: '100px',
+      align: 'center',
+      sortable: true
+    }),
     
-    Column.badge<DocumentShallowType>('selection_count')
-      .header('Selections')
-      .sortable()
-      .build(),
+    // Selection count - displayed as badge
+    columns.badge<DocumentShallowType>('selection_count', {
+      header: 'Selections',
+      width: '100px',
+      align: 'center',
+      sortable: true
+    }),
     
     // Custom Status column
-    {
-      id: 'status',
-      key: 'status',
-      header: 'Status',
-      cell: (_: any, row: DocumentShallowType) => processedStatusRenderer(row),
-    },
+    columns.custom<DocumentShallowType, boolean>(
+      'status',
+      'is_processed',
+      {
+        header: 'Status',
+        width: '120px',
+        align: 'center',
+        render: (_value, row) => processedStatusRenderer(row)
+      }
+    ),
     
-    Column.date<DocumentShallowType>('created_at')
-      .header('Created')
-      .sortable()
-      .build(),
-  ], [processedStatusRenderer, tagsRenderer, nameRenderer]);
+    // Created date - relative formatting
+    columns.date<DocumentShallowType>('created_at', {
+      header: 'Created',
+      width: '150px',
+      sortable: true,
+      format: { style: 'relative' }
+    }),
+    
+    // Actions column - modern action definitions
+    columns.actions<DocumentShallowType>('actions', {
+      header: 'Actions',
+      width: '100px',
+      align: 'center',
+      actions: [
+        {
+          id: 'copy',
+          label: 'Copy document ID',
+          icon: Copy,
+          onClick: (document) => {
+            navigator.clipboard.writeText(document.id)
+          }
+        },
+        {
+          id: 'select',
+          label: 'Select Document',
+          icon: Eye,
+          onClick: actionHandlers.onSelectDocument
+        },
+        {
+          id: 'edit',
+          label: 'Edit document',
+          icon: Edit,
+          onClick: actionHandlers.onEditDocument
+        },
+        {
+          id: 'delete',
+          label: 'Delete document',
+          icon: Trash2,
+          variant: 'destructive',
+          onClick: actionHandlers.onDeleteDocument
+        }
+      ]
+    })
+  ], [processedStatusRenderer, tagsRenderer, nameRenderer, actionHandlers]);
 
   // Paginate data
   const startIndex = pageIndex * pageSize
   const endIndex = startIndex + pageSize
   const paginatedDocuments = documents.slice(startIndex, endIndex)
 
-  const tableActions = useMemo(() => Actions.create<DocumentShallowType>()
-    .copy(
-      (document) => document.id,
-      'Copy document ID'
-    )
-    .separator()
-    .custom(
-      'Select Document',
-      'select',
-      actionHandlers.onSelectDocument,
-      {
-        icon: Eye,
-        variant: 'default'
-      }
-    )
-    .edit(actionHandlers.onEditDocument, 'Edit document')
-    .delete(actionHandlers.onDeleteDocument, 'Delete document')
-    .build(), [actionHandlers]);
+  // Convert new column configs to legacy format for DataTable compatibility
+  const legacyColumns = useMemo(() => adaptColumns(documentColumns), [documentColumns]);
 
   if (isLoading) {
     return (
@@ -202,14 +251,13 @@ export function DocumentsDataTable({ onDocumentSelect }: DocumentsDataTableProps
   return (
     <>
       <DataTable
-        columns={columns}
+        columns={legacyColumns}
         data={paginatedDocuments}
-        selectedRows={currentDocument ? [currentDocument] : []}
-        onRowSelect={() => {}}
+        selectedRows={selectedDocuments}
+        onRowSelect={setSelectedDocuments}
         searchPlaceholder="Search documents..."
         onAddNew={actionHandlers.onCreateDocument}
-        actions={tableActions}
-        showCheckboxes={false}
+        showCheckboxes={true}
         showActions={true}
         pagination={{
           pageIndex,

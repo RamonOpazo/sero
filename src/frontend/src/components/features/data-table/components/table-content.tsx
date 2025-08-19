@@ -142,14 +142,14 @@ export function TableContent<T extends Record<string, any>>({
   // Helper function to get CSS class based on column type
   const getColumnHeaderClass = (column: Column<T>) => {
     switch (column.type) {
-      case 'actions': return 'dt-v2-col-actions'
+      case 'actions': return 'data-table-col-actions'
       default: return '' // Use inline Tailwind classes instead
     }
   }
 
   const getColumnCellClass = (column: Column<T>) => {
     switch (column.type) {
-      case 'actions': return 'dt-v2-cell-actions'
+      case 'actions': return 'data-table-cell-actions'
       default: return '' // Use inline Tailwind classes instead
     }
   }
@@ -178,16 +178,16 @@ export function TableContent<T extends Record<string, any>>({
 
 
   return (
-    <div className="w-full overflow-x-auto rounded-lg" style={stickyVars}>
-      <Table className="min-w-[1800px] relative">
-        <TableHeader className="bg-muted sticky top-0 z-40">
+    <div className="data-table-scroll-area" style={stickyVars}>
+      <Table className="data-table-table">
+        <TableHeader className="data-table-header">
           <TableRow>
             {/* Combined checkbox + first column */}
             {(checkboxColumn || pinnedColumns.length > 0) && (
               <TableHead className="sticky left-0 z-40 bg-muted w-[var(--combined-left-col)] min-w-[var(--combined-left-col)]">
                 <div className="flex items-center gap-2">
                   {checkboxColumn && (
-                    <div className="flex-shrink-0">
+                    <div className="flex-shrink-0 px-4">
                       <Checkbox
                         checked={allSelected}
                         onCheckedChange={handleSelectAll}
@@ -217,7 +217,7 @@ export function TableContent<T extends Record<string, any>>({
 
             {/* Actions column */}
             {actionsColumn && (
-              <TableHead className="dt-v2-col-actions">
+              <TableHead className="data-table-col-actions">
                 Actions
               </TableHead>
             )}
@@ -229,7 +229,6 @@ export function TableContent<T extends Record<string, any>>({
             data.map((row: T, index: number) => (
               <TableRow
                 key={index}
-                className="dt-v2-row"
                 data-state={isRowSelected(row) ? 'selected' : undefined}
               >
                 {/* Combined checkbox + first column cell */}
@@ -237,7 +236,7 @@ export function TableContent<T extends Record<string, any>>({
                   <TableCell className="sticky left-0 z-30 bg-background w-[var(--combined-left-col)] min-w-[var(--combined-left-col)]">
                     <div className="flex items-center gap-2">
                       {checkboxColumn && (
-                        <div className="flex-shrink-0">
+                        <div className="flex-shrink-0 px-4">
                           <Checkbox
                             checked={isRowSelected(row)}
                             onCheckedChange={(checked) => handleRowSelect(row, checked as boolean)}
@@ -267,7 +266,7 @@ export function TableContent<T extends Record<string, any>>({
 
                 {/* Actions cell */}
                 {actionsColumn && (
-                  <TableCell className="dt-v2-cell-actions">
+                  <TableCell className="data-table-cell-actions">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon">

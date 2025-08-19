@@ -80,7 +80,3 @@ export const columns = {
 
 // Default export for convenience
 export default columns
-
-// Legacy compatibility - for gradual migration from old builder
-export const createColumn = columns
-export { createColumn as Column }
