@@ -1,5 +1,5 @@
 import { Badge as OriginalBadge } from '@/components/ui/badge'
-import { extendWithVariants, type VariantConfig } from './variant-extension'
+import { extendWithVariants, type VariantConfig } from '@/lib/ui-variant-extender'
 
 // Semantic variant configuration for badges (more subtle colors)
 const semanticVariantConfig: VariantConfig = {
