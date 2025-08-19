@@ -69,10 +69,9 @@ export class ColumnBuilder<TData extends Record<string, any>, TValue = unknown> 
   static badge<TData extends Record<string, any>>(key: string): ColumnBuilder<TData, string> {
     const builder = new ColumnBuilder<TData, string>(key)
     builder.column.type = 'scrollable'
+    // Store the original cell renderer so align() can wrap it properly
     builder.column.cell = (value: any) => (
-      <div className="text-left">
-        <Badge variant="secondary">{value || 0}</Badge>
-      </div>
+      <Badge variant="secondary">{value || 0}</Badge>
     )
     return builder
   }
@@ -146,6 +145,9 @@ export class ColumnBuilder<TData extends Record<string, any>, TValue = unknown> 
   }
 
   align(position: "left" | "center" | "right" = "left"): this {
+    // Store alignment preference for later use
+    this.column.alignment = position
+    
     const originalCell = this.column.cell
     this.column.cell = originalCell ? 
       (value: any, row: any, index: any) => <div className={`text-${position}`}>{originalCell(value, row, index)}</div> :
@@ -161,15 +163,17 @@ export class ColumnBuilder<TData extends Record<string, any>, TValue = unknown> 
   truncate(maxChars = 15): this {
     const originalCell = this.column.cell
     const cellStyle = { maxWidth: `${maxChars}ch` }
+    const alignment = this.column.alignment ? `text-${this.column.alignment}` : ''
+    const classes = `text-muted-foreground truncate ${alignment}`.trim()
 
     this.column.cell = originalCell
       ? (value: any, row: any, index: any) => (
-          <div className="text-muted-foreground truncate" style={cellStyle}>
+          <div className={classes} style={cellStyle}>
             {originalCell(value, row, index) || 'No description'}
           </div>
         )
       : (value: any) => (
-          <div className="text-muted-foreground truncate" style={cellStyle}>
+          <div className={classes} style={cellStyle}>
             {(value as string) || 'No description'}
           </div>
         )
@@ -183,11 +187,14 @@ export class ColumnBuilder<TData extends Record<string, any>, TValue = unknown> 
 
   withClass(className: string): this {
     const originalCell = this.column.cell
+    const alignment = this.column.alignment ? `text-${this.column.alignment}` : ''
+    const classes = `${className} ${alignment}`.trim()
+    
     this.column.cell = originalCell ?
       (value: any, row: any, index: any) => (
-        <div className={className}>{originalCell(value, row, index)}</div>
+        <div className={classes}>{originalCell(value, row, index)}</div>
       ) :
-      (value: any) => <div className={className}>{value}</div>
+      (value: any) => <div className={classes}>{value}</div>
     return this
   }
 

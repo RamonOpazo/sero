@@ -52,7 +52,7 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
         header: 'Project Name',
         pinned: true,
         sortable: true,
-        width: '250px',
+        width: '150px',
         render: (_value, row) => nameRenderer(row)
       }
     ),
@@ -121,6 +121,7 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
     columns.actions<ProjectShallowType>('actions', {
       header: 'Actions',
       width: '100px',
+      align: 'center',
       actions: [
         {
           id: 'copy',

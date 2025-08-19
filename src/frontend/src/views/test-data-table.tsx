@@ -225,9 +225,18 @@ export function TestDataTable() {
       .width('130px') // Same as hired date
       .build(),
 
+    // Test alignment - centered role
+    createColumn.text<User>('role')
+      .header('Role (Centered)')
+      .withClass('font-medium')
+      .align('center') // This should now work for both header and content
+      .width('140px')
+      .build(),
+
     // Actions column - integrated into regular column system
     createColumn.actions<User>()
       .header('Actions')
+      .align('center') // Center the actions dropdown
       .width('100px') // Custom width for actions
       .build(),
   ]

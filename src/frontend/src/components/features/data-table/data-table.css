@@ -29,10 +29,16 @@
   }
 
   .dt-v2-row {
-    @apply hover:bg-muted/50 transition-colors;
+    @apply transition-colors;
   }
 
-  .dt-v2-row[data-state="selected"] {
+  /* All header cells get background */
+  .dt-v2-header th {
+    @apply bg-muted;
+  }
+
+  /* Scrollable header columns */
+  .dt-v2-col-scrollable {
     @apply bg-muted;
   }
 
@@ -48,6 +54,7 @@
     position: sticky;
     z-index: 10;
     background: hsl(var(--muted));
+    border-right: 1px solid hsl(var(--border));
   }
 
   .dt-v2-col-actions {
@@ -55,6 +62,25 @@
     right: 0;
     z-index: 20;
     background: hsl(var(--muted));
+  }
+
+  /* All body cells get background */
+  .dt-v2-row td {
+    @apply bg-background;
+  }
+
+  /* Row hover states override cell backgrounds */
+  .dt-v2-row:hover td {
+    @apply bg-muted/50;
+  }
+
+  .dt-v2-row[data-state="selected"] td {
+    @apply bg-muted;
+  }
+
+  /* Scrollable body cells */
+  .dt-v2-cell-scrollable {
+    @apply bg-background;
   }
 
   /* Sticky body cells - widths now handled by inline styles */
@@ -68,8 +94,8 @@
   .dt-v2-cell-pinned-first {
     position: sticky;
     z-index: 10;
-    font-weight: 500;
     background: hsl(var(--background));
+    border-right: 1px solid hsl(var(--border));
   }
 
   .dt-v2-cell-actions {
@@ -77,6 +103,19 @@
     right: 0;
     z-index: 10;
     background: hsl(var(--background));
+  }
+
+  /* Special overrides for sticky cells in different states */
+  .dt-v2-row:hover .dt-v2-cell-checkbox,
+  .dt-v2-row:hover .dt-v2-cell-pinned-first,
+  .dt-v2-row:hover .dt-v2-cell-actions {
+    background: hsl(var(--muted) / 0.5);
+  }
+
+  .dt-v2-row[data-state="selected"] .dt-v2-cell-checkbox,
+  .dt-v2-row[data-state="selected"] .dt-v2-cell-pinned-first,
+  .dt-v2-row[data-state="selected"] .dt-v2-cell-actions {
+    background: hsl(var(--muted));
   }
 
   /* Toolbar styling */

@@ -21,6 +21,7 @@ export interface Column<T = any> {
   sortable?: boolean
   width?: string | number
   minWidth?: string | number
+  alignment?: 'left' | 'center' | 'right'
 }
 
 export interface DataTableProps<T = any> {

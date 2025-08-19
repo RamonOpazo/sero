@@ -42,27 +42,30 @@ export function TableContent<T extends Record<string, any>>({
   const getCellValue = (row: T, column: Column<T>) => {
     // Handle actions columns by rendering the actions dropdown
     if (column.type === 'actions') {
+      const alignmentClass = column.alignment ? `text-${column.alignment}` : 'text-center'
       return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon">
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            {actions.map((action: any) => (
-              <DropdownMenuItem
-                key={action.value}
-                onClick={() => onRowAction?.(action.value, row)}
-                className={action.variant === 'destructive' ? 'text-red-600' : ''}
-              >
-                {action.label}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className={alignmentClass}>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {actions.map((action: any) => (
+                <DropdownMenuItem
+                  key={action.value}
+                  onClick={() => onRowAction?.(action.value, row)}
+                  className={action.variant === 'destructive' ? 'text-red-600' : ''}
+                >
+                  {action.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       )
     }
     
