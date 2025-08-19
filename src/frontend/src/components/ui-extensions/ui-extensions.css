@@ -3,96 +3,17 @@
  * Variables defined in src/index.css
  */
 
-/* Grid container - override flex with grid */
-div.group\/sidebar-wrapper.uix-sidebar-grid-provider,
-div.uix-sidebar-grid-provider[data-slot="sidebar-wrapper"],
-div.uix-sidebar-grid-provider.flex,
-div.uix-sidebar-grid-provider {
+.uix-sidebar-grid-provider {
   display: grid;
   grid-template-columns: var(--uix-grid-sidebar-cols);
 }
 
-/* Even higher specificity for flex classes */
-div.flex.uix-sidebar-grid-provider.group\/sidebar-wrapper,
-div.flex.uix-sidebar-grid-provider[data-slot="sidebar-wrapper"] {
-  display: grid;
-  grid-template-columns: var(--uix-grid-sidebar-cols);
-}
-
-/* Collapsed state */
-div.group\/sidebar-wrapper.uix-sidebar-grid-provider[data-state="collapsed"],
-div.uix-sidebar-grid-provider[data-slot="sidebar-wrapper"][data-state="collapsed"] {
+.uix-sidebar-grid-provider[data-state="collapsed"] {
   grid-template-columns: var(--uix-grid-sidebar-cols-collapsed);
 }
 
 @media (max-width: 768px) {
-  div.group\/sidebar-wrapper.uix-sidebar-grid-provider,
-  div.uix-sidebar-grid-provider[data-slot="sidebar-wrapper"] {
+  .uix-sidebar-grid-provider {
     grid-template-columns: var(--uix-grid-sidebar-cols-mobile);
-  }
-}
-
-/* Sidebar grid child */
-div.uix-sidebar-grid-provider > div.uix-sidebar-grid-child {
-  height: 100vh;
-  grid-column: 1 / 2 !important;
-  grid-row: 1 !important;
-}
-
-div.uix-sidebar-grid-provider > div.uix-sidebar-grid-child[data-slot="sidebar"] {
-  display: block;
-}
-
-/* Remove sidebar gap spacer */
-div.uix-sidebar-grid-provider div.uix-sidebar-grid-child > [data-slot="sidebar-gap"] {
-  display: none;
-}
-
-/* Override fixed positioning */
-div.uix-sidebar-grid-provider div.uix-sidebar-grid-child > [data-slot="sidebar-container"] {
-  position: static !important;
-  z-index: auto !important;
-  transform: none !important;
-  width: 100%;
-  height: 100vh;
-  display: flex;
-  overflow: hidden;
-}
-
-/* Constrain sidebar content */
-div.uix-sidebar-grid-provider div.uix-sidebar-grid-child * {
-  max-width: 100%;
-  box-sizing: border-box;
-}
-
-div.uix-sidebar-grid-provider div.uix-sidebar-grid-child [data-sidebar="header"],
-div.uix-sidebar-grid-provider div.uix-sidebar-grid-child [data-sidebar="content"],
-div.uix-sidebar-grid-provider div.uix-sidebar-grid-child [data-sidebar="footer"],
-div.uix-sidebar-grid-provider div.uix-sidebar-grid-child [data-sidebar="menu"],
-div.uix-sidebar-grid-provider div.uix-sidebar-grid-child [data-sidebar="menu-item"],
-div.uix-sidebar-grid-provider div.uix-sidebar-grid-child [data-sidebar="menu-button"] {
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
-}
-
-/* Main content inset */
-main.uix-sidebar-grid-inset,
-.uix-sidebar-grid-inset {
-  min-height: 100vh;
-  overflow: auto;
-  grid-column: 2 / 3 !important;
-  grid-row: 1 !important;
-}
-
-/* Mobile state */
-@media (max-width: 768px) {
-  .uix-sidebar-grid-provider .uix-sidebar-grid-child {
-    display: none !important;
-  }
-  
-  .uix-sidebar-grid-provider .uix-sidebar-grid-inset {
-    grid-column: 1 / -1 !important;
   }
 }
