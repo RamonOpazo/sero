@@ -4,7 +4,7 @@ import { WorkspaceProvider } from '@/providers/workspace-provider';
 import { ThemeToggle } from '@/components/shared';
 import { Separator } from '@/components/ui/separator';
 import { Breadcrumbs } from './navigation';
-import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
+import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui-extensions/sidebar';
 import { AppSidebar } from './sidebar';
 
 interface LayoutProps {
@@ -14,9 +14,9 @@ interface LayoutProps {
 export function MainLayout({ children }: LayoutProps) {
   return (
     <WorkspaceProvider>
-    <SidebarProvider>
-      <AppSidebar />
-      <SidebarInset>
+    <SidebarProvider layout="grid">
+      <AppSidebar layout="grid" />
+      <SidebarInset layout="grid">
         <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
           <div className="flex w-full items-center gap-2 px-4">
             <SidebarTrigger className="-ml-1" />

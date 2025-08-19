@@ -1,62 +1,192 @@
 /**
- * UI Extensions Styles
+ * ========================================
+ * 🎨 UIX Extensions - UI Component Styles
+ * ========================================
  * 
- * Custom styles for extended shadcn/ui components with semantic color variants.
- * Uses CSS custom properties for consistent theming and easy customization.
+ * Custom styles for extended shadcn/ui components with semantic color variants
+ * and grid-based sidebar layout that bypasses the original sidebar's complex 
+ * positioning for clean CSS Grid.
+ * 
+ * Variables are defined in src/index.css to avoid Tailwind theme conflicts.
  */
 
-@theme inline {
-  /* UIX semantic color variants */
-  --uix-info-bg: oklch(0.97 0.013 242.5);
-  --uix-info-text: oklch(0.375 0.128 244.8);
-  --uix-info-border: oklch(0.906 0.033 242.2);
-  
-  --uix-success-bg: oklch(0.97 0.013 156.87);
-  --uix-success-text: oklch(0.375 0.128 155.6);
-  --uix-success-border: oklch(0.906 0.033 155.87);
-  
-  --uix-warning-bg: oklch(0.97 0.013 78.74);
-  --uix-warning-text: oklch(0.575 0.128 78.2);
-  --uix-warning-border: oklch(0.906 0.033 78.74);
-  
-  --uix-danger-bg: oklch(0.97 0.013 22.216);
-  --uix-danger-text: oklch(0.575 0.191 22.216);
-  --uix-danger-border: oklch(0.906 0.033 22.216);
-  
-  --uix-neutral-bg: var(--muted);
-  --uix-neutral-text: var(--muted-foreground);
-  --uix-neutral-border: var(--border);
+/* ========================================
+ * Grid Container
+ * ========================================
+ */
+
+/* Grid layout overrides for sidebar components */
+/* High specificity selectors to override default flex layout */
+div.group\/sidebar-wrapper.uix-sidebar-grid-provider,
+div.uix-sidebar-grid-provider[data-slot="sidebar-wrapper"],
+div.uix-sidebar-grid-provider.flex,
+div.uix-sidebar-grid-provider {
+  display: grid;
+  grid-template-columns: var(--uix-grid-sidebar-cols);
+  /* Remove flex properties */
+  flex-direction: unset;
+  flex: none;
+  flex-wrap: unset;
+  align-items: unset;
+  justify-content: unset;
 }
 
-.dark {
-  /* Dark theme overrides */
-  --uix-info-bg: oklch(0.205 0.033 242.2);
-  --uix-info-text: oklch(0.75 0.098 242.5);
-  --uix-info-border: oklch(0.305 0.045 242.2);
-  
-  --uix-success-bg: oklch(0.205 0.033 155.87);
-  --uix-success-text: oklch(0.75 0.098 155.6);
-  --uix-success-border: oklch(0.305 0.045 155.87);
-  
-  --uix-warning-bg: oklch(0.205 0.033 78.74);
-  --uix-warning-text: oklch(0.85 0.098 78.2);
-  --uix-warning-border: oklch(0.305 0.045 78.74);
-  
-  --uix-danger-bg: oklch(0.205 0.033 22.216);
-  --uix-danger-text: oklch(0.85 0.151 22.216);
-  --uix-danger-border: oklch(0.305 0.045 22.216);
+/* Even higher specificity for flex classes */
+div.flex.uix-sidebar-grid-provider.group\/sidebar-wrapper,
+div.flex.uix-sidebar-grid-provider[data-slot="sidebar-wrapper"] {
+  display: grid;
+  grid-template-columns: var(--uix-grid-sidebar-cols);
 }
 
-/* Grid layout variables for sidebar variants */
-@theme inline {
-  --uix-sidebar-width: 16rem;
-  --uix-sidebar-width-icon: 3rem;
-  --uix-sidebar-width-mobile: 0;
+/* Collapsed state */
+div.group\/sidebar-wrapper.uix-sidebar-grid-provider[data-state="collapsed"],
+div.uix-sidebar-grid-provider[data-slot="sidebar-wrapper"][data-state="collapsed"] {
+  grid-template-columns: var(--uix-grid-sidebar-cols-collapsed);
 }
 
-:root {
-  /* Grid layout sidebar variables */
-  --uix-grid-sidebar-cols: var(--uix-sidebar-width) 1fr;
-  --uix-grid-sidebar-cols-collapsed: var(--uix-sidebar-width-icon) 1fr;
-  --uix-grid-sidebar-cols-mobile: var(--uix-sidebar-width-mobile) 1fr;
+@media (max-width: 768px) {
+  div.group\/sidebar-wrapper.uix-sidebar-grid-provider,
+  div.uix-sidebar-grid-provider[data-slot="sidebar-wrapper"] {
+    grid-template-columns: var(--uix-grid-sidebar-cols-mobile);
+  }
+}
+
+/* ========================================
+ * Sidebar Grid Child (Left Column)
+ * ========================================
+ */
+
+/* Override the complex nested sidebar structure when in grid layout */
+/* Use high specificity to override component styles */
+div.uix-sidebar-grid-provider > div.uix-sidebar-grid-child {
+  /* Set explicit sidebar width using CSS variables */
+  position: relative;
+  display: block;
+  width: var(--uix-sidebar-width);
+  max-width: var(--uix-sidebar-width);
+  min-width: var(--uix-sidebar-width);
+  height: 100vh;
+  /* Grid positioning - these might need !important if overridden */
+  grid-column: 1 / 2 !important;
+  grid-row: 1 !important;
+  /* Layout properties */
+  box-sizing: border-box;
+  contain: layout size;
+  left: 0;
+  top: 0;
+  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.uix-sidebar-grid-provider .uix-sidebar-grid-child[data-slot="sidebar"] {
+  /* Override the 'hidden md:block' classes */
+  display: block !important;
+}
+
+.uix-sidebar-grid-provider .uix-sidebar-grid-child [data-slot="sidebar-gap"] {
+  /* Completely remove the spacer div from layout */
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.uix-sidebar-grid-provider .uix-sidebar-grid-child [data-slot="sidebar-container"] {
+  /* Override the fixed positioned inner container */
+  position: static !important;
+  z-index: auto !important;
+  inset: auto !important;
+  left: auto !important;
+  right: auto !important;
+  top: auto !important;
+  bottom: auto !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  height: 100vh !important;
+  display: flex !important;
+  transform: none !important;
+  overflow: hidden !important;
+}
+
+/* Force all nested sidebar content to respect width constraints */
+.uix-sidebar-grid-provider .uix-sidebar-grid-child * {
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.uix-sidebar-grid-provider .uix-sidebar-grid-child [data-sidebar="header"],
+.uix-sidebar-grid-provider .uix-sidebar-grid-child [data-sidebar="content"],
+.uix-sidebar-grid-provider .uix-sidebar-grid-child [data-sidebar="footer"],
+.uix-sidebar-grid-provider .uix-sidebar-grid-child [data-sidebar="menu"],
+.uix-sidebar-grid-provider .uix-sidebar-grid-child [data-sidebar="menu-item"],
+.uix-sidebar-grid-provider .uix-sidebar-grid-child [data-sidebar="menu-button"] {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+}
+
+/* ========================================
+ * Main Content Inset (Right Column)
+ * ========================================
+ */
+
+/* Use high specificity for main content inset */
+main.uix-sidebar-grid-inset,
+.uix-sidebar-grid-inset {
+  /* Set explicit calculated width: viewport width minus sidebar width */
+  position: relative;
+  width: calc(100vw - var(--uix-sidebar-width));
+  max-width: calc(100vw - var(--uix-sidebar-width));
+  min-width: calc(100vw - var(--uix-sidebar-width));
+  min-height: 100vh;
+  overflow: auto;
+  /* Grid positioning - keep !important for these as they're critical */
+  grid-column: 2 / 3 !important;
+  grid-row: 1 !important;
+  /* Layout properties */
+  box-sizing: border-box;
+  left: 0;
+  top: 0;
+}
+
+/* ========================================
+ * State Handling
+ * ========================================
+ */
+
+/* Collapsed state - use higher specificity */
+div.uix-sidebar-grid-provider[data-state="collapsed"] > div.uix-sidebar-grid-child {
+  width: var(--uix-sidebar-width-icon);
+  max-width: var(--uix-sidebar-width-icon);
+  min-width: var(--uix-sidebar-width-icon);
+}
+
+div.uix-sidebar-grid-provider[data-state="collapsed"] .uix-sidebar-grid-child [data-slot="sidebar-container"] {
+  width: 100%;
+}
+
+/* Collapsed main content */
+main.uix-sidebar-grid-provider[data-state="collapsed"] .uix-sidebar-grid-inset,
+.uix-sidebar-grid-provider[data-state="collapsed"] main.uix-sidebar-grid-inset,
+.uix-sidebar-grid-provider[data-state="collapsed"] .uix-sidebar-grid-inset {
+  width: calc(100vw - var(--uix-sidebar-width-icon));
+  max-width: calc(100vw - var(--uix-sidebar-width-icon));
+  min-width: calc(100vw - var(--uix-sidebar-width-icon));
+}
+
+/* Mobile state */
+@media (max-width: 768px) {
+  .uix-sidebar-grid-provider .uix-sidebar-grid-child {
+    display: none !important;
+  }
+  
+  .uix-sidebar-grid-provider .uix-sidebar-grid-inset {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    min-width: 100vw !important;
+    grid-column: 1 / -1 !important;
+  }
 }

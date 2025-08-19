@@ -17,6 +17,15 @@ export type VariantConfig = {
     /** CSS class to apply when conditions are met */
     className: string
   }>
+  /** Function overrides that apply when specific variant conditions are met */
+  functionOverrides?: Array<{
+    /** Conditions that must be met for this function override to apply */
+    conditions: Record<string, string>
+    /** Function name to override */
+    functionName: string
+    /** Replacement function */
+    override: (...args: any[]) => any
+  }>
 }
 
 /**
@@ -38,5 +47,16 @@ export type TypedVariantConfig<TVariants extends Record<string, Record<string, s
     }
     /** CSS class to apply when conditions are met */
     className: string
+  }>
+  /** Function overrides that apply when specific variant conditions are met */
+  functionOverrides?: Array<{
+    /** Conditions that must be met for this function override to apply */
+    conditions: {
+      [K in keyof TVariants]?: keyof TVariants[K]
+    }
+    /** Function name to override */
+    functionName: string
+    /** Replacement function */
+    override: (...args: any[]) => any
   }>
 }

@@ -1,50 +1,122 @@
+import React from 'react'
 import { 
   SidebarProvider as OriginalSidebarProvider,
   Sidebar as OriginalSidebar,
-  SidebarInset as OriginalSidebarInset
+  SidebarInset as OriginalSidebarInset,
+  useSidebar as originalUseSidebar
 } from '@/components/ui/sidebar'
-import { extendWithVariants, type VariantConfig } from '@/lib/ui-variant-extender'
+import { cn } from '@/lib/utils'
 import './ui-extensions.css'
 
-// Grid-based SidebarProvider variant that fixes width calculations
-const sidebarProviderVariantConfig: VariantConfig = {
-  variants: {
-    layout: {
-      // CSS Grid layout that fixes sticky positioning issues
-      grid: 'grid min-h-svh w-full transition-all duration-200 ease-linear grid-cols-[var(--uix-grid-sidebar-cols)] data-[state=collapsed]:grid-cols-[var(--uix-grid-sidebar-cols-collapsed)] max-md:grid-cols-[var(--uix-grid-sidebar-cols-mobile)]'
+// Create a context to override the layout variant behavior
+const SidebarLayoutContext = React.createContext<{ layout?: string }>({ layout: undefined })
+
+// Custom useSidebar hook that can be overridden based on layout
+export function useSidebar() {
+  const { layout } = React.useContext(SidebarLayoutContext)
+  const originalContext = originalUseSidebar()
+  
+  if (layout === 'grid') {
+    // For grid layout, we might need to override some behaviors
+    // For now, return the original context but we could customize it
+    return {
+      ...originalContext,
+      // Override specific behaviors for grid layout if needed
+      // For example, different toggle behavior, etc.
     }
   }
-  // No defaultVariants needed - 'default' is auto-created and preserves original behavior
+  
+  return originalContext
 }
 
-// Grid-based Sidebar variant that uses static positioning instead of fixed
-const sidebarVariantConfig: VariantConfig = {
-  variants: {
-    layout: {
-      // Static positioning for grid layout (fixes width calculations)
-      grid: 'sticky top-0 h-screen w-full hidden md:flex'
-    }
+// Grid-specific SidebarProvider - use original but with grid classes and layout context
+function GridSidebarProvider(props: React.ComponentProps<typeof OriginalSidebarProvider>) {
+  const { className, ...restProps } = props
+  
+  return (
+    <SidebarLayoutContext.Provider value={{ layout: 'grid' }}>
+      <OriginalSidebarProvider 
+        className={cn(
+          'uix-sidebar-grid-provider',
+          // Force grid layout with !important via CSS
+          className
+        )}
+        {...restProps}
+      />
+    </SidebarLayoutContext.Provider>
+  )
+}
+
+// Grid-specific Sidebar that bypasses the complex structure
+function GridSidebar(props: React.ComponentProps<typeof OriginalSidebar>) {
+  const { className, children, ...restProps } = props
+  
+  return (
+    <div 
+      className={cn(
+        'uix-sidebar-grid-child',
+        'bg-sidebar text-sidebar-foreground',
+        'flex flex-col h-screen overflow-hidden',
+        className
+      )}
+      data-slot="sidebar"
+      {...restProps}
+    >
+      {children}
+    </div>
+  )
+}
+
+// Grid-specific SidebarInset
+function GridSidebarInset(props: React.ComponentProps<typeof OriginalSidebarInset>) {
+  const { className, children, ...restProps } = props
+  
+  return (
+    <main
+      className={cn(
+        'uix-sidebar-grid-inset',
+        'bg-background relative flex w-full h-full flex-col overflow-hidden',
+        className
+      )}
+      data-slot="sidebar-inset"
+      {...restProps}
+    >
+      {children}
+    </main>
+  )
+}
+
+// Smart components that choose the right implementation based on layout
+function SmartSidebarProvider(props: any) {
+  const { layout, ...restProps } = props
+  if (layout === 'grid') {
+    return <GridSidebarProvider {...restProps} />
   }
-  // No defaultVariants needed - 'default' is auto-created and preserves original behavior
+  return <OriginalSidebarProvider {...restProps} />
 }
 
-// Grid-based SidebarInset variant that doesn't need complex peer calculations
-const sidebarInsetVariantConfig: VariantConfig = {
-  variants: {
-    layout: {
-      // Simple layout for grid containers (auto width handling)
-      grid: 'bg-background relative flex w-full h-full flex-col overflow-hidden'
-    }
+function SmartSidebar(props: any) {
+  const { layout, ...restProps } = props
+  if (layout === 'grid') {
+    return <GridSidebar {...restProps} />
   }
-  // No defaultVariants needed - 'default' is auto-created and preserves original behavior
+  return <OriginalSidebar {...restProps} />
 }
 
-// Extended components with layout variants
-export const SidebarProvider = extendWithVariants(OriginalSidebarProvider, sidebarProviderVariantConfig)
-export const Sidebar = extendWithVariants(OriginalSidebar, sidebarVariantConfig)
-export const SidebarInset = extendWithVariants(OriginalSidebarInset, sidebarInsetVariantConfig)
+function SmartSidebarInset(props: any) {
+  const { layout, ...restProps } = props
+  if (layout === 'grid') {
+    return <GridSidebarInset {...restProps} />
+  }
+  return <OriginalSidebarInset {...restProps} />
+}
 
-// Re-export all other sidebar components unchanged
+// Export the smart components
+export const SidebarProvider = SmartSidebarProvider
+export const Sidebar = SmartSidebar  
+export const SidebarInset = SmartSidebarInset
+
+// Re-export all other sidebar components unchanged (except useSidebar which we override)
 export {
   SidebarTrigger,
   SidebarRail,
@@ -65,6 +137,8 @@ export {
   SidebarMenuSkeleton,
   SidebarMenuSub,
   SidebarMenuSubButton,
-  SidebarMenuSubItem,
-  useSidebar
+  SidebarMenuSubItem
 } from '@/components/ui/sidebar'
+
+// Export our custom useSidebar hook
+// (already exported above as a named export)

@@ -44,60 +44,68 @@ export function extendWithVariants<
       }
     })
   }
-  type VariantProps = {
-    [K in keyof TVariants]?: keyof TVariants[K]
-  }
   
-  type ExtendedProps = TProps & VariantProps & {
-    className?: string
-  }
-
-  const ExtendedComponent = React.forwardRef<any, ExtendedProps>(
-    ({ className, ...props }, ref) => {
-      // Extract variant props
-      const variantProps: Record<string, string> = {}
-      const componentProps: Record<string, any> = {}
-      
-      Object.entries(props).forEach(([key, value]) => {
-        if (key in processedConfig.variants) {
-          variantProps[key] = value as string
-        } else {
-          componentProps[key] = value
-        }
+  const ExtendedComponent = (props: any) => {
+    const { className, ...restProps } = props
+    // Extract variant props
+    const variantProps: Record<string, string> = {}
+    const componentProps: Record<string, any> = {}
+    
+    Object.entries(restProps).forEach(([key, value]) => {
+      if (key in processedConfig.variants) {
+        variantProps[key] = value as string
+      } else {
+        componentProps[key] = value
+      }
+    })
+    
+    // Build base variant classes (handle undefined values)
+    const variantClasses = Object.entries(processedConfig.variants)
+      .map(([variantKey, variantOptions]) => {
+        const selectedVariant = variantProps[variantKey] || processedConfig.defaultVariants?.[variantKey]
+        if (!selectedVariant) return ''
+        
+        const className = variantOptions[selectedVariant as string]
+        // Return empty string for undefined values (preserves original styling)
+        return className ?? ''
+      })
+      .filter(Boolean)
+    
+    // Apply compound variants
+    const compoundClasses = processedConfig.compoundVariants?.filter(compound => {
+      return Object.entries(compound.conditions).every(([key, value]) => {
+        const currentValue = variantProps[key] || processedConfig.defaultVariants?.[key]
+        return currentValue === value
+      })
+    }).map(compound => compound.className) || []
+    
+    // Apply function overrides based on variant conditions
+    const functionOverrides: Record<string, (...args: any[]) => any> = {}
+    processedConfig.functionOverrides?.forEach(override => {
+      const conditionsMet = Object.entries(override.conditions).every(([key, value]) => {
+        const currentValue = variantProps[key] || processedConfig.defaultVariants?.[key]
+        return currentValue === value
       })
       
-      // Build base variant classes (handle undefined values)
-      const variantClasses = Object.entries(processedConfig.variants)
-        .map(([variantKey, variantOptions]) => {
-          const selectedVariant = variantProps[variantKey] || processedConfig.defaultVariants?.[variantKey]
-          if (!selectedVariant) return ''
-          
-          const className = variantOptions[selectedVariant as string]
-          // Return empty string for undefined values (preserves original styling)
-          return className ?? ''
-        })
-        .filter(Boolean)
-      
-      // Apply compound variants
-      const compoundClasses = processedConfig.compoundVariants?.filter(compound => {
-        return Object.entries(compound.conditions).every(([key, value]) => {
-          const currentValue = variantProps[key] || processedConfig.defaultVariants?.[key]
-          return currentValue === value
-        })
-      }).map(compound => compound.className) || []
-      
-      // Combine all classes
-      const combinedClassName = cn(...variantClasses, ...compoundClasses, className)
-      
-      return (
-        <Component
-          ref={ref}
-          className={combinedClassName}
-          {...(componentProps as TProps)}
-        />
-      )
-    }
-  )
+      if (conditionsMet) {
+        functionOverrides[override.functionName] = override.override
+      }
+    })
+    
+    // Combine all classes
+    const combinedClassName = cn(...variantClasses, ...compoundClasses, className)
+    
+    // Prepare component props with className and function overrides
+    const finalProps = {
+      ...componentProps,
+      ...functionOverrides, // Add function overrides as props
+      className: combinedClassName
+    } as unknown as TProps
+    
+    return (
+      <Component {...finalProps} />
+    )
+  }
   
   ExtendedComponent.displayName = `Extended${Component.displayName || Component.name || 'Component'}`
   

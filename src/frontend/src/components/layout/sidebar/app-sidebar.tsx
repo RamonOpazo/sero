@@ -20,7 +20,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@/components/ui/sidebar"
+} from "@/components/ui-extensions/sidebar"
 
 // Helper to determine if we're in development mode
 const isDev = (typeof window !== 'undefined' && window.location.hostname === 'localhost') || 
