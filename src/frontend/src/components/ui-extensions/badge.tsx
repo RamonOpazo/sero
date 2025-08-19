@@ -1,15 +1,16 @@
 import { Badge as OriginalBadge } from '@/components/ui/badge'
 import { extendWithVariants, type VariantConfig } from '@/lib/ui-variant-extender'
+import './ui-extensions.css'
 
-// Semantic variant configuration for badges (more subtle colors)
+// Semantic variant configuration for badges using UIX custom properties
 const semanticVariantConfig: VariantConfig = {
   variants: {
     semantic: {
-      warning: 'bg-yellow-50 text-yellow-800 border-yellow-100',
-      info: 'bg-blue-50 text-blue-800 border-blue-100',
-      success: 'bg-green-50 text-green-800 border-green-100',
-      danger: 'bg-red-50 text-red-800 border-red-100',
-      neutral: 'bg-muted text-muted-foreground border-border'
+      warning: 'bg-[hsl(var(--uix-warning-bg))] text-[hsl(var(--uix-warning-text))] border-[hsl(var(--uix-warning-border))]',
+      info: 'bg-[hsl(var(--uix-info-bg))] text-[hsl(var(--uix-info-text))] border-[hsl(var(--uix-info-border))]',
+      success: 'bg-[hsl(var(--uix-success-bg))] text-[hsl(var(--uix-success-text))] border-[hsl(var(--uix-success-border))]',
+      danger: 'bg-[hsl(var(--uix-danger-bg))] text-[hsl(var(--uix-danger-text))] border-[hsl(var(--uix-danger-border))]',
+      neutral: 'bg-[hsl(var(--uix-neutral-bg))] text-[hsl(var(--uix-neutral-text))] border-[hsl(var(--uix-neutral-border))]'
     }
   },
   defaultVariants: {
