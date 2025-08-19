@@ -224,6 +224,12 @@ export function TestDataTable() {
       .header('Last Login')
       .width('130px') // Same as hired date
       .build(),
+
+    // Actions column - integrated into regular column system
+    createColumn.actions<User>()
+      .header('Actions')
+      .width('100px') // Custom width for actions
+      .build(),
   ]
 
   // Filter data based on search and role filter
@@ -369,6 +375,7 @@ export function TestDataTable() {
               <li>• Location: 160px</li>
               <li>• Phone: 150px + min 120px</li>
               <li>• Dates: 130px each</li>
+              <li>• Actions: 100px (column)</li>
             </ul>
           </div>
         </div>

@@ -7,6 +7,9 @@ export * from './factories'
 // Re-export all renderers
 export * from './renderers'
 
+// Re-export adapter functions
+export * from './adapter'
+
 // Re-export all presets
 export * from './presets'
 

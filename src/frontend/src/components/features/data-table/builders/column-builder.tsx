@@ -96,6 +96,12 @@ export class ColumnBuilder<TData extends Record<string, any>, TValue = unknown> 
     return builder
   }
 
+  static actions<TData extends Record<string, any>>(): ColumnBuilder<TData, never> {
+    const builder = new ColumnBuilder<TData, never>('actions')
+    builder.column.type = 'actions'
+    return builder
+  }
+
   // Positioning modifiers - these set CSS classes
   pinned(): this {
     this.column.pinFirstColumn = true

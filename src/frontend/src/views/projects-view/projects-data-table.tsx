@@ -1,12 +1,14 @@
 import { useMemo, useCallback, useState } from 'react';
-import { Eye, Plus } from 'lucide-react';
-import { DataTable, createColumn, Actions } from '@/components/features/data-table';
+import { Eye, Plus, Copy, Edit, Trash2 } from 'lucide-react';
+import { DataTable } from '@/components/features/data-table';
+import { columns, adaptColumns } from '@/components/features/data-table/columns';
 import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { CreateProjectDialog, EditProjectDialog } from './dialogs';
 import { ConfirmationDialog } from '@/components/shared/ConfirmationDialog';
 import { useProjectsView } from './use-projects-view';
 import type { ProjectShallowType } from '@/types';
+import type { ColumnConfig } from '@/components/features/data-table/columns';
 
 interface ProjectsDataTableProps {
   onProjectSelect?: (project: ProjectShallowType) => void;
@@ -40,96 +42,124 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
     );
   }, [actionHandlers.onSelectProject]);
 
-  const columns = useMemo(() => [
-    // Name column - pinned and clickable
-    {
-      id: 'name',
-      key: 'name',
-      header: 'Project Name',
-      accessorKey: 'name',
-      cell: (_: any, row: ProjectShallowType) => nameRenderer(row),
-      enableSorting: true,
-      pinFirstColumn: true,
-    },
+  // Define columns using the new modern column system
+  const projectColumns: ColumnConfig<ProjectShallowType>[] = useMemo(() => [
+    // Project name - pinned, clickable, and custom renderer
+    columns.custom<ProjectShallowType, string>(
+      'name',
+      'name',
+      {
+        header: 'Project Name',
+        pinned: true,
+        sortable: true,
+        width: '250px',
+        render: (_value, row) => nameRenderer(row)
+      }
+    ),
     
-    // Description
-    createColumn.text<ProjectShallowType>('description')
-      .header('Description')
-      .truncate(40)
-      .width('200px')
-      .build(),
+    // Description - truncated for readability
+    columns.text<ProjectShallowType>('description', {
+      header: 'Description',
+      maxLength: 40,
+      width: '200px',
+      placeholder: 'No description'
+    }),
     
-    // Document count
-    createColumn.badge<ProjectShallowType>('document_count')
-      .header('Documents')
-      .sortable()
-      .width('120px')
-      .build(),
+    // Document count - displayed as badge
+    columns.badge<ProjectShallowType>('document_count', {
+      header: 'Documents',
+      width: '120px',
+      align: 'center',
+      sortable: true
+    }),
     
-    // Updated date
-    createColumn.date<ProjectShallowType>('updated_at')
-      .header('Last Updated')
-      .sortable()
-      .width('150px')
-      .build(),
+    // Last updated - relative date formatting
+    columns.date<ProjectShallowType>('updated_at', {
+      header: 'Last Updated',
+      width: '150px',
+      sortable: true,
+      format: { style: 'relative' }
+    }),
     
-    // Contact person
-    createColumn.text<ProjectShallowType>('contact_name')
-      .header('Contact Person')
-      .truncate(20)
-      .width('150px')
-      .build(),
+    // Contact person - truncated
+    columns.text<ProjectShallowType>('contact_name', {
+      header: 'Contact Person',
+      maxLength: 20,
+      width: '150px'
+    }),
     
-    // Version
-    {
-      id: 'version',
-      key: 'version',
-      header: 'Version',
-      accessorKey: 'version',
-      cell: (_: any, row: ProjectShallowType) => (
-        <Badge variant="outline">{row.version}</Badge>
-      ),
-      enableSorting: true,
-    },
+    // Version - custom badge renderer
+    columns.custom<ProjectShallowType, number>(
+      'version',
+      'version',
+      {
+        header: 'Version',
+        width: '100px',
+        align: 'center',
+        sortable: true,
+        render: (value) => <Badge variant="outline">v{value}</Badge>
+      }
+    ),
     
-    // Contact email
-    createColumn.text<ProjectShallowType>('contact_email')
-      .header('Email Address')
-      .truncate(25)
-      .width('180px')
-      .build(),
+    // Contact email - truncated with monospace font
+    columns.text<ProjectShallowType>('contact_email', {
+      header: 'Email Address',
+      maxLength: 25,
+      width: '180px',
+      className: 'font-mono text-sm'
+    }),
     
-    // Created date
-    createColumn.date<ProjectShallowType>('created_at')
-      .header('Created')
-      .sortable()
-      .width('150px')
-      .build(),
-  ], [nameRenderer]);
+    // Created date - relative formatting
+    columns.date<ProjectShallowType>('created_at', {
+      header: 'Created',
+      width: '150px',
+      sortable: true,
+      format: { style: 'relative' }
+    }),
+    
+    // Actions column - modern action definitions
+    columns.actions<ProjectShallowType>('actions', {
+      header: 'Actions',
+      width: '100px',
+      actions: [
+        {
+          id: 'copy',
+          label: 'Copy project ID',
+          icon: Copy,
+          onClick: (project) => {
+            navigator.clipboard.writeText(project.id)
+          }
+        },
+        {
+          id: 'select',
+          label: 'Select Project',
+          icon: Eye,
+          onClick: actionHandlers.onSelectProject
+        },
+        {
+          id: 'edit',
+          label: 'Edit project',
+          icon: Edit,
+          onClick: actionHandlers.onEditProject
+        },
+        {
+          id: 'delete',
+          label: 'Delete project',
+          icon: Trash2,
+          variant: 'destructive',
+          onClick: actionHandlers.onDeleteProject
+        }
+      ]
+    })
+  ], [nameRenderer, actionHandlers]);
+  
+  // Convert new column configs to legacy format for DataTable compatibility
+  const legacyColumns = useMemo(() => adaptColumns(projectColumns), [projectColumns]);
 
   // Paginate data
   const startIndex = pageIndex * pageSize
   const endIndex = startIndex + pageSize
   const paginatedProjects = projects.slice(startIndex, endIndex)
-
-  const tableActions = useMemo(() => Actions.create<ProjectShallowType>()
-    .copy(
-      (project) => project.id,
-      'Copy project ID'
-    )
-    .separator()
-    .custom(
-      'Select Project',
-      'select',
-      actionHandlers.onSelectProject,
-      {
-        icon: Eye,
-        variant: 'default'
-      }
-    )
-    .edit(actionHandlers.onEditProject, 'Edit project')
-    .delete(actionHandlers.onDeleteProject, 'Delete project')
-    .build(), [actionHandlers]);
 
   if (isLoading) {
     return (
@@ -167,13 +197,12 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
   return (
     <>
       <DataTable
-        columns={columns}
+        columns={legacyColumns}
         data={paginatedProjects}
         selectedRows={selectedProjects}
         onRowSelect={actionHandlers.onRowSelectionChange}
         searchPlaceholder="Search projects..."
         onAddNew={actionHandlers.onCreateProject}
-        actions={tableActions}
         showCheckboxes={true}
         showActions={true}
         pagination={{

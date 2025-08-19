@@ -40,6 +40,32 @@ export function TableContent<T extends Record<string, any>>({
 
   // Helper function to get cell value
   const getCellValue = (row: T, column: Column<T>) => {
+    // Handle actions columns by rendering the actions dropdown
+    if (column.type === 'actions') {
+      return (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {actions.map((action: any) => (
+              <DropdownMenuItem
+                key={action.value}
+                onClick={() => onRowAction?.(action.value, row)}
+                className={action.variant === 'destructive' ? 'text-red-600' : ''}
+              >
+                {action.label}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )
+    }
+    
     if (column.cell) {
       return column.cell(row[column.key], row, data.indexOf(row))
     }
@@ -80,9 +106,11 @@ export function TableContent<T extends Record<string, any>>({
   const checkboxColumn = showCheckboxes
   const pinnedColumns = columns.filter((col: Column<T>) => col.pinFirstColumn === true)
   const scrollableColumns = columns.filter((col: Column<T>) => 
-    !col.pinFirstColumn && (col.type === 'scrollable' || !col.type)
+    !col.pinFirstColumn && (col.type === 'scrollable' || col.type === 'actions' || !col.type)
   )
-  const actionsColumn = showActions
+  // Check if we have any actions columns in our column definitions
+  const hasActionsColumn = columns.some((col: Column<T>) => col.type === 'actions')
+  const actionsColumn = showActions && !hasActionsColumn // Only show legacy actions if no actions column exists
 
   // Helper function to get CSS class based on column type
   const getColumnHeaderClass = (column: Column<T>) => {
