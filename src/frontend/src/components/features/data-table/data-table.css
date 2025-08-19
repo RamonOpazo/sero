@@ -42,7 +42,7 @@
 
   /* Toolbar styling */
   .data-table-toolbar {
-    @apply flex flex-col gap-4 p-4 bg-card rounded-lg border;
+    @apply flex flex-col gap-4;
   }
 
   .data-table-toolbar-title {

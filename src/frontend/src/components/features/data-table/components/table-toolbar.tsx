@@ -5,8 +5,6 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Plus, Search, Columns3, ChevronDown } from 'lucide-react'
@@ -109,8 +107,6 @@ export function TableToolbar({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>Toggle columns</DropdownMenuLabel>
-                <DropdownMenuSeparator />
                 {columns.map((column) => (
                   <DropdownMenuCheckboxItem
                     key={column.key}
@@ -146,7 +142,7 @@ export function TableToolbar({
           ))}
           
           {onAddNew && (
-            <Button onClick={onAddNew} size="sm">
+            <Button onClick={onAddNew} variant="outline" size="sm">
               <Plus className="h-4 w-4" />
               <span className="hidden lg:inline ml-2">{addNewLabel}</span>
               <span className="lg:hidden ml-2">Add</span>

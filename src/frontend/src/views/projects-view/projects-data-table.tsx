@@ -1,5 +1,5 @@
 import { useMemo, useCallback, useState } from 'react';
-import { Eye, Plus, Copy, Edit, Trash2, Download, RefreshCw } from 'lucide-react';
+import { Eye, Plus, Copy, Edit, Trash2 } from 'lucide-react';
 import { DataTable } from '@/components/features/data-table';
 import { columns, adaptColumns } from '@/components/features/data-table/columns';
 import { Badge } from '@/components/ui/badge';
@@ -185,36 +185,8 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
     { key: 'created_at', header: 'Created' }
   ], []);
   
-  // Custom buttons for the toolbar
+  // Custom buttons for the toolbar - only bulk delete when items are selected
   const customButtons: CustomButtonOption[] = useMemo(() => [
-    {
-      label: 'Export Projects',
-      icon: Download,
-      variant: 'outline',
-      onClick: () => {
-        // Export projects as CSV
-        const csvContent = projects.map(p => 
-          `"${p.name}","${p.description || ''}",${p.document_count},"${p.contact_name || ''}","${p.contact_email || ''}"`
-        ).join('\n');
-        const header = 'Name,Description,Documents,Contact,Email\n';
-        const blob = new Blob([header + csvContent], { type: 'text/csv' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'projects.csv';
-        a.click();
-        URL.revokeObjectURL(url);
-      }
-    },
-    {
-      label: 'Refresh',
-      icon: RefreshCw,
-      variant: 'ghost',
-      onClick: () => {
-        // Trigger refresh - you might want to add this to your useProjectsView hook
-        window.location.reload();
-      }
-    },
     ...(selectedProjects.length > 0 ? [
       {
         label: `Delete ${selectedProjects.length} selected`,
@@ -223,7 +195,7 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
         onClick: () => actionHandlers.onBulkDelete()
       }
     ] : [])
-  ], [projects, selectedProjects, actionHandlers]);
+  ], [selectedProjects, actionHandlers]);
   
   // Filter projects based on search
   const filteredProjects = useMemo(() => {
@@ -314,6 +286,7 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
         searchValue={searchValue}
         onSearch={setSearchValue}
         onAddNew={actionHandlers.onCreateProject}
+        addNewLabel="Add Project"
         showCheckboxes={true}
         showActions={true}
         // Advanced search features
