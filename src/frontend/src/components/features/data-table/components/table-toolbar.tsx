@@ -9,7 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Plus, Search, Columns, ChevronDown } from 'lucide-react'
+import { Plus, Search, Columns3, ChevronDown } from 'lucide-react'
 import type { TableToolbarProps } from '../types'
 import '../data-table.css'
 
@@ -37,110 +37,122 @@ export function TableToolbar({
         </h2>
       )}
       <div className="data-table-toolbar-controls">
-        {onSearch && (
-          <div className="flex gap-2">
-            {/* Advanced Search Box */}
-            <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-              <Input
-                placeholder={searchPlaceholder}
-                value={searchValue}
-                onChange={(e) => onSearch(e.target.value)}
-                className="pl-10 data-table-search-input"
-              />
-            </div>
-            
-            {/* Search Column Selector */}
-            {searchColumns.length > 0 && (
-              <Select
-                value={selectedSearchColumn}
-                onValueChange={onSearchColumnChange}
-              >
-                <SelectTrigger className="w-[150px]">
-                  <SelectValue placeholder="Search in..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All columns</SelectItem>
-                  {searchColumns.map((column) => (
-                    <SelectItem key={column.key} value={column.key}>
-                      {column.header}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          </div>
-        )}
-        
-        {filters?.map((filter: any) => (
-          <Select
-            key={filter.key}
-            value={filter.value}
-            onValueChange={filter.onChange}
-          >
-            <SelectTrigger className="data-table-filter-select">
-              <SelectValue placeholder={filter.label} />
-            </SelectTrigger>
-            <SelectContent>
-              {filter.options.map((option: any) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        ))}
-        
-        {/* Column Visibility Selector */}
-        {columns.length > 0 && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="ml-auto">
-                <Columns className="mr-2 h-4 w-4" />
-                Columns
-                <ChevronDown className="ml-2 h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-[200px]">
-              <DropdownMenuLabel>Toggle columns</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {columns.map((column) => (
-                <DropdownMenuCheckboxItem
-                  key={column.key}
-                  className="capitalize"
-                  checked={visibleColumns.includes(column.key)}
-                  onCheckedChange={(checked) => 
-                    onColumnVisibilityChange?.(column.key, checked)
-                  }
+        {/* Left side - Search and Filters */}
+        <div className="flex items-center gap-2">
+          {onSearch && (
+            <div className="flex items-center gap-2">
+              {/* Advanced Search Box */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input
+                  placeholder={searchPlaceholder}
+                  value={searchValue}
+                  onChange={(e) => onSearch(e.target.value)}
+                  className="pl-10 w-[250px] lg:w-[300px]"
+                />
+              </div>
+              
+              {/* Search Column Selector */}
+              {searchColumns.length > 0 && (
+                <Select
+                  value={selectedSearchColumn}
+                  onValueChange={onSearchColumnChange}
                 >
-                  {column.header}
-                </DropdownMenuCheckboxItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
+                  <SelectTrigger className="w-[120px] lg:w-[150px]">
+                    <SelectValue placeholder="All" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All columns</SelectItem>
+                    {searchColumns.map((column) => (
+                      <SelectItem key={column.key} value={column.key}>
+                        {column.header}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          )}
+          
+          {/* Filters */}
+          {filters?.map((filter: any) => (
+            <Select
+              key={filter.key}
+              value={filter.value}
+              onValueChange={filter.onChange}
+            >
+              <SelectTrigger className="w-[120px] lg:w-[150px]">
+                <SelectValue placeholder={filter.label} />
+              </SelectTrigger>
+              <SelectContent>
+                {filter.options.map((option: any) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ))}
+        </div>
         
-        {/* Custom Action Buttons */}
-        {customButtons.map((button, index) => (
-          <Button
-            key={index}
-            onClick={button.onClick}
-            variant={button.variant || 'outline'}
-            size={button.size || 'default'}
-            className={button.className}
-            disabled={button.disabled}
-          >
-            {button.icon && <button.icon className="mr-2 h-4 w-4" />}
-            {button.label}
-          </Button>
-        ))}
-        
-        {onAddNew && (
-          <Button onClick={onAddNew} className="data-table-add-button">
-            <Plus className="mr-2 h-4 w-4" />
-            {addNewLabel}
-          </Button>
-        )}
+        {/* Right side - Actions */}
+        <div className="flex items-center gap-2">
+          {/* Column Visibility Selector */}
+          {columns.length > 0 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Columns3 className="h-4 w-4" />
+                  <span className="hidden lg:inline ml-2">Customize Columns</span>
+                  <span className="lg:hidden ml-2">Columns</span>
+                  <ChevronDown className="ml-2 h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>Toggle columns</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {columns.map((column) => (
+                  <DropdownMenuCheckboxItem
+                    key={column.key}
+                    className="capitalize"
+                    checked={visibleColumns.includes(column.key)}
+                    onCheckedChange={(checked) => 
+                      onColumnVisibilityChange?.(column.key, checked)
+                    }
+                  >
+                    {column.header}
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+          
+          {/* Custom Action Buttons */}
+          {customButtons.map((button, index) => (
+            <Button
+              key={index}
+              onClick={button.onClick}
+              variant={button.variant || 'outline'}
+              size="sm"
+              className={button.className}
+              disabled={button.disabled}
+            >
+              {button.icon && <button.icon className="h-4 w-4" />}
+              <span className="hidden lg:inline ml-2">{button.label}</span>
+              <span className="lg:hidden ml-2">
+                {button.label.split(' ')[0]} {/* Show first word on mobile */}
+              </span>
+            </Button>
+          ))}
+          
+          {onAddNew && (
+            <Button onClick={onAddNew} size="sm">
+              <Plus className="h-4 w-4" />
+              <span className="hidden lg:inline ml-2">{addNewLabel}</span>
+              <span className="lg:hidden ml-2">Add</span>
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   )
