@@ -34,9 +34,38 @@ export function TableContent<T extends Record<string, any>>({
   columnWidths
 }: TableContentProps<T>) {
   const [allSelected, setAllSelected] = useState(false)
+  // const [hoveredRowIndex, setHoveredRowIndex] = useState<number | null>(null)
   
   // Merge user-provided column widths with defaults
   const widthConfig = mergeColumnWidths(columnWidths)
+  
+  // Separate columns by type first (needed for width calculations)
+  const pinnedColumns = columns.filter((col: Column<T>) => col.pinFirstColumn === true)
+  
+  // CSS variables for consistent sticky positioning
+  // Calculate combined width for checkbox + first column when both are present
+  const getCombinedLeftColWidth = () => {
+    const checkboxWidth = typeof widthConfig.checkbox === 'number' ? widthConfig.checkbox : parseInt(widthConfig.checkbox.replace(/[^\d]/g, ''))
+    const pinnedWidth = typeof widthConfig.pinned === 'number' ? widthConfig.pinned : parseInt(widthConfig.pinned.replace(/[^\d]/g, ''))
+    
+    if (showCheckboxes && pinnedColumns.length > 0) {
+      return `${checkboxWidth + pinnedWidth}px`
+    } else if (showCheckboxes) {
+      return typeof widthConfig.checkbox === 'number' ? `${widthConfig.checkbox}px` : widthConfig.checkbox
+    } else if (pinnedColumns.length > 0) {
+      return typeof widthConfig.pinned === 'number' ? `${widthConfig.pinned}px` : widthConfig.pinned
+    }
+    return '0px'
+  }
+
+  const stickyVars = {
+    "--combined-left-col": getCombinedLeftColWidth(),
+    "--actions-col": typeof widthConfig.actions === 'number' ? `${widthConfig.actions}px` : widthConfig.actions,
+  } as React.CSSProperties
+
+  // Conditional sticky classes like ChatGPT's approach
+  // const pinnedHeadSticky = "sticky left-[var(--checkbox-col)] z-30 bg-muted"
+  // const pinnedCellSticky = "sticky left-[var(--checkbox-col)] z-20 bg-background"
 
   // Helper function to get cell value
   const getCellValue = (row: T, column: Column<T>) => {
@@ -105,9 +134,8 @@ export function TableContent<T extends Record<string, any>>({
 
   const isRowSelected = (row: T) => selectedRows.includes(row)
 
-  // Separate columns by type and apply CSS classes
+  // Separate columns by type and apply CSS classes  
   const checkboxColumn = showCheckboxes
-  const pinnedColumns = columns.filter((col: Column<T>) => col.pinFirstColumn === true)
   const scrollableColumns = columns.filter((col: Column<T>) => 
     !col.pinFirstColumn && (col.type === 'scrollable' || col.type === 'actions' || !col.type)
   )
@@ -157,50 +185,43 @@ export function TableContent<T extends Record<string, any>>({
   }
 
   // Helper function to get width for special columns (checkbox, actions)
-  const getSpecialColumnWidth = (type: 'checkbox' | 'actions') => {
-    const width = widthConfig[type]
-    return typeof width === 'number' ? `${width}px` : width
-  }
+  // const getSpecialColumnWidth = (type: 'checkbox' | 'actions') => {
+  //   const width = widthConfig[type]
+  //   return typeof width === 'number' ? `${width}px` : width
+  // }
 
   // Helper function to calculate left position for pinned columns
-  const getPinnedLeftPosition = () => {
-    if (!showCheckboxes) return '0px'
-    return getSpecialColumnWidth('checkbox')
-  }
+  // const getPinnedLeftPosition = () => {
+  //   if (!showCheckboxes) return '0px'
+  //   return getSpecialColumnWidth('checkbox')
+  // }
 
   return (
-    <div className="dt-v2-scroll-area">
-      <Table className="dt-v2-table">
-        <TableHeader className="dt-v2-header">
+    <div className="w-full overflow-x-auto rounded-lg" style={stickyVars}>
+      <Table className="min-w-[1800px] relative">
+        <TableHeader className="bg-muted sticky top-0 z-40">
           <TableRow>
-            {/* Checkbox column */}
-            {checkboxColumn && (
-              <TableHead 
-                className="dt-v2-col-checkbox"
-                style={{ width: getSpecialColumnWidth('checkbox'), minWidth: getSpecialColumnWidth('checkbox') }}
-              >
-                <Checkbox
-                  checked={allSelected}
-                  onCheckedChange={handleSelectAll}
-                  aria-label="Select all"
-                />
+            {/* Combined checkbox + first column */}
+            {(checkboxColumn || pinnedColumns.length > 0) && (
+              <TableHead className="sticky left-0 z-40 bg-muted w-[var(--combined-left-col)] min-w-[var(--combined-left-col)]">
+                <div className="flex items-center gap-2">
+                  {checkboxColumn && (
+                    <div className="flex-shrink-0">
+                      <Checkbox
+                        checked={allSelected}
+                        onCheckedChange={handleSelectAll}
+                        aria-label="Select all"
+                      />
+                    </div>
+                  )}
+                  {pinnedColumns.length > 0 && (
+                    <div className="flex-1 font-medium">
+                      {pinnedColumns[0]?.header || 'Name'}
+                    </div>
+                  )}
+                </div>
               </TableHead>
             )}
-
-            {/* Pinned columns */}
-            {pinnedColumns.map((column: Column<T>) => (
-              <TableHead
-                key={column.key}
-                className={getColumnHeaderClass(column)}
-                style={{ 
-                  left: getPinnedLeftPosition(),
-                  width: getColumnWidth(column), 
-                  minWidth: column.minWidth || getColumnWidth(column) 
-                }}
-              >
-                {column.header}
-              </TableHead>
-            ))}
 
             {/* Scrollable columns */}
             {scrollableColumns.map((column: Column<T>) => (
@@ -215,10 +236,7 @@ export function TableContent<T extends Record<string, any>>({
 
             {/* Actions column */}
             {actionsColumn && (
-              <TableHead 
-                className="dt-v2-col-actions"
-                style={{ width: getSpecialColumnWidth('actions'), minWidth: getSpecialColumnWidth('actions') }}
-              >
+              <TableHead className="dt-v2-col-actions">
                 Actions
               </TableHead>
             )}
@@ -232,35 +250,30 @@ export function TableContent<T extends Record<string, any>>({
                 key={index}
                 className="dt-v2-row"
                 data-state={isRowSelected(row) ? 'selected' : undefined}
+                // onMouseEnter={() => setHoveredRowIndex(index)}
+                // onMouseLeave={() => setHoveredRowIndex(null)}
               >
-                {/* Checkbox cell */}
-                {checkboxColumn && (
-                  <TableCell 
-                    className="dt-v2-cell-checkbox"
-                    style={{ width: getSpecialColumnWidth('checkbox'), minWidth: getSpecialColumnWidth('checkbox') }}
-                  >
-                    <Checkbox
-                      checked={isRowSelected(row)}
-                      onCheckedChange={(checked) => handleRowSelect(row, checked as boolean)}
-                      aria-label={`Select row ${index + 1}`}
-                    />
+                {/* Combined checkbox + first column cell */}
+                {(checkboxColumn || pinnedColumns.length > 0) && (
+                  <TableCell className="sticky left-0 z-30 bg-background w-[var(--combined-left-col)] min-w-[var(--combined-left-col)]">
+                    <div className="flex items-center gap-2">
+                      {checkboxColumn && (
+                        <div className="flex-shrink-0">
+                          <Checkbox
+                            checked={isRowSelected(row)}
+                            onCheckedChange={(checked) => handleRowSelect(row, checked as boolean)}
+                            aria-label={`Select row ${index + 1}`}
+                          />
+                        </div>
+                      )}
+                      {pinnedColumns.length > 0 && (
+                        <div className="flex-1 font-medium">
+                          {getCellValue(row, pinnedColumns[0])}
+                        </div>
+                      )}
+                    </div>
                   </TableCell>
                 )}
-
-                {/* Pinned cells */}
-                {pinnedColumns.map((column: Column<T>) => (
-                  <TableCell
-                    key={column.key}
-                    className={getColumnCellClass(column)}
-                    style={{ 
-                      left: getPinnedLeftPosition(),
-                      width: getColumnWidth(column), 
-                      minWidth: column.minWidth || getColumnWidth(column) 
-                    }}
-                  >
-                    {getCellValue(row, column)}
-                  </TableCell>
-                ))}
 
                 {/* Scrollable cells */}
                 {scrollableColumns.map((column: Column<T>) => (
@@ -275,10 +288,7 @@ export function TableContent<T extends Record<string, any>>({
 
                 {/* Actions cell */}
                 {actionsColumn && (
-                  <TableCell 
-                    className="dt-v2-cell-actions"
-                    style={{ width: getSpecialColumnWidth('actions'), minWidth: getSpecialColumnWidth('actions') }}
-                  >
+                  <TableCell className="dt-v2-cell-actions">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon">
@@ -307,8 +317,7 @@ export function TableContent<T extends Record<string, any>>({
             <TableRow>
               <TableCell
                 colSpan={
-                  (checkboxColumn ? 1 : 0) +
-                  pinnedColumns.length +
+                  ((checkboxColumn || pinnedColumns.length > 0) ? 1 : 0) +
                   scrollableColumns.length +
                   (actionsColumn ? 1 : 0)
                 }

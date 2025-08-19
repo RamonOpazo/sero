@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { DataTable, createColumn, Actions, DEFAULT_COLUMN_WIDTHS } from '@/components/features/data-table'
+import { DataTable, createColumn, Actions } from '@/components/features/data-table'
 import type { Column, ColumnWidthConfig } from '@/components/features/data-table'
 
 // Sample data interface
@@ -297,8 +297,7 @@ export function TestDataTable() {
   }
 
   return (
-    <div className="container mx-auto py-8">
-      <DataTable
+    <DataTable
         data={paginatedData}
         columns={columns}
         title="User Management"
@@ -340,55 +339,13 @@ export function TestDataTable() {
           pageSizeOptions: [5, 10, 20, 50]
         }}
       />
+  )
+}
 
-      {/* Debug info */}
-      <div className="mt-8 p-4 bg-muted rounded-lg">
-        <h3 className="font-semibold mb-2">Debug Info:</h3>
-        <p>Search: "{searchValue}"</p>
-        <p>Role Filter: {roleFilter}</p>
-        <p>Total Results: {filteredData.length}</p>
-        <p>Showing: {paginatedData.length} (Page {pageIndex + 1} of {Math.ceil(filteredData.length / pageSize)})</p>
-        <p>Selected Rows: {selectedRows.length}</p>
-        {selectedRows.length > 0 && (
-          <p>Selected Users: {selectedRows.map(r => r.name).join(', ')}</p>
-        )}
-        
-        <h4 className="font-semibold mt-4 mb-2">Column Width Configuration:</h4>
-        <div className="grid grid-cols-3 gap-4 text-sm">
-          <div>
-            <p className="font-medium">Default Widths:</p>
-            <ul className="mt-1 space-y-1">
-              <li>• Checkbox: {DEFAULT_COLUMN_WIDTHS.checkbox}</li>
-              <li>• Pinned: {DEFAULT_COLUMN_WIDTHS.pinned}</li>
-              <li>• Scrollable: {DEFAULT_COLUMN_WIDTHS.scrollable}</li>
-              <li>• Actions: {DEFAULT_COLUMN_WIDTHS.actions}</li>
-            </ul>
-          </div>
-          <div>
-            <p className="font-medium">Global Custom:</p>
-            <ul className="mt-1 space-y-1">
-              <li>• Checkbox: {customColumnWidths.checkbox}</li>
-              <li>• Pinned: {customColumnWidths.pinned}</li>
-              <li>• Scrollable: {customColumnWidths.scrollable}</li>
-              <li>• Actions: {customColumnWidths.actions}</li>
-            </ul>
-          </div>
-          <div>
-            <p className="font-medium">Individual Overrides:</p>
-            <ul className="mt-1 space-y-1">
-              <li>• Name: 300px (pinned)</li>
-              <li>• Email: 220px</li>
-              <li>• Role: 120px</li>
-              <li>• Status: 140px</li>
-              <li>• Department: uses global</li>
-              <li>• Location: 160px</li>
-              <li>• Phone: 150px + min 120px</li>
-              <li>• Dates: 130px each</li>
-              <li>• Actions: 100px (column)</li>
-            </ul>
-          </div>
-        </div>
-      </div>
+export default function TestDataTableWithDebug() {
+  return (
+    <div className="container mx-auto py-8">
+      <TestDataTable />
     </div>
   )
 }

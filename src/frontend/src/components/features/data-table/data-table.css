@@ -1,6 +1,6 @@
 /**
- * Data Table V2 - Clean sticky positioning with HTML/CSS
- * Simple, maintainable approach using native CSS sticky positioning
+ * Data Table V2 - Simple sticky positioning following ChatGPT approach
+ * Keep it minimal and let Tailwind handle most styling
  */
 
 @reference "../../../index.css";
@@ -16,106 +16,59 @@
   }
 
   .dt-v2-scroll-area {
-    @apply w-full overflow-x-auto rounded-lg border;
+    @apply w-full overflow-x-auto rounded-lg;
   }
 
   .dt-v2-table {
-    @apply min-w-[1200px] relative;
+    @apply min-w-[1800px] relative;
   }
 
   /* Header styling */
   .dt-v2-header {
-    @apply bg-muted sticky top-0 z-10;
+    @apply bg-muted sticky top-0 z-40;
   }
 
   .dt-v2-row {
     @apply transition-colors;
   }
 
-  /* All header cells get background */
-  .dt-v2-header th {
-    @apply bg-muted;
-  }
-
-  /* Scrollable header columns */
-  .dt-v2-col-scrollable {
-    @apply bg-muted;
-  }
-
-  /* Sticky columns - widths now handled by inline styles */
+  /* Sticky header cells */
   .dt-v2-col-checkbox {
-    position: sticky;
-    left: 0;
-    z-index: 20;
-    background: hsl(var(--muted));
+    @apply sticky left-0 z-40 bg-muted w-[var(--checkbox-col)] min-w-[var(--checkbox-col)];
   }
 
   .dt-v2-col-pinned-first {
-    position: sticky;
-    z-index: 10;
-    background: hsl(var(--muted));
-    border-right: 1px solid hsl(var(--border));
+    @apply sticky left-[var(--checkbox-col)] z-30 bg-muted w-[var(--first-col)] min-w-[var(--first-col)];
   }
 
   .dt-v2-col-actions {
-    position: sticky;
-    right: 0;
-    z-index: 20;
-    background: hsl(var(--muted));
+    @apply sticky right-0 z-40 bg-muted w-[var(--actions-col)] min-w-[var(--actions-col)];
   }
 
-  /* All body cells get background */
-  .dt-v2-row td {
-    @apply bg-background;
-  }
-
-  /* Row hover states override cell backgrounds */
-  .dt-v2-row:hover td {
-    @apply bg-muted/50;
-  }
-
-  .dt-v2-row[data-state="selected"] td {
-    @apply bg-muted;
-  }
-
-  /* Scrollable body cells */
-  .dt-v2-cell-scrollable {
-    @apply bg-background;
-  }
-
-  /* Sticky body cells - widths now handled by inline styles */
+  /* Sticky body cells */
   .dt-v2-cell-checkbox {
-    position: sticky;
-    left: 0;
-    z-index: 10;
-    background: hsl(var(--background));
+    @apply sticky left-0 z-30 bg-background w-[var(--checkbox-col)] min-w-[var(--checkbox-col)];
   }
 
   .dt-v2-cell-pinned-first {
-    position: sticky;
-    z-index: 10;
-    background: hsl(var(--background));
-    border-right: 1px solid hsl(var(--border));
+    @apply sticky left-[var(--checkbox-col)] z-20 bg-background w-[var(--first-col)] min-w-[var(--first-col)];
   }
 
   .dt-v2-cell-actions {
-    position: sticky;
-    right: 0;
-    z-index: 10;
-    background: hsl(var(--background));
+    @apply sticky right-0 z-30 bg-background w-[var(--actions-col)] min-w-[var(--actions-col)];
   }
 
-  /* Special overrides for sticky cells in different states */
+  /* Hover state overrides for sticky cells */
   .dt-v2-row:hover .dt-v2-cell-checkbox,
   .dt-v2-row:hover .dt-v2-cell-pinned-first,
   .dt-v2-row:hover .dt-v2-cell-actions {
-    background: hsl(var(--muted) / 0.5);
+    @apply bg-muted/50;
   }
 
   .dt-v2-row[data-state="selected"] .dt-v2-cell-checkbox,
   .dt-v2-row[data-state="selected"] .dt-v2-cell-pinned-first,
   .dt-v2-row[data-state="selected"] .dt-v2-cell-actions {
-    background: hsl(var(--muted));
+    @apply bg-muted;
   }
 
   /* Toolbar styling */
@@ -143,10 +96,39 @@
     @apply md:ml-auto;
   }
 
+  /* Remove vertical borders */
+  .dt-v2-table th,
+  .dt-v2-table td {
+    @apply border-l-0 border-r-0;
+  }
+
+  .dt-v2-table {
+    @apply border-separate border-spacing-0;
+  }
+
+  /* Ensure no vertical borders on any table elements */
+  .dt-v2-table,
+  .dt-v2-table * {
+    border-left: none !important;
+    border-right: none !important;
+  }
+
+  /* Remove padding from sticky columns for precise positioning */
+  .sticky-no-padding {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  /* Special case: checkbox columns can keep some internal padding for the checkbox itself */
+  .sticky-checkbox-padding {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+  }
+
   /* Responsive enhancements */
   @media (max-width: 768px) {
     .dt-v2-table {
-      min-width: 600px;
+      min-width: 1200px;
     }
   }
 }
