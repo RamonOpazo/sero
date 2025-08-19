@@ -40,32 +40,11 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  /* ========================================
-   * 🎨 UIX Extensions - Custom Variables
-   * ========================================
-   * Our custom variables for UI extensions
-   */
-
-  /* UIX semantic color variants */
-  --uix-info-bg: oklch(0.97 0.013 242.5);
-  --uix-info-text: oklch(0.375 0.128 244.8);
-  --uix-info-border: oklch(0.906 0.033 242.2);
-  
-  --uix-success-bg: oklch(0.97 0.013 156.87);
-  --uix-success-text: oklch(0.375 0.128 155.6);
-  --uix-success-border: oklch(0.906 0.033 155.87);
-  
-  --uix-warning-bg: oklch(0.97 0.013 78.74);
-  --uix-warning-text: oklch(0.575 0.128 78.2);
-  --uix-warning-border: oklch(0.906 0.033 78.74);
-  
-  --uix-danger-bg: oklch(0.97 0.013 22.216);
-  --uix-danger-text: oklch(0.575 0.191 22.216);
-  --uix-danger-border: oklch(0.906 0.033 22.216);
-  
-  --uix-neutral-bg: var(--muted);
-  --uix-neutral-text: var(--muted-foreground);
-  --uix-neutral-border: var(--border);
+  /* UIX semantic colors inspired by Tailwind palette */
+  --uix-color-success: oklch(0.6980 0.1300 142.5000);
+  --uix-color-warning: oklch(0.8470 0.1700 83.8700);
+  --uix-color-failure: oklch(0.6280 0.2570 25.3300);
+  --uix-color-info: oklch(0.7020 0.1610 233.8900);
 
   /* UIX sidebar grid layout variables */
   --uix-sidebar-width: 16rem;
@@ -111,6 +90,12 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  
+  /* UIX semantic colors for light theme */
+  --uix-color-success: oklch(0.6980 0.1300 142.5000);
+  --uix-color-warning: oklch(0.8470 0.1700 83.8700);
+  --uix-color-failure: oklch(0.6280 0.2570 25.3300);
+  --uix-color-info: oklch(0.7020 0.1610 233.8900);
 }
 
 .dark {
@@ -146,22 +131,11 @@
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
 
-  /* 🌙 UIX Extensions - Dark Theme Overrides */
-  --uix-info-bg: oklch(0.205 0.033 242.2);
-  --uix-info-text: oklch(0.75 0.098 242.5);
-  --uix-info-border: oklch(0.305 0.045 242.2);
-  
-  --uix-success-bg: oklch(0.205 0.033 155.87);
-  --uix-success-text: oklch(0.75 0.098 155.6);
-  --uix-success-border: oklch(0.305 0.045 155.87);
-  
-  --uix-warning-bg: oklch(0.205 0.033 78.74);
-  --uix-warning-text: oklch(0.85 0.098 78.2);
-  --uix-warning-border: oklch(0.305 0.045 78.74);
-  
-  --uix-danger-bg: oklch(0.205 0.033 22.216);
-  --uix-danger-text: oklch(0.85 0.151 22.216);
-  --uix-danger-border: oklch(0.305 0.045 22.216);
+  /* UIX semantic colors for dark theme */
+  --uix-color-success: oklch(0.6180 0.1100 145.2000);
+  --uix-color-warning: oklch(0.7650 0.1450 85.1200);
+  --uix-color-failure: oklch(0.6850 0.2100 27.8900);
+  --uix-color-info: oklch(0.6490 0.1380 236.1500);
 }
 
 @layer base {

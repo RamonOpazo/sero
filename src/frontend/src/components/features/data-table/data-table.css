@@ -16,7 +16,7 @@
   }
 
   .data-table-scroll-area {
-    @apply w-full overflow-x-auto rounded-lg border border-border;
+    @apply w-full overflow-x-auto rounded-md border border-border;
   }
 
   .data-table-table {
@@ -28,8 +28,18 @@
     @apply bg-muted sticky top-0 z-40;
   }
 
+  /* Remove hover styles from data table rows */
   .data-table-row {
-    @apply transition-colors;
+    @apply transition-none bg-transparent border-b border-border;
+  }
+  
+  .data-table-row:hover {
+    @apply bg-transparent;
+  }
+  
+  /* Selected row styling */
+  .data-table-row[data-state="selected"] {
+    @apply bg-muted;
   }
 
   .data-table-col-actions {
@@ -38,6 +48,17 @@
 
   .data-table-cell-actions {
     @apply sticky right-0 z-30 bg-background w-[var(--actions-col)] min-w-[var(--actions-col)];
+  }
+  
+  /* Sticky cell backgrounds - consistent with row background */
+  .data-table-cell-pinned {
+    @apply bg-background;
+  }
+  
+  /* Selected row sticky cells */
+  .data-table-row[data-state="selected"] .data-table-cell-actions,
+  .data-table-row[data-state="selected"] .data-table-cell-pinned {
+    @apply bg-muted;
   }
 
   /* Toolbar styling */

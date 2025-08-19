@@ -131,7 +131,7 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
     // Actions column - modern action definitions
     columns.actions<ProjectShallowType>('actions', {
       header: 'Actions',
-      width: '120px',
+      width: '5rem',
       align: 'center',
       actions: [
         {

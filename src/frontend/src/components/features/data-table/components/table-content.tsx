@@ -201,11 +201,12 @@ export function TableContent<T extends Record<string, any>>({
             data.map((row: T, index: number) => (
               <TableRow
                 key={index}
+                className="data-table-row"
                 data-state={isRowSelected(row) ? 'selected' : undefined}
               >
                 {/* Combined checkbox + first column cell */}
                 {(checkboxColumn || pinnedColumns.length > 0) && (
-                  <TableCell className="sticky left-0 z-30 bg-background w-[var(--combined-left-col)] min-w-[var(--combined-left-col)]">
+                  <TableCell className="sticky left-0 z-30 w-[var(--combined-left-col)] min-w-[var(--combined-left-col)] data-table-cell-pinned">
                     <div className="flex items-center gap-2">
                       {checkboxColumn && (
                         <div className="flex-shrink-0 px-4">
