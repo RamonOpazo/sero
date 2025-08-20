@@ -460,14 +460,17 @@ def process(db: Session, document_id: UUID, password: str) -> generics_schema.Su
             detail="Document has no selections - cannot process without redaction areas"
         )
     
-    # Check if redacted file already exists
-    has_redacted_file = any(file.file_type == FileType.REDACTED for file in document.files)
-    if has_redacted_file:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Document already has a redacted file"
-        )
-    
+    # If a redacted file already exists, delete it to allow reprocessing (replace semantics)
+    existing_redacted_files = [file for file in document.files if file.file_type == FileType.REDACTED]
+    for rf in existing_redacted_files:
+        try:
+            files_crud.delete(db=db, id=rf.id)
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to remove existing redacted file before reprocessing: {str(e)}"
+            )
+
     # Decrypt original file data (original files are always encrypted)
     if original_file.salt is None:
         raise HTTPException(
