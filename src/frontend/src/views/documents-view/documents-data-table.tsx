@@ -230,11 +230,11 @@ export function DocumentsDataTable({ onDocumentSelect }: DocumentsDataTableProps
   const tableColumns: ColumnOption[] = useMemo(() => [
     { key: 'description', header: 'Description' },
     { key: 'tags', header: 'Tags' },
-    { key: 'file_count', header: 'Files' },
-    { key: 'prompt_count', header: 'Prompts' },
-    { key: 'selection_count', header: 'Selections' },
+    { key: 'prompt_count', header: '# Prompts' },
+    { key: 'selection_count', header: '# Selections' },
     { key: 'status', header: 'Status' },
-    { key: 'created_at', header: 'Created' }
+    { key: 'created_at', header: 'Created' },
+    { key: 'updated_at', header: 'Last Updated' }
   ], []);
   
   // Custom buttons for the toolbar - delete button always visible
