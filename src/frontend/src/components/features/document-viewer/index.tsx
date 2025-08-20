@@ -1,5 +1,6 @@
 import { ViewportProvider } from "./providers";
-import { SelectionProvider, PromptProvider } from "./providers";
+import { PromptProvider } from "./providers";
+import { SelectionProvider } from "./core/selection-provider";
 import DocumentViewerLayout from "./components/layouts/main-layout";
 import { type MinimalDocumentType } from "@/types";
 import { useSelectionLoader } from "./hooks/useSelectionLoader";

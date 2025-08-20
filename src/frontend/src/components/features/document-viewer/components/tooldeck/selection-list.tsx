@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { X, MousePointer2, Globe, Hash } from "lucide-react";
-import { useSelections } from "../../providers/selection-provider";
+import { useSelections } from "../../core/selection-provider";
 import { useViewportState } from "../../providers/viewport-provider";
 import { useMemo, useRef, useEffect, useState, useCallback } from "react";
 import { cn } from "@/lib/utils";
@@ -16,7 +16,8 @@ export default function SelectionList() {
     selectSelection, 
     deleteSelection,
     setSelectionPage,
-    setOnSelectionDoubleClick
+    setOnSelectionDoubleClick,
+    pendingChanges
   } = useSelections();
   
   const { setCurrentPage, currentPage, numPages } = useViewportState();
@@ -46,28 +47,19 @@ export default function SelectionList() {
 
   // Use all selections from the manager with type information and modification status
   const selectionsWithTypeInfo = useMemo(() => {
-    const initialSavedSelections = selectionState.initialState.savedItems;
-    
-    const saved = (selectionState.savedItems || []).map((sel: Selection) => {
-      // Check if this saved selection was modified from its initial state
-      const initialSelection = initialSavedSelections?.find((initial: Selection) => initial.id === sel.id);
-      const isModified = initialSelection && (
-        sel.x !== initialSelection.x ||
-        sel.y !== initialSelection.y ||
-        sel.width !== initialSelection.width ||
-        sel.height !== initialSelection.height ||
-        sel.page_number !== initialSelection.page_number
-      );
+    const saved = ((selectionState as any).persistedItems || []).map((sel: Selection) => {
+      // Check if this persisted selection has pending updates
+      const isModified = pendingChanges.updates.some((update: Selection) => update.id === sel.id);
       
       return {
         ...sel,
         type: 'saved' as const,
-        isModified: !!isModified,
+        isModified,
         displayId: sel.id,
       };
     });
     
-    const newOnes = (selectionState.newItems || []).map((sel: Selection) => ({
+    const newOnes = ((selectionState as any).draftItems || []).map((sel: Selection) => ({
       ...sel,
       type: 'new' as const,
       isModified: false,
@@ -75,7 +67,7 @@ export default function SelectionList() {
     }));
     
     return [...saved, ...newOnes];
-  }, [selectionState]);
+  }, [selectionState, pendingChanges]);
 
   // Group selections by type for better organization
   const groupedSelections = useMemo(() => {

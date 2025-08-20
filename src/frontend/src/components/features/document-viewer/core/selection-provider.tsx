@@ -33,6 +33,7 @@ interface SelectionContextValue {
   updateSelection: (id: string, selection: Selection) => void;
   updateSelectionBatch: (id: string, selection: Selection) => void;
   finishBatchOperation: () => void;
+  beginBatchOperation: () => void;
   
   // *** DELETE NEW/SAVED SELECTIONS ***
   deleteSelection: (id: string) => void;
@@ -49,7 +50,7 @@ interface SelectionContextValue {
   clearAll: () => void;
   
   // *** COMMIT STAGED CHANGES ***
-  saveAllChanges: () => Promise<Result<void, unknown>>;
+  save: () => Promise<Result<void, unknown>>;
   commitChanges: () => void;
   discardAllChanges: () => void;
   
@@ -131,8 +132,8 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
   // CORE ACTION DISPATCH
   // ========================================
   
-  const dispatch = useCallback((action: { type: string; payload?: any }) => {
-    manager.dispatch(action);
+  const dispatch = useCallback((actionType: string, payload?: any) => {
+    (manager as any).dispatch(actionType, payload);
   }, [manager]);
   
   // ========================================
@@ -145,7 +146,7 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
       ...selection,
       id: selection.id || `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
     };
-    dispatch({ type: 'START_DRAW', payload: selectionWithId });
+    dispatch('START_DRAW', selectionWithId);
   }, [dispatch]);
   
   const updateDraw = useCallback((selection: SelectionCreateType) => {
@@ -154,15 +155,15 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
       ...selection,
       id: selection.id || `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
     };
-    dispatch({ type: 'UPDATE_DRAW', payload: selectionWithId });
+    dispatch('UPDATE_DRAW', selectionWithId);
   }, [dispatch]);
   
   const finishDraw = useCallback(() => {
-    dispatch({ type: 'FINISH_DRAW' });
+    dispatch('FINISH_DRAW');
   }, [dispatch]);
   
   const cancelDraw = useCallback(() => {
-    dispatch({ type: 'CANCEL_DRAW' });
+    dispatch('CANCEL_DRAW');
   }, [dispatch]);
   
   // ========================================
@@ -170,15 +171,21 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
   // ========================================
   
   const updateSelection = useCallback((id: string, selection: Selection) => {
-    dispatch({ type: 'UPDATE_ITEM', payload: { id, updates: selection } });
+    dispatch('UPDATE_ITEM', { id, updates: selection });
   }, [dispatch]);
   
   const updateSelectionBatch = useCallback((id: string, selection: Selection) => {
-    dispatch({ type: 'UPDATE_ITEM_BATCH', payload: { id, updates: selection } });
+    // Use standard V2 UPDATE_ITEM behavior for proper change tracking
+    // Batch functionality is handled by the BEGIN_BATCH/END_BATCH actions
+    dispatch('UPDATE_ITEM', { id, updates: selection });
   }, [dispatch]);
   
   const finishBatchOperation = useCallback(() => {
-    dispatch({ type: 'FINISH_BATCH_OPERATION' });
+    dispatch('END_BATCH');
+  }, [dispatch]);
+  
+  const beginBatchOperation = useCallback(() => {
+    dispatch('BEGIN_BATCH');
   }, [dispatch]);
   
   // ========================================
@@ -186,27 +193,28 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
   // ========================================
   
   const deleteSelection = useCallback((id: string) => {
-    dispatch({ type: 'DELETE_ITEM', payload: id });
+    dispatch('DELETE_ITEM', id);
   }, [dispatch]);
   
   const deleteSelectedSelection = useCallback(() => {
-    if (state.selectedItemId) {
-      dispatch({ type: 'DELETE_ITEM', payload: state.selectedItemId });
+    const selectedId = (state as any).selectedItemId;
+    if (selectedId && typeof selectedId === 'string') {
+      dispatch('DELETE_ITEM', selectedId);
       return true;
     }
     return false;
-  }, [dispatch, state.selectedItemId]);
+  }, [dispatch, state]);
   
   // ========================================
   // HISTORY OF CHANGES
   // ========================================
   
   const undo = useCallback(() => {
-    dispatch({ type: 'UNDO' });
+    dispatch('UNDO');
   }, [dispatch]);
   
   const redo = useCallback(() => {
-    dispatch({ type: 'REDO' });
+    dispatch('REDO');
   }, [dispatch]);
   
   // ========================================
@@ -214,27 +222,27 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
   // ========================================
   
   const clearPage = useCallback((pageNumber: number) => {
-    dispatch({ type: 'CLEAR_PAGE', payload: pageNumber });
+    dispatch('CLEAR_PAGE', pageNumber);
   }, [dispatch]);
   
   const clearAll = useCallback(() => {
-    dispatch({ type: 'CLEAR_ALL' });
+    dispatch('CLEAR_GLOBAL_CONTEXT');
   }, [dispatch]);
   
   // ========================================
   // COMMIT STAGED CHANGES
   // ========================================
   
-  const saveAllChanges = useCallback(() => {
-    return manager.saveAllChanges();
+  const save = useCallback(() => {
+    return manager.save();
   }, [manager]);
   
   const commitChanges = useCallback(() => {
-    dispatch({ type: 'COMMIT_CHANGES' });
+    dispatch('COMMIT_CHANGES');
   }, [dispatch]);
   
   const discardAllChanges = useCallback(() => {
-    dispatch({ type: 'DISCARD_CHANGES' });
+    dispatch('DISCARD_CHANGES');
   }, [dispatch]);
   
   // ========================================
@@ -242,7 +250,7 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
   // ========================================
   
   const selectSelection = useCallback((id: string | null) => {
-    dispatch({ type: 'SELECT_ITEM', payload: id });
+    dispatch('SELECT_ITEM', id);
   }, [dispatch]);
   
   // ========================================
@@ -250,11 +258,17 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
   // ========================================
   
   const toggleSelectionGlobal = useCallback((id: string) => {
-    dispatch({ type: 'TOGGLE_ITEM_GLOBAL', payload: id });
-  }, [dispatch]);
+    // Find the item and toggle its page_number using standard V2 UPDATE_ITEM
+    const item = manager.getItemById(id);
+    if (item) {
+      const newPageNumber = item.page_number === null ? 1 : null;
+      dispatch('UPDATE_ITEM', { id, updates: { page_number: newPageNumber } });
+    }
+  }, [dispatch, manager]);
   
   const setSelectionPage = useCallback((id: string, pageNumber: number | null) => {
-    dispatch({ type: 'SET_ITEM_PAGE', payload: { id, page: pageNumber } });
+    // Use standard V2 UPDATE_ITEM behavior for proper change tracking
+    dispatch('UPDATE_ITEM', { id, updates: { page_number: pageNumber } });
   }, [dispatch]);
   
   // ========================================
@@ -262,7 +276,10 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
   // ========================================
   
   const loadSavedSelections = useCallback((selections: Selection[]) => {
-    dispatch({ type: 'LOAD_ITEMS', payload: selections });
+    // Load items into persisted state
+    dispatch('LOAD_ITEMS', selections);
+    // Capture baseline immediately after loading so subsequent edits are tracked
+    dispatch('CAPTURE_BASELINE' as any, undefined as any);
   }, [dispatch]);
   
   // ========================================
@@ -280,8 +297,8 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
   const allSelections = useMemo(() => manager.getAllItems(), [manager, state]);
   
   const selectedSelection = useMemo(() => {
-    const selectedId = state.selectedItemId;
-    return selectedId ? manager.getItemById(selectedId) || null : null;
+    const selectedId = (state as any).selectedItemId;
+    return (selectedId && typeof selectedId === 'string') ? manager.getItemById(selectedId) || null : null;
   }, [manager, state]);
   
   const canUndo = useMemo(() => (state as any).canUndo?.() || false, [state]);
@@ -293,7 +310,14 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
   // Utility computed values
   const hasSelections = useMemo(() => allSelections.length > 0, [allSelections]);
   const selectionCount = useMemo(() => allSelections.length, [allSelections]);
-  const getCurrentDraw = useCallback(() => (state as any).getCurrentDraw?.() || null, [state]);
+  const getCurrentDraw = useCallback(() => {
+    const getter = (state as any).getCurrentDraw;
+    if (typeof getter === 'function') {
+      const value = getter();
+      if (value !== undefined) return value;
+    }
+    return (state as any).currentDraw || null;
+  }, [state]);
   const isCurrentlyDrawing = useMemo(() => (state as any).isCurrentlyDrawing?.() || false, [state]);
   
   // Page operations
@@ -328,6 +352,7 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
     updateSelection,
     updateSelectionBatch,
     finishBatchOperation,
+    beginBatchOperation,
     
     // Delete new/saved selections
     deleteSelection,
@@ -344,7 +369,7 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
     clearAll,
     
     // Commit staged changes
-    saveAllChanges,
+    save,
     commitChanges,
     discardAllChanges,
     
@@ -379,9 +404,9 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
     getPageSelections,
   }), [
     state, dispatch, startDraw, updateDraw, finishDraw, cancelDraw,
-    updateSelection, updateSelectionBatch, finishBatchOperation,
+    updateSelection, updateSelectionBatch, finishBatchOperation, beginBatchOperation,
     deleteSelection, deleteSelectedSelection, undo, redo, canUndo, canRedo,
-    clearPage, clearAll, saveAllChanges, commitChanges, discardAllChanges,
+    clearPage, clearAll, save, commitChanges, discardAllChanges,
     selectSelection, selectedSelection, toggleSelectionGlobal, setSelectionPage,
     loadSavedSelections, onSelectionDoubleClick, setOnSelectionDoubleClick,
     allSelections, hasUnsavedChanges, pendingChanges, pendingChangesCount,

@@ -1,7 +1,7 @@
 import React, { useRef, useCallback, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { useViewportState, useViewportActions } from '../../providers/viewport-provider';
-import { useSelections } from '../../providers/selection-provider';
+import { useSelections } from '../../core/selection-provider';
 import { toast } from 'sonner';
 
 /**

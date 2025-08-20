@@ -5,7 +5,7 @@
  * Provides all required selection functionality with clean separation of concerns.
  */
 
-import type { DomainManagerConfig, ApiAdapter, ApiTransforms, Comparators } from '@/lib/domain-manager';
+import type { DomainManagerConfig, ApiAdapter, DataTransforms as ApiTransforms, ItemComparators as Comparators } from '@/lib/domain-manager';
 import { DocumentViewerAPI } from '@/lib/document-viewer-api';
 import type { Selection } from '../types/viewer';
 import type { SelectionType, SelectionCreateType } from '@/types';
@@ -69,7 +69,16 @@ const selectionApiAdapter: ApiAdapter<Selection, Omit<SelectionCreateType, 'docu
       confidence: data.confidence
     };
     
-    return await DocumentViewerAPI.updateSelection(id, updateData);
+    const result = await DocumentViewerAPI.updateSelection(id, updateData);
+    if (result.ok) {
+      // Transform API response to Selection format
+      const selection: Selection = {
+        ...data as Selection,
+        id
+      };
+      return { ok: true, value: selection };
+    }
+    return result as any;
   },
   
   delete: DocumentViewerAPI.deleteSelection
@@ -167,12 +176,9 @@ const selectionExtensions = {
     
     FINISH_DRAW: (state: any) => {
       if (state.isDrawing && state.currentDraw) {
-        // Generate final ID and add to draft items
-        const selectionWithId = {
-          ...state.currentDraw,
-          id: `selection-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-        };
-        state.draftItems.push(selectionWithId);
+        // Preserve the temporary ID assigned when drawing started; add as a draft item
+        const created = { ...state.currentDraw };
+        state.draftItems = [...state.draftItems, created];
         
         // Clear drawing state
         state.currentDraw = null;
@@ -196,28 +202,14 @@ const selectionExtensions = {
     },
     
     // Batch operation actions
-    START_BATCH_OPERATION: (state: any) => {
+    BEGIN_BATCH: (state: any) => {
       state.isBatchOperation = true;
     },
     
-    UPDATE_ITEM_BATCH: (state: any, payload: { id: string; updates: Partial<Selection> }) => {
-      const { id, updates } = payload;
-      
-      // Update in persisted items first
-      const persistedIndex = state.persistedItems.findIndex((item: Selection) => item.id === id);
-      if (persistedIndex !== -1) {
-        state.persistedItems[persistedIndex] = { ...state.persistedItems[persistedIndex], ...updates };
-        return;
-      }
-      
-      // Then update in draft items
-      const draftIndex = state.draftItems.findIndex((item: Selection) => item.id === id);
-      if (draftIndex !== -1) {
-        state.draftItems[draftIndex] = { ...state.draftItems[draftIndex], ...updates };
-      }
-    },
+    // Note: Removed UPDATE_ITEM_BATCH override - use standard UPDATE_ITEM from V2 CRUD behavior
+    // This ensures proper change tracking. Batch functionality is handled by BEGIN_BATCH/END_BATCH.
     
-    FINISH_BATCH_OPERATION: (state: any) => {
+    END_BATCH: (state: any) => {
       state.isBatchOperation = false;
       // Add single history entry for the batch
       if (state.addToHistory) {
@@ -244,55 +236,17 @@ const selectionExtensions = {
       }
     },
     
-    // Global operations
-    TOGGLE_ITEM_GLOBAL: (state: any, payload: string) => {
-      const updateItem = (item: Selection) => {
-        if (item.id === payload) {
-          return { ...item, page_number: item.page_number === null ? 1 : null };
-        }
-        return item;
-      };
-      
-      state.persistedItems = state.persistedItems.map(updateItem);
-      state.draftItems = state.draftItems.map(updateItem);
-      
-      // Add to history if not in batch mode
-      if (!state.isBatchOperation && state.addToHistory) {
-        state.addToHistory();
-      }
-    },
+    // Note: Removed TOGGLE_ITEM_GLOBAL override - use standard UPDATE_ITEM from selection provider
+    // This ensures proper change tracking through V2 CRUD behavior.
     
-    SET_ITEM_PAGE: (state: any, payload: { id: string; page: number | null }) => {
-      const { id, page } = payload;
-      const updateItem = (item: Selection) => {
-        if (item.id === id) {
-          return { ...item, page_number: page };
-        }
-        return item;
-      };
-      
-      state.persistedItems = state.persistedItems.map(updateItem);
-      state.draftItems = state.draftItems.map(updateItem);
-      
-      // Add to history if not in batch mode
-      if (!state.isBatchOperation && state.addToHistory) {
-        state.addToHistory();
-      }
-    },
+    // Note: Removed SET_ITEM_PAGE override - use standard UPDATE_ITEM from selection provider
+    // This ensures proper change tracking through V2 CRUD behavior.
     
-    // Override DELETE_ITEM to handle selection clearing
+    // Custom DELETE_ITEM that adds selection clearing (runs AFTER core DELETE_ITEM behavior)
     DELETE_ITEM: (state: any, payload: string) => {
-      state.persistedItems = state.persistedItems.filter((item: Selection) => item.id !== payload);
-      state.draftItems = state.draftItems.filter((item: Selection) => item.id !== payload);
-      
       // Clear selection if the selected item was deleted
       if (state.selectedItemId === payload) {
         state.selectedItemId = null;
-      }
-      
-      // Add to history if not in batch mode
-      if (!state.isBatchOperation && state.addToHistory) {
-        state.addToHistory();
       }
     }
   },
@@ -358,7 +312,7 @@ export const selectionDomainConfig: DomainManagerConfig<Selection, Omit<Selectio
     'crud',               // Core CRUD operations
     'changeTracking',     // Track pending changes
     'history',            // Undo/redo functionality
-    'selection',          // Selection tracking 
+    'focusManagement',    // Selection/focus tracking 
     'batchOperations',    // Batch operations for smooth UI
     'bulkOperations'      // Clear all/page operations
   ],

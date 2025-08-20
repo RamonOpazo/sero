@@ -16,11 +16,11 @@ export interface BatchOperationsState {
 // =============================================================================
 
 const batchOperationsActionHandlers: ActionHandlerMap<any> = {
-  START_BATCH_OPERATION: (state: any) => {
+  BEGIN_BATCH: (state: any) => {
     state.isBatching = true;
   },
 
-  FINISH_BATCH_OPERATION: (state: any) => {
+  END_BATCH: (state: any) => {
     state.isBatching = false;
     // Add single history entry for the entire batch if history is available
     if (state.addToHistory && typeof state.addToHistory === 'function') {
@@ -28,52 +28,6 @@ const batchOperationsActionHandlers: ActionHandlerMap<any> = {
     }
   },
 
-  // Generic batch update that doesn't trigger history during batch mode
-  UPDATE_ITEM_BATCH: (state: any, payload: { id: string; updates: any }) => {
-    const { id, updates } = payload;
-    
-    // Try to find and update in persisted items (V2 naming)
-    if (state.persistedItems) {
-      const persistedIndex = state.persistedItems.findIndex((item: any) => 
-        (state.getId ? state.getId(item) : item.id) === id
-      );
-      if (persistedIndex !== -1) {
-        state.persistedItems[persistedIndex] = { ...state.persistedItems[persistedIndex], ...updates };
-        return;
-      }
-    }
-    
-    // Try to find and update in draft items (V2 naming)
-    if (state.draftItems) {
-      const draftIndex = state.draftItems.findIndex((item: any) => 
-        (state.getId ? state.getId(item) : item.id) === id
-      );
-      if (draftIndex !== -1) {
-        state.draftItems[draftIndex] = { ...state.draftItems[draftIndex], ...updates };
-        return;
-      }
-    }
-
-    // Fallback to V1 naming for backward compatibility
-    if (state.savedItems) {
-      const savedIndex = state.savedItems.findIndex((item: any) => 
-        (state.getId ? state.getId(item) : item.id) === id
-      );
-      if (savedIndex !== -1) {
-        state.savedItems[savedIndex] = { ...state.savedItems[savedIndex], ...updates };
-        return;
-      }
-    }
-    
-    if (state.newItems) {
-      const newIndex = state.newItems.findIndex((item: any) => 
-        (state.getId ? state.getId(item) : item.id) === id
-      );
-      if (newIndex !== -1) {
-        state.newItems[newIndex] = { ...state.newItems[newIndex], ...updates };
-      }
-    }
-  }
 };
 
 // =============================================================================

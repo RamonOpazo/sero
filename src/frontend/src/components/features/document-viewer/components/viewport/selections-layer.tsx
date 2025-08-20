@@ -7,7 +7,7 @@
 
 import React, { useState, useCallback, useRef } from "react";
 import { cn } from "@/lib/utils";
-import { useSelections } from '../../providers/selection-provider';
+import { useSelections } from '../../core/selection-provider';
 import { useViewportState } from '../../providers/viewport-provider';
 import type { Selection, SelectionCreateType } from '../../types/viewer';
 
@@ -38,6 +38,9 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     updateDraw,
     finishDraw,
     onSelectionDoubleClick,
+    pendingChanges,
+    getCurrentDraw,
+    beginBatchOperation,
   } = useSelections();
 
   
@@ -249,6 +252,9 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     e.stopPropagation();
     e.preventDefault();
     
+    // Begin a batch so drag updates coalesce into a single history entry
+    beginBatchOperation();
+
     setDragState({
       type: 'move',
       startMousePos: { x: e.clientX, y: e.clientY },
@@ -256,7 +262,7 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     });
     
     isDraggingRef.current = true;
-  }, []);
+  }, [beginBatchOperation]);
   
   // Handle resize start
   const handleResizeStart = useCallback((corner: string, e: React.MouseEvent, selection: Selection) => {
@@ -265,6 +271,9 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     e.stopPropagation();
     e.preventDefault();
     
+    // Begin a batch so drag updates coalesce into a single history entry
+    beginBatchOperation();
+
     setDragState({
       type: 'resize',
       corner,
@@ -273,7 +282,7 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     });
     
     isDraggingRef.current = true;
-  }, []);
+  }, [beginBatchOperation]);
 
   // Render resize handles
   const renderResizeHandles = useCallback((selection: Selection) => {
@@ -309,22 +318,12 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     const height = Math.abs(selection.height) * documentSize.height;
 
     const isSelected = selectedSelection?.id === selection.id;
-    const isNew = !('created_at' in selection); // Simple check for new vs saved
+    const isNew = pendingChanges.creates.some((create: Selection) => create.id === selection.id);
     const isGlobal = selection.page_number === null;
     
     
     // Check if this saved selection has been modified from its initial state
-    const isModified = !isNew && (() => {
-      const initialSavedSelections = selectionState.initialState.savedItems;
-      const initialSelection = initialSavedSelections?.find((initial: Selection) => initial.id === selection.id);
-      return initialSelection && (
-        selection.x !== initialSelection.x ||
-        selection.y !== initialSelection.y ||
-        selection.width !== initialSelection.width ||
-        selection.height !== initialSelection.height ||
-        selection.page_number !== initialSelection.page_number
-      );
-    })();
+    const isModified = !isNew && pendingChanges.updates.some((update: Selection) => update.id === selection.id);
 
     const selectionElement = (
       <div
@@ -381,7 +380,7 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
   );
 
   // Show current drawing if any
-  const currentDraw = selectionState.currentDraw;
+  const currentDraw = getCurrentDraw();
   const drawingThisPage = currentDraw && 
     (currentDraw.page_number === null || currentDraw.page_number === currentPage);
 
@@ -411,7 +410,7 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
         {pageSelections.map(renderSelectionBox)}
         
         {/* Render current drawing */}
-        {drawingThisPage && (
+        {drawingThisPage && currentDraw && (
           <div
             className="absolute pointer-events-none border border-blue-400 bg-blue-50/20"
             style={{

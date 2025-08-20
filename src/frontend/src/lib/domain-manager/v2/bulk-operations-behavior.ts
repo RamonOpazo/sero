@@ -17,7 +17,7 @@ export interface BulkOperationsState {
 
 const bulkOperationsActionHandlers: ActionHandlerMap<any> = {
   // Clear all items (both persisted and drafts)
-  CLEAR_ALL: (state: any) => {
+  CLEAR_GLOBAL_CONTEXT: (state: any) => {
     // V2 naming
     if (state.persistedItems !== undefined) {
       state.persistedItems = [];
@@ -45,81 +45,6 @@ const bulkOperationsActionHandlers: ActionHandlerMap<any> = {
     }
   },
 
-  // Clear only draft/new items
-  CLEAR_DRAFTS: (state: any) => {
-    // V2 naming
-    if (state.draftItems !== undefined) {
-      state.draftItems = [];
-    }
-    
-    // V1 naming fallback  
-    if (state.newItems !== undefined) {
-      state.newItems = [];
-    }
-    
-    // Add to history if available and not in batch mode
-    if (state.addToHistory && typeof state.addToHistory === 'function' && !state.isBatching) {
-      state.addToHistory();
-    }
-  },
-
-  // Clear only persisted/saved items
-  CLEAR_PERSISTED: (state: any) => {
-    // V2 naming
-    if (state.persistedItems !== undefined) {
-      state.persistedItems = [];
-    }
-    
-    // V1 naming fallback
-    if (state.savedItems !== undefined) {
-      state.savedItems = [];
-    }
-    
-    // Add to history if available and not in batch mode
-    if (state.addToHistory && typeof state.addToHistory === 'function' && !state.isBatching) {
-      state.addToHistory();
-    }
-  },
-
-  // Bulk delete by IDs
-  BULK_DELETE: (state: any, payload: { ids: readonly string[] }) => {
-    const { ids } = payload;
-    const idsSet = new Set(ids);
-    
-    // V2 naming
-    if (state.persistedItems !== undefined) {
-      state.persistedItems = state.persistedItems.filter((item: any) => 
-        !idsSet.has(state.getId ? state.getId(item) : item.id)
-      );
-    }
-    if (state.draftItems !== undefined) {
-      state.draftItems = state.draftItems.filter((item: any) => 
-        !idsSet.has(state.getId ? state.getId(item) : item.id)
-      );
-    }
-    
-    // V1 naming fallback
-    if (state.savedItems !== undefined) {
-      state.savedItems = state.savedItems.filter((item: any) => 
-        !idsSet.has(state.getId ? state.getId(item) : item.id)
-      );
-    }
-    if (state.newItems !== undefined) {
-      state.newItems = state.newItems.filter((item: any) => 
-        !idsSet.has(state.getId ? state.getId(item) : item.id)
-      );
-    }
-    
-    // Clear selection if selected item was deleted
-    if (state.selectedItemId && idsSet.has(state.selectedItemId)) {
-      state.selectedItemId = null;
-    }
-    
-    // Add to history if available and not in batch mode
-    if (state.addToHistory && typeof state.addToHistory === 'function' && !state.isBatching) {
-      state.addToHistory();
-    }
-  }
 };
 
 // =============================================================================

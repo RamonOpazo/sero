@@ -18,8 +18,8 @@ describe('PromptManager Configuration', () => {
       const state = promptManager.getState();
       
       expect(state.documentId).toBe(TEST_DOCUMENT_ID);
-      expect(state.savedItems).toEqual([]);
-      expect(state.newItems).toEqual([]);
+      expect(state.persistedItems).toEqual([]);
+      expect(state.draftItems).toEqual([]);
       expect(state.isLoading).toBe(false);
       expect(state.error).toBeNull();
     });
@@ -44,10 +44,7 @@ describe('PromptManager Configuration', () => {
         updated_at: null
       };
 
-      promptManager.dispatch({
-        type: 'ADD_ITEM',
-        payload: testPrompt
-      });
+      promptManager.dispatch('CREATE_ITEM', testPrompt);
 
       const allPrompts = promptManager.getAllItems();
       expect(allPrompts).toHaveLength(1);
@@ -66,15 +63,12 @@ describe('PromptManager Configuration', () => {
         updated_at: null
       };
 
-      promptManager.dispatch({ type: 'ADD_ITEM', payload: testPrompt });
+      promptManager.dispatch('CREATE_ITEM', testPrompt);
 
       // Update prompt
-      promptManager.dispatch({
-        type: 'UPDATE_ITEM',
-        payload: {
-          id: 'prompt-1',
-          updates: { text: 'Updated text', temperature: 0.8 }
-        }
+      promptManager.dispatch('UPDATE_ITEM', {
+        id: 'prompt-1',
+        updates: { text: 'Updated text', temperature: 0.8 }
       });
 
       const updatedPrompt = promptManager.getItemById('prompt-1') as PromptType | undefined;
@@ -93,10 +87,10 @@ describe('PromptManager Configuration', () => {
         updated_at: null
       };
 
-      promptManager.dispatch({ type: 'ADD_ITEM', payload: testPrompt });
+      promptManager.dispatch('CREATE_ITEM', testPrompt);
       expect(promptManager.getAllItems()).toHaveLength(1);
 
-      promptManager.dispatch({ type: 'DELETE_ITEM', payload: 'prompt-1' });
+      promptManager.dispatch('DELETE_ITEM', 'prompt-1');
       expect(promptManager.getAllItems()).toHaveLength(0);
     });
   });
@@ -118,17 +112,14 @@ describe('PromptManager Configuration', () => {
       expect((state as any).getPromptCount()).toBe(0);
 
       // Add a prompt
-      promptManager.dispatch({
-        type: 'ADD_ITEM',
-        payload: {
-          id: 'prompt-1',
-          text: 'Test',
-          temperature: 0.7,
-          languages: ['en'],
-          document_id: TEST_DOCUMENT_ID,
-          created_at: new Date().toISOString(),
-          updated_at: null
-        }
+      promptManager.dispatch('CREATE_ITEM', {
+        id: 'prompt-1',
+        text: 'Test',
+        temperature: 0.7,
+        languages: ['en'],
+        document_id: TEST_DOCUMENT_ID,
+        created_at: new Date().toISOString(),
+        updated_at: null
       });
 
       const updatedState = promptManager.getState();
@@ -141,23 +132,20 @@ describe('PromptManager Configuration', () => {
     it('should clear all prompts', () => {
       // Add multiple prompts
       for (let i = 1; i <= 3; i++) {
-        promptManager.dispatch({
-          type: 'ADD_ITEM',
-          payload: {
-            id: `prompt-${i}`,
-            text: `Prompt ${i}`,
-            temperature: 0.7,
-            languages: ['en'],
-            document_id: TEST_DOCUMENT_ID,
-            created_at: new Date().toISOString(),
-            updated_at: null
-          }
+        promptManager.dispatch('CREATE_ITEM', {
+          id: `prompt-${i}`,
+          text: `Prompt ${i}`,
+          temperature: 0.7,
+          languages: ['en'],
+          document_id: TEST_DOCUMENT_ID,
+          created_at: new Date().toISOString(),
+          updated_at: null
         });
       }
 
       expect(promptManager.getAllItems()).toHaveLength(3);
 
-      promptManager.dispatch({ type: 'CLEAR_ALL' });
+      promptManager.dispatch('CLEAR_GLOBAL_CONTEXT');
       expect(promptManager.getAllItems()).toHaveLength(0);
     });
   });
@@ -165,17 +153,14 @@ describe('PromptManager Configuration', () => {
   describe('Change Tracking', () => {
     it('should track pending changes correctly', () => {
       // Add a new prompt
-      promptManager.dispatch({
-        type: 'ADD_ITEM',
-        payload: {
-          id: 'prompt-1',
-          text: 'Test prompt',
-          temperature: 0.7,
-          languages: ['en'],
-          document_id: TEST_DOCUMENT_ID,
-          created_at: new Date().toISOString(),
-          updated_at: null
-        }
+      promptManager.dispatch('CREATE_ITEM', {
+        id: 'prompt-1',
+        text: 'Test prompt',
+        temperature: 0.7,
+        languages: ['en'],
+        document_id: TEST_DOCUMENT_ID,
+        created_at: new Date().toISOString(),
+        updated_at: null
       });
 
       const changes = promptManager.getPendingChanges();
@@ -193,17 +178,14 @@ describe('PromptManager Configuration', () => {
       const mockListener = jest.fn();
       const unsubscribe = promptManager.subscribe(mockListener);
 
-      promptManager.dispatch({
-        type: 'ADD_ITEM',
-        payload: {
-          id: 'prompt-1',
-          text: 'Test',
-          temperature: 0.7,
-          languages: ['en'],
-          document_id: TEST_DOCUMENT_ID,
-          created_at: new Date().toISOString(),
-          updated_at: null
-        }
+      promptManager.dispatch('CREATE_ITEM', {
+        id: 'prompt-1',
+        text: 'Test',
+        temperature: 0.7,
+        languages: ['en'],
+        document_id: TEST_DOCUMENT_ID,
+        created_at: new Date().toISOString(),
+        updated_at: null
       });
 
       expect(mockListener).toHaveBeenCalled();

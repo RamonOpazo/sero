@@ -31,12 +31,14 @@ export function createSelectionManager(
   
   // Initialize with provided selections if any
   if (initialSelections?.saved?.length) {
-    manager.dispatch({ type: 'LOAD_ITEMS', payload: initialSelections.saved });
+    manager.dispatch('LOAD_ITEMS', initialSelections.saved);
+    // Capture baseline after loading persisted items so updates are tracked
+    manager.dispatch('CAPTURE_BASELINE' as any, undefined as any);
   }
   
   if (initialSelections?.new?.length) {
     initialSelections.new.forEach(selection => {
-      manager.dispatch({ type: 'CREATE_ITEM', payload: selection });
+      manager.dispatch('CREATE_ITEM', selection);
     });
   }
   
