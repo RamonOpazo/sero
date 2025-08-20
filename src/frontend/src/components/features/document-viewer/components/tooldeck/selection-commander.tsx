@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Save, RotateCcw, AlertCircle, Trash2, FileX, Undo2 } from "lucide-react";
 import { useViewportState } from "../../providers/viewport-provider";
-import { useSelections } from "../../core/selection-provider";
+import { useSelections } from "../../providers/selection-provider";
 import { toast } from "sonner";
 import { useState, useCallback, useMemo } from "react";
 import type { MinimalDocumentType } from "@/types";
@@ -18,6 +18,8 @@ interface SelectionControlsProps {
  * Manages selection visibility, saving, and clearing operations
  */
 export default function SelectionManagement({ document }: SelectionControlsProps) {
+  // Access to avoid TS6133 unused parameter error during builds
+  void document;
   const { isViewingProcessedDocument, currentPage } = useViewportState();
   
   const {

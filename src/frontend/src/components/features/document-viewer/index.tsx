@@ -1,6 +1,4 @@
-import { ViewportProvider } from "./providers";
-import { PromptProvider } from "./providers";
-import { SelectionProvider } from "./core/selection-provider";
+import { UnifiedDocumentViewerProvider } from "./providers";
 import DocumentViewerLayout from "./components/layouts/main-layout";
 import { type MinimalDocumentType } from "@/types";
 import { useSelectionLoader } from "./hooks/useSelectionLoader";
@@ -31,13 +29,9 @@ export default function DocumentViewer({ document }: DocumentViewerProps) {
   }
 
   return (
-    <ViewportProvider document={document}>
-      <SelectionProvider documentId={document.id}>
-        <PromptProvider documentId={document.id}>
-          <DocumentViewerContent document={document} />
-        </PromptProvider>
-      </SelectionProvider>
-    </ViewportProvider>
+    <UnifiedDocumentViewerProvider document={document}>
+      <DocumentViewerContent document={document} />
+    </UnifiedDocumentViewerProvider>
   );
 }
 
@@ -53,14 +47,6 @@ export * from "./components";
 
 // Providers and state management
 export * from "./providers";
-
-// Domain Managers (configuration-driven system)
-export { 
-  createPromptManager, 
-  createSelectionManager,
-  type PromptManagerInstance,
-  type SelectionManagerInstance
-} from './managers';
 
 // Utilities
 export * from "./utils";

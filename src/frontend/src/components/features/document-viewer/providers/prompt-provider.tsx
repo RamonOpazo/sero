@@ -1,51 +1,35 @@
 /**
- * Prompt Context Provider
- * 
- * Provides a clean React interface using the new domain manager library
- * Maintains identical external interface for seamless migration
+ * Prompt Provider - React Context for Prompt Management
+ *
+ * Uses the V2 domain manager via prompt manager factory.
  */
 
-import React, { createContext, useContext, useEffect, useState, useRef, useMemo, useCallback } from 'react';
-import { createDomainManager, type DomainManager, type PendingChanges } from '@/lib/domain-manager';
-import { promptManagerConfig, type PromptType, type PromptCreateType } from '../managers/configs/prompt-manager-config';
-import { type Result } from '@/lib/result';
-
-// Legacy type aliases for backward compatibility
-type PromptManagerState = ReturnType<DomainManager<PromptType>['getState']>;
-type PromptManagerAction = { type: string; payload?: any };
-type PendingPromptChanges = PendingChanges<PromptType>;
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { createPromptManager, type PromptType } from '../core/prompt-manager';
+import type { Result } from '@/lib/result';
 
 interface PromptContextValue {
-  // State
-  state: PromptManagerState;
-  
-  // Core actions
-  dispatch: (action: PromptManagerAction) => void;
-  
-  // API methods
-  loadPrompts: () => Promise<Result<PromptType[], unknown>>;
-  saveAllChanges: () => Promise<Result<void, unknown>>;
-  
-  // Local operations (don't hit server immediately)
-  addPromptLocally: (promptData: Omit<PromptCreateType, 'document_id'>) => PromptType;
-  updatePrompt: (id: string, updates: Partial<PromptType>) => boolean;
-  deletePromptLocally: (id: string) => boolean;
+  state: ReturnType<ReturnType<typeof createPromptManager>['getState']>;
+  dispatch: ReturnType<typeof createPromptManager>['dispatch'];
+
+  // CRUD helpers
+  createPrompt: (data: Omit<PromptType, 'id' | 'created_at' | 'updated_at' | 'document_id'>) => void;
+  updatePrompt: (id: string, updates: Partial<PromptType>) => void;
+  deletePrompt: (id: string) => void;
+
+  // Load/save
+  load: () => Promise<Result<readonly PromptType[], unknown>>;
+  save: () => Promise<Result<void, unknown>>;
+
+  // Clear/discard
   clearAll: () => void;
   discardAllChanges: () => void;
-  
-  // Convenience methods
-  getPromptById: (id: string) => PromptType | undefined;
-  getAllPrompts: () => PromptType[];
-  clearError: () => void;
-  
-  // Computed values
-  promptCount: number;
-  hasPrompts: boolean;
+
+  // Computed
+  allPrompts: readonly PromptType[];
   hasUnsavedChanges: boolean;
-  pendingChanges: PendingPromptChanges;
   pendingChangesCount: number;
-  isOperationInProgress: boolean;
-  isAnyOperationInProgress: boolean;
+  pendingChanges: { creates: readonly PromptType[]; updates: readonly PromptType[]; deletes: readonly PromptType[] };
 }
 
 const PromptContext = createContext<PromptContextValue | null>(null);
@@ -56,168 +40,96 @@ interface PromptProviderProps {
   initialPrompts?: PromptType[];
 }
 
-export function PromptProvider({ children, documentId }: PromptProviderProps) {
-  // Create domain manager instance (only once per documentId)
-  const managerRef = useRef<DomainManager<PromptType> | null>(null);
-  const currentDocumentId = useRef<string>(documentId);
+export function PromptProvider({ children, documentId, initialPrompts }: PromptProviderProps) {
+  const managerRef = useRef<ReturnType<typeof createPromptManager> | null>(null);
+  const currentId = useRef<string>(documentId);
 
-  // Re-create manager if document ID changes
-  if (!managerRef.current || currentDocumentId.current !== documentId) {
-    managerRef.current = createDomainManager(promptManagerConfig, documentId);
-    currentDocumentId.current = documentId;
+  if (!managerRef.current || currentId.current !== documentId) {
+    managerRef.current = createPromptManager(documentId, initialPrompts);
+    currentId.current = documentId;
   }
-  
   const manager = managerRef.current;
-  
-  // Subscribe to state changes
-  const [state, setState] = useState<PromptManagerState>(manager.getState());
-  
-  useEffect(() => {
-    const unsubscribe = manager.subscribe(setState);
-    return unsubscribe;
+
+  const [state, setState] = useState(manager.getState());
+  useEffect(() => manager.subscribe(setState), [manager]);
+
+  const dispatch = useCallback(<K extends any>(type: K, payload?: any) => {
+    (manager as any).dispatch(type, payload);
   }, [manager]);
-  
-  // Memoized dispatch function
-  const dispatch = useCallback((action: PromptManagerAction) => {
-    manager.dispatch(action);
-  }, [manager]);
-  
-  // API methods
-  const loadPrompts = useCallback(async () => {
-    return manager.loadItems();
-  }, [manager]);
-  
-  const saveAllChanges = useCallback(async () => {
-    return manager.saveAllChanges();
-  }, [manager]);
-  
-  // Local operations (don't hit server immediately) - Adapter methods
-  const addPromptLocally = useCallback((promptData: Omit<PromptCreateType, 'document_id'>) => {
-    const promptWithId: PromptType = {
-      id: `prompt-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      ...promptData,
-      document_id: documentId,
+
+  // CRUD helpers
+  const createPrompt = useCallback((data: Omit<PromptType, 'id' | 'created_at' | 'updated_at' | 'document_id'>) => {
+    const temp: PromptType = {
+      id: `prompt-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+      document_id: currentId.current,
       created_at: new Date().toISOString(),
-      updated_at: null
+      updated_at: null,
+      text: data.text,
+      temperature: data.temperature,
+      languages: data.languages,
     };
-    
-    manager.dispatch({ type: 'ADD_ITEM', payload: promptWithId });
-    return promptWithId;
-  }, [manager, documentId]);
-  
-  const updatePrompt = useCallback((id: string, updates: Partial<PromptType>) => {
-    const existingPrompt = manager.getItemById(id);
-    if (existingPrompt) {
-      manager.dispatch({ 
-        type: 'UPDATE_ITEM', 
-        payload: { id, updates }
-      });
-      return true;
-    }
-    return false;
-  }, [manager]);
-  
-  const deletePromptLocally = useCallback((id: string) => {
-    const existingPrompt = manager.getItemById(id);
-    if (existingPrompt) {
-      manager.dispatch({ type: 'DELETE_ITEM', payload: id });
-      return true;
-    }
-    return false;
-  }, [manager]);
-  
-  const clearAll = useCallback(() => {
-    manager.dispatch({ type: 'CLEAR_ALL' });
-  }, [manager]);
-  
-  const discardAllChanges = useCallback(() => {
-    manager.dispatch({ type: 'DISCARD_ALL_CHANGES' });
-  }, [manager]);
-  
-  // Convenience methods - Use domain manager methods
-  const getPromptById = useCallback((id: string) => {
-    return manager.getItemById(id);
-  }, [manager]);
-  
-  const getAllPrompts = useCallback(() => {
-    return manager.getAllItems();
-  }, [manager]);
-  
-  const clearError = useCallback(() => {
-    dispatch({ type: 'SET_ERROR', payload: null });
+    dispatch('CREATE_ITEM', temp);
   }, [dispatch]);
-  
-  // Computed values - Use state methods from domain manager
-  const promptCount = useMemo(() => (state as any).getPromptCount?.() || manager.getItemCount(), [manager, state]);
-  const hasPrompts = useMemo(() => (state as any).hasPrompts?.() || manager.hasItems(), [manager, state]);
+
+  const updatePrompt = useCallback((id: string, updates: Partial<PromptType>) => {
+    dispatch('UPDATE_ITEM', { id, updates });
+  }, [dispatch]);
+
+  const deletePrompt = useCallback((id: string) => {
+    dispatch('DELETE_ITEM', id);
+  }, [dispatch]);
+
+  // Load/save
+  const load = useCallback(async () => {
+    return (manager as any).load();
+  }, [manager]);
+
+  const save = useCallback(async () => {
+    return (manager as any).save();
+  }, [manager]);
+
+  const clearAll = useCallback(() => {
+    dispatch('CLEAR_GLOBAL_CONTEXT');
+  }, [dispatch]);
+
+  const discardAllChanges = useCallback(() => {
+    dispatch('DISCARD_CHANGES');
+  }, [dispatch]);
+
+  // Computed
+  const allPrompts = useMemo(() => manager.getAllItems(), [manager, state]);
   const hasUnsavedChanges = useMemo(() => manager.hasUnsavedChanges(), [manager, state]);
-  const pendingChanges = useMemo(() => manager.getPendingChanges(), [manager, state]);
   const pendingChangesCount = useMemo(() => manager.getPendingChangesCount(), [manager, state]);
-  const isOperationInProgress = useMemo(() => 
-    state.isLoading || state.isCreating || state.isDeleting !== null, 
-    [state.isLoading, state.isCreating, state.isDeleting]
-  );
-  const isAnyOperationInProgress = useMemo(() => 
-    state.isLoading || state.isCreating || state.isDeleting !== null || state.isClearing || state.isSaving, 
-    [state.isLoading, state.isCreating, state.isDeleting, state.isClearing, state.isSaving]
-  );
-  
-  const contextValue: PromptContextValue = useMemo(() => ({
+  const pendingChanges = useMemo(() => manager.getPendingChanges(), [manager, state]);
+
+  const value: PromptContextValue = useMemo(() => ({
     state,
     dispatch,
-    loadPrompts,
-    saveAllChanges,
-    addPromptLocally,
+    createPrompt,
     updatePrompt,
-    deletePromptLocally,
+    deletePrompt,
+    load,
+    save,
     clearAll,
     discardAllChanges,
-    getPromptById,
-    getAllPrompts,
-    clearError,
-    promptCount,
-    hasPrompts,
+    allPrompts,
     hasUnsavedChanges,
-    pendingChanges,
     pendingChangesCount,
-    isOperationInProgress,
-    isAnyOperationInProgress,
-  }), [
-    state,
-    dispatch,
-    loadPrompts,
-    saveAllChanges,
-    addPromptLocally,
-    updatePrompt,
-    deletePromptLocally,
-    clearAll,
-    discardAllChanges,
-    getPromptById,
-    getAllPrompts,
-    clearError,
-    promptCount,
-    hasPrompts,
-    hasUnsavedChanges,
     pendingChanges,
-    pendingChangesCount,
-    isOperationInProgress,
-    isAnyOperationInProgress,
-  ]);
-  
+  }), [state, dispatch, createPrompt, updatePrompt, deletePrompt, load, save, clearAll, discardAllChanges, allPrompts, hasUnsavedChanges, pendingChangesCount, pendingChanges]);
+
   return (
-    <PromptContext.Provider value={contextValue}>
+    <PromptContext.Provider value={value}>
       {children}
     </PromptContext.Provider>
   );
 }
 
-// Hook to use prompt context
-export function usePrompts(): PromptContextValue {
-  const context = useContext(PromptContext);
-  if (!context) {
-    throw new Error('usePrompts must be used within a PromptProvider');
-  }
-  return context;
+export function usePrompts() {
+  const ctx = useContext(PromptContext);
+  if (!ctx) throw new Error('usePrompts must be used within a PromptProvider');
+  return ctx;
 }
 
 export default PromptProvider;
+

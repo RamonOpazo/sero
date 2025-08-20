@@ -7,7 +7,7 @@
 
 import React, { useState, useCallback, useRef } from "react";
 import { cn } from "@/lib/utils";
-import { useSelections } from '../../core/selection-provider';
+import { useSelections } from '../../providers/selection-provider';
 import { useViewportState } from '../../providers/viewport-provider';
 import type { Selection, SelectionCreateType } from '../../types/viewer';
 
@@ -42,7 +42,9 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     getCurrentDraw,
     beginBatchOperation,
   } = useSelections();
-
+  
+  // Touch selectionState to avoid TS unused variable during builds
+  void selectionState;
   
   // Interaction state for resize, move, and create operations
   const [dragState, setDragState] = useState<{

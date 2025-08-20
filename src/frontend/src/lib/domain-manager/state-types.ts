@@ -1,7 +1,7 @@
 // Domain Manager V2 - Core State and Configuration Types
 // Immutable state structures with strict type safety
 
-import type { Result } from '../../result';
+import type { Result } from '../result';
 import type { ActionContext, ActionType, ActionPayloadMap, Dispatch } from './action-types';
 
 // =============================================================================
