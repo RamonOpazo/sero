@@ -508,6 +508,18 @@ def process(db: Session, document_id: UUID, password: str) -> generics_schema.Su
         }
         for sel in document.selections
     ]
+
+    # Debug log selections
+    try:
+        from loguru import logger as _logger
+        _logger.info(
+            "Processing document {doc} with {count} selections",
+            doc=str(document_id), count=len(selections_list)
+        )
+        if selections_list:
+            _logger.debug("First 3 selections sample: {}", selections_list[:3])
+    except Exception:
+        pass
     
     # Apply redaction
     try:
@@ -738,9 +750,12 @@ def download_redacted_file(
     # Generate filename
     safe_filename = f"{document.name}_redacted.pdf"
     
-    # Always download as attachment for redacted files
+    # Always download as attachment for redacted files and disable caching
     headers = {
-        "Content-Disposition": f'attachment; filename="{safe_filename}"'
+        "Content-Disposition": f'attachment; filename="{safe_filename}"',
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        "Pragma": "no-cache",
+        "Expires": "0",
     }
     
     return StreamingResponse(

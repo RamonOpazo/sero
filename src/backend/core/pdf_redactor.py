@@ -18,6 +18,9 @@ class PDFRedactor:
     
     def redact_document(self, pdf_data: bytes, selections: List[Dict[str, Any]]) -> bytes:
         try:
+            logger.info("Redactor received {} selections", len(selections))
+            if len(selections) > 0:
+                logger.debug("Selections sample (first 3): {}", selections[:3])
             doc = pymupdf.open("pdf", pdf_data)
             
             if doc.is_encrypted:
@@ -38,13 +41,32 @@ class PDFRedactor:
                         redaction_count += count
                         processed_pages.add(page_idx)
                 else:
-                    page_idx = page_num - 1
+                    try:
+                        pn = int(page_num)
+                    except Exception:
+                        logger.warning(f"Invalid page_number in selection: {page_num}")
+                        continue
+                    # Support 0-based or 1-based inputs
+                    page_idx = pn - 1 if pn >= 1 else pn
                     if 0 <= page_idx < doc.page_count:
                         count = self._redact_page(doc.load_page(page_idx), [selection])
                         redaction_count += count
                         processed_pages.add(page_idx)
+                    else:
+                        logger.warning(f"Selection targets out-of-range page index {page_idx} (from page_number={pn}); doc has {doc.page_count} pages")
             
-            # Ensure watermark is applied on every page
+            # Apply all redactions: fall back to per-page application for compatibility
+            try:
+                for page_idx in range(doc.page_count):
+                    page = doc.load_page(page_idx)
+                    try:
+                        page.apply_redactions(images=1, graphics=1, text=1)
+                    except Exception as pe:
+                        logger.warning(f"Page-level redaction apply failed on page {page_idx+1}: {str(pe)}")
+            except Exception as e:
+                logger.warning(f"Failed applying redactions: {str(e)}")
+
+            # Ensure watermark is applied on every page AFTER redactions
             for page_idx in range(doc.page_count):
                 page = doc.load_page(page_idx)
                 self._insert_watermark(page)
@@ -69,19 +91,26 @@ class PDFRedactor:
         selection_rects: list[pymupdf.Rect] = []
         for selection in selections:
             rects = self._selection_to_rects(selection, page_rect)
+            if rects:
+                logger.debug(
+                    "Page {}: selection {} -> {} rect(s): {}",
+                    page.number + 1,
+                    selection,
+                    len(rects),
+                    [(float(r.x0), float(r.y0), float(r.x1), float(r.y1)) for r in rects]
+                )
+            else:
+                logger.debug("Page {}: selection {} produced no rects", page.number + 1, selection)
             selection_rects.extend(rects)
 
-        # 1) Visual marking: draw rectangles around words inside selections
+        # Debug: outline selection rects to verify mapping
         try:
-            words = page.get_text("words")  # [x0, y0, x1, y1, word, block_no, line_no, word_no]
-            for w in words:
-                wr = pymupdf.Rect(w[0], w[1], w[2], w[3])
-                if any(wr.intersects(sr) for sr in selection_rects):
-                    page.draw_rect(wr, color=(1, 0, 0), width=0.8, fill=None)
+            for sr in selection_rects:
+                page.draw_rect(sr, color=(0, 1, 0), width=0.8, fill=None)
         except Exception as e:
-            logger.warning(f"Failed to mark words on page {page.number+1}: {str(e)}")
+            logger.warning(f"Failed to draw selection outlines on page {page.number+1}: {str(e)}")
 
-        # 2) Redaction annotations for the whole selection area (still keep this path)
+        # Add redaction annotations for each selection area
         for rect in selection_rects:
             try:
                 page.add_redact_annot(rect, fill=self._redaction_fill)
@@ -89,10 +118,7 @@ class PDFRedactor:
             except Exception as e:
                 logger.warning(f"Failed to add redaction annot on page {page.number+1}: {str(e)}")
 
-        if redaction_count > 0:
-            # Apply redactions, ensuring text/graphics/images all affected
-            page.apply_redactions(images=1, graphics=1, text=1)
-
+        # Redactions are applied at the document level in redact_document
         return redaction_count
     
     def _selection_to_rects(self, selection: Dict[str, Any], page_rect: pymupdf.Rect) -> list[pymupdf.Rect]:
@@ -103,30 +129,34 @@ class PDFRedactor:
             width = float(selection['width'])
             height = float(selection['height'])
             
-            # Determine if coordinates are normalized (0..1) or absolute (points)
-            normalized = 0.0 <= x <= 1.0 and 0.0 <= y <= 1.0 and 0.0 < width <= 1.0 and 0.0 < height <= 1.0
+            # Determine if coordinates are normalized (0..1), percent (0..100), or absolute (points)
+            normalized_unit = 0.0 <= x <= 1.0 and 0.0 <= y <= 1.0 and 0.0 < width <= 1.0 and 0.0 < height <= 1.0
+            percent_unit = 0.0 <= x <= 100.0 and 0.0 <= y <= 100.0 and 0.0 < width <= 100.0 and 0.0 < height <= 100.0 and not normalized_unit
             page_width = page_rect.width
             page_height = page_rect.height
 
             candidates: list[tuple[float,float,float,float]] = []
-            if normalized:
-                # Candidate A: assume (0,0) top-left, y grows down
-                x0a = x * page_width
-                y0a = y * page_height
-                x1a = x0a + (width * page_width)
-                y1a = y0a + (height * page_height)
-                candidates.append((x0a, y0a, x1a, y1a))
-                # Candidate B: assume (0,0) bottom-left, y grows up (flip y)
-                y0b = (1.0 - (y + height)) * page_height
-                x0b = x * page_width
-                x1b = x0b + (width * page_width)
-                y1b = y0b + (height * page_height)
-                candidates.append((x0b, y0b, x1b, y1b))
+            if normalized_unit or percent_unit:
+                if percent_unit:
+                    # Convert to normalized 0..1 first
+                    x_n = x / 100.0
+                    y_n = y / 100.0
+                    w_n = width / 100.0
+                    h_n = height / 100.0
+                else:
+                    x_n, y_n, w_n, h_n = x, y, width, height
+                # Assume browser-style coordinates: origin at top-left, y grows downward
+                x0 = x_n * page_width
+                y0 = y_n * page_height
+                x1 = x0 + (w_n * page_width)
+                y1 = y0 + (h_n * page_height)
+                candidates.append((x0, y0, x1, y1))
             else:
                 candidates.append((x, y, x + width, y + height))
 
             # Normalize, clamp and convert to Rects
             for (x0, y0, x1, y1) in candidates:
+                orig = (x0, y0, x1, y1)
                 x0 = max(page_rect.x0, min(page_rect.x1, x0))
                 y0 = max(page_rect.y0, min(page_rect.y1, y0))
                 x1 = max(page_rect.x0, min(page_rect.x1, x1))
@@ -139,6 +169,10 @@ class PDFRedactor:
                 # Skip zero-area rects
                 if r.width > 0 and r.height > 0:
                     rects.append(r)
+                    try:
+                        logger.debug("Candidate {} -> clamped rect {}", orig, (float(r.x0), float(r.y0), float(r.x1), float(r.y1)))
+                    except Exception:
+                        pass
             
             return rects
         except (KeyError, TypeError, ValueError):
