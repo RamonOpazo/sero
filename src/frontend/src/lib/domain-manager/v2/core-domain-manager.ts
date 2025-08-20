@@ -286,6 +286,8 @@ export class CoreDomainManager<TItem, TCreateData = Omit<TItem, 'id'>> implement
       
       // Commit changes and update baseline
       this.dispatch('COMMIT_CHANGES' as any, undefined as any);
+      // After a successful save and commit, reset history so we start clean
+      this.dispatch('CLEAR_HISTORY' as any, undefined as any);
       this.dispatch('SET_SAVING' as any, false);
       
       return { ok: true, value: undefined };

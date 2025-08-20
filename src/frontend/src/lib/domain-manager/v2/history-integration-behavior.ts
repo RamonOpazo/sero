@@ -38,8 +38,13 @@ export const historyIntegrationBehavior: Behavior<CoreDomainState<any>> = {
     
     // Intercept UPDATE_ITEM to record history
     [CrudActionType.UPDATE_ITEM]: (state, { id, updates }, context) => {
-      // Don't record if this is from an undo/redo operation
-      if (context.source === ActionSource.UNDO_REDO || (state as any).isUndoRedoOperation) {
+      // Don't record if this is from an undo/redo operation OR if batching suppresses granular updates
+      if (
+        context.source === ActionSource.UNDO_REDO ||
+        (state as any).isUndoRedoOperation ||
+        (state as any).isBatchOperation ||
+        (state as any).suppressUpdateHistory
+      ) {
         return;
       }
       

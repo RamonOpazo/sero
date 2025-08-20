@@ -156,7 +156,12 @@ const selectionExtensions = {
     selectedItemId: null as string | null,
     
     // Batch operations for smooth drag operations
-    isBatchOperation: false
+    isBatchOperation: false,
+    suppressUpdateHistory: false,
+    batchSnapshot: {
+      itemId: null as string | null,
+      previous: null as Partial<Selection> | null,
+    }
   },
   
   actions: {
@@ -176,18 +181,18 @@ const selectionExtensions = {
     
     FINISH_DRAW: (state: any) => {
       if (state.isDrawing && state.currentDraw) {
-        // Preserve the temporary ID assigned when drawing started; add as a draft item
+        // Preserve the temporary ID assigned when drawing started; create via CRUD to leverage behaviors
         const created = { ...state.currentDraw };
-        state.draftItems = [...state.draftItems, created];
+        if (typeof state.dispatch === 'function') {
+          state.dispatch('CREATE_ITEM', created);
+        } else {
+          // Fallback (should not be needed): mutate drafts
+          state.draftItems = [...state.draftItems, created];
+        }
         
         // Clear drawing state
         state.currentDraw = null;
         state.isDrawing = false;
-        
-        // Add to history if not in batch mode
-        if (!state.isBatchOperation && state.addToHistory) {
-          state.addToHistory();
-        }
       }
     },
     
@@ -204,35 +209,82 @@ const selectionExtensions = {
     // Batch operation actions
     BEGIN_BATCH: (state: any) => {
       state.isBatchOperation = true;
+      (state as any).suppressUpdateHistory = true;
+      // Capture snapshot of the currently selected item for deterministic history at END_BATCH
+      const selectedId = state.selectedItemId;
+      if (selectedId) {
+        const current = [...state.persistedItems, ...state.draftItems].find((i: Selection) => i.id === selectedId);
+        if (current) {
+          (state as any).batchSnapshot = {
+            itemId: selectedId,
+            previous: {
+              x: current.x,
+              y: current.y,
+              width: current.width,
+              height: current.height,
+              page_number: current.page_number,
+              confidence: current.confidence,
+            }
+          };
+        }
+      }
     },
     
     // Note: Removed UPDATE_ITEM_BATCH override - use standard UPDATE_ITEM from V2 CRUD behavior
     // This ensures proper change tracking. Batch functionality is handled by BEGIN_BATCH/END_BATCH.
     
     END_BATCH: (state: any) => {
-      state.isBatchOperation = false;
-      // Add single history entry for the batch
-      if (state.addToHistory) {
-        state.addToHistory();
+      // End batch and record a single UPDATE in history if applicable
+      const snapshot = (state as any).batchSnapshot;
+      if (snapshot && snapshot.itemId && snapshot.previous) {
+        const current = [...state.persistedItems, ...state.draftItems].find((i: Selection) => i.id === snapshot.itemId);
+        if (current && typeof (state as any).recordHistoryChange === 'function') {
+          // Compute new values (only changed fields)
+          const newValues: Partial<Selection> = {};
+          const prev = snapshot.previous as Partial<Selection>;
+          const fields: (keyof Selection)[] = ['x','y','width','height','page_number','confidence'];
+          for (const key of fields) {
+            if ((current as any)[key] !== (prev as any)[key]) {
+              (newValues as any)[key] = (current as any)[key];
+            }
+          }
+          if (Object.keys(newValues).length > 0) {
+            (state as any).recordHistoryChange({
+              type: 'update',
+              itemId: snapshot.itemId,
+              previousValues: prev,
+              newValues,
+              timestamp: Date.now(),
+            });
+          }
+        }
       }
+      // Reset batching flags and snapshot
+      state.isBatchOperation = false;
+      (state as any).suppressUpdateHistory = false;
+      (state as any).batchSnapshot = { itemId: null, previous: null };
     },
     
     // Page operations
     CLEAR_PAGE: (state: any, payload: number) => {
-      state.persistedItems = state.persistedItems.filter((item: Selection) => item.page_number !== payload);
-      state.draftItems = state.draftItems.filter((item: Selection) => item.page_number !== payload);
+      // Determine items on the page and dispatch DELETE_ITEMS to leverage behaviors/history
+      const toDelete = [...state.persistedItems, ...state.draftItems]
+        .filter((item: Selection) => item.page_number === payload)
+        .map((item: Selection) => item.id);
+      if (toDelete.length > 0 && typeof state.dispatch === 'function') {
+        state.dispatch('DELETE_ITEMS', toDelete);
+      } else {
+        // Fallback (should not be needed)
+        state.persistedItems = state.persistedItems.filter((item: Selection) => item.page_number !== payload);
+        state.draftItems = state.draftItems.filter((item: Selection) => item.page_number !== payload);
+      }
       
       // Clear selection if it was on the cleared page
       if (state.selectedItemId) {
-        const selectedItem = [...state.persistedItems, ...state.draftItems].find((item: Selection) => item.id === state.selectedItemId);
-        if (!selectedItem) {
+        const stillSelected = [...state.persistedItems, ...state.draftItems].find((item: Selection) => item.id === state.selectedItemId);
+        if (!stillSelected) {
           state.selectedItemId = null;
         }
-      }
-      
-      // Add to history if not in batch mode
-      if (!state.isBatchOperation && state.addToHistory) {
-        state.addToHistory();
       }
     },
     
@@ -312,6 +364,7 @@ export const selectionDomainConfig: DomainManagerConfig<Selection, Omit<Selectio
     'crud',               // Core CRUD operations
     'changeTracking',     // Track pending changes
     'history',            // Undo/redo functionality
+    'historyIntegration', // Deterministic recording via behavior; batch suppresses granular updates
     'focusManagement',    // Selection/focus tracking 
     'batchOperations',    // Batch operations for smooth UI
     'bulkOperations'      // Clear all/page operations
