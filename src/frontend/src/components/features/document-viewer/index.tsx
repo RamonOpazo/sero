@@ -28,6 +28,16 @@ export default function DocumentViewer({ document }: DocumentViewerProps) {
     return <div>Document not found</div>;
   }
 
+  // Log entry into DocumentViewer with a compact summary
+  const filesSummary = (document.files || []).map((f: any) => ({ id: f.id, type: f.file_type, hasBlob: !!(f as any).blob }));
+  // Use info level to make it visible
+  console.info('[DocumentViewer] Mount', {
+    docId: document.id,
+    hasOriginalPtr: !!document.original_file,
+    hasRedactedPtr: !!document.redacted_file,
+    files: filesSummary,
+  });
+
   return (
     <UnifiedDocumentViewerProvider document={document}>
       <DocumentViewerContent document={document} />

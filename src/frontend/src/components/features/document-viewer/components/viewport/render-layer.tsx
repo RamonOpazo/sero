@@ -49,6 +49,11 @@ export default function RenderLayer({ document, onDocumentSizeChange }: Props) {
     const fileToLoad = navigation.isViewingProcessedDocument ? document.redacted_file : document.original_file;
 
     if (!fileToLoad) {
+      console.info('[RenderLayer] No fileToLoad for view', {
+        viewingProcessed: navigation.isViewingProcessedDocument,
+        redactedId: document.redacted_file?.id,
+        originalId: document.original_file?.id,
+      });
       setBlob(null);
       return;
     }
@@ -59,13 +64,21 @@ export default function RenderLayer({ document, onDocumentSizeChange }: Props) {
     // Look for the blob in the files array - each file should have its blob attached
     const fileWithBlob = document.files?.find(f => f.id === fileToLoad.id);
     
-    if (fileWithBlob && 'blob' in fileWithBlob && fileWithBlob.blob instanceof Blob) {
-      setBlob(fileWithBlob.blob);
+    const hasBlob = !!(fileWithBlob && 'blob' in (fileWithBlob as any) && (fileWithBlob as any).blob instanceof Blob);
+    console.info('[RenderLayer] Selecting file', {
+      selectedId: fileToLoad.id,
+      selectedType: (fileToLoad as any).file_type,
+      hasBlob,
+      availableFiles: (document.files || []).map((f: any) => ({ id: f.id, type: f.file_type, hasBlob: !!(f as any).blob })),
+    });
+
+    if (hasBlob) {
+      setBlob((fileWithBlob as any).blob as Blob);
       setCurrentPage(0); // reset on new file
     } else {
       // Fallback: The document viewer might be called with a blob that's stored elsewhere
       // Check if the document itself has a blob property for this use case
-      console.warn('No blob found in file structure, document may need to be reloaded');
+      console.warn('[RenderLayer] No blob found in file structure, document may need to be reloaded');
       setBlob(null);
     }
   }, [

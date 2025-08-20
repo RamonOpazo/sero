@@ -29,13 +29,9 @@ export const DocumentShallowSchema = z.object({
   description: z.string().nullable(),
   project_id: UUIDSchema,
   tags: z.array(z.string()),
-  
-  // Metadata about next level without loading full data
-  file_count: z.number().int(),
+  // Minimal metadata
   prompt_count: z.number().int(),
   selection_count: z.number().int(),
-  has_original_file: z.boolean(),
-  has_redacted_file: z.boolean(),
   is_processed: z.boolean(),
 });
 

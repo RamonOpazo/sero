@@ -300,6 +300,12 @@ export function ViewportProvider({ children, document }: ViewportProviderProps) 
   // Set document when provided
   React.useEffect(() => {
     if (document && document !== state.document) {
+      console.info('[ViewportProvider] Setting document', {
+        docId: document.id,
+        originalPtr: !!document.original_file,
+        redactedPtr: !!document.redacted_file,
+        files: (document.files || []).map((f: any) => ({ id: f.id, type: f.file_type, hasBlob: !!(f as any).blob })),
+      });
       dispatch({ type: 'SET_DOCUMENT', payload: document });
     }
   }, [document, state.document]);

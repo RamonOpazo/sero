@@ -23,6 +23,12 @@ export function UnifiedDocumentViewerProvider({
   document,
   children,
 }: UnifiedDocumentViewerProviderProps) {
+  // Provider boundary log
+  console.info('[UnifiedDocumentViewerProvider] Mount', {
+    docId: document.id,
+    originalPtr: !!document.original_file,
+    redactedPtr: !!document.redacted_file,
+  });
   return (
     <ViewportProvider document={document}>
       <SelectionProvider documentId={document.id}>
