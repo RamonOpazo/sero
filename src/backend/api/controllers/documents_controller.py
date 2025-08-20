@@ -66,24 +66,23 @@ def get(db: Session, document_id: UUID) -> documents_schema.Document:
 
 
 def get_shallow(db: Session, document_id: UUID) -> documents_schema.DocumentShallow:
-    """Get shallow document by ID without file, prompt, or selection data for efficient loading."""
-    documents_with_counts = documents_crud.search_shallow(
+    """Get shallow document by ID with counts and processed flag."""
+    documents_with_meta = documents_crud.search_shallow(
         db=db,
         skip=0,
         limit=1,
         order_by=[("created_at", "desc")],
-        # Filter for specific document ID
         id=document_id
     )
     
-    if not documents_with_counts:
+    if not documents_with_meta:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Document with ID {str(document_id)!r} not found",
         )
     
     # Extract the single result
-    document, file_count, prompt_count, selection_count, has_original, has_redacted = documents_with_counts[0]
+    document, prompt_count, selection_count, is_processed = documents_with_meta[0]
     
     shallow_data = {
         "id": document.id,
@@ -93,12 +92,9 @@ def get_shallow(db: Session, document_id: UUID) -> documents_schema.DocumentShal
         "description": document.description,
         "project_id": document.project_id,
         "tags": document.tags,
-        "file_count": file_count,
-        "prompt_count": prompt_count,
-        "selection_count": selection_count,
-        "has_original_file": bool(has_original),
-        "has_redacted_file": bool(has_redacted),
-        "is_processed": bool(has_redacted)
+        "prompt_count": int(prompt_count or 0),
+        "selection_count": int(selection_count or 0),
+        "is_processed": bool(is_processed),
     }
     
     return documents_schema.DocumentShallow.model_validate(shallow_data)
@@ -115,8 +111,8 @@ def get_list(db: Session, skip: int, limit: int) -> list[documents_schema.Docume
 
 
 def get_shallow_list(db: Session, skip: int, limit: int) -> list[documents_schema.DocumentShallow]:
-    """Get shallow list of documents without file, prompt, or selection data for efficient listing."""
-    documents_with_counts = documents_crud.search_shallow(
+    """Get shallow list of documents with prompt/selection counts and processed flag."""
+    documents_with_meta = documents_crud.search_shallow(
         db=db,
         skip=skip,
         limit=limit,
@@ -124,8 +120,8 @@ def get_shallow_list(db: Session, skip: int, limit: int) -> list[documents_schem
     )
     
     # Convert to shallow schema with metadata
-    shallow_documents = []
-    for document, file_count, prompt_count, selection_count, has_original, has_redacted in documents_with_counts:
+    shallow_documents: list[documents_schema.DocumentShallow] = []
+    for document, prompt_count, selection_count, is_processed in documents_with_meta:
         shallow_data = {
             "id": document.id,
             "created_at": document.created_at,
@@ -134,12 +130,9 @@ def get_shallow_list(db: Session, skip: int, limit: int) -> list[documents_schem
             "description": document.description,
             "project_id": document.project_id,
             "tags": document.tags,
-            "file_count": file_count,
-            "prompt_count": prompt_count,
-            "selection_count": selection_count,
-            "has_original_file": bool(has_original),
-            "has_redacted_file": bool(has_redacted),
-            "is_processed": bool(has_redacted)
+            "prompt_count": int(prompt_count or 0),
+            "selection_count": int(selection_count or 0),
+            "is_processed": bool(is_processed),
         }
         shallow_documents.append(documents_schema.DocumentShallow.model_validate(shallow_data))
     
