@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import type { MinimalDocumentType } from "@/types";
 import { AddPromptDialog, SavePromptChangesConfirmationDialog } from "../dialogs";
 import PromptsList from "./prompt-list";
-import { usePrompts } from "../../providers/prompt-provider";
+import { usePrompts } from "../../core/prompt-provider";
 
 interface PromptControlsProps {
   document: MinimalDocumentType;
@@ -18,20 +18,24 @@ interface PromptControlsProps {
  */
 export default function PromptManagement({ document }: PromptControlsProps) {
   const {
-    state: { savedItems: savedPrompts, newItems: newPrompts, isSaving, error },
-    loadPrompts,
-    saveAllChanges,
-    addPromptLocally,
+    state,
+    load,
+    save,
+    createPrompt,
     updatePrompt,
     clearAll,
     discardAllChanges,
-    getAllPrompts,
-    getPromptById,
+    allPrompts,
     hasUnsavedChanges,
     pendingChangesCount,
-    isAnyOperationInProgress
   } = usePrompts();
   
+  const isSaving = (state as any).isSaving || false;
+  const isLoading = (state as any).isLoading || false;
+  const isDeleting = (state as any).isDeleting || false;
+  const error = (state as any).error || null;
+  const isAnyOperationInProgress = !!(isSaving || isLoading || isDeleting);
+
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editingPromptId, setEditingPromptId] = useState<string | null>(null);
@@ -39,15 +43,14 @@ export default function PromptManagement({ document }: PromptControlsProps) {
   
   // Load prompts when component mounts
   useEffect(() => {
-    loadPrompts();
-  }, [loadPrompts]);
+    load();
+  }, [load]);
 
   // Calculate prompt statistics
   const promptStats = useMemo(() => {
-    const allPrompts = getAllPrompts();
     const totalCount = allPrompts.length;
-    const savedCount = savedPrompts.length;
-    const newCount = newPrompts.length;
+    const savedCount = (state as any).persistedItems?.length || 0;
+    const newCount = (state as any).draftItems?.length || 0;
     return {
       totalCount,
       savedCount,
@@ -55,7 +58,7 @@ export default function PromptManagement({ document }: PromptControlsProps) {
       hasUnsavedChanges,
       totalUnsavedChanges: pendingChangesCount,
     };
-  }, [getAllPrompts, savedPrompts.length, newPrompts.length, hasUnsavedChanges, pendingChangesCount]);
+  }, [allPrompts.length, (state as any).persistedItems?.length, (state as any).draftItems?.length, hasUnsavedChanges, pendingChangesCount]);
 
   // Add new rule locally (not saved to server until saveAllChanges is called)
   const handleAddRule = useCallback((ruleData: {
@@ -85,7 +88,7 @@ export default function PromptManagement({ document }: PromptControlsProps) {
         temperature: temperatureMap[ruleData.priority],
       };
       
-      addPromptLocally(promptData);
+      createPrompt(promptData);
       toast.success(`${ruleData.title} rule added (not yet saved)`);
       setShowAddDialog(false);
       
@@ -93,7 +96,7 @@ export default function PromptManagement({ document }: PromptControlsProps) {
       console.error('Error adding rule:', error);
       toast.error('Failed to add AI rule');
     }
-  }, [addPromptLocally]);
+  }, [createPrompt]);
 
   // Save all pending changes with confirmation
   const handleSaveAllPrompts = useCallback(() => {
@@ -112,7 +115,7 @@ export default function PromptManagement({ document }: PromptControlsProps) {
   // Handler for confirmed save action
   const handleConfirmedSave = useCallback(async () => {
     try {
-      const result = await saveAllChanges();
+      const result = await save();
       if (result.ok) {
         const savedCount = promptStats.totalUnsavedChanges;
         toast.success(`Successfully saved ${savedCount} change${savedCount === 1 ? '' : 's'}`);
@@ -124,7 +127,7 @@ export default function PromptManagement({ document }: PromptControlsProps) {
       console.error('Error saving changes:', error);
       toast.error('Failed to save changes');
     }
-  }, [saveAllChanges, promptStats.totalUnsavedChanges]);
+  }, [save, promptStats.totalUnsavedChanges]);
   
   // Discard all unsaved changes
   const handleDiscardAllChanges = useCallback(() => {
@@ -192,19 +195,15 @@ export default function PromptManagement({ document }: PromptControlsProps) {
         'low': 0.5      // Higher creativity for optional rules
       };
       
-      const success = updatePrompt(editingPromptId, {
+      updatePrompt(editingPromptId, {
         text: promptText,
         temperature: temperatureMap[ruleData.priority],
         languages: ['english', 'castillian']
       });
       
-      if (success) {
-        toast.success(`${ruleData.title} rule updated (not yet saved)`);
-        setShowEditDialog(false);
-        setEditingPromptId(null);
-      } else {
-        toast.error('Failed to update AI rule - prompt not found');
-      }
+      toast.success(`${ruleData.title} rule updated (not yet saved)`);
+      setShowEditDialog(false);
+      setEditingPromptId(null);
       
     } catch (error) {
       console.error('Error updating rule:', error);
@@ -319,7 +318,7 @@ export default function PromptManagement({ document }: PromptControlsProps) {
       
       {/* Edit Rule Dialog */}
       {editingPromptId && (() => {
-        const editingPrompt = getPromptById(editingPromptId);
+        const editingPrompt = allPrompts.find(p => p.id === editingPromptId);
         if (!editingPrompt) return null;
         
         // Parse the prompt text to extract form data

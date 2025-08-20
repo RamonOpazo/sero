@@ -3,7 +3,7 @@
 
 import { createDomainManager } from '@/lib/domain-manager';
 import { promptManagerConfig } from './configs/prompt-manager-config';
-import { selectionManagerConfig } from './configs/selection-manager-config';
+import { createSelectionManager as createV2SelectionManager } from '../core/selection-manager';
 
 // =============================================================================
 // MANAGER FACTORY FUNCTIONS
@@ -20,13 +20,13 @@ export const createPromptManager = (documentId: string) => {
 };
 
 /**
- * Creates a new SelectionManager instance for a given document
+ * Creates a new SelectionManager instance for a given document using V2 system
  * 
  * @param documentId - The document ID to manage selections for  
- * @returns A fully configured selection manager with CRUD, history, drawing, and page operations
+ * @returns A fully configured V2 selection manager with CRUD, history, drawing, and page operations
  */
 export const createSelectionManager = (documentId: string) => {
-  return createDomainManager(selectionManagerConfig, documentId);
+  return createV2SelectionManager(documentId);
 };
 
 // =============================================================================
@@ -35,7 +35,7 @@ export const createSelectionManager = (documentId: string) => {
 
 // Re-export types for convenience
 export type { PromptType, PromptCreateType } from '@/types';
-export type { Selection } from './configs/selection-manager-config';
+export type { Selection } from '../core/selection-config';
 export type { SelectionType, SelectionCreateType } from '@/types';
 
 // Manager instance types for React components

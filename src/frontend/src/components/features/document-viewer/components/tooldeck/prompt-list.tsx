@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { X, Loader2, Brain } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { usePrompts } from "../../providers/prompt-provider";
+import { usePrompts } from "../../core/prompt-provider";
 import { toast } from "sonner";
 import { useMemo } from "react";
 import type { PromptType, PromptCreateType } from "@/types";
@@ -16,38 +16,30 @@ type Props = {
 
 export default function PromptList({ onEditPrompt }: Props) {
   const {
-    state: { savedItems: savedPrompts, newItems: newPrompts, isLoading, isDeleting, error, initialState },
-    deletePromptLocally
+    state,
+    deletePrompt,
+    pendingChanges
   } = usePrompts();
 
+  const savedPrompts = (state as any).persistedItems || [];
+  const newPrompts = (state as any).draftItems || [];
+  const isLoading = (state as any).isLoading || false;
+  const error = (state as any).error || null;
+
   const handleDeletePrompt = (promptId: string) => {
-    const success = deletePromptLocally(promptId);
-    if (success) {
-      toast.success('Prompt deleted (not yet saved)');
-    } else {
-      toast.error('Failed to delete prompt');
-    }
+    deletePrompt(promptId);
+    toast.success('Prompt deleted (not yet saved)');
   };
 
   // Enhanced prompts with type information and modification status
   const promptsWithTypeInfo = useMemo(() => {
-    const initialSavedPrompts = initialState.savedItems;
+    const updatedIds = new Set(pendingChanges.updates.map((p: any) => p.id));
 
-    const saved = savedPrompts.map((prompt: Prompt) => {
-      // Check if this saved prompt was modified from its initial state
-      const initialPrompt = initialSavedPrompts?.find((initial: Prompt) => initial.id === prompt.id);
-      const isModified = initialPrompt && (
-        prompt.text !== initialPrompt.text ||
-        prompt.temperature !== initialPrompt.temperature ||
-        JSON.stringify(prompt.languages) !== JSON.stringify(initialPrompt.languages)
-      );
-
-      return {
-        ...prompt,
-        type: 'saved' as const,
-        isModified: !!isModified,
-      };
-    });
+    const saved = savedPrompts.map((prompt: Prompt) => ({
+      ...prompt,
+      type: 'saved' as const,
+      isModified: updatedIds.has(prompt.id),
+    }));
 
     const newOnes = newPrompts.map((prompt: Prompt) => ({
       ...prompt,
@@ -56,7 +48,7 @@ export default function PromptList({ onEditPrompt }: Props) {
     }));
 
     return [...newOnes, ...saved]; // New prompts first
-  }, [savedPrompts, newPrompts, initialState.savedItems]);
+  }, [savedPrompts, newPrompts, pendingChanges.updates]);
 
   if (isLoading) {
     return (
@@ -216,14 +208,10 @@ export default function PromptList({ onEditPrompt }: Props) {
                     e.stopPropagation();
                     handleDeletePrompt(prompt.id);
                   }}
-                  disabled={isDeleting === prompt.id}
+                  disabled={false}
                   className="h-6 w-6 p-0 text-muted-foreground/60 hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-all duration-200"
                 >
-                  {isDeleting === prompt.id ? (
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                  ) : (
-                    <X className="h-3 w-3" />
-                  )}
+                  <X className="h-3 w-3" />
                 </Button>
               </div>
 

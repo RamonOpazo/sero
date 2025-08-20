@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils";
 import { WidgetContainer, Widget } from "@/components/shared/Widget";
 import { useState, useEffect } from "react";
 import type { MinimalDocumentType } from "@/types";
-import { useSelections } from "../../providers/selection-provider";
+import { useSelections } from "../../core/selection-provider";
 import {
   DocumentControls,
   SelectionCommander,

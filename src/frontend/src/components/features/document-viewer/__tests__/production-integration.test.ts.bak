@@ -15,13 +15,13 @@ describe('Production Integration', () => {
       expect(promptManager).toBeDefined();
       expect(typeof promptManager.getState).toBe('function');
       expect(typeof promptManager.dispatch).toBe('function');
-      expect(typeof promptManager.loadItems).toBe('function');
-      expect(typeof promptManager.saveAllChanges).toBe('function');
+      expect(typeof promptManager.load).toBe('function');
+      expect(typeof promptManager.save).toBe('function');
       
       const state = promptManager.getState();
       expect(state.documentId).toBe(TEST_DOCUMENT_ID);
-      expect(state.savedItems).toEqual([]);
-      expect(state.newItems).toEqual([]);
+      expect(state.persistedItems).toEqual([]);
+      expect(state.draftItems).toEqual([]);
     });
 
     it('should create selection manager instances successfully', () => {
@@ -30,13 +30,13 @@ describe('Production Integration', () => {
       expect(selectionManager).toBeDefined();
       expect(typeof selectionManager.getState).toBe('function');
       expect(typeof selectionManager.dispatch).toBe('function');
-      expect(typeof selectionManager.loadItems).toBe('function');
-      expect(typeof selectionManager.saveAllChanges).toBe('function');
+      expect(typeof selectionManager.load).toBe('function');
+      expect(typeof selectionManager.save).toBe('function');
       
       const state = selectionManager.getState();
       expect(state.documentId).toBe(TEST_DOCUMENT_ID);
-      expect(state.savedItems).toEqual([]);
-      expect(state.newItems).toEqual([]);
+      expect(state.persistedItems).toEqual([]);
+      expect(state.draftItems).toEqual([]);
       
       // Selection-specific features
       expect(state.isDrawing).toBe(false);
@@ -54,7 +54,7 @@ describe('Production Integration', () => {
       expect(selectionManager.getState().documentId).toBe('doc1');
       
       // Operations on one shouldn't affect others
-      promptManager1.dispatch({ type: 'ADD_ITEM', payload: {
+      promptManager1.dispatch('CREATE_ITEM', {
         id: 'test-prompt',
         text: 'Test prompt',
         temperature: 0.7,
@@ -62,7 +62,7 @@ describe('Production Integration', () => {
         document_id: 'doc1',
         created_at: new Date().toISOString(),
         updated_at: null
-      } as PromptType });
+      } as PromptType);
       
       expect(promptManager1.getAllItems()).toHaveLength(1);
       expect(promptManager2.getAllItems()).toHaveLength(0);
@@ -85,20 +85,17 @@ describe('Production Integration', () => {
       };
       
       // Add prompt
-      promptManager.dispatch({ type: 'ADD_ITEM', payload: testPrompt });
+      promptManager.dispatch('CREATE_ITEM', testPrompt);
       expect(promptManager.getAllItems()).toHaveLength(1);
       expect(promptManager.getItemById('test-prompt-1')).toEqual(testPrompt);
       
       // Update prompt
       const updatedPrompt = { ...testPrompt, text: 'Updated prompt text' };
-      promptManager.dispatch({ 
-        type: 'UPDATE_ITEM', 
-        payload: { id: 'test-prompt-1', updates: updatedPrompt } 
-      });
+      promptManager.dispatch('UPDATE_ITEM', { id: 'test-prompt-1', updates: updatedPrompt });
       expect(promptManager.getItemById('test-prompt-1')?.text).toBe('Updated prompt text');
       
       // Delete prompt
-      promptManager.dispatch({ type: 'DELETE_ITEM', payload: 'test-prompt-1' });
+      promptManager.dispatch('DELETE_ITEM', 'test-prompt-1');
       expect(promptManager.getAllItems()).toHaveLength(0);
     });
 
@@ -120,11 +117,11 @@ describe('Production Integration', () => {
       };
       
       // Add selection
-      selectionManager.dispatch({ type: 'ADD_ITEM', payload: testSelection });
+      selectionManager.dispatch('CREATE_ITEM', testSelection);
       expect(selectionManager.getAllItems()).toHaveLength(1);
       
       // Select it
-      selectionManager.dispatch({ type: 'SELECT_ITEM', payload: 'test-selection-1' });
+      selectionManager.dispatch('SELECT_ITEM', 'test-selection-1');
       const state = selectionManager.getState();
       expect(state.selectedItemId).toBe('test-selection-1');
       
@@ -143,12 +140,12 @@ describe('Production Integration', () => {
         is_ai_generated: false
       };
       
-      selectionManager.dispatch({ type: 'START_DRAW', payload: drawingSelection });
+      selectionManager.dispatch('START_DRAW', drawingSelection);
       let drawState = selectionManager.getState();
       expect(drawState.isDrawing).toBe(true);
       expect(drawState.selectedItemId).toBeNull(); // Should clear selection
       
-      selectionManager.dispatch({ type: 'FINISH_DRAW' });
+      selectionManager.dispatch('FINISH_DRAW');
       drawState = selectionManager.getState();
       expect(drawState.isDrawing).toBe(false);
       expect(selectionManager.getAllItems()).toHaveLength(2); // Original + new from draw
@@ -180,13 +177,13 @@ describe('Production Integration', () => {
       ];
       
       prompts.forEach(prompt => {
-        promptManager.dispatch({ type: 'ADD_ITEM', payload: prompt });
+        promptManager.dispatch('CREATE_ITEM', prompt);
       });
       
       expect(promptManager.getAllItems()).toHaveLength(2);
       
       // Clear all
-      promptManager.dispatch({ type: 'CLEAR_ALL' });
+      promptManager.dispatch('CLEAR_GLOBAL_CONTEXT');
       expect(promptManager.getAllItems()).toHaveLength(0);
     });
   });
@@ -200,7 +197,7 @@ describe('Production Integration', () => {
       const promptState = promptManager.getState();
       const selectionState = selectionManager.getState();
       
-      expect(typeof promptState.savedItems).toBe('object');
+      expect(typeof promptState.persistedItems).toBe('object');
       expect(typeof selectionState.isDrawing).toBe('boolean');
       expect(typeof selectionState.selectedItemId).toBe('object'); // null is an object
       

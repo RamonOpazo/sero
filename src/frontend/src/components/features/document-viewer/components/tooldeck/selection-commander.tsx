@@ -2,11 +2,10 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Save, RotateCcw, AlertCircle, Trash2, FileX, Undo2 } from "lucide-react";
 import { useViewportState } from "../../providers/viewport-provider";
-import { useSelections } from "../../providers/selection-provider";
+import { useSelections } from "../../core/selection-provider";
 import { toast } from "sonner";
 import { useState, useCallback, useMemo } from "react";
 import type { MinimalDocumentType } from "@/types";
-import { useDocumentSelections } from "../../hooks/use-document-data";
 import { SaveConfirmationDialog } from "../dialogs";
 import SelectionsList from "./selection-list";
 
@@ -26,15 +25,11 @@ export default function SelectionManagement({ document }: SelectionControlsProps
     allSelections,
     pendingChanges,
     pendingChangesCount,
-    loadSavedSelections,
     clearAll,
     clearPage,
     discardAllChanges,
-    saveAllChanges,
+    save,
   } = useSelections();
-  
-  // Get fresh selections data for reload after save
-  const { refetch: refetchSelections } = useDocumentSelections(document.id);
   
   const [isSaving, setIsSaving] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
@@ -42,7 +37,7 @@ export default function SelectionManagement({ document }: SelectionControlsProps
   // Calculate selection statistics using the clean PendingChanges API
   const selectionStats = useMemo(() => {
     const newCount = pendingChanges.creates.length;
-    const existingCount = selectionState.savedItems?.length || 0;
+    const existingCount = (selectionState as any).persistedItems?.length || 0;
     const totalCount = allSelections.length;
     const modifiedSavedCount = pendingChanges.updates.length;
     const pendingDeletionsCount = pendingChanges.deletes.length;
@@ -58,7 +53,7 @@ export default function SelectionManagement({ document }: SelectionControlsProps
       totalUnsavedChanges,
       hasUnsavedChanges
     };
-  }, [pendingChanges, pendingChangesCount, selectionState.savedItems?.length, allSelections.length]);
+  }, [pendingChanges, pendingChangesCount, (selectionState as any).persistedItems?.length, allSelections.length]);
 
   // Save all pending changes using SelectionManager
   const performSaveAllSelections = useCallback(async () => {
@@ -70,7 +65,7 @@ export default function SelectionManagement({ document }: SelectionControlsProps
     setIsSaving(true);
     
     try {
-      const result = await saveAllChanges();
+      const result = await save();
       
       if (result.ok) {
         // Calculate statistics for user feedback
@@ -85,16 +80,9 @@ export default function SelectionManagement({ document }: SelectionControlsProps
         
         toast.success(`Successfully saved changes: ${messages.join(', ')}`);
         
-        // Reload selections from backend to get updated IDs and state
-        try {
-          const freshSelections = await refetchSelections();
-          if (freshSelections) {
-            loadSavedSelections(freshSelections);
-          }
-        } catch (reloadError) {
-          console.warn('Failed to reload selections after save:', reloadError);
-          // Changes were already committed by SelectionManager.saveAllChanges()
-        }
+        // Note: The V2 domain manager's save() method automatically calls COMMIT_CHANGES
+        // which updates the baseline and handles state transitions properly.
+        // No need to reload from server as local state is now authoritative.
       } else {
         console.error('Failed to save selections:', result.error);
         toast.error('Failed to save selections');
@@ -106,7 +94,7 @@ export default function SelectionManagement({ document }: SelectionControlsProps
     } finally {
       setIsSaving(false);
     }
-  }, [pendingChanges, pendingChangesCount, saveAllChanges, refetchSelections, loadSavedSelections]);
+  }, [pendingChanges, pendingChangesCount, save]);
 
   // Handler to show confirmation dialog
   const handleSaveAllSelections = useCallback(() => {

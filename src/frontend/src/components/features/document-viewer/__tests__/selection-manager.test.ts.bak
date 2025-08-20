@@ -19,8 +19,8 @@ describe('SelectionManager Configuration', () => {
       const state = selectionManager.getState();
       
       expect(state.documentId).toBe(TEST_DOCUMENT_ID);
-      expect(state.savedItems).toEqual([]);
-      expect(state.newItems).toEqual([]);
+      expect(state.persistedItems).toEqual([]);
+      expect(state.draftItems).toEqual([]);
       expect(state.isLoading).toBe(false);
       expect(state.error).toBeNull();
     });
@@ -57,10 +57,7 @@ describe('SelectionManager Configuration', () => {
       };
 
       // Start drawing
-      selectionManager.dispatch({
-        type: 'START_DRAW',
-        payload: drawingSelection
-      });
+      selectionManager.dispatch('START_DRAW', drawingSelection);
 
       let state = selectionManager.getState();
       expect(state.isDrawing).toBe(true);
@@ -69,21 +66,18 @@ describe('SelectionManager Configuration', () => {
 
       // Update drawing
       const updatedDraw = { ...drawingSelection, width: 0.5 };
-      selectionManager.dispatch({
-        type: 'UPDATE_DRAW',
-        payload: updatedDraw
-      });
+      selectionManager.dispatch('UPDATE_DRAW', updatedDraw);
 
       state = selectionManager.getState();
       expect(state.currentDraw?.width).toBe(0.5);
 
       // Finish drawing
-      selectionManager.dispatch({ type: 'FINISH_DRAW' });
+      selectionManager.dispatch('FINISH_DRAW');
 
       state = selectionManager.getState();
       expect(state.isDrawing).toBe(false);
       expect(state.currentDraw).toBeNull();
-      expect(state.newItems).toHaveLength(1);
+      expect(state.draftItems).toHaveLength(1);
     });
 
     it('should cancel drawing correctly', () => {
@@ -101,17 +95,17 @@ describe('SelectionManager Configuration', () => {
         is_ai_generated: false
       };
 
-      selectionManager.dispatch({ type: 'START_DRAW', payload: drawingSelection });
+      selectionManager.dispatch('START_DRAW', drawingSelection);
       
       let state = selectionManager.getState();
       expect(state.isDrawing).toBe(true);
 
-      selectionManager.dispatch({ type: 'CANCEL_DRAW' });
+      selectionManager.dispatch('CANCEL_DRAW');
 
       state = selectionManager.getState();
       expect(state.isDrawing).toBe(false);
       expect(state.currentDraw).toBeNull();
-      expect(state.newItems).toHaveLength(0); // Should not add to items
+      expect(state.draftItems).toHaveLength(0); // Should not add to items
     });
   });
 
@@ -132,10 +126,10 @@ describe('SelectionManager Configuration', () => {
       };
 
       // Add selection
-      selectionManager.dispatch({ type: 'ADD_ITEM', payload: testSelection });
+      selectionManager.dispatch('CREATE_ITEM', testSelection);
 
       // Select it
-      selectionManager.dispatch({ type: 'SELECT_ITEM', payload: 'selection-1' });
+      selectionManager.dispatch('SELECT_ITEM', 'selection-1');
 
       const state = selectionManager.getState();
       expect(state.selectedItemId).toBe('selection-1');
@@ -159,14 +153,14 @@ describe('SelectionManager Configuration', () => {
         is_ai_generated: false
       };
 
-      selectionManager.dispatch({ type: 'ADD_ITEM', payload: testSelection });
-      selectionManager.dispatch({ type: 'SELECT_ITEM', payload: 'selection-1' });
+      selectionManager.dispatch('CREATE_ITEM', testSelection);
+      selectionManager.dispatch('SELECT_ITEM', 'selection-1');
 
       let state = selectionManager.getState();
       expect(state.selectedItemId).toBe('selection-1');
 
       // Delete the selected item
-      selectionManager.dispatch({ type: 'DELETE_ITEM', payload: 'selection-1' });
+      selectionManager.dispatch('DELETE_ITEM', 'selection-1');
 
       state = selectionManager.getState();
       expect(state.selectedItemId).toBeNull(); // Should auto-clear
@@ -209,21 +203,18 @@ describe('SelectionManager Configuration', () => {
         is_ai_generated: false
       };
 
-      selectionManager.dispatch({ type: 'ADD_ITEM', payload: testSelection });
+      selectionManager.dispatch('CREATE_ITEM', testSelection);
 
       // Start batch operation
-      selectionManager.dispatch({ type: 'START_BATCH_OPERATION' });
+      selectionManager.dispatch('BEGIN_BATCH');
 
       let state = selectionManager.getState();
       expect((state as any).isBatch?.()).toBe(true);
 
       // Batch update
-      selectionManager.dispatch({
-        type: 'UPDATE_ITEM_BATCH',
-        payload: {
-          id: 'selection-1',
-          updates: { x: 0.5, y: 0.6 }
-        }
+      selectionManager.dispatch('UPDATE_ITEM_BATCH', {
+        id: 'selection-1',
+        updates: { x: 0.5, y: 0.6 }
       });
 
       const updatedSelection = selectionManager.getItemById('selection-1') as Selection | undefined;
@@ -231,7 +222,7 @@ describe('SelectionManager Configuration', () => {
       expect(updatedSelection?.y).toBe(0.6);
 
       // Finish batch operation
-      selectionManager.dispatch({ type: 'FINISH_BATCH_OPERATION' });
+      selectionManager.dispatch('END_BATCH');
 
       state = selectionManager.getState();
       expect((state as any).isBatch?.()).toBe(false);
@@ -275,7 +266,7 @@ describe('SelectionManager Configuration', () => {
 
       // Add all selections
       selections.forEach(selection => {
-        selectionManager.dispatch({ type: 'ADD_ITEM', payload: selection });
+        selectionManager.dispatch('CREATE_ITEM', selection);
       });
 
       const state = selectionManager.getState();
@@ -314,18 +305,15 @@ describe('SelectionManager Configuration', () => {
       expect((state as any).getSelectionCount()).toBe(0);
 
       // Add a selection
-      selectionManager.dispatch({
-        type: 'ADD_ITEM',
-        payload: {
-          id: 'selection-1',
-          x: 0.1, y: 0.1, width: 0.2, height: 0.2,
-          page_number: 1,
-          confidence: 1.0,
-          document_id: TEST_DOCUMENT_ID,
-          created_at: new Date().toISOString(),
-          updated_at: null,
-          is_ai_generated: false
-        }
+      selectionManager.dispatch('CREATE_ITEM', {
+        id: 'selection-1',
+        x: 0.1, y: 0.1, width: 0.2, height: 0.2,
+        page_number: 1,
+        confidence: 1.0,
+        document_id: TEST_DOCUMENT_ID,
+        created_at: new Date().toISOString(),
+        updated_at: null,
+        is_ai_generated: false
       });
 
       const updatedState = selectionManager.getState();
