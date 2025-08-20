@@ -11,6 +11,7 @@ from backend.db.models import Document as DocumentModel
 from backend.crud import documents_crud, prompts_crud, selections_crud, projects_crud, files_crud
 from backend.api.schemas import documents_schema, generics_schema, files_schema, prompts_schema, selections_schema
 from backend.api.enums import FileType
+from backend.services.redaction_service import create_redaction_service
 
 
 def _raise_not_found(callback: Callable[..., DocumentModel | None], db: Session, id: UUID, **kwargs) -> DocumentModel:
@@ -424,19 +425,140 @@ def process(db: Session, document_id: UUID, password: str) -> generics_schema.Su
     """Process a document to generate a redacted version.
     
     This method will:
-    1. Decrypt the original file using the password
-    2. Apply redaction based on prompts and selections
-    3. Generate a redacted PDF file (not encrypted)
-    4. Store the redacted file with salt=None
+    1. Verify document exists and has original file
+    2. Verify password is correct for the project
+    3. Decrypt the original file using the password
+    4. Apply redaction based on selections
+    5. Generate a redacted PDF file (not encrypted)
+    6. Store the redacted file with salt=None
     """
-    # TODO: Implement the processing pipeline
-    # - Verify document exists and has original file
-    # - Decrypt original file using password
-    # - Apply AI-based redaction using prompts
-    # - Apply manual redaction using selections
-    # - Generate redacted PDF
-    # Store redacted file with salt=None (unencrypted)
-    raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED)
+    # Get document with files and selections
+    document = _raise_not_found(
+        documents_crud.read, 
+        db=db, 
+        id=document_id, 
+        join_with=["files", "selections"]
+    )
+    
+    # Find original file
+    original_file = None
+    for file in document.files:
+        if file.file_type == FileType.ORIGINAL:
+            original_file = file
+            break
+    
+    if original_file is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Document has no original file - cannot process"
+        )
+    
+    # Verify project password
+    if not projects_crud.verify_password(db=db, id=document.project_id, password=password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid project password"
+        )
+    
+    # Check if document has selections
+    if not document.selections:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Document has no selections - cannot process without redaction areas"
+        )
+    
+    # Check if redacted file already exists
+    has_redacted_file = any(file.file_type == FileType.REDACTED for file in document.files)
+    if has_redacted_file:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Document already has a redacted file"
+        )
+    
+    # Decrypt original file data (original files are always encrypted)
+    if original_file.salt is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Original file has no encryption salt - data corruption"
+        )
+    
+    decrypted_data = security_manager.decrypt_data(
+        encrypted_data=original_file.data, 
+        password=password, 
+        salt=original_file.salt
+    )
+    
+    if decrypted_data is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to decrypt file - document may be corrupted"
+        )
+    
+    # Verify file integrity
+    if security_manager.generate_file_hash(decrypted_data) != original_file.file_hash:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="File integrity verification failed - document may be corrupted"
+        )
+    
+    # Prepare selections for redaction
+    selections_list = [
+        {
+            'x': sel.x,
+            'y': sel.y,
+            'width': sel.width,
+            'height': sel.height,
+            'page_number': sel.page_number
+        }
+        for sel in document.selections
+    ]
+    
+    # Apply redaction
+    try:
+        redaction_service = create_redaction_service()
+        redacted_pdf_data = redaction_service.redactor.redact_document(
+            pdf_data=decrypted_data,
+            selections=selections_list
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Redaction failed: {str(e)}"
+        )
+    
+    # Calculate file hash for redacted data
+    redacted_file_hash = security_manager.generate_file_hash(redacted_pdf_data)
+    
+    # Create redacted file (unencrypted, salt=None)
+    file_data = files_schema.FileCreate(
+        file_hash=redacted_file_hash,
+        file_type=FileType.REDACTED,
+        mime_type=original_file.mime_type,
+        data=redacted_pdf_data,
+        salt=None,  # Redacted files are not encrypted
+        document_id=document_id,
+        file_size=len(redacted_pdf_data)
+    )
+    
+    try:
+        # Create the redacted file
+        redacted_file = files_crud.create(db=db, data=file_data)
+        
+        return generics_schema.Success(
+            message=f"Document processed successfully - redacted file created",
+            detail={
+                "document_id": str(document_id),
+                "redacted_file_id": str(redacted_file.id),
+                "original_file_size": original_file.file_size,
+                "redacted_file_size": len(redacted_pdf_data),
+                "selections_count": len(document.selections)
+            }
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to save redacted file: {str(e)}"
+        )
 
 
 def download_original_file(
@@ -630,3 +752,5 @@ def download_redacted_file(
         media_type=redacted_file.mime_type,
         headers=headers
     )
+
+
