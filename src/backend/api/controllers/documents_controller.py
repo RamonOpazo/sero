@@ -752,5 +752,3 @@ def download_redacted_file(
         media_type=redacted_file.mime_type,
         headers=headers
     )
-
-
