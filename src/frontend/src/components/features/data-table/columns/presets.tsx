@@ -1,88 +1,11 @@
-import { CheckCircle, XCircle, Clock, AlertCircle, Zap } from 'lucide-react'
 import type { 
   TextColumnConfig,
   NumberColumnConfig,
   DateColumnConfig,
-  StatusColumnConfig,
   BadgeColumnConfig,
   BooleanColumnConfig
 } from '../types/column-config'
-import { textColumn, numberColumn, dateColumn, statusColumn, badgeColumn, booleanColumn } from './factories'
-
-// Common status configurations
-export const CommonStatusMaps = {
-  // Generic active/inactive status
-  activeStatus: {
-    active: { 
-      label: 'Active', 
-      variant: 'default' as const, 
-      color: 'bg-green-50 text-green-700 border-green-200',
-      icon: CheckCircle
-    },
-    inactive: { 
-      label: 'Inactive', 
-      variant: 'secondary' as const, 
-      color: 'bg-gray-50 text-gray-700 border-gray-200',
-      icon: XCircle
-    }
-  },
-  
-  // Task/project status
-  taskStatus: {
-    pending: { 
-      label: 'Pending', 
-      variant: 'outline' as const, 
-      color: 'bg-yellow-50 text-yellow-700 border-yellow-200',
-      icon: Clock
-    },
-    in_progress: { 
-      label: 'In Progress', 
-      variant: 'default' as const, 
-      color: 'bg-blue-50 text-blue-700 border-blue-200',
-      icon: Zap
-    },
-    completed: { 
-      label: 'Completed', 
-      variant: 'default' as const, 
-      color: 'bg-green-50 text-green-700 border-green-200',
-      icon: CheckCircle
-    },
-    cancelled: { 
-      label: 'Cancelled', 
-      variant: 'destructive' as const, 
-      color: 'bg-red-50 text-red-700 border-red-200',
-      icon: XCircle
-    }
-  },
-  
-  // Processing status
-  processingStatus: {
-    awaiting: { 
-      label: 'Awaiting', 
-      variant: 'outline' as const, 
-      color: 'bg-yellow-50 text-yellow-700 border-yellow-200',
-      icon: Clock
-    },
-    processing: { 
-      label: 'Processing', 
-      variant: 'default' as const, 
-      color: 'bg-blue-50 text-blue-700 border-blue-200',
-      icon: Zap
-    },
-    processed: { 
-      label: 'Processed', 
-      variant: 'default' as const, 
-      color: 'bg-green-50 text-green-700 border-green-200',
-      icon: CheckCircle
-    },
-    error: { 
-      label: 'Error', 
-      variant: 'destructive' as const, 
-      color: 'bg-red-50 text-red-700 border-red-200',
-      icon: AlertCircle
-    }
-  }
-}
+import { textColumn, numberColumn, dateColumn, badgeColumn, booleanColumn } from './factories'
 
 // Preset column factory functions
 export const columnPresets = {
@@ -95,7 +18,7 @@ export const columnPresets = {
       width: '80px',
       align: 'right',
       sortable: true,
-      className: 'font-mono'
+      className: 'font-medium'
     })
   },
 
@@ -148,7 +71,7 @@ export const columnPresets = {
       header: 'Email',
       width: '220px',
       maxLength: 30,
-      className: 'font-mono text-sm'
+      className: 'text-muted-foreground'
     })
   },
 
@@ -159,7 +82,7 @@ export const columnPresets = {
     return textColumn(key as any, {
       header: 'Phone',
       width: '150px',
-      className: 'font-mono'
+      className: 'font-medium'
     })
   },
 
@@ -196,7 +119,7 @@ export const columnPresets = {
         prefix: currency,
         thousands: ','
       },
-      className: 'font-mono'
+      className: 'font-medium'
     })
   },
 
@@ -216,7 +139,7 @@ export const columnPresets = {
         decimals: 1,
         suffix: '%'
       },
-      className: 'font-mono'
+      className: 'font-medium'
     })
   },
 
@@ -260,39 +183,6 @@ export const columnPresets = {
   },
 
   /**
-   * Active/inactive status column
-   */
-  activeStatus<TData>(key: keyof TData = 'status' as keyof TData): StatusColumnConfig<TData> {
-    return statusColumn(key as any, {
-      header: 'Status',
-      width: '120px',
-      statusMap: CommonStatusMaps.activeStatus
-    })
-  },
-
-  /**
-   * Task status column (pending, in_progress, completed, cancelled)
-   */
-  taskStatus<TData>(key: keyof TData = 'status' as keyof TData): StatusColumnConfig<TData> {
-    return statusColumn(key as any, {
-      header: 'Status',
-      width: '140px',
-      statusMap: CommonStatusMaps.taskStatus
-    })
-  },
-
-  /**
-   * Processing status column (awaiting, processing, processed, error)
-   */
-  processingStatus<TData>(key: keyof TData = 'status' as keyof TData): StatusColumnConfig<TData> {
-    return statusColumn(key as any, {
-      header: 'Status',
-      width: '140px',
-      statusMap: CommonStatusMaps.processingStatus
-    })
-  },
-
-  /**
    * Boolean column with Yes/No display
    */
   yesNo<TData>(
@@ -332,7 +222,7 @@ export const columnPresets = {
       header: 'Version',
       width: '100px',
       align: 'center',
-      className: 'font-mono'
+      className: 'font-medium'
     })
   },
 
@@ -376,50 +266,6 @@ export const columnPresets = {
       header,
       width: '140px'
     })
-  }
-}
-
-// Commonly used column combinations
-export const columnCombinations = {
-  /**
-   * Standard user table columns
-   */
-  userColumns<TData>() {
-    return [
-      columnPresets.name<TData>(),
-      columnPresets.email<TData>(),
-      columnPresets.role<TData>(),
-      columnPresets.department<TData>(),
-      columnPresets.activeStatus<TData>(),
-      columnPresets.createdAt<TData>()
-    ]
-  },
-
-  /**
-   * Standard project table columns
-   */
-  projectColumns<TData>() {
-    return [
-      columnPresets.name<TData>(),
-      columnPresets.description<TData>(),
-      columnPresets.taskStatus<TData>(),
-      columnPresets.count<TData>('document_count' as keyof TData, 'Documents'),
-      columnPresets.updatedAt<TData>(),
-      columnPresets.createdAt<TData>()
-    ]
-  },
-
-  /**
-   * Standard document table columns
-   */
-  documentColumns<TData>() {
-    return [
-      columnPresets.title<TData>(),
-      columnPresets.description<TData>(),
-      columnPresets.processingStatus<TData>(),
-      columnPresets.count<TData>('page_count' as keyof TData, 'Pages'),
-      columnPresets.updatedAt<TData>()
-    ]
   }
 }
 

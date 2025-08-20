@@ -16,12 +16,10 @@ export * from './presets'
 // Convenience exports for the most common patterns
 export { column } from './factories'
 export { columnPresets as presets } from './presets'
-export { columnCombinations as combinations } from './presets'
 
 // Main column creation utilities
 import { column } from './factories'
 import { columnPresets } from './presets'
-import { columnCombinations } from './presets'
 
 /**
  * Modern column builder - the main API for creating type-safe columns
@@ -48,9 +46,6 @@ export const columns = {
   
   // Pre-configured presets
   presets: columnPresets,
-  
-  // Common column combinations
-  combinations: columnCombinations,
   
   // Utility functions for advanced use cases
   utils: {

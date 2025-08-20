@@ -7,7 +7,6 @@ import type {
   DateColumnConfig,
   BooleanColumnConfig,
   BadgeColumnConfig,
-  StatusColumnConfig,
   ActionsColumnConfig,
   SelectColumnConfig,
   CustomColumnConfig,
@@ -166,17 +165,6 @@ export interface StatusColumnOptions<TData> extends BaseColumnOptions<TData, str
   }>
 }
 
-export function statusColumn<TData>(
-  key: KeyOf<TData>,
-  options: StatusColumnOptions<TData> = {}
-): StatusColumnConfig<TData> {
-  return {
-    ...createBaseColumn(key, key as any, options),
-    type: 'status',
-    statusMap: options.statusMap,
-  } as any
-}
-
 // Actions Column Factory
 export interface ActionsColumnOptions<TData> extends Omit<BaseColumnOptions<TData, any>, 'cell'> {
   actions: Array<{
@@ -241,7 +229,6 @@ export const column = {
   date: dateColumn,
   boolean: booleanColumn,
   badge: badgeColumn,
-  status: statusColumn,
   actions: actionsColumn,
   select: selectColumn,
   custom: customColumn,
@@ -317,7 +304,6 @@ export {
   dateColumn as date,
   booleanColumn as boolean,
   badgeColumn as badge,
-  statusColumn as status,
   actionsColumn as actions,
   selectColumn as select,
   customColumn as custom,

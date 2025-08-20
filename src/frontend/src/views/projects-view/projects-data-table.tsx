@@ -3,7 +3,6 @@ import { Eye, Plus, Copy, Edit, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { DataTable } from '@/components/features/data-table';
 import { columns, adaptColumns } from '@/components/features/data-table/columns';
-import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { CreateProjectDialog, EditProjectDialog } from './dialogs';
 import { ConfirmationDialog } from '@/components/shared/ConfirmationDialog';
@@ -77,52 +76,37 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
     }),
     
     // Document count - displayed as badge
-    columns.badge<ProjectShallowType>('document_count', {
-      header: 'Documents',
-      width: '120px',
-      align: 'center',
-      sortable: true
-    }),
-    
-    // Last updated - relative date formatting
-    columns.date<ProjectShallowType>('updated_at', {
-      header: 'Last Updated',
+    columns.number<ProjectShallowType>('document_count', {
+      header: '# Documents',
       width: '150px',
-      sortable: true,
-      format: { style: 'relative' }
+      sortable: true
     }),
     
     // Contact person - truncated
     columns.text<ProjectShallowType>('contact_name', {
       header: 'Contact Person',
       maxLength: 20,
-      width: '150px'
+      width: '200px'
     }),
-    
-    // Version - custom badge renderer
-    columns.custom<ProjectShallowType, number>(
-      'version',
-      'version',
-      {
-        header: 'Version',
-        width: '100px',
-        align: 'center',
-        sortable: true,
-        render: (value) => <Badge variant="outline">v{value}</Badge>
-      }
-    ),
-    
+        
     // Contact email - truncated with monospace font
     columns.text<ProjectShallowType>('contact_email', {
-      header: 'Email Address',
+      header: 'Contact Email',
       maxLength: 25,
-      width: '180px',
-      className: 'font-mono text-sm'
+      width: '200px'
     }),
     
     // Created date - relative formatting
     columns.date<ProjectShallowType>('created_at', {
       header: 'Created',
+      width: '150px',
+      sortable: true,
+      format: { style: 'relative' }
+    }),
+    
+    // Last updated - relative date formatting
+    columns.date<ProjectShallowType>('updated_at', {
+      header: 'Last Updated',
       width: '150px',
       sortable: true,
       format: { style: 'relative' }
