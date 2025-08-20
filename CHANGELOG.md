@@ -1,6 +1,1456 @@
 # CHANGELOG
 
 
+## v1.0.0 (2025-08-20)
+
+### Bug Fixes
+
+- Complete selection system migration with clean architecture
+  ([`110f7e9`](https://github.com/RamonOpazo/sero/commit/110f7e98bbaa1527d08589cd3aae5ad2b2f17853))
+
+- Create useSelectionLoader hook to load API data directly into new SelectionManager - Update
+  DocumentViewer to use clean architecture without mixing old/new systems - Remove bridge pattern
+  and establish single source of truth for selection data - New system now handles: API loading →
+  state management → UI display - Maintain proper separation of concerns throughout the architecture
+
+This fixes the issue where saved selections weren't visible after Phase 5 migration. The new system
+  is now the complete owner of selection data flow.
+
+- Connect resize functionality to actual selection state
+  ([`44b8da1`](https://github.com/RamonOpazo/sero/commit/44b8da10a6968c35d847aed66d8dc520d53ea64f))
+
+- Add UPDATE_EXISTING_SELECTION and UPDATE_NEW_SELECTION actions to ViewerState types - Implement
+  handlers for both actions in the reducer with bounds checking - Connect SelectionsLayer resize
+  logic to dispatch real state updates - Fix visual feedback by updating actual selection data
+  during drag - Ensure both existing and new selections update correctly during resize - Add proper
+  dependency tracking for useCallback with dispatch
+
+Now when users resize selections, the visual changes are immediately reflected in the underlying
+  state, and the sidebar will also show the updated selection coordinates in real-time.
+
+- Correct API endpoints and selection reload flow
+  ([`de444da`](https://github.com/RamonOpazo/sero/commit/de444da4d397d900f8a8c22eb5e8574b1d832a52))
+
+- Fix selection deletion to use correct /selections/id/{id} endpoint instead of non-existent
+  document-scoped endpoint - Fix selection updates to use correct /selections/id/{id} endpoint for
+  consistency - Add refetch capability to useDocumentSelections hook for proper state reload -
+  Implement proper selection reload after successful save operations - Ensure new selections are
+  cleared when reloading fresh selections from backend - Maintain proper state synchronization
+  between frontend and backend after saves
+
+The app was failing because frontend was using wrong API endpoints: - DELETE
+  /documents/id/{id}/selections/{id} (doesn't exist) → /selections/id/{id} ✓ - PUT
+  /documents/id/{id}/selections/{id} (doesn't exist) → /selections/id/{id} ✓ - POST
+  /documents/id/{id}/selections (correct) ✓
+
+After saves, selections are now properly reloaded from backend to get real UUIDs and newSelections
+  array is cleared since they're now saved.
+
+- Eliminate React-PDF file prop warning by optimizing dependency tracking
+  ([`c198c14`](https://github.com/RamonOpazo/sero/commit/c198c147e0a620a5e1fcea655e688ea90b45a2f2))
+
+- Add automatic URL redirects for cleaner navigation: * /projects/:projectId ->
+  /projects/:projectId/documents * /projects/:projectId/documents/:documentId -> .../original-file
+
+- Fix React-PDF 'File prop changed but equal' warning: * Root cause: RenderLayer useEffect was
+  re-running on document object changes * Solution: Track file.id instead of document object
+  reference in dependencies * Prevents unnecessary blob/ArrayBuffer recreation for same file content
+  * Maintains proper reloading when actual file changes
+
+- Simplify DocumentViewer integration: * Remove complex MemoizedDocumentViewer wrapper * Use key
+  prop for proper component lifecycle management * Let React-PDF handle internal optimizations
+  naturally
+
+- Improve file loading stability: * Enhanced memoization in RenderLayer using useRef pattern *
+  Stable PDF file object references prevent unnecessary reloads * Maintain performance while
+  eliminating console warnings
+
+- Implement consistent 0-based page system across selection layer
+  ([`289a33b`](https://github.com/RamonOpazo/sero/commit/289a33b60e1c096da9cd6086d4a9a83b91f82181))
+
+- Fix selection navigation bug - clicks now go to correct pages - Standardize page numbering:
+  null=global, 0=page1, 1=page2, etc. - Update SelectionsList display logic to add +1 for user
+  display only - Fix SelectionsLayer creation to use currentPage directly (0-based) - Update old
+  useSelections hook to use 0-based pageIndex - Remove page_number === 0 checks, only use null for
+  global selections - Simplify page filtering logic throughout selection rendering - Add utility
+  functions for future page/index conversions if needed
+
+Now selection creation, storage, navigation, and display all use consistent 0-based internal
+  indexing with +1 only applied for user-facing display. This eliminates the off-by-one navigation
+  bugs completely.
+
+- Implement proper flexbox layout for DocumentViewer height
+  ([`28b2801`](https://github.com/RamonOpazo/sero/commit/28b280141e6c96c24b3da3ac01544c2941a747b9))
+
+- Replace arbitrary calc(100vh-200px) with proper flexbox layout - FileViewer now uses flex-col
+  h-full container with flex-1 children - DocumentViewer takes available space naturally from parent
+  - All content sections (password prompts, viewer) use flex-1 for proper space distribution - Added
+  min-h-0 to prevent overflow issues - Height now adapts properly to any parent container structure
+  - Removes dependency on hardcoded viewport calculations
+
+This ensures DocumentViewer properly fills available space regardless of where FileViewer is used in
+  the layout hierarchy.
+
+- Implement proper page filtering for selections
+  ([`60c18e3`](https://github.com/RamonOpazo/sero/commit/60c18e32c679011ed521cd375e5eb549874fcbde))
+
+- Fix page filtering logic to handle page_number field correctly: - page_number = null or 0: Show
+  selection on ALL pages - page_number > 0: Show selection only on that specific page - Use actual
+  currentPage from viewer state instead of hardcoded value - Convert 0-based currentPage to 1-based
+  page_number for comparison - Handle both null and 0 values as 'show on all pages' - Apply
+  filtering to existing selections, new selections, and drawing selection
+
+This ensures selections are displayed correctly based on their page assignment and supports both
+  document-wide selections (page_number = null/0) and page-specific selections (page_number > 0).
+
+- Preserve selection IDs to enable proper updates instead of duplicates
+  ([`890b257`](https://github.com/RamonOpazo/sero/commit/890b257067dcbd3ded603fe1953cc04ec4d1ce22))
+
+- Fix SET_EXISTING_SELECTIONS action to preserve SelectionType with id fields - Enhance
+  UPDATE_EXISTING_SELECTION to merge updates while preserving metadata - Fix API result handling to
+  use .ok/.value instead of .success/.data - Update SelectionsLayer to properly handle selection
+  updates and type casting - Resolve TypeScript compilation errors and remove unused imports
+
+This resolves the issue where editing existing selections would create duplicates instead of
+  updating the original selections, as the id fields were being stripped during state storage.
+
+- Prevent unnecessary page navigation when clicking selection on current page
+  ([`60cc37c`](https://github.com/RamonOpazo/sero/commit/60cc37cd9f9791526e69d36b04697d50d46e421d))
+
+When clicking on a selection item in the list that belongs to the current page, avoid calling
+  setCurrentPage() unnecessarily as this was causing selections to disappear due to viewport
+  refresh.
+
+Now only navigates to a different page if the selection's page differs from the current page,
+  maintaining smooth UX when selecting items on the same page.
+
+- Remove old ViewerState system and fix undo/redo conflicts
+  ([`0a84904`](https://github.com/RamonOpazo/sero/commit/0a84904932ba3878854e94da874781656606312c))
+
+- Delete old ViewerState.tsx, useViewerState.ts, EventHandler.tsx - Replace with minimal
+  ViewportState.tsx for viewport concerns only - Update all components to use new ViewportState
+  hooks - Remove old SelectionsLayer.tsx (replaced by SelectionsLayerNew) - Fix keyboard shortcut
+  conflicts - undo/redo now properly uses SelectionManager - Clean separation: SelectionManager
+  handles selections, ViewportState handles viewport - Build successfully passes with no conflicts
+  between old and new systems
+
+Resolves undo/redo functionality - now works with proper history granularity
+
+- Resolve 'Unhandled action type: CAPTURE_INITIAL_STATE' warning
+  ([`d384dfb`](https://github.com/RamonOpazo/sero/commit/d384dfb50b49c4f0996308387f0a4cae2ada92a1))
+
+DOMAIN MANAGER FIX - Action Dispatcher Warning Resolution:
+
+🐛 Issue Fixed: - Console warning: 'Unhandled action type: CAPTURE_INITIAL_STATE' - Occurred when
+  domain managers were created without 'changeTracking' behavior - Core manager was dispatching
+  CAPTURE_INITIAL_STATE unconditionally
+
+🔧 Root Cause: - Domain manager constructor always dispatched CAPTURE_INITIAL_STATE - loadItems()
+  method also dispatched CAPTURE_INITIAL_STATE - But CAPTURE_INITIAL_STATE handler only exists in
+  'changeTracking' behavior - Minimal managers with just 'crud' behavior didn't have this handler
+
+✅ Solution Implemented: - Added conditional checks before dispatching CAPTURE_INITIAL_STATE - Only
+  dispatch when 'changeTracking' behavior is included in config - Applied fix to both constructor
+  (line 75) and loadItems() method (line 189)
+
+🎯 Conditional Logic:
+
+✅ Quality Assurance: - All 45 tests passing (100% success rate) - Console warning completely
+  eliminated - No breaking changes to existing functionality - Behavior composition still works
+  correctly for all configurations
+
+This fix ensures domain managers only dispatch actions that have registered handlers, maintaining
+  clean console output and proper action matching.
+
+- Resolve critical undo/redo issues in selection management
+  ([`374803b`](https://github.com/RamonOpazo/sero/commit/374803bfd1e96a50380faebf606298acf50d2c7a))
+
+- Fix multiple addToHistory calls in UPDATE_SELECTION and DELETE_SELECTION operations that were
+  corrupting the history stack with duplicate entries - Fix initial history state mismatch when
+  selections are loaded after manager creation by updating initial snapshot instead of creating
+  duplicate entries - Add proper validation and early returns for boundary conditions - Clean up
+  excessive debug logging after identifying root causes
+
+The core issues were: 1. History corruption from multiple addToHistory calls per logical operation
+  2. Initial history snapshot containing empty state instead of loaded selections 3. This caused
+  undo to revert to empty state instead of actual initial state
+
+All undo/redo operations should now work correctly without data loss.
+
+- Resolve infinite re-render loop in document viewer
+  ([`6d4b3ab`](https://github.com/RamonOpazo/sero/commit/6d4b3ab3ea3ed9b22ef7b0dee8b8d5c35a925bdf))
+
+- Stabilize registerPage and other action functions using useCallback - Fix Controller component to
+  use unified viewer state instead of old context - Add SET_VIEWING_PROCESSED action to ViewerState
+  reducer - Prevent infinite loop caused by function recreation on every render
+
+This resolves the 'Maximum update depth exceeded' error and restores functionality to the refactored
+  document viewer.
+
+- Resolve major TypeScript compilation errors
+  ([`9c99a60`](https://github.com/RamonOpazo/sero/commit/9c99a600b7bde67c95298dd09eab47485460279a))
+
+- Fix setShowSelections to use toggleSelections in ActionsLayer - Remove InfoLayer export conflict
+  from index.ts - Fix duplicate type exports by being more specific with coordinate system exports -
+  Update DocumentsDataTable and ProjectsDataTable copy actions to remove callback parameter - Clean
+  up unused imports and variables: - Remove unused React import from InfoLayer - Remove unused
+  fileWithBlob variable from InfoLayer - Clean up SelectionsLayer props and unused imports - Remove
+  unused imports from AppSidebar and NavMain - Fix breadcrumbs unused index parameter
+
+Reduced TypeScript errors from 44 to ~20, with remaining errors being mostly unused variables that
+  don't affect functionality. Core document viewer on-demand loading feature is fully functional.
+
+- Resolve redo shortcut conflicts with browser-reserved Ctrl+Shift+Z
+  ([`f3ade47`](https://github.com/RamonOpazo/sero/commit/f3ade47592d03f2f752c8244af43c614b8429fb5))
+
+## Problem Ctrl+Shift+Z doesn't work in most browsers because it's reserved for: - Chrome/Edge:
+  'Reopen closed tab' - Firefox: Tab management - System-level shortcuts on Linux/Windows
+
+The keydown event never reaches JavaScript when browser intercepts it.
+
+## Solution - **Primary redo shortcut**: Ctrl+Y (standard, reliable across all browsers) -
+  **Fallback redo shortcut**: Ctrl+Shift+Z (works where not reserved) - **Undo shortcut**: Ctrl+Z
+  (unchanged, works everywhere)
+
+## Technical Details - Browser event interception happens before preventDefault() - System-level
+  shortcuts take precedence over web apps - Ctrl+Y is the most reliable redo shortcut for web
+  applications
+
+Both undo and redo now work perfectly with proper keyboard shortcuts
+
+- Resolve TypeScript build errors after refactoring
+  ([`597a59a`](https://github.com/RamonOpazo/sero/commit/597a59af9271398d41be5018667e09a1add24a05))
+
+- Remove unused document parameter from DocumentViewControls component - Remove unused
+  MinimalDocumentType import - Update component usage to match new signature - Build now passes
+  successfully with clean architecture
+
+- Resolve TypeScript build errors in PromptManager implementation
+  ([`81b1e95`](https://github.com/RamonOpazo/sero/commit/81b1e95096fa9fd94e2487e915d75cb9ca70a46c))
+
+- Fix Result type usage: use 'ok' property instead of 'success' and 'value' instead of 'data' -
+  Remove unused imports and variables across all components - Clean up AddPromptDialog interface to
+  remove unused documentId parameter - Ensure all Result type patterns match the axios wrapper
+  implementation - Build now passes successfully with no TypeScript errors
+
+- Update component property access for new domain manager system
+  ([`0c8e8d9`](https://github.com/RamonOpazo/sero/commit/0c8e8d920db194ec65a185d51b7ed20740d1ad66))
+
+- Fixed PromptsList.tsx to use initialState.savedItems instead of savedPrompts - Fixed
+  SelectionCommander.tsx to use savedItems instead of savedSelections - Fixed SelectionsList.tsx to
+  use savedItems/newItems instead of savedSelections/newSelections - Added null safety with optional
+  chaining and fallback arrays - Resolved 'Cannot read properties of undefined' errors in all
+  components - All components now compatible with reorganized domain manager architecture
+
+- Update index.ts exports after component reorganization
+  ([`b731220`](https://github.com/RamonOpazo/sero/commit/b7312200b8bf08d4f065d9ba2bed7e241b9699b3))
+
+- Export new layout components (MainLayout, ViewportLayout, TooldeckLayout) - Export viewport
+  components from new viewport directory - Update core system exports for clean architecture -
+  Maintain all public API exports for components
+
+### Chores
+
+- Cleaned some spurious code leftovers
+  ([`6ca6e99`](https://github.com/RamonOpazo/sero/commit/6ca6e9902e1e6baf7121cb1a85efec153f6e5f8b))
+
+- Reviewing selections.
+  ([`54269ae`](https://github.com/RamonOpazo/sero/commit/54269aede1237d2200675fc28d8b67acba1accd4))
+
+### Code Style
+
+- Improve table toolbar design with better responsive layout
+  ([`ce64edd`](https://github.com/RamonOpazo/sero/commit/ce64edd3a8662beb865e146b79f12b0740713526))
+
+- Replace Columns icon with Columns3 for better visual consistency - Add responsive text visibility
+  (full text on desktop, shorter on mobile) - Implement proper left-right layout with search/filters
+  on left, actions on right - Use consistent size='sm' for all toolbar buttons - Add better
+  responsive widths for search and filter inputs - Improve mobile experience with adaptive button
+  labels - Update CSS for cleaner toolbar layout with proper spacing - Follow modern UI patterns
+  with icons + conditional text labels
+
+### Documentation
+
+- Add comprehensive migration plan for component-centric architecture
+  ([`9cf5f35`](https://github.com/RamonOpazo/sero/commit/9cf5f35d12c28247f0cac469a1089326d69867a5))
+
+- Complete DIRECTORY_STRUCTURE.md with strict architectural imperatives - Detailed MIGRATION_PLAN.md
+  with 11 phases and compliance checks - Command-by-command migration steps with verification -
+  Explicit hook extraction and dialog domain ownership rules - Import hygiene enforcement and
+  architectural boundary validation - Testing colocation and clean public API requirements
+
+Ready for execution to migrate to component-centric organization with strict separation of concerns.
+
+- Update migration plan progress - mark phases 1-3 complete
+  ([`1286c4b`](https://github.com/RamonOpazo/sero/commit/1286c4b02d2adf7c06639fee215a4c02599e5636))
+
+- Phase 1: Directory structure creation ✅ - Phase 2: Pages migration with clean indexes ✅ - Phase 3:
+  ProjectsView module migration with hook encapsulation ✅ - Build status: Passing with no errors -
+  Ready for phases 4-5 (DocumentsView and DocumentEditor migrations)
+
+### Features
+
+- Achieve minimal CSS Grid sidebar with maximum impact
+  ([`f6a60b4`](https://github.com/RamonOpazo/sero/commit/f6a60b49c19183df87aef2db5092791430e59fcb))
+
+- Reduced CSS file from 100+ lines to 18 lines (~82% reduction) - Restored all user interactions by
+  removing over-engineered overrides - Pure CSS Grid approach: trust the grid, don't fight it -
+  Perfect functionality: responsive, collapsible, interactive - Clean, maintainable, and elegant
+  solution
+
+Sometimes less is definitively more.
+
+- Add 'Show on All Pages' context menu option for selections
+  ([`1733794`](https://github.com/RamonOpazo/sero/commit/173379468aadf814ea4f1bb91ca083f43c980733))
+
+- Add new context menu option with Globe icon to make selections appear on all pages - Implement
+  handleMakeSelectionGlobal function to set page_number to 0 - Support both existing and new
+  selections with proper state updates - Mark existing selections as edited when made global so they
+  can be saved - Only show option when selection is not already global (page_number !== 0) - Add
+  Globe icon import from lucide-react
+
+This allows users to easily convert page-specific selections to global selections that appear across
+  all pages of the document.
+
+- Add breadcrumb navigation to refactor layout
+  ([`82768bb`](https://github.com/RamonOpazo/sero/commit/82768bb9dda7a5c7e820e14c457800a01118ac54))
+
+- Integrate existing Breadcrumbs component into RefactorLayout header - Update breadcrumb routing
+  patterns for new app structure: * Support /projects/:projectId/documents paths * Add original-file
+  and redacted-file route recognition - Add proper label mapping for original-file -> 'Original
+  File' - Position breadcrumbs below main header for clear navigation hierarchy - Breadcrumbs now
+  show proper navigation context: * Projects root: No breadcrumb (clean) * Project documents: Home >
+  Projects > Documents * File viewer: Home > Projects > Documents > Original File/Redacted File
+
+Provides users with clear location awareness and easy navigation back to parent levels.
+
+- Add clear page and clear all selection functionality
+  ([`8e296d3`](https://github.com/RamonOpazo/sero/commit/8e296d37c156af9fe1977a35a68342012f4f7ebc))
+
+- Add CLEAR_PAGE action to SelectionManager with proper page number filtering - Extend
+  SelectionProvider with clearAll and clearPage methods - Implement clear page and clear all buttons
+  in SelectionCommander - Fix page number mismatch (viewport 0-based vs selection 1-based) - Improve
+  unsaved changes counting to include modified saved selections - Add proper destructive styling for
+  clear all button - Include comprehensive toast notifications for user feedback - Disable buttons
+  appropriately when no selections exist or viewing processed docs
+
+- Add comprehensive test suite for domain manager library
+  ([`479faf1`](https://github.com/RamonOpazo/sero/commit/479faf18d2914d2d83cc2647678ea174e01bd7dc))
+
+🧪 Testing Infrastructure: - Organized tests by domain ownership principles - Created domain-specific
+  integration tests in feature directory - Added generic library unit tests with mock configurations
+
+📁 Test Structure: - src/lib/domain-manager/__tests__/core.test.ts - Library unit tests -
+  src/components/features/document-viewer/__tests__/ ├── domain-managers.integration.ts -
+  Integration tests for both managers ├── prompt-manager.test.ts - PromptManager configuration tests
+  └── selection-manager.test.ts - SelectionManager configuration tests
+
+✅ Test Coverage: - Generic library functionality with mock data - PromptManager configuration and
+  behaviors - SelectionManager configuration and advanced features - Drawing workflow, selection
+  tracking, history management - Batch operations, page operations, custom methods - API
+  integration, subscription patterns, error handling
+
+🎯 Benefits: - Clean separation between library and domain tests - Follows architectural principles
+  of domain ownership - Comprehensive coverage of all behaviors and features - Real-world scenarios
+  with actual configurations - Mock-based testing for generic library validation
+
+- Add GET endpoints for document-specific prompts and selections
+  ([`f4dd48f`](https://github.com/RamonOpazo/sero/commit/f4dd48fd1fffe3d755bb9adda083b70407538634))
+
+- Add get_prompts() and get_selections() controller methods in documents_controller.py - Add GET
+  /documents/id/{document_id}/prompts endpoint with pagination - Add GET
+  /documents/id/{document_id}/selections endpoint with pagination - Both endpoints verify document
+  existence and use existing CRUD methods - Enables on-demand loading of prompts/selections instead
+  of including in DocumentType - Prepares for FileViewer optimization to eliminate unnecessary
+  DocumentType fields
+
+- Add manual verification test runner for domain managers
+  ([`8401c9e`](https://github.com/RamonOpazo/sero/commit/8401c9ecb1366e161d80b38cf7d3cff6f866b22a))
+
+✅ Verification Results: - Basic manager creation and state management working - Add/delete/clear
+  operations functional - Subscription pattern operational - Item retrieval by ID working correctly
+  - State notifications firing as expected
+
+🏗️ Architecture Validated: - Configuration-driven approach implemented - Functional pattern matching
+  operational - Behavior composition working correctly - API adapter pattern ready for integration -
+  Type safety maintained throughout
+
+🚀 Production Readiness Confirmed: - PromptManager can be safely replaced with configuration -
+  SelectionManager can be safely replaced with configuration - Zero code duplication achieved -
+  Providers ready for update to new library - All original functionality preserved
+
+Ready to proceed with provider migration! 🎉
+
+- Add resize handles and move functionality to SelectionsLayerNew
+  ([`1a70a45`](https://github.com/RamonOpazo/sero/commit/1a70a455fc9217b599b2628b909a3c0d74963f76))
+
+- Add 4-corner resize handles (nw, ne, sw, se) for selected selections - Implement real-time move
+  functionality by dragging selection body - Use SelectionManager's updateSelection for direct state
+  updates during operations - Maintain clean separation: creation uses drawing system, move/resize
+  updates directly - Disable CSS transitions during drag operations for smooth, responsive
+  interactions - Add proper cursor feedback (grab/grabbing for move, resize cursors for handles) -
+  Ensure proper bounds checking and minimum size constraints
+
+- Add secure save confirmation dialog and discard changes functionality
+  ([`51d2e79`](https://github.com/RamonOpazo/sero/commit/51d2e79628cdcadfc97a81303a561b25fc76e61c))
+
+- Add discardAllChanges method to SelectionProvider that dispatches DISCARD_ALL_CHANGES action -
+  Update SelectionCommander with new Discard All Changes button alongside existing controls - Apply
+  ragged left button styling convention (w-full justify-start) across all action buttons - Create
+  SaveConfirmationDialog following PageSelectionDialog structure and styling patterns - Implement
+  secure phrase confirmation ('proceed') to prevent accidental saves - Add comprehensive save
+  summary with change counts and detailed action descriptions - Include proper loading states, error
+  handling, and dialog auto-close on completion - Maintain consistent UI patterns with Alert
+  components, typography, and spacing
+
+- Add shallow data schemas and endpoints for optimized API performance
+  ([`4907910`](https://github.com/RamonOpazo/sero/commit/4907910abc26a7009489ec6cb2c228d6c1ed918e))
+
+- Add ProjectShallow and DocumentShallow schemas for efficient listing - Implement shallow endpoints
+  in projects and documents controllers - Add corresponding router endpoints for /shallow routes -
+  Include comprehensive test coverage for new shallow endpoints - Optimize frontend data loading
+  with lightweight shallow data structures
+
+This improves API performance by avoiding unnecessary nested data loading when only basic listing
+  information is needed.
+
+- Add smooth transitions to grid-based sidebar layout
+  ([`8abbfe1`](https://github.com/RamonOpazo/sero/commit/8abbfe1a2a1733addedbcecb6bb58b4bf2b9e835))
+
+- Add CSS transitions to grid-template-columns for smooth sidebar collapse/expand - Use cubic-bezier
+  easing (0.4, 0, 0.2, 1) for more natural animation feel - Increase transition duration to 250ms
+  for smoother visual experience - Add hardware acceleration with transform: translateZ(0) and
+  backface-visibility: hidden - Ensure sidebar content transitions smoothly during state changes
+
+Fixes jerky sidebar behavior when toggling between expanded and collapsed states, providing a
+  polished user experience matching modern UI expectations.
+
+- Add strict component-centric architecture documentation
+  ([`ce1b923`](https://github.com/RamonOpazo/sero/commit/ce1b923a0768cb85e05d1c54e64c88e6bc8084f4))
+
+- Add DIRECTORY_STRUCTURE.md with mandatory separation of concerns principles - Add
+  MIGRATION_PLAN.md with detailed step-by-step migration instructions - Emphasize IMPERATIVE nature
+  of architectural boundaries - Document clean import patterns and domain ownership rules - Prepare
+  for frontend reorganization to improve encapsulation and testability
+
+This commit establishes the architectural law for component organization.
+
+- Add temporary panning mode visual indicator
+  ([`f1adc76`](https://github.com/RamonOpazo/sero/commit/f1adc76971d50ee8daf268237304ac6ae3ac2b8f))
+
+- Add middle mouse button tracking in ActionsLayer - Show hand icon on mode toggle button during
+  temporary panning - Update button styling and tooltip for temporary panning state - Maintain
+  existing mode toggle functionality while providing clear visual feedback
+
+- Add ui variant extender library for shadcn/ui components
+  ([`31c9526`](https://github.com/RamonOpazo/sero/commit/31c952660f94b05109f7f4ca47b56f846c70951b))
+
+- Add ui-variant-extender library in src/lib with proper module structure - Provides
+  extendWithVariants() function for adding custom variants to components - Includes
+  TypedVariantConfig for full type safety and inference - Add createVariantConfig() utility for
+  reusable configurations - Update Badge component to use new library - Maintains compatibility with
+  erasableSyntaxOnly TypeScript setting - All functions are pure, type-safe, and preserve original
+  component APIs
+
+- Always open dialog for page selection instead of direct toggle
+  ([`00eb0be`](https://github.com/RamonOpazo/sero/commit/00eb0bea9775b9885a8c89e4244a0b444a1be85e))
+
+- Change selection list page badges to always open dialog instead of direct toggle - Prevents
+  accidental changes when users click on badges by mistake - Provides consistent dialog experience
+  for all page assignment changes - Users can now cancel without making changes if clicked
+  accidentally - Update tooltip to reflect new 'click to change' behavior - Better UX with
+  confirmation step for all page scope modifications
+
+- Complete DataTable migration and fix runtime errors
+  ([`49c41dd`](https://github.com/RamonOpazo/sero/commit/49c41dd93939f0275f25943f1dd25c8ebd3e848a))
+
+- Migrate all components from DataTableV2 to DataTable - Fix App.tsx imports and route names
+  (test-data-table-v2 → test-data-table) - Fix documents-data-table.tsx type errors and prop
+  migration - Fix projects-data-table.tsx import errors and column builder usage - Resolve custom
+  column cell renderer signature mismatch - Add missing 'key' properties to custom columns - Pin
+  name columns in both projects and documents tables - Update all DataTable props to new API
+  (selectedRows, onAddNew, actions) - Separate actions from columns to fix type conflicts - Maintain
+  column width configuration system integration
+
+All tables now build successfully and render without runtime errors. The enhanced column width
+  system remains fully functional.
+
+- Complete Phase 2.1 unified context architecture
+  ([`010d5ee`](https://github.com/RamonOpazo/sero/commit/010d5eec0e9223db6e1aed2976578e1ec1b599c7))
+
+- Create consolidated ViewerState with reducer pattern - Implement comprehensive type definitions
+  for unified state - Add selector hooks to prevent unnecessary re-renders - Replace
+  DocumentViewerContext and PDFContext with UnifiedViewerProvider - Update all layer components to
+  use unified state management - Add backward compatibility layer for easier migration - Consolidate
+  selection logic into main viewer state - Implement coordinate transformation utilities in state
+
+This eliminates multiple contexts and provides single source of truth for all viewer state,
+  significantly reducing component complexity and improving performance through selective
+  re-rendering.
+
+- Complete Phase 2.3 - Event Handling Optimization & Retro InfoLayer
+  ([`7012c6e`](https://github.com/RamonOpazo/sero/commit/7012c6edc10c44b7b6688fc292dc8df9972cc2a9))
+
+✨ Major Features: - Unified event handling integrated directly into UnifiedViewport component -
+  Command & Conquer-style retro terminal InfoLayer overlay - Full viewer coverage instead of
+  PDF-only scope
+
+🔧 Event Handling Optimization: - Single mouse event handler with intelligent mode delegation
+  (pan/select) - Throttled pan updates (16ms/60fps) for smooth performance - Debounced selection
+  updates (10ms) for reduced overhead - Global keyboard shortcuts (Escape, Ctrl+Z, Ctrl+0, zoom
+  controls) - Removed dependency on separate UnifiedEventHandler component
+
+🎨 InfoLayer Redesign: - Full viewport overlay covering entire document viewer - Retro terminal
+  aesthetic with green phosphor text on black background - Color-coded information
+  (green/yellow/cyan/red/orange scheme) - Simple 2-column layout with military-style section headers
+  - Animated elements (pulsing status indicators, hover effects) - Clean key-value data presentation
+  replacing complex card layouts
+
+🐛 Fixes: - Fixed React Rules of Hooks violation in InfoLayer - Removed redundant info banner from
+  FileViewer - Fixed JSX syntax errors with proper HTML entity escaping
+
+🏗️ Architecture Improvements: - Centralized event handling with no scattered listeners -
+  Self-contained viewport with integrated interactions - Performance optimized with proper cleanup
+  and memory management - Maintainable code structure with clear separation of concerns
+
+The document viewer now has a sleek retro terminal interface that perfectly matches the Command &
+  Conquer aesthetic while providing optimal performance
+
+- Complete Phase 2.3 event handling optimization
+  ([`8b664b3`](https://github.com/RamonOpazo/sero/commit/8b664b36cd838e650cb0cbd9cdad9f7b16875c49))
+
+- Implement UnifiedEventHandler with single global event listener - Add debouncing and throttling
+  utilities for performance - Centralize all mouse/keyboard event handling with delegation - Add
+  keyboard shortcuts for zoom, undo/redo, mode switching - Remove individual event listeners from
+  viewport and selection layers - Implement smooth 60fps panning with throttled updates - Add
+  context menu prevention and custom keyboard handling
+
+This completes Phase 2: State Consolidation with massive simplification of event handling and 30-50%
+  reduction in re-renders achieved.
+
+- Complete Phase 4 - DocumentsView module migration
+  ([`cdc44e4`](https://github.com/RamonOpazo/sero/commit/cdc44e4b08c2135ebbd798bf63758281a5473793))
+
+✅ PHASE 4 COMPLETE - DocumentsView Module Migration:
+
+🔄 File Moves (via IDE): - DocumentsView.tsx: views/ → components/DocumentsView/ -
+  DocumentsDataTable.tsx: views/ → components/DocumentsView/ - CreateDocumentDialog →
+  UploadDocumentsDialog: dialogs/ → DocumentsView/dialogs/ - EditDocumentDialog.tsx: dialogs/ →
+  DocumentsView/dialogs/
+
+🏗️ Architecture Implementation: - ✅ Created useDocumentsView.ts business logic hook - ✅ Extracted
+  navigation, state management, and data loading - ✅ Created clean index.ts files (main + dialogs) -
+  ✅ Better semantic naming: UploadDocumentsDialog vs CreateDocumentDialog
+
+🎯 Compliance Achieved: - ✅ Component encapsulation per directive #1 - ✅ Dialog domain ownership per
+  directive #3 - ✅ Hook encapsulation per directive #4 - ✅ Clean public APIs per directive #6 - ✅
+  Build passes (pnpm build successful)
+
+📊 Migration Progress: 4/11 phases complete (55 minutes) 🚀 Ready for Phase 5: DocumentEditor module
+  migration
+
+- Complete Phase 5 - DocumentEditor module migration
+  ([`d8840a6`](https://github.com/RamonOpazo/sero/commit/d8840a6e356f71c55a66a096fd4fcb45f553faa5))
+
+✅ PHASE 5 COMPLETE: DocumentEditor Module Migration
+
+### Changes Made: - FileViewer.tsx → DocumentEditor.tsx (semantic naming) - PasswordDialog.tsx →
+  DocumentPasswordDialog.tsx (contextual naming) - Created useDocumentEditor.ts hook with extracted
+  business logic - Added clean index.ts files for public APIs - Full compliance with
+  DIRECTORY_STRUCTURE.md
+
+### Architecture Benefits: - Complete document editing domain encapsulation - Business logic hook
+  co-location (directive #4) - Dialog domain ownership with contextual naming (directive #3) - Clean
+  public APIs via index files (directive #6)
+
+### Progress: - Completed: 5/11 phases (75 minutes) ✅ - Build Status: ✅ Passing (pnpm build
+  successful) - Next: Phase 6 - Shared Components Reorganization
+
+BREAKING CHANGE: FileViewer imports now use DocumentEditor
+
+- Complete Phase 6 - Shared Components reorganization
+  ([`b67bfbb`](https://github.com/RamonOpazo/sero/commit/b67bfbb8c706c7800d8af9cf959a4aaba7948b98))
+
+✅ PHASE 6 COMPLETE: Shared Components Reorganization
+
+### Component Encapsulation: - EmptyState → shared/EmptyState/ with index.ts - ThemeToggle →
+  shared/ThemeToggle/ with index.ts - SettingsToggle → shared/SettingsToggle/ with index.ts - Widget
+  → shared/Widget/ with comprehensive exports - ConfirmationDialog → shared/ConfirmationDialog/
+  (moved from dialogs)
+
+### DataTable Migration: - Complete migration: features/data-table/ → shared/DataTable/ - CSS
+  rename: data-table.css → DataTable.css - Comprehensive index with builders and all components -
+  Updated imports in ProjectsDataTable and DocumentsDataTable - Cleaned features index exports
+
+### Import Path Updates: - Fixed all DataTable and ConfirmationDialog imports - Updated CSS import
+  paths for proper resolution - Removed legacy exports from dialogs and features
+
+### Architecture Benefits: - Complete shared component encapsulation (directive #1) - Clean public
+  APIs via index files (directive #6) - Proper domain separation for generic vs specific dialogs -
+  DataTable properly migrated from features to shared
+
+### Progress: - Completed: 6/11 phases (90 minutes) ✅ - Build Status: ✅ Passing (pnpm build
+  successful) - Next: Phase 7 - Layout Components Migration
+
+BREAKING CHANGE: DataTable and ConfirmationDialog import paths updated
+
+- Complete Phase 7 layout components migration with semantic organization
+  ([`ea7c92d`](https://github.com/RamonOpazo/sero/commit/ea7c92d18bf94ed582dfe3c215efc46b8c311bda))
+
+PHASE 7 COMPLETE - Layout Components Migration: - Establish complete layout component domain per
+  architectural directive #2 - Migrate all layout components to dedicated Layout domain structure -
+  Implement semantic component renaming for clarity and purpose
+
+LAYOUT COMPONENT MIGRATIONS: - MainLayout: views/MainLayout.tsx → Layout/MainLayout.tsx -
+  SiteHeader: views/SiteHeader.tsx → Layout/SiteHeader.tsx - AppSidebar: views/AppSidebar.tsx →
+  Layout/sidebar/AppSidebar.tsx
+
+NAVIGATION DOMAIN MIGRATIONS WITH SEMANTIC RENAMING: - NavMain → AppNavigation (clearer purpose) -
+  NavUser → UserMenu (more descriptive) - NavApi → ApiLinks (better context) - Breadcrumbs:
+  features/breadcrumbs → Layout/navigation
+
+ARCHITECTURAL ENFORCEMENT: - ✅ Component encapsulation: Layout components fully self-contained - ✅
+  Domain separation: Sidebar and navigation properly separated - ✅ Clean public APIs: Index files
+  with comprehensive exports - ✅ Import hygiene: Clean index-based imports enforced - ✅ Semantic
+  naming: All components use descriptive, purpose-driven names - ✅ Directory cleanup: Empty
+  features/breadcrumbs directory removed
+
+BUILD VALIDATION: - ✅ TypeScript compilation successful - ✅ Build passes with pnpm build - ✅ All
+  imports updated to use clean index patterns - ✅ No legacy import paths remain
+
+NEXT: Phase 8 - Hook Encapsulation Enforcement
+
+- Complete Phase 8 hook encapsulation enforcement with strict architectural compliance
+  ([`95823f0`](https://github.com/RamonOpazo/sero/commit/95823f0ffe5c0682f7b1eacfb37df8131e228f3e))
+
+PHASE 8 COMPLETE - Hook Encapsulation Enforcement: - Enforce strict hook encapsulation per
+  architectural directive #4 - Move component-specific hooks to their respective domains
+
+HOOK ENCAPSULATION MIGRATIONS: - useDataTable.tsx → shared/DataTable/useDataTable.tsx
+  (DataTable-specific) - useDocumentViewerState.ts →
+  features/document-viewer/useDocumentViewerState.ts (viewer-specific) - usePDFPages.tsx →
+  features/document-viewer/usePDFPages.tsx (PDF-specific) - useDocumentData.ts →
+  DocumentEditor/useDocumentData.ts (editor-specific)
+
+GLOBAL HOOKS VALIDATION: - ✅ useIsMobile: Cross-cutting UI utility (remains global) - ✅
+  useColumnNavigation: Cross-cutting navigation utility (remains global) - ✅ useProjects,
+  useDocuments, useFiles, usePrompts, useSelection: Multi-component API hooks (remain global)
+
+ARCHITECTURAL ENFORCEMENT: - ✅ Component encapsulation: All hooks properly co-located with domains -
+  ✅ Clean public APIs: Global hooks index + component index updates - ✅ Import hygiene: All moved
+  hooks accessible via clean index imports - ✅ Build compliance: Zero TypeScript errors, successful
+  build - ✅ Hook naming: Fixed export name inconsistencies (useMobile→useIsMobile,
+  useSelections→useSelection)
+
+BUILD VALIDATION: - ✅ TypeScript compilation successful - ✅ Build passes with pnpm build - ✅ All
+  component indexes properly export co-located hooks - ✅ No hook encapsulation violations remain
+
+NEXT: Phase 9 - Import Path Updates & Compliance
+
+- Complete Phase 9 import path updates & compliance with strict architectural enforcement
+  ([`06f1a3c`](https://github.com/RamonOpazo/sero/commit/06f1a3cf947b182f242503a1e873e2fd9655b456))
+
+PHASE 9 COMPLETE - Import Path Updates & Compliance: - Enforce strict import hygiene per
+  architectural directive #6 - Eliminate all legacy import violations and deep import bypasses
+
+IMPORT PATH UPDATES: - ✅ App.tsx routing imports: Updated to use clean index-based patterns - ✅
+  Component internal imports: Fixed all deep import violations - ✅ Layout imports: MainLayout uses
+  @/components/Layout clean index - ✅ DocumentEditor dialog: Fixed deep import to use ./dialogs
+  clean pattern
+
+IMPORT HYGIENE ENFORCEMENT: - ✅ Zero legacy views/ imports remain - ✅ Zero deep dialogs/ imports
+  bypassing index.ts files - ✅ Central dialogs/index.ts cleaned of moved dialog re-exports - ✅ Only
+  AddPromptDialog remains in central dialogs location (truly generic)
+
+ARCHITECTURAL COMPLIANCE: - ✅ Clean index-based imports: All imports use proper index.ts patterns -
+  ✅ No cross-domain business logic leaks between components - ✅ Domain boundary enforcement: Strict
+  separation maintained - ✅ Build validation: pnpm build passes successfully with zero violations -
+  ✅ Import pattern verification: All imports follow architectural directives
+
+BUILD VALIDATION: - ✅ TypeScript compilation successful - ✅ Build passes with pnpm build - ✅ Zero
+  import hygiene violations detected - ✅ All component domains properly self-contained
+
+NEXT: Phase 10 - Dialog Export Cleanup (finalize architectural separation)
+
+- Complete RefactorFileViewer with full DocumentViewer integration
+  ([`99c0ea7`](https://github.com/RamonOpazo/sero/commit/99c0ea757e70aaa3aa1d3bca642521d79c46845f))
+
+- Replace placeholder with complete file viewer implementation - Add password-protected file states
+  with retry functionality - Implement tabbed interface (Preview, Prompts, Selections, Info) - Add
+  file metadata display with size, type, and hash information - Integrate existing DocumentViewer
+  component for PDF rendering - Add comprehensive memoization to prevent unnecessary re-renders: *
+  Enhanced documentForViewer object stability * Memoized DocumentViewer with custom comparison
+  function * Fixes PDF.js file prop warning and worker errors - Include proper error handling and
+  loading states - Maintain navigation flow with back button to documents view
+
+- Complete table toolbar and actions implementation
+  ([`17927f8`](https://github.com/RamonOpazo/sero/commit/17927f87cdd72a452c62aca236f968c37ad5c06b))
+
+Major improvements to data table functionality:
+
+## Enhanced Table Toolbar - Remove search column selector for simpler UX - always searches all
+  columns - Reorder toolbar buttons: Delete Selection, Add Project, Columns (right to left) - Rename
+  'Customize Columns' to 'Columns' for cleaner interface - Make Delete Selection button always
+  visible but disabled when no items selected - Remove dropdown title from column visibility
+  selector for cleaner design - Exclude pinned columns (Project Name) from column customization
+  options
+
+## Fixed Actions Column - Implement all four action buttons: Copy ID, Select project, Edit project,
+  Delete project - Fix legacy action system override that was preventing new column actions from
+  working - Remove competing action rendering logic in table-content.tsx - Actions now properly use
+  the new column system with individual onClick handlers - All actions connect to existing business
+  logic via actionHandlers
+
+## Added Toast Notifications - Import and use Sonner toast system throughout actions - Copy ID:
+  Shows success toast with project ID - Select project: Shows confirmation toast with project name -
+  Toast integration matches existing patterns in useProjectsView hook
+
+## Button Order and Consistency - Toolbar button order: Delete Selection → Add Project → Columns -
+  All buttons use consistent size='sm' and outline variant - Maintain proper responsive behavior
+  with adaptive labels
+
+## Column Management - Pinned columns (Project Name) always visible and excluded from customization
+  - Actions column always visible and excluded from customization - Only scrollable columns can be
+  toggled via column visibility dropdown - Clean filter logic for column visibility state management
+
+The table now provides a complete, professional data management experience with all expected
+  features working correctly and consistent UX patterns throughout.
+
+- Complete UnifiedViewport migration to new SelectionManager system
+  ([`86f777e`](https://github.com/RamonOpazo/sero/commit/86f777e6998ada3f0697a773f35c39ee799e409b))
+
+- Remove all legacy selection drawing logic from UnifiedViewport - Delegate selection handling to
+  SelectionsLayerNew component - Fix type issues with SelectionCreateType vs Selection interfaces -
+  Add missing SET_NEW_SELECTIONS action type for backward compatibility - Update SelectionProvider
+  to handle SelectionCreateType properly - Remove unused parameters and imports across components -
+  Ensure clean TypeScript compilation with no errors
+
+The UnifiedViewport now only handles: - Panning and zooming - Keyboard shortcuts - Navigation
+  controls
+
+While SelectionsLayerNew (via SelectionProvider) handles: - Selection drawing and editing -
+  Selection state management - Context menus and interactions
+
+This completes the architectural separation between viewport management and selection management
+  systems.
+
+- Create BaseManager abstraction for document viewer managers
+  ([`5cfe07c`](https://github.com/RamonOpazo/sero/commit/5cfe07c219ca6bbd1d492ac09abaffea324e7d08))
+
+- Add BaseManager abstraction (446 lines) with common patterns: - Generic state management with
+  saved/new items split - Subscription pattern for React integration - Pending changes tracking and
+  API integration - Common loading and error states - Create simplified PromptManager.v2 (167 lines
+  vs 465 original - 64% reduction) - Create simplified SelectionManager.v2 (422 lines vs 716
+  original - 41% reduction) - Maintain backward compatibility and existing functionality - All
+  builds pass successfully - Ready for gradual migration implementation
+
+- Create comprehensive migration plan for ultra-declarative domain managers
+  ([`da2aede`](https://github.com/RamonOpazo/sero/commit/da2aeded1296f9844234da27791ee353b04a29a9))
+
+- Design enum-based functional pattern matching system - Create consolidated library structure (4
+  files vs 12+ atomized files) - Plan API adapter pattern for Result<T> compliance - Design
+  composable behaviors with functional composition - Define streamlined migration phases from
+  working original managers - Add comprehensive type safety with enum-based actions - Include
+  IDE-friendly development experience - Plan 94% code reduction with 100% functionality preservation
+
+Migration target: PromptManager (465 lines) + SelectionManager (425 lines) → ~80 lines total
+  Approach: Extract proven patterns → Create reusable behaviors → Generate managers from config
+
+- Eliminate document fetching in FileViewer for efficient file loading
+  ([`012044c`](https://github.com/RamonOpazo/sero/commit/012044c282d355660fb3ce8546c1dc8e1c7581ac))
+
+- Remove unnecessary document API calls from FileViewer.tsx - Use document ID directly from URL
+  parameters instead of fetching document - Let backend endpoints handle file existence validation
+  internally - Create synthetic document data for DocumentViewer from loaded file data - Fix 'No
+  original file found for this document' error by eliminating the problematic validation logic -
+  Improve performance by removing redundant API calls - Simplify frontend architecture with true
+  document-centric file access
+
+This completes the FileViewer architecture improvement, achieving: ✅ Zero unnecessary API calls for
+  file loading ✅ Direct document-based file access using existing endpoints ✅ Simplified error
+  handling and validation ✅ Better user experience with immediate file loading
+
+- Enhance DocumentControls with rich metadata and better organization
+  ([`043a6fb`](https://github.com/RamonOpazo/sero/commit/043a6fb7580fc72124bfcb0013c9027c1de8f8a1))
+
+- Add comprehensive document information (creation date, update time, file status) - Implement
+  visual separation with Separator component between sections - Add smart date formatting with
+  relative time display - Include file availability status for both original and redacted versions -
+  Improve visual hierarchy and spacing throughout - Use consistent formatting for all metadata
+  fields - Fetch real document metadata from API using search endpoint in FileViewer - Display
+  actual document names, descriptions, and tags instead of fallback data
+
+- Enhance migration plan with detailed pedantic steps
+  ([`dc7f8d6`](https://github.com/RamonOpazo/sero/commit/dc7f8d62428b30403ce9a20074918343922ecab2))
+
+- Add comprehensive phase-by-phase tracking with checkboxes - Include detailed verification steps
+  for each file operation - Add mandatory compliance checks referencing DIRECTORY_STRUCTURE.md -
+  Provide granular validation at each phase - Estimate 165 minutes total migration time - Enforce
+  strict architectural directive compliance
+
+The migration plan is now extremely detailed for step-by-step execution.
+
+- Enhance selection rendering with interactive UI
+  ([`858610a`](https://github.com/RamonOpazo/sero/commit/858610aa46fb9f81b97506c60c22cd0c36d1ca23))
+
+- Remove debug console logs from SelectionsLayer - Replace thick borders with thin, subtle borders
+  for better visual appeal - Add selection state management for click-to-select functionality -
+  Implement corner resize handles (6px squares) on selected selections - Add visual states:
+  unselected (slate), new (green), selected (blue) - Include hover effects and smooth transitions -
+  Add click-outside-to-deselect behavior - Style delete buttons with better opacity transitions -
+  Prepare foundation for resize functionality (TODO: implement drag logic)
+
+Selections now have a professional, modern appearance with interactive elements ready for editing
+  capabilities.
+
+- Enhance table toolbar with advanced search, column visibility, and custom buttons
+  ([`c611039`](https://github.com/RamonOpazo/sero/commit/c6110395dfe8078bf3052e19667f43e08d77b8f5))
+
+- Add search column selector to allow searching in specific columns or all columns - Add column
+  visibility dropdown with checkboxes to toggle column display - Add custom buttons support for
+  toolbar extensions (export, refresh, bulk actions) - Update TableToolbar component with new UI
+  elements using shadcn/ui components - Extend DataTableProps and TableToolbarProps interfaces with
+  new features - Integrate enhanced toolbar into projects data table with: - Column-specific search
+  functionality - Show/hide columns feature - Export to CSV button - Refresh button - Bulk delete
+  button (when items selected) - Add proper TypeScript types for all new features - Maintain
+  backward compatibility with existing table implementations
+
+- Enhance ui-variant-extender with auto-default variants and semantic CSS system
+  ([`6482f1e`](https://github.com/RamonOpazo/sero/commit/6482f1e3adc9bd7e98723ec292664ae45db9cf87))
+
+- Add automatic 'default' variant creation with undefined value for cleaner configs - Create
+  semantic badge CSS variables with --uix- prefix in dedicated extensions file - Implement grid
+  layout variant for sidebar components to fix sticky positioning issues - Update type definitions
+  to support string | undefined variant values - Simplify variant configurations by removing
+  explicit empty string defaults - Improve developer experience with better documentation and
+  cleaner API
+
+- Implement AI Rules Management with PromptManager architecture
+  ([`df7c869`](https://github.com/RamonOpazo/sero/commit/df7c869ad9fb9c96b06d58f9a8262988fda76e7d))
+
+- Add PromptManager.ts for core business logic and API integration - Add PromptProvider.tsx for
+  React context wrapper - Update AI Rules Management dialog with proper API integration - Transform
+  UI RuleData to backend PromptCreateType format - Map priority levels to AI temperature settings -
+  Update PromptCommander and PromptsList to use PromptManager - Integrate PromptProvider into
+  DocumentViewer architecture - Add comprehensive error handling and loading states - Follow
+  separation of concerns pattern matching SelectionManager
+
+- Implement complete prompts and selections API endpoints
+  ([`19afa21`](https://github.com/RamonOpazo/sero/commit/19afa21050aae2b79386cc286024d94243d60fec))
+
+- Add complete prompts CRUD API with create, read, update, delete endpoints - Add complete
+  selections CRUD API with create, read, update, delete endpoints - Implement comprehensive test
+  suites for both APIs with 100% coverage - Add fixtures for prompts and selections testing -
+  Support coordinate validation for selections (0-1 range) - Handle AI-generated vs manual
+  selections with confidence scores - Add computed field is_ai_generated for selections based on
+  confidence - Support temperature validation for prompts (0-1 range) - Handle multi-language
+  prompts with flexible language arrays - Implement proper error handling and validation for all
+  endpoints - Add integration tests verifying database relations - Include edge case testing for
+  large data and concurrent operations
+
+- Implement comprehensive files API endpoints with full CRUD operations
+  ([`5aa2108`](https://github.com/RamonOpazo/sero/commit/5aa21089b16f0926d3485ef01d7e888deab18490))
+
+- Add complete files CRUD API with create, read, update, delete endpoints - Implement file upload
+  and download functionality with encryption support - Add comprehensive test suite for files API
+  with 100% coverage - Extend documents API tests for better edge case coverage - Support file
+  replacement and metadata management - Handle project-based file isolation and security
+
+- Implement comprehensive selection manipulation system
+  ([`5eb8e9a`](https://github.com/RamonOpazo/sero/commit/5eb8e9aaa3d8cf16f02c3ce9983e58cc39137f24))
+
+- Add drag-to-move functionality for selected selections with grab/grabbing cursors - Implement
+  drag-to-create new selections on empty space in select mode - Enhanced resize system with improved
+  corner handles and smooth dragging - Fixed performance issues by disabling transitions during all
+  drag operations - Added proper bounds checking for move, resize, and create operations -
+  Integrated with unified viewer state system for consistent state management - Remove delete
+  buttons from selections (will handle deletion differently) - Support crosshair cursor in select
+  mode for intuitive selection creation - Maintain compatibility with existing selection, page
+  filtering, and UI systems
+
+- Implement context menu for selections with proper positioning
+  ([`d126572`](https://github.com/RamonOpazo/sero/commit/d1265724bbdfc51e4641f72f635a45763bb31379))
+
+- Add context menu with Save and Remove actions for selected selections - Use createPortal to render
+  menu at exact mouse cursor position - Fix positioning issues by rendering outside transformed
+  document space - Add REMOVE_EXISTING_SELECTION action to properly delete saved selections -
+  Prevent right-click dragging - only allow left-click for drag operations - Add button checks
+  (e.button === 0) to all drag handlers - Context menu appears exactly at cursor with Save/Remove
+  options - Proper event handling prevents conflicts between context menu and dragging
+
+The context menu now provides intuitive selection management with pixel-perfect positioning.
+
+- Implement domain manager library with configuration-driven architecture
+  ([`47277e8`](https://github.com/RamonOpazo/sero/commit/47277e824dfa45fbf74340f8be502d6a1c1b8ee9))
+
+🚀 Features: - Complete domain manager library in src/lib/domain-manager/ - 8 composable behaviors
+  extracted from working managers - Functional pattern matching dispatcher replacing switch/case -
+  Configuration objects for PromptManager and SelectionManager - Full TypeScript support with proper
+  type safety
+
+📁 Structure: - src/lib/domain-manager/types.ts - Core type definitions -
+  src/lib/domain-manager/behaviors.ts - 8 reusable behaviors - src/lib/domain-manager/core.ts -
+  Generic manager implementation - src/lib/domain-manager/index.ts - Public API and utilities -
+  prompt-manager-config.ts - PromptManager configuration - selection-manager-config.ts -
+  SelectionManager configuration
+
+✅ Benefits: - 100% functionality coverage of original managers - Zero code duplication through
+  behavior composition - Pluggable API adapters with Result<T> pattern - Eliminates complex
+  inheritance hierarchies - Enables rapid creation of new domain managers
+
+🔧 Technical: - Functional pattern matching for action dispatch - State management with subscription
+  pattern - Change tracking and history management - Drawing state and batch operations support -
+  Page operations and bulk actions
+
+Build passes all TypeScript checks ✅
+
+- Implement double-click to open page selection dialog on canvas selections
+  ([`9256acd`](https://github.com/RamonOpazo/sero/commit/9256acd050ca1ee812d85d27fcae76d72ee2c40b))
+
+- Add callback mechanism to SelectionProvider for double-click events - Implement double-click
+  detection in SelectionsLayer with 300ms delay - Register SelectionsList as double-click handler to
+  maintain separation of concerns - Allow users to double-click any selection (new or saved) on
+  canvas to open page dialog - Maintain existing single-click behavior for selection - Preserve
+  architectural separation: SelectionsLayer handles UI interactions, SelectionsList handles dialogs
+  - Support both global and page-specific selection assignment via double-click - Clean
+  implementation without breaking existing functionality
+
+- Implement grid-based sidebar layout
+  ([`d4ff586`](https://github.com/RamonOpazo/sero/commit/d4ff586f4c2107933ecd59a20d35c81429437426))
+
+- Implement interactive selection resize functionality
+  ([`ae92ecd`](https://github.com/RamonOpazo/sero/commit/ae92ecd483128211a379ea7be61240452c554fcf))
+
+- Increase resize handle size from 6px to 10px for better accessibility - Add complete resize drag
+  logic with mouse event handling - Implement proper corner-based resizing (NW, NE, SW, SE) - Add
+  state management for resize operations with drag tracking - Include bounds checking to keep
+  selections within 0-1 range - Add minimum size constraint (1%) to prevent invalid selections -
+  Implement smooth visual feedback during resize operations - Add proper event propagation handling
+  to prevent conflicts - Include cursor styling for resize directions - Prepare foundation for state
+  persistence (TODO: save to database)
+
+Users can now click a selection to see resize handles and drag any corner to resize the selection in
+  real-time with proper bounds validation.
+
+- Implement modern type-safe declarative column system
+  ([`cea609f`](https://github.com/RamonOpazo/sero/commit/cea609f499c9a96a07e2254bc80b838253e7079a))
+
+- Create comprehensive column configuration interfaces with full TypeScript support - Replace
+  fragile builder pattern with functional column factories - Add specialized column types: text,
+  number, date, status, badge, boolean, actions, select, custom - Implement column presets with
+  sensible defaults for common use cases - Add column combinations for standard table layouts (user,
+  project, document tables) - Create adapter layer for backward compatibility with existing tables -
+  Include validation, debugging, and performance measurement utilities - Build responsive column
+  renderers with proper formatting and styling - Support advanced features: sorting, pinning,
+  truncation, status mapping, actions - Provide extensible and maintainable architecture for future
+  column types
+
+- Implement new selection management system (phases 1-3)
+  ([`40f5bf8`](https://github.com/RamonOpazo/sero/commit/40f5bf844ffbde05f8d41fd25ae8d6a8934f1837))
+
+- Add SelectionManager class for clean state management - Add SelectionProvider React context for
+  integration - Create simplified SelectionsLayerNew component - Add type aliases for unified
+  Selection interface - Integrate SelectionProvider as bridge with existing system - Replace complex
+  SelectionsLayer with simplified version
+
+This eliminates the wonky selection behavior by providing: - Single source of truth for selections -
+  ID-based selection references (no fragile index refs) - Simplified history management - Clear
+  separation of UI and business logic
+
+Phases completed: ✅ Phase 1: Setup new system ✅ Phase 2: Integrate provider ✅ Phase 3: Migrate
+  SelectionsLayer
+
+- Implement on-demand data fetching for document viewer
+  ([`0276e26`](https://github.com/RamonOpazo/sero/commit/0276e2661264b5ca608da2e4151c3d5d0a009f40))
+
+- Create useDocumentPrompts and useDocumentSelections hooks for on-demand data fetching - Add
+  MinimalDocumentType for viewer components that don't need full document data - Update PromptsList
+  and SelectionsList to fetch data using document ID - Refactor FileViewer to use
+  MinimalDocumentType without synthetic prompts/selections - Update all document viewer components
+  (DocumentViewer, Layers, RenderLayer, etc.) to use minimal document structure - Fix
+  document.createElement naming conflict in Controls component - Optimize loading performance by
+  eliminating redundant API calls - Maintain full functionality while improving separation of
+  concerns
+
+This refactor significantly improves performance by loading only essential document data upfront and
+  fetching prompts/selections on-demand when components need them.
+
+- Implement perfect undo/redo for drag operations
+  ([`65baee4`](https://github.com/RamonOpazo/sero/commit/65baee4cfc3afd2cf916d6a294cf07091268f2f0))
+
+- Fix double history entries issue by removing initial state saving on drag start - Add no-history
+  action types for smooth drag updates without history pollution - Implement reference-based
+  selection state to fix synchronization issues - Ensure undo/redo always works with current data,
+  not stale references
+
+Key improvements: - Single undo step for complete drag operations (no more double undo) - Real-time
+  synchronization between selection state and global state - Clean history management with only
+  meaningful entries - Professional-grade undo/redo behavior matching design tools
+
+Flow: Start drag → Update without history → End drag → Single history entry
+
+Result: One operation = One undo step, exactly as users expect
+
+- Implement polished page selection dialog with switch UI
+  ([`d999f89`](https://github.com/RamonOpazo/sero/commit/d999f893cf5434158d277f6293c06638229fa889))
+
+- Add comprehensive PageSelectionDialog component with shadcn/ui switch - Replace radio buttons with
+  cleaner toggle switch for global/page-specific choice - Implement proper error handling and
+  validation for page numbers - Add informative alert with usage instructions and current context -
+  Gray out page input when global mode is selected (maintains layout) - Use consistent typography
+  and minimalist list styling - Fix TypeScript errors in SelectionsList component - Support both
+  global (null) and page-specific (number) selection assignment - Enhance UX with state reset on
+  dialog open and Enter key support - Follow shadcn/ui design conventions throughout
+
+- Implement responsive pagination with shadcn/ui design
+  ([`1f101d3`](https://github.com/RamonOpazo/sero/commit/1f101d3b311b640bb8a057d4a7c51433163646a4))
+
+- Replace Pagination components with Button-based responsive design - Add Lucide React chevron icons
+  for navigation - Hide page size selector and first/last buttons on mobile - Improve mobile UX with
+  simplified controls - Maintain full functionality on desktop - Clean up unused variables and props
+
+- Implement RSA ephemeral key encryption for secure file downloads
+  ([`0585fe4`](https://github.com/RamonOpazo/sero/commit/0585fe4ee1525c5a0baea6bc00e7441720dd6403))
+
+🔐 Major Security Upgrade: Perfect Forward Secrecy Implementation
+
+BACKEND CHANGES: - Add RSA ephemeral key generation with 2048-bit keys (~36ms locally) - Implement
+  /api/crypto/ephemeral-key endpoint for key distribution - Update file download endpoint to POST
+  with encrypted password body - Add comprehensive crypto API tests (10 test cases, 100% pass rate)
+  - Integrate crypto router with proper error handling and key cleanup
+
+FRONTEND CHANGES: - Implement Web Crypto API integration for client-side RSA encryption - Add secure
+  password encryption utility with PEM key parsing - Update useFiles hook to use encrypted password
+  transmission - Remove insecure password storage (passwordManager.ts, localStorage) - Add
+  CryptoTest component for development verification
+
+SECURITY BENEFITS: ✅ Perfect Forward Secrecy - Keys destroyed immediately after use ✅ No Password
+  Exposure - Never in URLs, logs, or browser history ✅ Client-Side Encryption - Password encrypted
+  before network transmission ✅ Enterprise-Grade Security - RSA-2048 with OAEP-SHA256 padding ✅
+  Minimal Performance Impact - 40ms overhead for maximum security
+
+INFRASTRUCTURE: - Ephemeral key TTL: 5 minutes with automatic cleanup - Concurrent key generation
+  support for multiple users - Comprehensive error handling and logging - Full test coverage
+  including edge cases and key expiration
+
+This replaces the previous insecure URL parameter approach with industry-standard asymmetric
+  encryption, providing the same level of security as enterprise banking systems.
+
+Co-authored-by: Assistant
+
+- Implement unified undo/redo for all selection operations
+  ([`296bad1`](https://github.com/RamonOpazo/sero/commit/296bad136959d8fb8106c3666cfd22a0cca9ecb0))
+
+- Add SelectionHistorySnapshot interface to store complete selection state - Update all selection
+  action handlers to create unified history entries - Enhance UNDO_SELECTION and REDO_SELECTION to
+  restore both existing and new selections - Add helper functions createSelectionSnapshot() and
+  addHistoryEntry() - Update help overlay to clarify undo/redo works for all selection changes -
+  Remove unused existingSelections destructuring from UnifiedViewport - Ensure proper bounds
+  checking for undo/redo operations
+
+Now Ctrl+Z and Ctrl+Shift+Z work for all selection operations: - Creating new selections - Deleting
+  selections (new or existing) - Modifying existing selections - Removing existing selections
+
+This provides a professional-grade undo/redo system that matches user expectations.
+
+- Implement unified viewport architecture for document viewer
+  ([`49a8391`](https://github.com/RamonOpazo/sero/commit/49a83914aee7de23b3ac2549b0cb425e09a8a6be))
+
+- Add comprehensive refactoring plan document - Create UnifiedViewport component with shared
+  coordinate system - Implement coordinate system utilities for transformations - Refactor
+  RenderLayer to use unified transform approach - Update SelectionsLayer to eliminate position lag
+  during panning - Add enhanced InfoLayer with hideable overlay functionality - Update ActionsLayer
+  with info panel toggle - Restructure layer architecture for better separation of concerns
+
+This eliminates selection lag during panning operations and provides a foundation for future
+  performance optimizations.
+
+- Improve selection colors and toolbar behavior
+  ([`a321823`](https://github.com/RamonOpazo/sero/commit/a321823a30aec45c0e81a3b61d711df09f2de17c))
+
+Selection Colors: - Add distinct colors for global selections (page_number = 0 or null) - New
+  selections: purple for global, green for page-specific - Existing selections: orange for global,
+  slate for page-specific - Enhances visual distinction between selection types
+
+Toolbar Behavior: - Change from time-based to hover-based visibility - Toolbar shows immediately
+  when mouse enters render area - Toolbar hides immediately when mouse leaves render area - Fix
+  toggle bug where bar wouldn't show after being disabled then re-enabled - Track mouse position
+  with ref to avoid stale closure issues - Remove timer dependencies for cleaner, more predictable
+  UX
+
+This provides more intuitive and responsive toolbar behavior while making global selections visually
+  distinct from page-specific ones.
+
+- Integrate API-fetched selections with document viewer
+  ([`2088d4f`](https://github.com/RamonOpazo/sero/commit/2088d4f4250cf44f6474efeea1b464703ee51fa6))
+
+- Add useSelectionsIntegration hook to bridge useDocumentSelections with ViewerState - Implement
+  SET_EXISTING_SELECTIONS action to load selections from database - Update SelectionsLayer to render
+  both existing (blue) and new (green) selections - Convert SelectionType from API to
+  SelectionCreateType for rendering compatibility - Replace Square icon with Pen/PenOff for
+  selections visibility toggle - Remove mocked test selection from initial state
+
+Selections from the database are now properly displayed as blue overlays on the document,
+  synchronized with the sidebar list. The viewer maintains separation between existing selections
+  (from DB) and new selections being created by the user.
+
+- Migrate documentation system to react-markdown and add developer routes
+  ([`462983e`](https://github.com/RamonOpazo/sero/commit/462983e2270a775679203df91a7376f73d6a8d0c))
+
+- Migrate from marked to react-markdown for better security and React integration - Add
+  comprehensive markdown rendering with syntax highlighting, anchor links, and table wrapping -
+  Enhance documentation styles with professional typography, dark mode support, and responsive
+  design - Create /dev/api-swagger route that redirects to FastAPI's built-in Swagger UI at /docs -
+  Create /dev/crypto-test route for crypto testing functionality - Update Vite proxy configuration
+  to forward /docs and /openapi.json to backend - Improve documentation content styling with proper
+  heading hierarchy, code blocks, and link handling - Add support for internal documentation links
+  with automatic path conversion - Remove unused Swagger and Scalar dependencies in favor of native
+  FastAPI docs
+
+- Redesign SelectionsList with stunning animated hover effects
+  ([`ecca028`](https://github.com/RamonOpazo/sero/commit/ecca028c5f71dfc6253ef69039c5ec79df96ccaa))
+
+- Replace cluttered badges with clean page indicators and status dots - Implement beautiful animated
+  padding (pl-0 → pl-4) on hover/focus - Add elegant left border accents using theme-aware colors -
+  Use subtle primary background (bg-primary/3) for selected items - Remove coordinate clutter, show
+  clean x,y,w,h with 2 decimal precision - Add full-width separators instead of individual item
+  borders - Hide scrollbar for cleaner appearance - Support keyboard navigation with proper focus
+  states - Create engaging micro-interactions with smooth transitions
+
+The new design feels modern, responsive, and professional with delightful hover animations that
+  provide clear visual feedback without overwhelming the interface.
+
+- Reorganize and improve document viewer tooldeck
+  ([`972351a`](https://github.com/RamonOpazo/sero/commit/972351a80f363c3b7371002337d39b8ffc65ae45))
+
+- Consolidate View Controls and File Operations into single Document Controls widget - Remove
+  confusing DocumentStatusBadge component - Improve widget styling with primary color on hover and
+  open states - Add comprehensive document information display (name, description, tags, file size)
+  - Better icon usage: Play icon for processing instead of Brain - Enhanced spacing and visual
+  hierarchy throughout tooldeck - Fix toggle functionality for proper bidirectional view switching -
+  Create consolidated DocumentControls component with better UX
+
+- **Phase 11**: Complete documentation migration and final cleanup
+  ([`efbaac0`](https://github.com/RamonOpazo/sero/commit/efbaac008c17a43e526cac2cfb7f755420968591))
+
+✅ MIGRATION COMPLETE: All 11 phases successfully executed
+
+Phase 11 Achievements: - Migrated documentation from TSX components to markdown files - Moved all
+  markdown files from src/docs to src/pages/docs - Updated markdown utility to load files
+  dynamically - Cleaned up unused TSX documentation components - Removed stale context files
+  (DocumentViewerContext, PDFContext) - Removed unused type definitions (api-client.ts,
+  swagger-ui-react.d.ts) - Added missing dialog indexes for document-viewer features - Updated all
+  components to use proper index-based imports
+
+🎉 Frontend architecture migration complete - strict component-centric structure enforced 📁 All
+  components properly encapsulated with domain ownership 🔒 Import hygiene fully compliant with zero
+  violations 🏗️ Build validation successful with no errors 📚 Documentation strategy aligned with
+  markdown-based rendering
+
+BREAKING CHANGE: Documentation now served from markdown files, not TSX components All architectural
+  directives from DIRECTORY_STRUCTURE.md fully implemented
+
+- **phase-10**: Complete dialog export cleanup and directory elimination
+  ([`639e20e`](https://github.com/RamonOpazo/sero/commit/639e20e6d70d9e453b5ef6b3055d748e7652bd00))
+
+- Remove unused AddPromptDialog from central dialogs directory - Eliminate entire
+  src/components/dialogs directory (now empty) - Update components/index.ts to remove dialogs export
+  - Verify build passes with no broken imports - Achieve complete dialog domain ownership compliance
+
+COMPLIANCE: Phase 10/11 complete - all dialogs now domain-owned, zero legacy exports
+
+- **ui-extensions**: Add semantic button and badge variants with clean data table styling
+  ([`74a551d`](https://github.com/RamonOpazo/sero/commit/74a551dfbb471c417d4f71d54e77786561b5e561))
+
+- Add UIX semantic color system using oklch values inspired by Tailwind - Define
+  --uix-color-success, --uix-color-warning, --uix-color-failure, --uix-color-info - Create utility
+  classes: bg-*, text-*, border-* for semantic colors - Add semantic variants to Button: success,
+  warning, info, failure - Update Badge component to use new semantic variants - Remove alternating
+  row colors from data table for cleaner appearance - Add solid borders between data table rows
+  using border-border - Maintain selected row styling with muted background - Update ui-extensions
+  index to export Button and Badge components
+
+### Performance Improvements
+
+- Eliminate resize drag lag by disabling transitions during resize
+  ([`e9bce02`](https://github.com/RamonOpazo/sero/commit/e9bce028560c0fe696305cc942cf19c909316afe))
+
+- Conditionally disable CSS transitions during active resize operations - Only the selection being
+  resized has transitions disabled (others keep smooth animations) - Add RAF cleanup for proper
+  memory management on unmount - Prevent animation conflicts that cause visual lag during drag
+  operations
+
+The resize experience is now buttery smooth without the delay/lag that was caused by CSS transitions
+  fighting with the real-time coordinate updates during mouse movement.
+
+### Refactoring
+
+- Add API methods to SelectionManager and update SelectionCommander
+  ([`a34091b`](https://github.com/RamonOpazo/sero/commit/a34091b5946696403475c6e060be3dfada34206a))
+
+- Update SelectionProvider to accept documentId prop and pass to SelectionManager - Update
+  DocumentViewer to pass document.id to SelectionProvider - Expose saveAllChanges method through
+  SelectionProvider context - Refactor SelectionCommander to use SelectionManager.saveAllChanges
+  instead of direct API calls - Remove unused imports and variables - Maintain consistent
+  architecture pattern with PromptManager - All builds pass successfully
+
+- Clean up stale selection handlers and redundant code
+  ([`be3d410`](https://github.com/RamonOpazo/sero/commit/be3d4102be44367194bd9918234019882116392c))
+
+- Remove unused saveNewSelections method and SAVE_NEW_SELECTIONS action - Clean up stale type
+  definitions from old viewer system - Remove unused imports and variables (Badge,
+  selectedSelection, hasUnsavedChanges, etc.) - Remove redundant pageToArrayIndex function that just
+  returned same value - Fix TypeScript build errors and achieve clean build - Unify all selection
+  operations through new change management system - Maintain unified save flow with creates,
+  updates, and deletes via pendingChanges API
+
+- Complete component and architecture reorganization
+  ([`092fee3`](https://github.com/RamonOpazo/sero/commit/092fee31740e3c001ab1f9a1bc7979c167b05031))
+
+Major organizational improvements:
+
+🔄 Component Migrations: - Move DataTable from shared/ to features/data-table/ for proper feature
+  encapsulation - Move CryptoTest & DocumentationRenderer from components/ to views/ (they are route
+  components) - Consolidate all DataTable hooks into features/data-table/hooks/ - Consolidate main
+  DataTable component into index.tsx
+
+📁 File Naming Standardization: - Convert PascalCase to kebab-case for all component files - Update
+  all layout components (MainLayout, AppNavigation, etc.) - Update all DataTable sub-components and
+  builders - Maintain consistent naming across the codebase
+
+🏗️ Architecture Improvements: - DataTable now self-contained feature with hooks/, builders/,
+  components - Views properly separated from reusable components - Clean feature boundaries and
+  dependencies - Proper export patterns with index files
+
+🔧 Technical Fixes: - Fix TypeScript errors with proper type annotations - Update all import paths to
+  new locations - Remove unused parameter warnings - Maintain backward compatibility for all exports
+
+✅ Verification: - All tests pass (45/45) - Build successful - No breaking changes to public APIs -
+  Proper feature encapsulation maintained
+
+- Complete document-viewer architecture reorganization
+  ([`266fbe8`](https://github.com/RamonOpazo/sero/commit/266fbe84b0ced8c76af419bd7ca14464a8bfa8f2))
+
+MAJOR REFACTORING - Document Viewer Module Restructuring:
+
+🏗️ Architecture Reorganization: - Restructured document-viewer into clean, logical directory
+  structure - Created providers/, components/, utils/, hooks/, types/ organization - Moved all files
+  using IDE refactoring to preserve import references - Eliminated empty legacy directories (core/,
+  dialogs/, layouts/, etc.)
+
+📦 Module Entry Point Consolidation: - Consolidated document-viewer.tsx + index.ts into single
+  index.tsx - Implemented standard React pattern: directory imports resolve to index.tsx - Both
+  default and named exports available for flexibility - Cleaner import paths: import DocumentViewer
+  from '@/components/features/document-viewer'
+
+🔧 State Management Consolidation: - Removed redundant useDocumentViewerState.ts hook - Enhanced
+  ViewportProvider with all missing functionality - Eliminated unnecessary wrapper components
+  (ViewerWithNewSystem, ViewerWithCleanArchitecture) - Single clean DocumentViewer entry point with
+  proper provider nesting
+
+🛠️ Import Path Updates: - Fixed import paths throughout codebase for new structure - Updated manager
+  configs to use new types location - Fixed editor-view.tsx import to use new index.tsx location -
+  All components now use clean, predictable import patterns
+
+📋 Documentation Updates: - Added comprehensive index.tsx consolidation directive to
+  DIRECTORY_STRUCTURE.md - Applies to ALL component modules encapsulated behind directories -
+  Updated architecture diagram to reflect new document-viewer structure - Clear guidelines for
+  standard React ecosystem patterns
+
+✅ Quality Assurance: - All 45 tests passing (100% success rate) - No breaking changes to
+  functionality - Full type safety preserved throughout refactoring - Production-ready with improved
+  maintainability
+
+This establishes the new standard pattern for all complex component modules: use index.tsx as
+  consolidated entry point for components with sub-structure.
+
+- Create clean API layer architecture and eliminate redundant useProjects hook
+  ([`20741ef`](https://github.com/RamonOpazo/sero/commit/20741ef0995be45b0f3ac2a8476c795b05aedd82))
+
+🎯 ARCHITECTURAL EXCELLENCE: Perfect separation of concerns achieved
+
+Key Improvements: ✅ Created ProjectsAPI utility layer for centralized project CRUD operations ✅
+  Refactored useProjectsView to directly use ProjectsAPI (no hook-to-hook coupling) ✅ Removed
+  redundant useProjects hook (consolidation of responsibilities) ✅ Simplified WorkspaceProvider to
+  only handle selection state (not CRUD) ✅ Renamed use-projects-view.ts to follow dashed-case naming
+  convention
+
+Clean Architecture Layers: 📊 ProjectsAPI (src/lib/projects-api.ts) → Pure data operations + error
+  handling 🎛️ useProjectsView → Component business logic + UI state + dialog management 🖥️
+  ProjectsDataTable → Pure UI presentation layer 🗂️ WorkspaceProvider → Global selection state only
+  (no CRUD)
+
+Benefits: • Better separation of concerns (data ↔ business logic ↔ UI) • No redundant state
+  management (eliminated useProjects duplication) • Cleaner dependencies (API utilities → hooks →
+  components) • Future-proof API layer (easy to externalize or mock for testing) • Proper
+  encapsulation (ProjectsView owns its operations)
+
+Build Status: ✅ Passing with zero errors Architecture: ✅ Fully compliant with DIRECTORY_STRUCTURE.md
+  directives
+
+- Improve workspace vs project semantic naming in WorkspaceProvider
+  ([`129df4c`](https://github.com/RamonOpazo/sero/commit/129df4c627b6c122908115d1e4c6bfd43ef05040))
+
+✅ SEMANTIC CLARITY: Better distinction between workspace-level and project-level concerns
+
+Key Improvements: - Updated localStorage key: 'sero-refactor-state' → 'sero-workspace-state' -
+  Renamed persistence functions to be workspace-specific: • saveStateToStorage →
+  saveWorkspaceToStorage • loadStateFromStorage → loadWorkspaceFromStorage • clearStoredState →
+  clearWorkspaceStorage - Renamed persistence interfaces: PersistedState → PersistedWorkspaceState -
+  Enhanced comments to distinguish workspace vs project actions - Updated function comments and
+  variable names for semantic clarity
+
+Semantic Distinction: - 'Workspace': App-wide state management (persistence, initialization,
+  cross-component state) - 'Project': Individual project entities and CRUD operations - This creates
+  clear mental model: workspace contains projects, not the other way around
+
+Build Status: ✅ Passing Consistency: ✅ All naming semantically aligned with purpose
+
+- Move utility classes from React components to CSS
+  ([`95b4514`](https://github.com/RamonOpazo/sero/commit/95b4514012e009b8b1940f0299a9e76e744e6086))
+
+- Extracted bg-background, relative, flex, w-full, h-full, flex-col, overflow-hidden from React
+  components to CSS - Simplified GridSidebar and GridSidebarInset components by removing inline
+  utility classes - Removed unused useIsMobile import and variable - Better separation of concerns:
+  CSS handles styling, React handles logic - Improved maintainability with cleaner component code -
+  Preserved all layout functionality and responsive behavior
+
+- Reduce CSS important usage by 76 percent
+  ([`4ec7f60`](https://github.com/RamonOpazo/sero/commit/4ec7f604564c3a67be3e3b0a2c925b927e5e2657))
+
+- Remove 'Refactor' prefix from all components and clean up naming
+  ([`973e0d8`](https://github.com/RamonOpazo/sero/commit/973e0d883e344879d3404e64363b02038c8db1f4))
+
+- Rename RefactorApp.tsx → App.tsx - Rename RefactorProjectProvider.tsx → ProjectProvider.tsx -
+  Rename useRefactor* hooks → use* hooks (useProjects, useDocuments, useFiles) - Rename Refactor*
+  components → clean component names - Update all imports and references throughout the codebase -
+  Remove old unused files (FilesView, etc.) - Clean up component exports in views/index.ts
+
+This removes the temporary 'Refactor' prefixes that were used during development and establishes
+  clean, production-ready naming conventions across the frontend.
+
+- Remove obsolete DocumentEditor and useFiles after editor-view migration
+  ([`d16103e`](https://github.com/RamonOpazo/sero/commit/d16103e543569638d8644aa3387668ef7fd86c63))
+
+- Remove useFiles hook dependency from workspace-provider - Simplify workspace-provider to only
+  manage project/document selections - Move document data hooks to
+  document-viewer/hooks/use-document-data.ts - Add prompts/selections API functions to editor-api.ts
+  - Update SelectionCommander and useSelectionLoader to use new hook location - Remove obsolete
+  DocumentEditor folder and useFiles hook - Clean up unused imports and exports
+
+The editor-view now properly handles its own file management while document-viewer components have
+  their data fetching hooks co-located. Workspace-provider is simplified to focus only on
+  cross-component state.
+
+- Remove unused global hooks and create document-viewer API
+  ([`09ccb5a`](https://github.com/RamonOpazo/sero/commit/09ccb5ac15b387bc9dda2aad07d6f863dc1fedb7))
+
+- Remove obsolete usePrompts.ts and useSelections.ts from global hooks - These were not being used
+  (document-viewer has its own providers) - Create document-viewer-api.ts with centralized API
+  functions: - Prompt operations: fetch, create, update, delete - Selection operations: fetch,
+  create, update, delete - Update DIRECTORY_STRUCTURE.md to reflect changes - Update hooks/index.ts
+  to remove unused exports
+
+Next step: Refactor document-viewer components to use the new API for proper separation of concerns
+  (API logic -> lib/, UI logic -> components/)
+
+- Rename ProjectProvider to WorkspaceProvider with dashed-case naming
+  ([`1c8ac82`](https://github.com/RamonOpazo/sero/commit/1c8ac826a2fcb0212ee093f846550a9852e8493d))
+
+✅ ARCHITECTURAL IMPROVEMENT: Better semantic naming for app-wide state manager
+
+Key Changes: - Renamed ProjectProvider.tsx → workspace-provider.tsx (dashed-case file naming) -
+  Updated ProjectProvider → WorkspaceProvider (more accurate scope) - Updated useProject →
+  useWorkspace (clearer purpose) - Renamed internal types: ProjectState → WorkspaceState,
+  ProjectAction → WorkspaceAction - Updated all imports across codebase to use new naming - Added
+  mandatory dashed-case file naming directive to DIRECTORY_STRUCTURE.md
+
+Rationale: - WorkspaceProvider manages projects, documents, AND files (not just projects) -
+  Dashed-case files provide visual distinction from PascalCase functions/components - useWorkspace
+  is clearer than useProject for accessing app-wide workspace state - Eliminates naming confusion -
+  'Project' now specifically refers to project entities
+
+Build Status: ✅ Passing Architecture: ✅ Fully compliant with DIRECTORY_STRUCTURE.md directives
+
+- Reorganize view components into dedicated views/ directory
+  ([`644f982`](https://github.com/RamonOpazo/sero/commit/644f98271a44ed9f45571f7dabc42a8d4c8247df))
+
+- Move projects-view, documents-view, and editor-view from components/ to views/ - Update all import
+  paths to use new @/views/* structure - Create views/index.ts for clean public API exports - Update
+  DIRECTORY_STRUCTURE.md to reflect new architecture: - Views now properly separated from reusable
+  components - Updated import examples and domain boundaries - Clarified view vs component
+  responsibilities - Maintain all existing functionality with improved organization
+
+This establishes a clearer separation between: - views/: Application-specific view components with
+  business logic - components/: Reusable UI components and shared functionality - features/: Complex
+  self-contained features like document-viewer
+
+- Replace complex tab system with unified DocumentViewer
+  ([`062d84a`](https://github.com/RamonOpazo/sero/commit/062d84a9fb24de55621941f4e4aee49928f5653e))
+
+- Remove unnecessary Preview/Prompts/Selections/Info tabs in FileViewer - Use DocumentViewer's
+  built-in ORIGINAL/REDACTED toggle functionality - Simplify FileViewer to show single
+  DocumentViewer instance - All viewer functions (selections, prompts, info) accessible via right
+  sidebar - Clean up unused imports and state variables - Maintain existing password handling and
+  file loading logic
+
+This leverages the existing toggle button in the Controls component for switching between original
+  and redacted documents, providing a cleaner UX while preserving all functionality.
+
+- Simplify CSS Grid sidebar layout
+  ([`8dd834d`](https://github.com/RamonOpazo/sero/commit/8dd834d3f12d1a66c35eb576ae579b484b3860d2))
+
+- Remove redundant width calculations - let grid handle sizing - Eliminate verbose comments and
+  section dividers - Trust CSS Grid variables for automatic column sizing - Reduce file size by ~60%
+  while maintaining functionality - Clean, minimal comments focused on essential context
+
+- Standardize component structure with dashed-case naming and clean architecture
+  ([`d2cf5bd`](https://github.com/RamonOpazo/sero/commit/d2cf5bdb74f24292143a878f8a6d96308ce90fea))
+
+- Rename all component directories to dashed-case (documents-view, projects-view, layout) - Rename
+  all component files to dashed-case for consistency - Refactor documents management to follow clean
+  architecture pattern: * Extract DocumentsAPI utility for centralized API operations * Consolidate
+  useDocuments functionality into useDocumentsView * Remove document CRUD operations from
+  WorkspaceProvider (keep only selection state) * Update documents to use bulk upload instead of
+  individual creation - Apply same architectural patterns as projects management for consistency -
+  Update all imports and exports to use new dashed-case paths - Maintain component name conventions
+  (PascalCase for React components) - Ensure TypeScript type safety and build integrity
+
+This creates a consistent, maintainable codebase with proper separation of concerns where workspace
+  manages selection state and components manage their own CRUD operations.
+
+- Standardize theme context to follow provider pattern
+  ([`637d773`](https://github.com/RamonOpazo/sero/commit/637d773b8e79becb11367aeeeed4b746749cb6d9))
+
+- Rename ThemeContext.tsx to theme-provider.tsx for dashed-case consistency - Restructure theme
+  context to match workspace-provider pattern: * Separate ThemeState interface for state structure *
+  ThemeContextType interface for provider contract * Proper memoization with useMemo and useCallback
+  * Consistent error handling and context validation - Update ThemeToggle component to use new
+  useTheme hook interface - Maintain all existing functionality while improving code consistency -
+  Follow same architectural patterns as other context providers
+
+This creates consistent provider patterns across all context implementations.
+
+- Update PromptManager to use DocumentViewerAPI
+  ([`b22cc85`](https://github.com/RamonOpazo/sero/commit/b22cc85df3113d001df8ea36ab73f9e9c10a89a5))
+
+- Updated PromptManager to use DocumentViewerAPI instead of direct api calls - Centralized all
+  prompt operations: loadPrompts, createPrompt, updatePrompt, deletePrompt - Improved separation of
+  concerns: API logic -> lib/, business logic -> managers/ - Next: Update SelectionManager to follow
+  the same pattern
+
+- **selections**: Improve selection UI and fix critical page assignment bug
+  ([`74e5a4f`](https://github.com/RamonOpazo/sero/commit/74e5a4f6961baff0991e98864d26f336ae5b01f5))
+
+- Remove context menu from SelectionsLayer for cleaner interaction - Implement comprehensive
+  selection border color system: - Yellow: Global selections (page_number === null) - Green:
+  New/unsaved selections - Purple: Modified saved selections (more vibrant) - Gray: Unchanged saved
+  selections - Blue: Currently selected - Fix critical bug where page_number 0 was converted to null
+  during save - Change || to ?? operator to preserve falsy page numbers - Ensures Page 1 selections
+  stay page-specific instead of becoming global - Remove debug logging after confirming selection
+  logic works correctly
+
+
 ## v0.4.0 (2025-07-30)
 
 ### Bug Fixes
@@ -13,6 +1463,11 @@
 - Fixed issue in the document layer in which, upon zooming on a given document, it blew up the its
   container, overflowing and breaking the view.
   ([`eb8d757`](https://github.com/RamonOpazo/sero/commit/eb8d757ac11337f1d4eea15a9bb050b17610654d))
+
+### Chores
+
+- **release**: V0.4.0 [skip ci]
+  ([`d698ec2`](https://github.com/RamonOpazo/sero/commit/d698ec21aa450c9e1c711e5cac0e8d7e90e5cc76))
 
 ### Features
 
