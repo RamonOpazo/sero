@@ -1,6 +1,94 @@
 # CHANGELOG
 
 
+## v1.1.0 (2025-08-20)
+
+### Bug Fixes
+
+- Prevent toast layout shifts by moving Toaster outside grid system
+  ([`1e3f457`](https://github.com/RamonOpazo/sero/commit/1e3f457bcb1dfa7acaa5a7d83d2b304307a55c7a))
+
+- Move Toaster component outside SidebarProvider grid layout to prevent horizontal space issues in
+  document-viewer - Change toast position to top-center for better UX - Toasts now use fixed
+  positioning without affecting parent container layouts
+
+- **document-viewer/selections**: Stabilize undo/redo navigation and rendering
+  ([`105aa32`](https://github.com/RamonOpazo/sero/commit/105aa32340e89d6340b6a89a5c4e2f0a9778d9be))
+
+- navigate only when destination page differs to avoid unnecessary rerenders - compute target page
+  from manager history; apply state first, then navigate on next frame - ensure selections redisplay
+  reliably after redo without manual redraw
+
+- **prompt**: Include document_id on create and preserve edit dialog fields
+  ([`b740f0d`](https://github.com/RamonOpazo/sero/commit/b740f0ddef910289e006a900db75698a6eda362c))
+
+- add document_id to prompt creation payload to satisfy backend validation - prevent type-change
+  reset while editing so non-default type/priority data remains populated
+
+refactor(prompt): migrate UI to core provider using Domain Manager v2
+
+- switch components to use new provider/hook and V2 state shape - expose pendingChanges from
+  provider; use it to flag modified prompts
+
+### Features
+
+- Implement complete selection management system using V2 domain manager
+  ([`6dc0945`](https://github.com/RamonOpazo/sero/commit/6dc0945cb070fdddcd91627199ea560f5d81d1aa))
+
+✨ Features: - Create new selections with drawing workflow (startDraw/updateDraw/finishDraw) - Edit
+  both new and saved selections with real-time updates - Delete selections from both draft and
+  persisted collections - Consolidated history system with undo/redo across all operations - Clear
+  selections by page or clear all selections - Commit staged changes with full database CRUD
+  integration
+
+🏗️ Architecture: - Declarative configuration approach with clean separation of concerns - Generic V2
+  behaviors (CRUD, history, batch operations) + domain extensions - Purpose-built selection domain
+  config with API adapters and transforms - Factory pattern for creating selection manager instances
+  - React provider exposing complete selection functionality
+
+📁 Structure: - /core/selection-config.ts - Declarative domain configuration -
+  /core/selection-manager.ts - Factory for manager instances - /core/selection-provider.tsx - React
+  context provider
+
+🎯 Requirements Satisfied: - ✅ Create/edit/delete new selections - ✅ Create/edit/delete saved
+  selections - ✅ Consolidated history with undo/redo - ✅ Clear page/all selections - ✅ Commit staged
+  changes to database - ✅ Type safety with Result<T, unknown> pattern - ✅ Clean API integration with
+  DocumentViewerAPI
+
+- Implement document processing pipeline with decryption and redaction
+  ([`feecead`](https://github.com/RamonOpazo/sero/commit/feeceadfe676f5b98890b607e0511112ac1a0bf9))
+
+- Implement the function in documents controller to handle full document processing workflow -
+  Integrate password-based decryption for encrypted original files - Apply PDF redaction based on
+  document selections using the redaction service - Store redacted files unencrypted (salt=None) for
+  easy access - Comprehensive validation: document existence, original file, selections, password
+  verification - Error handling for decryption failures, integrity checks, and redaction errors -
+  Return success response with processing details (file sizes, selection count) - Remove obsolete
+  function that used old redaction service interface
+
+The process function now fully integrates: - Document and file management - Project password
+  authentication - File decryption and integrity verification - Selection-based PDF redaction -
+  Redacted file storage
+
+This completes the document processing pipeline implementation.
+
+- **document-viewer/selections**: Align SelectionsLayer and provider with domain-manager v2
+  ([`00e2c95`](https://github.com/RamonOpazo/sero/commit/00e2c9578ffb8b4906df23bfddbdb076a9d0bf24))
+
+- use UPDATE_ITEM for edits and BEGIN/END batch for drag - show live drawing via getCurrentDraw with
+  fallback - preserve temp ID on FINISH_DRAW; add drafts without regenerating ID - capture baseline
+  after loading selections to track updates - style new/modified via pendingChanges
+
+- **document-viewer/selections**: Deterministic history + proper batching
+  ([`53638bb`](https://github.com/RamonOpazo/sero/commit/53638bbddc3a7bcdd8717e17f5fb6e2770adda4a))
+
+- record creates via CRUD in FINISH_DRAW so history captures create - suppress granular updates
+  during drag; snapshot on BEGIN_BATCH, single UPDATE on END_BATCH - route CLEAR_PAGE via
+  DELETE_ITEMS to leverage history - reset baseline and clear history after successful save/commit -
+  rely entirely on domain-manager v2 behaviors (crud, changeTracking, history, historyIntegration,
+  batch)
+
+
 ## v1.0.0 (2025-08-20)
 
 ### Bug Fixes
@@ -256,6 +344,9 @@ Both undo and redo now work perfectly with proper keyboard shortcuts
 
 - Reviewing selections.
   ([`54269ae`](https://github.com/RamonOpazo/sero/commit/54269aede1237d2200675fc28d8b67acba1accd4))
+
+- **release**: V1.0.0 [skip ci]
+  ([`fcb9360`](https://github.com/RamonOpazo/sero/commit/fcb93601de3c11268fbceb9db8b0e08217f8023c))
 
 ### Code Style
 
