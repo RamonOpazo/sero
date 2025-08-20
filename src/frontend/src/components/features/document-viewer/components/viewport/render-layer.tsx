@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useLayoutEffect, useMemo } from "react";
+import { useEffect, useState, useRef, useLayoutEffect } from "react";
 import { Document, Page } from "react-pdf";
 import { toast } from "sonner";
 import { type MinimalDocumentType } from "@/types";
@@ -28,15 +28,10 @@ export default function RenderLayer({ document, onDocumentSizeChange }: Props) {
   const triggerUpdate = () => {};
 
   const [blob, setBlob] = useState<Blob | null>(null);
-  const [arrayBuffer, setArrayBuffer] = useState<ArrayBuffer | null>(null);
   const [renderZoom, setRenderZoom] = useState(zoom); // The zoom level actually used for rendering
   const zoomDebounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const documentInnerRef = useRef<HTMLDivElement>(null);
-  
-  // Stable reference for the PDF file object to prevent React-PDF warnings
-  const pdfFileRef = useRef<{ data: ArrayBuffer } | null>(null);
-  const lastArrayBufferRef = useRef<ArrayBuffer | null>(null);
 
   useEffect(() => {
     if (documentInnerRef.current) {
@@ -89,44 +84,7 @@ export default function RenderLayer({ document, onDocumentSizeChange }: Props) {
     setIsRendered
   ]);
 
-  // Convert blob to ArrayBuffer
-  useEffect(() => {
-    if (!blob) {
-      setArrayBuffer(null);
-      return;
-    }
 
-    const convertBlobToArrayBuffer = async () => {
-      try {
-        const buffer = await blob.arrayBuffer();
-        setArrayBuffer(buffer);
-      } catch (error) {
-        console.error('Failed to convert blob to array buffer:', error);
-        toast.error('Failed to process PDF file');
-        setArrayBuffer(null);
-      }
-    };
-
-    convertBlobToArrayBuffer();
-  }, [blob]);
-
-  // Create a stable PDF file object using useRef to prevent React-PDF warnings
-  // This ensures the same object reference is reused when the ArrayBuffer hasn't changed
-  const pdfFile = useMemo(() => {
-    if (!arrayBuffer) {
-      pdfFileRef.current = null;
-      lastArrayBufferRef.current = null;
-      return null;
-    }
-    
-    // Only create a new file object if the ArrayBuffer has actually changed
-    if (lastArrayBufferRef.current !== arrayBuffer) {
-      pdfFileRef.current = { data: arrayBuffer };
-      lastArrayBufferRef.current = arrayBuffer;
-    }
-    
-    return pdfFileRef.current;
-  }, [arrayBuffer]);
 
   const handleLoadSuccess = ({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
@@ -181,7 +139,6 @@ export default function RenderLayer({ document, onDocumentSizeChange }: Props) {
 
   if (!document) return <div className="text-red-500">No document selected</div>;
   if (!blob) return <div className="text-red-500">Unable to load file</div>;
-  if (!arrayBuffer || !pdfFile) return <div className="text-yellow-500">Processing PDF...</div>;
 
   return (
     <div
@@ -191,7 +148,7 @@ export default function RenderLayer({ document, onDocumentSizeChange }: Props) {
       // No transform styles - the parent UnifiedViewport handles all transformations
     >
       <Document
-        file={pdfFile}
+        file={blob}
         onLoadSuccess={handleLoadSuccess}
         loading={<div>Loading pages…</div>}
         error={<div className="text-red-500">Failed to render PDF</div>}
