@@ -69,6 +69,9 @@ interface SelectionContextValue {
   onSelectionDoubleClick?: (selection: Selection) => void;
   setOnSelectionDoubleClick: (callback: ((selection: Selection) => void) | undefined) => void;
   
+  // Navigation hooks
+  setOnNavigateToPage: (callback: ((pageNumber: number) => void) | undefined) => void;
+  
   // Computed values
   allSelections: readonly Selection[];
   hasUnsavedChanges: boolean;
@@ -122,6 +125,7 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
   
   // Double-click callback management
   const [onSelectionDoubleClick, setOnSelectionDoubleClickState] = useState<((selection: Selection) => void) | undefined>();
+  const [onNavigateToPage, setOnNavigateToPageState] = useState<((pageNumber: number) => void) | undefined>();
   
   useEffect(() => {
     const unsubscribe = manager.subscribe(setState);
@@ -210,12 +214,50 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
   // ========================================
   
   const undo = useCallback(() => {
+    // Determine target page, then UNDO, then navigate (next frame) so UI reflects the new state
+    let targetPage: number | null | undefined = undefined;
+    try {
+      const history = (manager as any).getChangeHistory?.() || [];
+      const position = (manager as any).getHistoryPosition?.() || 0; // 1-based
+      const targetIndex = position - 1; // current applied change index
+      const change = history[targetIndex];
+      if (change) {
+        if (change.item && typeof change.item.page_number !== 'undefined') {
+          targetPage = change.item.page_number;
+        } else if (change.itemId) {
+          const item = manager.getItemById(change.itemId);
+          targetPage = item?.page_number ?? change.previousValues?.page_number ?? change.newValues?.page_number;
+        }
+      }
+    } catch {}
     dispatch('UNDO');
-  }, [dispatch]);
+    if (onNavigateToPage && typeof targetPage === 'number' && targetPage !== null) {
+      requestAnimationFrame(() => onNavigateToPage(targetPage as number));
+    }
+  }, [dispatch, state, onNavigateToPage, manager]);
   
   const redo = useCallback(() => {
+    // Determine target page, then REDO, then navigate (next frame) so UI reflects the new state
+    let targetPage: number | null | undefined = undefined;
+    try {
+      const history = (manager as any).getChangeHistory?.() || [];
+      const position = (manager as any).getHistoryPosition?.() || 0; // 1-based
+      const targetIndex = position; // next change to apply on redo
+      const change = history[targetIndex];
+      if (change) {
+        if (change.item && typeof change.item.page_number !== 'undefined') {
+          targetPage = change.item.page_number;
+        } else if (change.itemId) {
+          const item = manager.getItemById(change.itemId);
+          targetPage = item?.page_number ?? change.previousValues?.page_number ?? change.newValues?.page_number;
+        }
+      }
+    } catch {}
     dispatch('REDO');
-  }, [dispatch]);
+    if (onNavigateToPage && typeof targetPage === 'number' && targetPage !== null) {
+      requestAnimationFrame(() => onNavigateToPage(targetPage as number));
+    }
+  }, [dispatch, state, onNavigateToPage, manager]);
   
   // ========================================
   // CLEAR SELECTIONS
@@ -288,6 +330,10 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
   
   const setOnSelectionDoubleClick = useCallback((callback: ((selection: Selection) => void) | undefined) => {
     setOnSelectionDoubleClickState(() => callback);
+  }, []);
+  
+  const setOnNavigateToPage = useCallback((callback: ((pageNumber: number) => void) | undefined) => {
+    setOnNavigateToPageState(() => callback);
   }, []);
   
   // ========================================
@@ -387,6 +433,7 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
     // Event callbacks
     onSelectionDoubleClick,
     setOnSelectionDoubleClick,
+    setOnNavigateToPage,
     
     // Computed values
     allSelections,

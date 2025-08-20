@@ -72,6 +72,7 @@ export function UnifiedViewport({
     undo,
     redo,
     cancelDraw,
+    setOnNavigateToPage,
   } = useSelections();
   
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -421,6 +422,17 @@ export function UnifiedViewport({
         break;
     }
   }, [mode, isPanning, zoom, setIsPanning, cancelDraw, dispatch, currentPage, numPages, setCurrentPage, setMode, toggleInfoPanel, showHelpOverlay, toggleHelpOverlay, deleteSelectedSelection, undo, redo]);
+
+  // Wire navigation callback so undo/redo move to the relevant page
+  useEffect(() => {
+    setOnNavigateToPage((pageNumber: number) => {
+      // Only navigate if the page is different to avoid unnecessary re-render cycles
+      if (typeof pageNumber === 'number' && pageNumber !== currentPage) {
+        setCurrentPage(pageNumber);
+      }
+    });
+    return () => setOnNavigateToPage(undefined);
+  }, [setOnNavigateToPage, setCurrentPage, currentPage]);
 
   // Attach keyboard and wheel event listeners to document/viewport
   useEffect(() => {

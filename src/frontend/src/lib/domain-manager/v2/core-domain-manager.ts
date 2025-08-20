@@ -335,6 +335,18 @@ export class CoreDomainManager<TItem, TCreateData = Omit<TItem, 'id'>> implement
   }
 
   // =============================================================================
+  // HISTORY (Delegated to behaviors)
+  // =============================================================================
+
+  getChangeHistory(): ReadonlyArray<any> {
+    return (this.state as any).getChangeHistory?.() || [];
+  }
+
+  getHistoryPosition(): number {
+    return (this.state as any).getHistoryPosition?.() || 0;
+  }
+
+  // =============================================================================
   // INTERNAL METHODS
   // =============================================================================
 
