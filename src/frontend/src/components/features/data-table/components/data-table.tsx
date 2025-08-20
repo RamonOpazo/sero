@@ -1,0 +1,96 @@
+import { cn } from '@/lib/utils'
+import { TableToolbar } from './table-toolbar'
+import { TableContent } from './table-content'
+import { TablePagination } from './table-pagination'
+import type { DataTableProps } from '../types'
+import '../data-table.css'
+
+export function DataTable<T extends Record<string, any>>({
+  data,
+  columns,
+  title,
+  searchPlaceholder,
+  onSearch,
+  onRowSelect,
+  onRowAction,
+  showCheckboxes = false,
+  showActions = false,
+  searchValue,
+  selectedRows,
+  actions = [
+    { label: 'Edit', value: 'edit' },
+    { label: 'View', value: 'view' },
+    { label: 'Delete', value: 'delete', variant: 'destructive' as const }
+  ],
+  filters,
+  onAddNew,
+  addNewLabel,
+  className,
+  columnWidths,
+  searchColumns,
+  selectedSearchColumn,
+  onSearchColumnChange,
+  tableColumns,
+  visibleColumns,
+  onColumnVisibilityChange,
+  customButtons,
+  pagination
+}: DataTableProps<T>) {
+  const totalItems = pagination?.totalItems ?? data.length
+  const showPagination = pagination?.showPagination ?? false
+  const selectedCount = selectedRows?.length ?? 0
+
+  return (
+    <div className={cn('data-table-container', className)}>
+      {/* Toolbar */}
+      {(title || onSearch || filters || onAddNew || searchColumns || tableColumns || customButtons) && (
+        <TableToolbar
+          title={title}
+          searchPlaceholder={searchPlaceholder}
+          searchValue={searchValue}
+          onSearch={onSearch}
+          filters={filters}
+          onAddNew={onAddNew}
+          addNewLabel={addNewLabel}
+          searchColumns={searchColumns}
+          selectedSearchColumn={selectedSearchColumn}
+          onSearchColumnChange={onSearchColumnChange}
+          columns={tableColumns}
+          visibleColumns={visibleColumns}
+          onColumnVisibilityChange={onColumnVisibilityChange}
+          customButtons={customButtons}
+        />
+      )}
+
+      {/* Table Content */}
+      <div className="data-table-content">
+        <TableContent
+          data={data}
+          columns={columns}
+          selectedRows={selectedRows}
+          onRowSelect={onRowSelect}
+          onRowAction={onRowAction}
+          showCheckboxes={showCheckboxes}
+          showActions={showActions}
+          actions={actions}
+          columnWidths={columnWidths}
+        />
+      </div>
+      
+      {/* Pagination */}
+      {pagination && (
+        <TablePagination
+          pageIndex={pagination.pageIndex}
+          pageSize={pagination.pageSize}
+          totalItems={totalItems}
+          selectedCount={selectedCount}
+          showSelection={showCheckboxes}
+          onPageChange={pagination.onPageChange}
+          onPageSizeChange={pagination.onPageSizeChange}
+          pageSizeOptions={pagination.pageSizeOptions}
+          showPagination={showPagination}
+        />
+      )}
+    </div>
+  )
+}

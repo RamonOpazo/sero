@@ -8,7 +8,7 @@ Sero is a secure FastAPI-based document privacy protection service that "Evilish
 
 ## Development Commands
 
-### Core Commands
+### Backend Commands
 ```bash
 # Start development server with hot reload
 uv run sero-dev
@@ -27,6 +27,36 @@ uv run sero-db-init
 
 # Show version information
 uv run sero-version
+```
+
+### Frontend Commands
+```bash
+# Navigate to frontend directory
+cd src/frontend
+
+# Install dependencies
+pnpm install
+
+# Start development server (with hot reload)
+pnpm run dev
+
+# Build for production
+pnpm run build
+
+# Preview production build
+pnpm run preview
+
+# Run linting
+pnpm run lint
+
+# Run tests
+pnpm run test
+
+# Run tests with watch mode
+pnpm run test:watch
+
+# Run tests with coverage
+pnpm run test:coverage
 ```
 
 ### Test Commands
@@ -73,7 +103,15 @@ uv add --group dev package-name
   - **`core/`** - Core services (config, database, security, logging)
   - **`crud/`** - Database operations with SQLAlchemy
   - **`db/`** - Database models and custom types
-- **`tests/`** - Comprehensive test suite (108 tests, 85% coverage)
+- **`src/frontend/`** - React TypeScript application
+  - **`src/components/`** - Reusable UI components with shadcn/ui
+  - **`src/pages/`** - Main application pages
+  - **`src/views/`** - Complex view components
+  - **`src/hooks/`** - Custom React hooks
+  - **`src/types/`** - TypeScript type definitions
+  - **`src/lib/`** - Utility libraries and configurations
+  - **`src/utils/`** - Utility functions
+- **`tests/`** - Backend test suite (108 tests, 85% coverage)
 - **`docs/`** - Documentation including ER diagrams
 
 ### Core Components
@@ -95,6 +133,17 @@ uv add --group dev package-name
 - **RESTful endpoints** under `/api/{resource}` prefixes
 - **Pydantic schemas** for request/response validation
 - **CORS middleware** configured for single-origin access
+
+#### Frontend Architecture
+- **React 19** with **TypeScript** for type safety
+- **Vite** for fast development and building
+- **TailwindCSS 4.x** for utility-first styling
+- **Radix UI** components with **shadcn/ui** design system
+- **React Router DOM 7.x** for client-side routing
+- **React Hook Form** with **Zod** validation
+- **Axios** for API communication
+- **Jest** with **Testing Library** for component testing
+- **React PDF** for PDF document viewing and manipulation
 
 ### Key Data Flow
 
@@ -123,6 +172,14 @@ uv add --group dev package-name
 - Use `backend.core.security` for all cryptographic operations
 - Project passwords must be provided for file decryption
 - All file uploads validated against MIME type whitelist
+
+### Frontend Development
+- Components built with **shadcn/ui** and **Radix UI** primitives
+- Forms use **React Hook Form** with **Zod** schema validation
+- API communication centralized through **Axios** interceptors
+- PDF viewing handled via **React PDF** with custom selection tools
+- Responsive design with **TailwindCSS** utility classes
+- Theme support via **next-themes** for dark/light modes
 
 ### API Development
 - Controllers in `api/controllers/` handle business logic
@@ -192,6 +249,8 @@ uv run sero-test-cov
 - Test with various file sizes and types
 
 ### Adding New Dependencies
+
+#### Backend Dependencies
 ```bash
 # Add runtime dependency
 uv add new-package
@@ -203,6 +262,21 @@ uv add --group dev new-dev-package
 uv lock
 ```
 
+#### Frontend Dependencies
+```bash
+# Navigate to frontend directory
+cd src/frontend
+
+# Add runtime dependency
+pnpm add new-package
+
+# Add development dependency
+pnpm add -D new-dev-package
+
+# Update lockfile
+pnpm install
+```
+
 ## Service Integration
 
 ### API Access
@@ -210,6 +284,10 @@ uv lock
 - **Production**: http://0.0.0.0:8000
 - **API Documentation**: http://localhost:8000/docs (Swagger UI)
 - **API Schema**: http://localhost:8000/openapi.json
+
+### Frontend Access
+- **Development**: http://localhost:5173 (Vite dev server)
+- **Production Build**: Served via `pnpm run preview` at http://localhost:4173
 
 ### Database Management
 - SQLite database auto-created on first run

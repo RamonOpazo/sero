@@ -39,6 +39,22 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  /* UIX semantic colors inspired by Tailwind palette */
+  --uix-color-success: oklch(0.6980 0.1300 142.5000);
+  --uix-color-warning: oklch(0.8470 0.1700 83.8700);
+  --uix-color-failure: oklch(0.6280 0.2570 25.3300);
+  --uix-color-info: oklch(0.7020 0.1610 233.8900);
+
+  /* UIX sidebar grid layout variables */
+  --uix-sidebar-width: 16rem;
+  --uix-sidebar-width-icon: 3rem;
+  --uix-sidebar-width-mobile: 0;
+  
+  /* UIX grid template columns for different states */
+  --uix-grid-sidebar-cols: var(--uix-sidebar-width) 1fr;
+  --uix-grid-sidebar-cols-collapsed: var(--uix-sidebar-width-icon) 1fr;
+  --uix-grid-sidebar-cols-mobile: var(--uix-sidebar-width-mobile) 1fr;
 }
 
 :root {
@@ -74,6 +90,12 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  
+  /* UIX semantic colors for light theme */
+  --uix-color-success: oklch(0.6980 0.1300 142.5000);
+  --uix-color-warning: oklch(0.8470 0.1700 83.8700);
+  --uix-color-failure: oklch(0.6280 0.2570 25.3300);
+  --uix-color-info: oklch(0.7020 0.1610 233.8900);
 }
 
 .dark {
@@ -108,12 +130,36 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+
+  /* UIX semantic colors for dark theme */
+  --uix-color-success: oklch(0.6180 0.1100 145.2000);
+  --uix-color-warning: oklch(0.7650 0.1450 85.1200);
+  --uix-color-failure: oklch(0.6850 0.2100 27.8900);
+  --uix-color-info: oklch(0.6490 0.1380 236.1500);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+  
+  *::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  
+  *::-webkit-scrollbar-track {
+    @apply bg-background;
+  }
+  
+  *::-webkit-scrollbar-thumb {
+    @apply bg-primary/15 rounded-4xl;
+  }
+  
+  *::-webkit-scrollbar-thumb:hover {
+    @apply bg-primary/15;
+  }
+
   body {
     @apply bg-background text-foreground;
   }

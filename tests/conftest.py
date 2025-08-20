@@ -189,3 +189,86 @@ def created_file(client, created_document, sample_file_data):
     
     # Return the first file from the document
     return document["files"][0]
+
+
+@pytest.fixture
+def sample_prompt_data():
+    """Sample prompt data for testing."""
+    return {
+        "text": "Analyze this document for sensitive data",
+        "languages": ["en", "es"],
+        "temperature": 0.7,
+    }
+
+
+@pytest.fixture
+def created_prompt(client, created_document, sample_prompt_data):
+    """Create a prompt for testing and return its data."""
+    prompt_data = {**sample_prompt_data, "document_id": created_document["id"]}
+    response = client.post("/api/prompts", json=prompt_data)
+    assert response.status_code == 200
+    return response.json()
+
+
+@pytest.fixture
+def created_prompts(client, created_document, sample_prompt_data):
+    """Create multiple prompts for testing and return their data."""
+    prompts = []
+    
+    # Create 3 different prompts
+    prompt_variations = [
+        {"text": "First test prompt", "languages": ["en"], "temperature": 0.3},
+        {"text": "Second test prompt", "languages": ["es"], "temperature": 0.7},
+        {"text": "Third test prompt", "languages": ["en", "fr"], "temperature": 0.9},
+    ]
+    
+    for variation in prompt_variations:
+        prompt_data = {**variation, "document_id": created_document["id"]}
+        response = client.post("/api/prompts", json=prompt_data)
+        assert response.status_code == 200
+        prompts.append(response.json())
+    
+    return prompts
+
+
+@pytest.fixture
+def sample_selection_data():
+    """Sample selection data for testing."""
+    return {
+        "page_number": 1,
+        "x": 0.1,
+        "y": 0.2,
+        "width": 0.3,
+        "height": 0.4,
+        "confidence": 0.8,
+    }
+
+
+@pytest.fixture
+def created_selection(client, created_document, sample_selection_data):
+    """Create a selection for testing and return its data."""
+    selection_data = {**sample_selection_data, "document_id": created_document["id"]}
+    response = client.post("/api/selections", json=selection_data)
+    assert response.status_code == 200
+    return response.json()
+
+
+@pytest.fixture
+def created_selections(client, created_document, sample_selection_data):
+    """Create multiple selections for testing and return their data."""
+    selections = []
+    
+    # Create 3 different selections
+    selection_variations = [
+        {"page_number": 1, "x": 0.1, "y": 0.1, "width": 0.2, "height": 0.3, "confidence": 0.9},
+        {"page_number": 1, "x": 0.4, "y": 0.5, "width": 0.3, "height": 0.2, "confidence": None},  # Manual selection
+        {"page_number": 2, "x": 0.0, "y": 0.0, "width": 1.0, "height": 1.0, "confidence": 0.7},
+    ]
+    
+    for variation in selection_variations:
+        selection_data = {**variation, "document_id": created_document["id"]}
+        response = client.post("/api/selections", json=selection_data)
+        assert response.status_code == 200
+        selections.append(response.json())
+    
+    return selections

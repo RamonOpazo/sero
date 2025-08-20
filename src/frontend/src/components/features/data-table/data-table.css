@@ -1,49 +1,97 @@
+/**
+ * Data Table V2 - Simple sticky positioning following ChatGPT approach
+ * Keep it minimal and let Tailwind handle most styling
+ */
+
 @reference "../../../index.css";
 
-@layer components { 
-  @keyframes slide-in-left {
-    from {
-      transform: translateX(-100%);
-      opacity: 0;
+@layer base {
+  /* Override shadcn/ui table row hover behavior for data tables */
+  .data-table-table [data-slot="table-row"]:hover {
+    background-color: transparent !important;
+  }
+}
+
+@layer components {
+  /* Base table container */
+  .data-table-container {
+    @apply w-full space-y-4;
+  }
+
+  .data-table-content {
+    @apply w-full;
+  }
+
+  .data-table-scroll-area {
+    @apply w-full overflow-x-auto rounded-md border border-border;
+  }
+
+  .data-table-table {
+    @apply min-w-[1800px] relative;
+  }
+
+  /* Header styling */
+  .data-table-header {
+    @apply bg-muted sticky top-0 z-40;
+  }
+
+  /* Remove hover styles from data table rows */
+  .data-table-row {
+    @apply transition-none bg-transparent border-b border-border;
+  }
+  
+  .data-table-row:hover {
+    @apply bg-transparent;
+  }
+  
+  /* Selected row styling */
+  .data-table-row[data-state="selected"] {
+    @apply bg-muted;
+  }
+
+  .data-table-col-actions {
+    @apply sticky right-0 z-40 bg-muted w-[var(--actions-col)] min-w-[var(--actions-col)];
+  }
+
+  .data-table-cell-actions {
+    @apply sticky right-0 z-30 bg-background w-[var(--actions-col)] min-w-[var(--actions-col)];
+  }
+  
+  /* Sticky cell backgrounds - consistent with row background */
+  .data-table-cell-pinned {
+    @apply bg-background;
+  }
+  
+  /* Selected row sticky cells */
+  .data-table-row[data-state="selected"] .data-table-cell-actions,
+  .data-table-row[data-state="selected"] .data-table-cell-pinned {
+    @apply bg-muted;
+  }
+
+  /* Toolbar styling */
+  .data-table-toolbar {
+    @apply flex flex-col gap-4;
+  }
+
+  .data-table-toolbar-title {
+    @apply text-xl font-semibold;
+  }
+
+  .data-table-toolbar-controls {
+    @apply flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 w-full;
+  }
+
+  /* Remove only vertical borders, preserve horizontal borders */
+  .data-table-table th,
+  .data-table-table td {
+    border-left: none !important;
+    border-right: none !important;
+  }
+
+  /* Responsive enhancements */
+  @media (max-width: 768px) {
+    .data-table-table {
+      min-width: 1200px;
     }
-    to {
-      transform: translateX(0);
-      opacity: 1;
-    }
-  }
-
-  @keyframes slide-in-right {
-    from {
-      transform: translateX(100%);
-      opacity: 0;
-    }
-    to {
-      transform: translateX(0);
-      opacity: 1;
-    }
-  }
-
-  .animate-slide-left {
-    animation: slide-in-left 0.5s forwards;
-  }
-
-  .animate-slide-right {
-    animation: slide-in-right 0.5s forwards;
-  }
-
-  /* Hide scrollbar for Chrome, Safari and Opera */
-  .hide-scrollbar::-webkit-scrollbar {
-      display: none;
-  }
-
-  /* Hide scrollbar for IE, Edge and Firefox */
-  .hide-scrollbar {
-      -ms-overflow-style: none;  /* IE and Edge */
-      scrollbar-width: none;  /* Firefox */
-  }
-
-  [data-slot="table-container"] {
-    overflow-x: hidden !important;
-    @apply relative rounded-md border;
   }
 }

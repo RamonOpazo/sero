@@ -1,4 +1,6 @@
-export { MainLayout } from './MainLayout';
-export { ProjectsDataTable } from './ProjectsDataTable';
-export { DocumentsDataTable } from './DocumentsDataTable';
-export { FileViewer } from './FileViewer';
+// Views public API exports
+export * from './projects-view'
+export * from './documents-view'
+export * from './editor-view'
+export * from './crypto-test-view'
+export * from './documentation-view'

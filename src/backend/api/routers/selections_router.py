@@ -10,6 +10,15 @@ from backend.api.controllers import selections_controller
 router = APIRouter()
 
 
+@router.post("", response_model=selections_schema.Selection)
+async def create_selection(
+    selection_data: selections_schema.SelectionCreate,
+    db: Session = Depends(get_db_session)
+):
+    """Create a new selection."""
+    return selections_controller.create(db=db, selection_data=selection_data)
+
+
 @router.get("", response_model=list[selections_schema.Selection])
 async def list_selections(
     skip: int = 0,

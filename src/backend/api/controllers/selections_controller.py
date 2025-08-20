@@ -19,6 +19,12 @@ def _raise_not_found(callback: Callable[..., SelectionModel | None], db: Session
     return maybe_selection
 
 
+def create(db: Session, selection_data: selections_schema.SelectionCreate) -> selections_schema.Selection:
+    """Create a new selection."""
+    selection = selections_crud.create(db=db, data=selection_data)
+    return selections_schema.Selection.model_validate(selection)
+
+
 def get(db: Session, selection_id: UUID) -> selections_schema.Selection:
     """Get a single selection by ID with document relation."""
     selection = _raise_not_found(

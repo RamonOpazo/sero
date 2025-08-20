@@ -19,6 +19,12 @@ def _raise_not_found(callback: Callable[..., PromptModel | None], db: Session, i
     return maybe_prompt
 
 
+def create(db: Session, prompt_data: prompts_schema.PromptCreate) -> prompts_schema.Prompt:
+    """Create a new prompt."""
+    prompt = prompts_crud.create(db=db, data=prompt_data)
+    return prompts_schema.Prompt.model_validate(prompt)
+
+
 def get(db: Session, prompt_id: UUID) -> prompts_schema.Prompt:
     """Get a single prompt by ID with document relation."""
     prompt = _raise_not_found(

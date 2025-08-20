@@ -1,14 +1,14 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from 'react-router-dom';
-import { ThemeProvider } from '@/context';
-import { MainLayout } from '@/views/MainLayout';
-import { HomePage } from '@/views/HomePage';
-import { ProjectsView } from '@/views/ProjectsView';
-import { DocumentsView } from '@/views/DocumentsView';
-import { FileViewer } from '@/views/FileViewer';
-import { DocumentationRenderer } from '@/components/DocumentationRenderer';
-import { SettingsPage } from '@/views/SettingsPage';
-import { CryptoTest } from '@/components/CryptoTest';
+import { ThemeProvider } from '@/providers';
+import { MainLayout } from '@/components/layout';
+import { HomePage } from '@/pages/HomePage';
+import { ProjectsView } from '@/views/projects-view';
+import { DocumentsView } from '@/views/documents-view';
+import { EditorView } from '@/views/editor-view';
+import { DocumentationView } from '@/views/documentation-view';
+import { SettingsPage } from '@/pages/SettingsPage';
+import { CryptoTestView } from '@/views/crypto-test-view';
 
 // Redirect component for /projects/:projectId -> /projects/:projectId/documents
 function ProjectRedirect() {
@@ -43,12 +43,12 @@ function App() {
             <Route path="/projects" element={<ProjectsView />} />
 
             {/* Documentation routes */}
-            <Route path="/documentation" element={<DocumentationRenderer docName="index" />} />
-            <Route path="/documentation/:docName" element={<DocumentationRenderer />} />
+            <Route path="/documentation" element={<DocumentationView docName="index" />} />
+            <Route path="/documentation/:docName" element={<DocumentationView />} />
 
             {/* Developer routes */}
             <Route path="/dev/api-swagger" element={<ApiDocsRedirect />} />
-            <Route path="/dev/crypto-test" element={<CryptoTest />} />
+            <Route path="/dev/crypto-test" element={<CryptoTestView />} />
 
             {/* Settings */}
             <Route path="/settings" element={<SettingsPage />} />
@@ -61,8 +61,8 @@ function App() {
             {/* Redirect /projects/:projectId/documents/:documentId to /projects/:projectId/documents/:documentId/original-file */}
             <Route path="/projects/:projectId/documents/:documentId" element={<DocumentRedirect />} />
 
-            <Route path="/projects/:projectId/documents/:documentId/original-file" element={<FileViewer fileType="original" />} />
-            <Route path="/projects/:projectId/documents/:documentId/redacted-file" element={<FileViewer fileType="redacted" />} />
+            <Route path="/projects/:projectId/documents/:documentId/original-file" element={<EditorView fileType="original" />} />
+            <Route path="/projects/:projectId/documents/:documentId/redacted-file" element={<EditorView fileType="redacted" />} />
 
             {/* Redirect all other routes to home */}
             <Route path="*" element={<Navigate to="/" replace />} />
