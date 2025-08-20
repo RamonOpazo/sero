@@ -10,6 +10,15 @@ from backend.api.controllers import prompts_controller
 router = APIRouter()
 
 
+@router.post("", response_model=prompts_schema.Prompt)
+async def create_prompt(
+    prompt_data: prompts_schema.PromptCreate,
+    db: Session = Depends(get_db_session)
+):
+    """Create a new prompt."""
+    return prompts_controller.create(db=db, prompt_data=prompt_data)
+
+
 @router.get("", response_model=list[prompts_schema.Prompt])
 async def list_prompts(
     skip: int = 0,
