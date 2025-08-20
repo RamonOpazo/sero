@@ -137,27 +137,19 @@ export function DocumentsDataTable({ onDocumentSelect }: DocumentsDataTableProps
       }
     ),
     
-    // File count - displayed as badge
-    columns.badge<DocumentShallowType>('file_count', {
-      header: 'Files',
-      width: '100px',
-      align: 'center',
-      sortable: true
-    }),
-    
     // Prompt count - displayed as badge
-    columns.badge<DocumentShallowType>('prompt_count', {
-      header: 'Prompts',
+    columns.number<DocumentShallowType>('prompt_count', {
+      header: '# Prompts',
       width: '100px',
-      align: 'center',
+      align: 'left',
       sortable: true
     }),
     
     // Selection count - displayed as badge
-    columns.badge<DocumentShallowType>('selection_count', {
-      header: 'Selections',
+    columns.number<DocumentShallowType>('selection_count', {
+      header: '# Selections',
       width: '100px',
-      align: 'center',
+      align: 'left',
       sortable: true
     }),
     
@@ -168,7 +160,7 @@ export function DocumentsDataTable({ onDocumentSelect }: DocumentsDataTableProps
       {
         header: 'Status',
         width: '120px',
-        align: 'center',
+        align: 'left',
         render: (_value, row) => processedStatusRenderer(row)
       }
     ),
@@ -180,11 +172,19 @@ export function DocumentsDataTable({ onDocumentSelect }: DocumentsDataTableProps
       sortable: true,
       format: { style: 'relative' }
     }),
+ 
+    // Last updated - relative date formatting
+    columns.date<DocumentShallowType>('updated_at', {
+      header: 'Last Updated',
+      width: '150px',
+      sortable: true,
+      format: { style: 'relative' }
+    }),
     
     // Actions column - modern action definitions
     columns.actions<DocumentShallowType>('actions', {
       header: 'Actions',
-      width: '100px',
+      width: '5rem',
       align: 'center',
       actions: [
         {
@@ -230,11 +230,11 @@ export function DocumentsDataTable({ onDocumentSelect }: DocumentsDataTableProps
   const tableColumns: ColumnOption[] = useMemo(() => [
     { key: 'description', header: 'Description' },
     { key: 'tags', header: 'Tags' },
-    { key: 'file_count', header: 'Files' },
-    { key: 'prompt_count', header: 'Prompts' },
-    { key: 'selection_count', header: 'Selections' },
+    { key: 'prompt_count', header: '# Prompts' },
+    { key: 'selection_count', header: '# Selections' },
     { key: 'status', header: 'Status' },
-    { key: 'created_at', header: 'Created' }
+    { key: 'created_at', header: 'Created' },
+    { key: 'updated_at', header: 'Last Updated' }
   ], []);
   
   // Custom buttons for the toolbar - delete button always visible

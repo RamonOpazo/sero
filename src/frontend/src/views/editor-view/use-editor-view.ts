@@ -17,6 +17,8 @@ export function useEditorView(fileType: 'original' | 'redacted') {
   // Own editor state management
   const [documentMetadata, setDocumentMetadata] = useState<DocumentShallowType | null>(null);
   const [fileData, setFileData] = useState<FileWithRelatedData | null>(null);
+  // Optionally prefetch the counterpart file (redacted) to enable toggle and immediate view switch
+  const [prefetchedRedacted, setPrefetchedRedacted] = useState<FileWithRelatedData | null>(null);
   const [isLoadingMetadata, setIsLoadingMetadata] = useState(false);
   const [isLoadingFile, setIsLoadingFile] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -106,6 +108,26 @@ export function useEditorView(fileType: 'original' | 'redacted') {
         toast.success('File loaded successfully!', {
           description: `Loaded ${fileType} file`
         });
+
+        // If the document is processed according to metadata, prefetch redacted now
+        if (documentMetadata?.is_processed) {
+          console.info('[EditorView] Redacted indicated by metadata; prefetching redacted blob…', {
+            documentId,
+            is_processed: documentMetadata?.is_processed,
+          });
+          EditorAPI.loadRedactedFile(documentId).then((r) => {
+            if (r.ok) {
+              console.info('[EditorView] Redacted prefetch OK', {
+                fileId: r.value.file.id,
+                size: r.value.blob.size,
+                type: r.value.file.file_type,
+              });
+              setPrefetchedRedacted(r.value);
+            } else {
+              console.info('[EditorView] Redacted prefetch FAILED', r.error);
+            }
+          });
+        }
       } else {
         setPasswordError('Failed to load file. Please check your password and try again.');
       }
@@ -115,7 +137,7 @@ export function useEditorView(fileType: 'original' | 'redacted') {
     } finally {
       setIsValidatingPassword(false);
     }
-  }, [documentId, fileType]);
+  }, [documentId, fileType, documentMetadata?.is_processed]);
 
   const handlePasswordCancel = useCallback(() => {
     setIsPasswordDialogOpen(false);
@@ -137,18 +159,27 @@ export function useEditorView(fileType: 'original' | 'redacted') {
     }
 
     // Create stable arrays and objects to prevent reference changes
-    // Attach the blob to the file for the document viewer to use
-    const fileWithBlob = {
+    // Attach the blob to the file(s) for the document viewer to use
+    const primaryFileWithBlob = {
       ...fileData.file,
       blob: fileData.blob
     };
-    const stableFiles = [fileWithBlob];
 
-    // Since DocumentShallowType doesn't have files array, we determine
-    // original/redacted files based on the current loaded file and shallow metadata
-    const isCurrentFileOriginal = fileData.file.file_type === 'original';
-    const originalFile = isCurrentFileOriginal ? fileWithBlob : null;
-    const redactedFile = !isCurrentFileOriginal ? fileWithBlob : null;
+    const filesWithBlobs = [primaryFileWithBlob];
+
+    if (prefetchedRedacted) {
+      filesWithBlobs.push({ ...prefetchedRedacted.file, blob: prefetchedRedacted.blob });
+    }
+
+    console.info('[EditorView] Building viewer document', {
+      documentId,
+      metadataIsProcessed: documentMetadata?.is_processed,
+      files: filesWithBlobs.map(f => ({ id: f.id, type: f.file_type, hasBlob: !!(f as any).blob })),
+    });
+
+    // Determine pointers for original and redacted files based on available files
+    const originalPointer = filesWithBlobs.find(f => f.file_type === 'original') ?? null;
+    const redactedPointer = filesWithBlobs.find(f => f.file_type === 'redacted') ?? null;
 
     // Create a minimal document object with real metadata instead of fallback data
     const viewerDocument: MinimalDocumentType = {
@@ -159,9 +190,9 @@ export function useEditorView(fileType: 'original' | 'redacted') {
       updated_at: documentMetadata.updated_at,
       project_id: documentMetadata.project_id,
       tags: documentMetadata.tags,
-      files: stableFiles,
-      original_file: originalFile,
-      redacted_file: redactedFile,
+      files: filesWithBlobs as any,
+      original_file: (originalPointer as any) || null,
+      redacted_file: (redactedPointer as any) || null,
     };
 
     return viewerDocument;
@@ -179,6 +210,8 @@ export function useEditorView(fileType: 'original' | 'redacted') {
     fileData?.file?.file_hash,
     fileData?.file?.file_size,
     fileData?.file?.file_type,
+    prefetchedRedacted?.file?.id,
+    prefetchedRedacted?.blob,
   ]);
 
   // Password dialog state and handlers

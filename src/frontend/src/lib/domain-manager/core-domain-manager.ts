@@ -1,7 +1,7 @@
 // Domain Manager V2 - Core Implementation
 // Main domain manager class with behavior composition and type-safe dispatch
 
-import type { Result } from '../../result';
+import type { Result } from '../result';
 import type {
   DomainManagerConfig,
   DomainManager,

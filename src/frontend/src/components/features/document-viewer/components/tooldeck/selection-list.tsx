@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { X, MousePointer2, Globe, Hash } from "lucide-react";
-import { useSelections } from "../../core/selection-provider";
+import { useSelections } from "../../providers/selection-provider";
 import { useViewportState } from "../../providers/viewport-provider";
 import { useMemo, useRef, useEffect, useState, useCallback } from "react";
 import { cn } from "@/lib/utils";

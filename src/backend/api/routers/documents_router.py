@@ -105,6 +105,15 @@ async def get_document(
     return documents_controller.get(db=db, document_id=document_id)
 
 
+@router.get("/id/{document_id}/shallow", response_model=documents_schema.DocumentShallow)
+async def get_document_shallow(
+    document_id: UUID,
+    db: Session = Depends(get_db_session)
+):
+    """Get a single shallow document by ID including counts and processed flag."""
+    return documents_controller.get_shallow(db=db, document_id=document_id)
+
+
 @router.put("/id/{document_id}", response_model=documents_schema.Document)
 async def update_document(
     document_id: UUID,

@@ -47,7 +47,9 @@ class DocumentUpdate(BaseModel):
 
 
 class DocumentShallow(BaseModel):
-    """Shallow document schema without nested file, prompt, or selection data for efficient listing."""
+    """Shallow document schema without nested file data for efficient listing.
+    Includes prompt and selection counts and is_processed flag.
+    """
     id: UUID4
     created_at: AwareDatetime
     updated_at: AwareDatetime | None
@@ -56,12 +58,9 @@ class DocumentShallow(BaseModel):
     project_id: UUID4
     tags: list[str]
     
-    # Metadata about next level without loading full data
-    file_count: int
+    # Minimal metadata
     prompt_count: int
     selection_count: int
-    has_original_file: bool
-    has_redacted_file: bool
     is_processed: bool
     
     class Config:

@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import type { MinimalDocumentType } from "@/types";
 import { AddPromptDialog, SavePromptChangesConfirmationDialog } from "../dialogs";
 import PromptsList from "./prompt-list";
-import { usePrompts } from "../../core/prompt-provider";
+import { usePrompts } from "../../providers/prompt-provider";
 
 interface PromptControlsProps {
   document: MinimalDocumentType;

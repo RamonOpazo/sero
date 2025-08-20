@@ -44,7 +44,7 @@ export const DocumentsAPI = {
     if (limit !== 100) params.append('limit', limit.toString());
     params.append('project_id', projectId);
     const queryString = params.toString();
-    const url = `/documents/search${queryString ? `?${queryString}` : ''}`;
+    const url = `/documents/shallow${queryString ? `?${queryString}` : ''}`;
 
     return await AsyncResultWrapper
       .from(api.safe.get(url) as Promise<Result<DocumentShallowType[], unknown>>)
@@ -187,6 +187,33 @@ export const DocumentsAPI = {
         toast.error(
           "Failed to upload documents",
           { description: error instanceof Error ? error.message : "Please try again." }
+        );
+        throw error;
+      })
+      .toResult();
+  },
+
+  /**
+   * Process an original document to produce a redacted file
+   */
+  async processDocument(documentId: string, password: string): Promise<Result<ApiResponse, unknown>> {
+    const form = new FormData();
+    form.append('password', password);
+
+    return AsyncResultWrapper
+      .from(api.safe.post(`/documents/id/${documentId}/process`, form, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      }) as Promise<Result<ApiResponse, unknown>>)
+      .tap(() => {
+        toast.success(
+          "Processing started",
+          { description: "Your document is being processed. This may take a moment." }
+        );
+      })
+      .catch((error: unknown) => {
+        toast.error(
+          "Failed to process document",
+          { description: error instanceof Error ? error.message : "Please check your password and try again." }
         );
         throw error;
       })

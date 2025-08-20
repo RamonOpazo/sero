@@ -46,43 +46,59 @@ class DocumentCrud(BaseCrud[Document, documents_schema.DocumentCreate, documents
         except Exception as err:
             raise Exception(f"Bulk creation failed: {str(err)}")
     
-    def search_shallow(self, db: Session, skip: int = 0, limit: int = 100, order_by: list[tuple[str, str]] | None = None, **kwargs) -> list[tuple["Document", int, int, int, bool, bool]]:
-        """Search documents with metadata counts but without loading file, prompt, or selection relationships."""
-        from sqlalchemy import func, case
+    def search_shallow(self, db: Session, skip: int = 0, limit: int = 100, order_by: list[tuple[str, str]] | None = None, **kwargs) -> list[tuple["Document", int, int, bool]]:
+        """Search documents with prompt/selection counts and is_processed flag using efficient subqueries.
+        Avoids row multiplication by not joining related tables.
+        """
+        from sqlalchemy import func, exists, and_, select
         from backend.db.models import File, Prompt, Selection
         from backend.api.enums import FileType
         
-        _sanitized_ordering = (
-            getattr(getattr(self.model, field), direction)()
-            for field, direction in order_by or []
-        )
-        _sanitized_filters = (
+        D = self.model
+        
+        # Ordering
+        q_ordered = db.query(D)
+        for field, direction in (order_by or []):
+            q_ordered = q_ordered.order_by(getattr(getattr(D, field), direction)())
+        
+        # Filters
+        _sanitized_filters = [
             self._resolve_filter_operation(field=field, data=data)
             for field, data in kwargs.items()
             if data is not None
+        ]
+        if _sanitized_filters:
+            q_ordered = q_ordered.filter(*_sanitized_filters)
+        
+        # Correlated subqueries using select().scalar_subquery() for SA 1.4+/2.0
+        prompt_count_sq = (
+            select(func.count(Prompt.id))
+            .where(Prompt.document_id == D.id)
+            .correlate(D)
+            .scalar_subquery()
         )
+        selection_count_sq = (
+            select(func.count(Selection.id))
+            .where(Selection.document_id == D.id)
+            .correlate(D)
+            .scalar_subquery()
+        )
+        redacted_count_sq = (
+            select(func.count(File.id))
+            .where(and_(File.document_id == D.id, File.file_type == FileType.REDACTED))
+            .correlate(D)
+            .scalar_subquery()
+        )
+        is_processed_expr = (redacted_count_sq > 0)
         
         results = (
             db.query(
-                self.model,
-                func.count(File.id).label('file_count'),
-                func.count(Prompt.id).label('prompt_count'),
-                func.count(Selection.id).label('selection_count'),
-                func.sum(case(
-                    (File.file_type == FileType.ORIGINAL, 1),
-                    else_=0
-                )).label('has_original_file'),
-                func.sum(case(
-                    (File.file_type == FileType.REDACTED, 1),
-                    else_=0
-                )).label('has_redacted_file')
+                D,
+                prompt_count_sq.label('prompt_count'),
+                selection_count_sq.label('selection_count'),
+                is_processed_expr.label('is_processed'),
             )
-            .outerjoin(File, self.model.id == File.document_id)
-            .outerjoin(Prompt, self.model.id == Prompt.document_id)
-            .outerjoin(Selection, self.model.id == Selection.document_id)
-            .filter(*_sanitized_filters)
-            .group_by(self.model.id)
-            .order_by(*_sanitized_ordering)
+            .filter(D.id.in_(q_ordered.with_entities(D.id)))
             .offset(skip)
             .limit(limit)
             .all()

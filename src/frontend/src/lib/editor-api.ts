@@ -24,22 +24,13 @@ export const EditorAPI = {
    * Fetch document metadata by document ID
    */
   async fetchDocumentMetadata(documentId: string, projectId?: string): Promise<Result<DocumentShallowType, unknown>> {
-    const params = new URLSearchParams();
-    if (projectId) params.append('project_id', projectId);
-    const queryString = params.toString();
-    const url = `/documents/search${queryString ? `?${queryString}` : ''}`;
-
     return await AsyncResultWrapper
-      .from(api.safe.get(url) as Promise<Result<DocumentShallowType[], unknown>>)
-      .andThen((documents) => {
-        // Find our specific document in the results
-        const targetDocument = documents.find(doc => doc.id === documentId);
-        
-        if (targetDocument) {
-          return { ok: true, value: targetDocument };
-        } else {
-          return { ok: false, error: new Error('Document not found in project') };
+      .from(api.safe.get(`/documents/id/${documentId}/shallow`) as Promise<Result<DocumentShallowType, unknown>>)
+      .andThen((doc: DocumentShallowType) => {
+        if (projectId && doc.project_id !== projectId) {
+          return { ok: false, error: new Error('Document not found in project') } as Result<DocumentShallowType, unknown>;
         }
+        return { ok: true, value: doc } as Result<DocumentShallowType, unknown>;
       })
       .catch((error: unknown) => {
         toast.error(

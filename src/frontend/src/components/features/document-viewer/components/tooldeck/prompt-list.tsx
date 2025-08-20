@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { X, Loader2, Brain } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { usePrompts } from "../../core/prompt-provider";
+import { usePrompts } from "../../providers/prompt-provider";
 import { toast } from "sonner";
 import { useMemo } from "react";
 import type { PromptType, PromptCreateType } from "@/types";

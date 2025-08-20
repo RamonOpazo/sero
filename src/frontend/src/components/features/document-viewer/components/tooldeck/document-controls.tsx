@@ -1,9 +1,13 @@
+import React from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Play, Download, Trash2, FileText, Eye, Calendar, Clock } from "lucide-react";
 import { useViewportState } from "../../providers/viewport-provider";
 import type { MinimalDocumentType } from "@/types";
+import { DocumentsAPI } from "@/lib/documents-api";
+import { DocumentPasswordDialog } from "@/views/editor-view/dialogs";
+import { toast } from "sonner";
 
 interface DocumentControlsProps {
   document: MinimalDocumentType;
@@ -15,6 +19,20 @@ interface DocumentControlsProps {
  */
 export default function DocumentControls({ document }: DocumentControlsProps) {
   const { isViewingProcessedDocument, dispatch } = useViewportState();
+  const [isPasswordDialogOpen, setPasswordDialogOpen] = React.useState(false);
+  const [isProcessing, setIsProcessing] = React.useState(false);
+  const [processError, setProcessError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    const hasRedacted = document.redacted_file !== null;
+    const filesDebug = (document.files || []).map((f: any) => ({ id: f.id, type: f.file_type, hasBlob: !!(f as any).blob }));
+    console.info('[DocumentControls] Mount/update', {
+      docId: document.id,
+      hasRedacted,
+      isViewingProcessedDocument,
+      files: filesDebug,
+    });
+  }, [document.id, document.redacted_file?.id, isViewingProcessedDocument, document.files]);
 
   const toggleDocumentView = () => {
     dispatch({
@@ -169,12 +187,39 @@ export default function DocumentControls({ document }: DocumentControlsProps) {
         <Button
           variant="default"
           size="sm"
-          disabled={isViewingProcessedDocument}
+          onClick={() => setPasswordDialogOpen(true)}
+          disabled={isProcessing || isViewingProcessedDocument || !document.original_file}
           className="w-full justify-start h-9 text-xs"
         >
-          <Play className="mr-2 h-3 w-3" />
-          Process Document
+          {isProcessing ? (
+            <span className="mr-2 h-3 w-3 animate-spin" />
+          ) : (
+            <Play className="mr-2 h-3 w-3" />
+          )}
+          {isProcessing ? 'Processing...' : 'Process Document'}
         </Button>
+
+        <DocumentPasswordDialog
+          isOpen={isPasswordDialogOpen}
+          onClose={() => { setPasswordDialogOpen(false); setProcessError(null); }}
+          onConfirm={async (password) => {
+            setProcessError(null);
+            setIsProcessing(true);
+            const result = await DocumentsAPI.processDocument(document.id, password);
+            setIsProcessing(false);
+
+            if (result.ok) {
+              toast.success('Document processing started');
+              // Switch view to the redacted document immediately
+              dispatch({ type: 'SET_VIEWING_PROCESSED', payload: true });
+              setPasswordDialogOpen(false);
+            } else {
+              setProcessError('Invalid password or server error');
+            }
+          }}
+          error={processError}
+          isLoading={isProcessing}
+        />
 
         <Button
           variant="outline"

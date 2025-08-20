@@ -6,7 +6,7 @@
  */
 
 import React, { createContext, useContext, useEffect, useState, useRef, useMemo, useCallback } from 'react';
-import { createSelectionManager, type SelectionDomainManager, type Selection, type SelectionCreateType } from './selection-manager';
+import { createSelectionManager, type SelectionDomainManager, type Selection, type SelectionCreateType } from '../core/selection-manager';
 import type { Result } from '@/lib/result';
 import type { PendingChanges } from '@/lib/domain-manager';
 

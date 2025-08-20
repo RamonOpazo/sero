@@ -5,7 +5,7 @@
 
 import { useEffect } from 'react';
 import { useDocumentSelections } from './use-document-data';
-import { useSelections } from '../core/selection-provider';
+import { useSelections } from '../providers/selection-provider';
 
 export function useSelectionLoader(documentId: string) {
   const { selections, loading, error } = useDocumentSelections(documentId);

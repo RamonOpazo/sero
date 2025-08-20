@@ -1,6 +1,4 @@
-import { ViewportProvider } from "./providers";
-import { PromptProvider } from "./providers";
-import { SelectionProvider } from "./core/selection-provider";
+import { UnifiedDocumentViewerProvider } from "./providers";
 import DocumentViewerLayout from "./components/layouts/main-layout";
 import { type MinimalDocumentType } from "@/types";
 import { useSelectionLoader } from "./hooks/useSelectionLoader";
@@ -30,14 +28,20 @@ export default function DocumentViewer({ document }: DocumentViewerProps) {
     return <div>Document not found</div>;
   }
 
+  // Log entry into DocumentViewer with a compact summary
+  const filesSummary = (document.files || []).map((f: any) => ({ id: f.id, type: f.file_type, hasBlob: !!(f as any).blob }));
+  // Use info level to make it visible
+  console.info('[DocumentViewer] Mount', {
+    docId: document.id,
+    hasOriginalPtr: !!document.original_file,
+    hasRedactedPtr: !!document.redacted_file,
+    files: filesSummary,
+  });
+
   return (
-    <ViewportProvider document={document}>
-      <SelectionProvider documentId={document.id}>
-        <PromptProvider documentId={document.id}>
-          <DocumentViewerContent document={document} />
-        </PromptProvider>
-      </SelectionProvider>
-    </ViewportProvider>
+    <UnifiedDocumentViewerProvider document={document}>
+      <DocumentViewerContent document={document} />
+    </UnifiedDocumentViewerProvider>
   );
 }
 
@@ -53,14 +57,6 @@ export * from "./components";
 
 // Providers and state management
 export * from "./providers";
-
-// Domain Managers (configuration-driven system)
-export { 
-  createPromptManager, 
-  createSelectionManager,
-  type PromptManagerInstance,
-  type SelectionManagerInstance
-} from './managers';
 
 // Utilities
 export * from "./utils";
