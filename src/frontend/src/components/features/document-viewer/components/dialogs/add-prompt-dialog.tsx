@@ -125,10 +125,10 @@ export default function AddPromptDialog({
     }
   };
   
-  // Reset title when type changes
+  // Reset title when type changes (create mode only). In edit mode we preserve populated values.
   useEffect(() => {
-    if (selectedType) {
-      // Always clear the title when type changes
+    if (mode === 'create' && selectedType) {
+      // Always clear the title when type changes (create only)
       setTitle('');
       // Auto-set priority based on rule type
       setPriority(currentType.priority as 'high' | 'medium' | 'low');
@@ -136,7 +136,7 @@ export default function AddPromptDialog({
       setRule('');
       setError('');
     }
-  }, [selectedType, currentType]);
+  }, [mode, selectedType, currentType]);
 
   // Simple title change handler - no prefix protection needed
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {

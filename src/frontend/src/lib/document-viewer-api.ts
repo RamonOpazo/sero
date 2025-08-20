@@ -33,9 +33,14 @@ export const DocumentViewerAPI = {
   /**
    * Create a new prompt for a document
    */
-  async createPrompt(documentId: string, promptData: PromptCreateType): Promise<Result<PromptType, unknown>> {
+  async createPrompt(documentId: string, promptData: Omit<PromptCreateType, 'document_id'>): Promise<Result<PromptType, unknown>> {
+    const createData: PromptCreateType = {
+      ...promptData,
+      document_id: documentId,
+    };
+
     return AsyncResultWrapper
-      .from(api.safe.post<PromptType>(`/documents/id/${documentId}/prompts`, promptData))
+      .from(api.safe.post<PromptType>(`/documents/id/${documentId}/prompts`, createData))
       .catch((error: unknown) => {
         console.error('Failed to create prompt:', error);
         throw error;
