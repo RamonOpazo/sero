@@ -52,7 +52,9 @@ export default function DocumentControls({ document }: DocumentControlsProps) {
         const url = URL.createObjectURL(fileWithBlob.blob);
         const link = globalThis.document.createElement('a');
         link.href = url;
-        link.download = `${document.name}_${isViewingProcessedDocument ? 'redacted' : 'original'}.pdf`;
+        // Use document ID for redacted to avoid leaking names
+        const fname = isViewingProcessedDocument ? `${document.id}.pdf` : `${document.name}_original.pdf`;
+        link.download = fname;
         link.click();
         URL.revokeObjectURL(url);
       }

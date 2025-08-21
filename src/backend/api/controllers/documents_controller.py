@@ -722,8 +722,8 @@ def download_redacted_file(
             detail="File integrity verification failed - document may be corrupted"
         )
     
-    # Generate filename
-    safe_filename = f"{document.name}_redacted.pdf"
+    # Generate filename: use document ID to avoid leaking names
+    safe_filename = f"{document.id}.pdf"
     
     # Always download as attachment for redacted files and disable caching
     headers = {

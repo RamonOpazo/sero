@@ -60,6 +60,43 @@ class PdfRedactor:
         self._ws = watermark_settings
 
     @staticmethod
+    def _pdf_date_now_utc() -> str:
+        # PDF date string in UTC per spec: D:YYYYMMDDHHmmSS+00'00'
+        now = datetime.now(tz=timezone.utc)
+        return now.strftime("D:%Y%m%d%H%M%S+00'00'")
+
+    def _scrub_and_set_metadata(self, doc: pymupdf.Document) -> None:
+        """Remove original metadata and set minimal safe metadata."""
+        # Clear XMP metadata if present
+        try:
+            doc.set_xml_metadata("")
+        except Exception:
+            pass
+        # Set basic info dictionary
+        safe_meta = {
+            "producer": "SERO",
+            "creator": "SERO",
+            "title": "Redacted Document",
+            "subject": "Redacted by SERO",
+            "keywords": "",
+            "creationDate": self._pdf_date_now_utc(),
+            "modDate": self._pdf_date_now_utc(),
+            "trapped": "False",
+        }
+        try:
+            doc.set_metadata(safe_meta)
+        except Exception:
+            # Fallback: ignore if backend does not support setting some fields
+            try:
+                # Try a minimal subset
+                doc.set_metadata({
+                    "producer": "SERO",
+                    "creator": "SERO",
+                })
+            except Exception:
+                pass
+
+    @staticmethod
     def _get_anchor_point(anchor: Literal["NW", "NE", "SW", "SE", "ZH"], padding: int, page_rect: pymupdf.Rect) -> tuple[float, float]:
         match anchor:
             case "NW":
@@ -126,6 +163,9 @@ class PdfRedactor:
 
             logger.info(f"Redacted {total_redactions} areas across {doc.page_count} pages")
 
+            # Scrub metadata before returning bytes
+            self._scrub_and_set_metadata(doc)
+
             # Return bytes while document context is active
             return doc.tobytes()
 
@@ -138,3 +178,8 @@ class PdfRedactor:
 
 # Singleton instance
 redactor = PdfRedactor(watermark_settings=WatermarkSettings())
+
+
+# Redactor factory
+def create_redactor() -> PdfRedactor:
+    return PdfRedactor(watermark_settings=WatermarkSettings())
