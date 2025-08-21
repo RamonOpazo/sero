@@ -1,6 +1,5 @@
 // import React from 'react';
 // import { cn } from '@/lib/utils';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { X, Keyboard } from 'lucide-react';
 
@@ -10,8 +9,6 @@ interface HelpOverlayProps {
 }
 
 export function HelpOverlay({ isVisible, onToggleVisibility }: HelpOverlayProps) {
-  if (!isVisible) return null;
-
   const shortcuts = [
     {
       category: "Navigation",
@@ -43,7 +40,7 @@ export function HelpOverlay({ isVisible, onToggleVisibility }: HelpOverlayProps)
       items: [
         { key: "Delete", description: "Remove last selection" },
         { key: "Ctrl+Z", description: "Undo selection changes" },
-        { key: "Ctrl+Shift+Z", description: "Redo selection changes" },
+        { key: "Ctrl+Y", description: "Redo selection changes" },
       ]
     },
     {
@@ -56,61 +53,59 @@ export function HelpOverlay({ isVisible, onToggleVisibility }: HelpOverlayProps)
     }
   ];
 
+  // Transition similar to InfoLayer; keep mounted for exit animation
+  const visibilityClasses = isVisible
+    ? 'opacity-100 translate-y-0 pointer-events-auto'
+    : 'opacity-0 -translate-y-2 pointer-events-none';
+
   return (
-    <div 
-      className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+    <div
+      className={`absolute inset-0 z-[2100] bg-black/50 backdrop-blur-xs p-4 flex flex-col gap-4 text-xs transition-all duration-200 ease-out ${visibilityClasses}`}
       onClick={onToggleVisibility}
+      aria-hidden={!isVisible}
     >
-      <Card 
-        className="w-full max-w-4xl max-h-[80vh] overflow-y-auto mx-4 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/95"
-        onClick={(e) => e.stopPropagation()}
+      {/* Close button */}
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={onToggleVisibility}
+        className="absolute top-4 right-4"
+        aria-label="Close help"
       >
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Keyboard className="h-5 w-5" />
-              <CardTitle>Keyboard Shortcuts</CardTitle>
-            </div>
-            <Button 
-              size="sm" 
-              variant="ghost" 
-              onClick={onToggleVisibility}
-              className="h-8 w-8 p-0"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {shortcuts.map((section) => (
-              <div key={section.category}>
-                <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide mb-3">
-                  {section.category}
-                </h3>
-                <div className="space-y-2">
-                  {section.items.map((item, index) => (
-                    <div key={index} className="flex items-center justify-between gap-3">
-                      <span className="text-sm text-muted-foreground flex-1">
-                        {item.description}
-                      </span>
-                      <kbd className="px-2 py-1 text-xs font-mono bg-muted border border-border rounded whitespace-nowrap">
-                        {item.key}
-                      </kbd>
-                    </div>
-                  ))}
-                </div>
+        <X />
+      </Button>
+
+      {/* Header */}
+      <div className="flex items-center gap-2 mb-2">
+        <Keyboard className="h-5 w-5" />
+        <h1 className="text-lg font-semibold">Keyboard Shortcuts</h1>
+      </div>
+
+      {/* Sections laid out like Info layer (single column, left-ragged) */}
+      <div className="bg-background/90 m-[100px] rounded-md p-8">
+        <div className="grid grid-cols-2 gap-8">
+          {shortcuts.map((section) => (
+            <div key={section.category}>
+              <h2 className="uppercase tracking-wider text-muted-foreground mb-2">{section.category}</h2>
+              <div className="ml-4 space-y-1">
+                {section.items.map((item, idx) => (
+                  <div key={idx} className="flex items-center">
+                    <span className="text-md text-muted-foreground mr-2">{item.description}</span>
+                    <kbd className="text-[0.8rem] px-1.5 py-1 border rounded-md bg-background/70 whitespace-nowrap font-mono">
+                      {item.key}
+                    </kbd>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-          <div className="mt-6 pt-4 border-t text-center">
-            <p className="text-sm text-muted-foreground">
-              Press <kbd className="px-1 py-0.5 text-xs font-mono bg-muted border border-border rounded">H</kbd> or{' '}
-              <kbd className="px-1 py-0.5 text-xs font-mono bg-muted border border-border rounded">Esc</kbd> to close this help
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+            </div>
+          ))}
+        </div>
+        {/* Footer hint */}
+        <div className="mt-10 text-center text-muted-foreground">
+          <p>Press H or Esc to close</p>
+        </div>
+      </div>
+
     </div>
   );
 }
