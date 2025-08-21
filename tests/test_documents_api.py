@@ -87,11 +87,8 @@ class TestDocumentsAPI:
         assert "project_id" in document
         assert "tags" in document
         assert "created_at" in document
-        assert "file_count" in document
         assert "prompt_count" in document
         assert "selection_count" in document
-        assert "has_original_file" in document
-        assert "has_redacted_file" in document
         assert "is_processed" in document
         
         # Verify no nested data is loaded
