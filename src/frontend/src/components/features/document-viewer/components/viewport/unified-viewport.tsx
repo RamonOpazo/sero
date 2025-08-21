@@ -58,6 +58,7 @@ export function UnifiedViewport({
     setCurrentPage,
     setMode,
     showHelpOverlay,
+    isViewingProcessedDocument,
   } = useViewportState();
   
   // Get viewport actions
@@ -347,6 +348,15 @@ export function UnifiedViewport({
         }
         break;
 
+      // Toggle between original and redacted (T)
+      case 't':
+      case 'T':
+        if (!isModifierPressed) {
+          dispatch({ type: 'SET_VIEWING_PROCESSED', payload: !isViewingProcessedDocument });
+          event.preventDefault();
+        }
+        break;
+
       case ' ': // Spacebar for temporary pan mode
         if (!isModifierPressed && mode === 'select') {
           // TODO: Implement temporary pan mode
@@ -421,7 +431,7 @@ export function UnifiedViewport({
         }
         break;
     }
-  }, [mode, isPanning, zoom, setIsPanning, cancelDraw, dispatch, currentPage, numPages, setCurrentPage, setMode, toggleInfoPanel, showHelpOverlay, toggleHelpOverlay, deleteSelectedSelection, undo, redo]);
+  }, [mode, isPanning, zoom, isViewingProcessedDocument, setIsPanning, cancelDraw, dispatch, currentPage, numPages, setCurrentPage, setMode, toggleInfoPanel, showHelpOverlay, toggleHelpOverlay, deleteSelectedSelection, undo, redo]);
 
   // Wire navigation callback so undo/redo move to the relevant page
   useEffect(() => {

@@ -5,7 +5,7 @@ import RenderLayer from "../viewport/render-layer";
 import SelectionsLayer from "../viewport/selections-layer"; // Note: Will be renamed from SelectionsLayerNew
 import InfoLayer from "../viewport/info-layer";
 import ActionsLayer from "../viewport/actions-layer";
-import HelpOverlay from "../viewport/help-layer";
+import { KeyboardShortcutsDialog } from "../dialogs";
 import { useViewportState, useViewportActions } from '../../providers/viewport-provider';
 import type { MinimalDocumentType } from "@/types";
 
@@ -62,8 +62,8 @@ export default function ViewportLayout({ document, className, ...props }: Render
         onToggleVisibility={toggleInfoPanel}
       />
       
-      {/* Help overlay covers the entire viewer area */}
-      <HelpOverlay 
+      {/* Keyboard shortcuts dialog */}
+      <KeyboardShortcutsDialog 
         isVisible={showHelpOverlay}
         onToggleVisibility={toggleHelpOverlay}
       />

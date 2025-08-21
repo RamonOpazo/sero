@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Hand, MousePointerClick, Eye, EyeOff, Scan, Info, Pen, PenOff } from "lucide-react";
+import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Hand, MousePointerClick, Eye, EyeOff, Scan, Info, Pen, PenOff, Keyboard } from "lucide-react";
 import { useViewportState, useViewportActions } from '../../providers/viewport-provider';
 
 interface ActionsLayerProps {
@@ -25,6 +25,7 @@ export default function ActionsLayer({ isInfoVisible = false, onToggleInfo }: Ac
   const {
     toggleSelections,
     resetView,
+    toggleHelpOverlay,
   } = useViewportActions();
   
   // Compatibility function for setShowSelections
@@ -316,10 +317,22 @@ export default function ActionsLayer({ isInfoVisible = false, onToggleInfo }: Ac
               size="icon"
               onClick={onToggleInfo}
               className={isInfoVisible ? 'bg-accent text-accent-foreground' : ''}
+              title="Toggle info"
             >
               <Info />
             </Button>
           )}
+
+          {/* Keyboard shortcuts dialog toggle */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleHelpOverlay}
+            title="Keyboard shortcuts (H)"
+          >
+            <Keyboard />
+          </Button>
+
         </div>
       </div>
     </div>

@@ -5,6 +5,7 @@ import { useSelections } from '../../providers/selection-provider';
 import { usePrompts } from '../../providers/prompt-provider';
 import { X, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 type Props = {
   document: MinimalDocumentType;
@@ -64,7 +65,13 @@ export default function InfoLayer({ document, documentSize, isVisible, onToggleV
 
   return (
     <div
-      className={`absolute top-0 left-0 bottom-0 z-[2100] bg-black/50 backdrop-blur-xs p-4 flex flex-col gap-4 text-xs w-[60ch] max-w-[60ch] transition-all duration-200 ease-out ${visibilityClasses}`}
+      className={cn(
+        "absolute top-0 left-0 bottom-0 z-[2100]",
+        "flex flex-col gap-4 w-[60ch] max-w-[60ch] p-4",
+        "rounded-l-md bg-black/90 backdrop-blur-xs backdrop-saturate-0",
+        "text-xs transition-all duration-200 ease-out",
+        `${visibilityClasses}`
+      )}
       onClick={onToggleVisibility}
       aria-hidden={!isVisible}
     >
