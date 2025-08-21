@@ -322,39 +322,41 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     const isSelected = selectedSelection?.id === selection.id;
     const isNew = pendingChanges.creates.some((create: Selection) => create.id === selection.id);
     const isGlobal = selection.page_number === null;
-    
-    
+
     // Check if this saved selection has been modified from its initial state
     const isModified = !isNew && pendingChanges.updates.some((update: Selection) => update.id === selection.id);
+
+    // Choose a color family for border and pattern; also set matching text-* so currentColor can be used in CSS
+    const colorClasses = isSelected
+      ? { border: "border-blue-600", text: "text-blue-600" }
+      : isGlobal
+        ? { border: "border-yellow-500/80 hover:border-yellow-600/95", text: "text-yellow-600" }
+        : isNew
+          ? { border: "border-green-500/80 hover:border-green-600/95", text: "text-green-600" }
+          : isModified
+            ? { border: "border-purple-600/85 hover:border-purple-700/95", text: "text-purple-700" }
+            : { border: "border-slate-500/80 hover:border-slate-600/95", text: "text-slate-600" };
 
     const selectionElement = (
       <div
         key={selection.id}
         className={cn(
-          "absolute pointer-events-auto group",
+          "absolute pointer-events-auto group overflow-hidden",
           // Disable transitions during drag operations
-          dragState?.type === 'move' || dragState?.type === 'resize' 
-            ? "" 
+          dragState?.type === 'move' || dragState?.type === 'resize'
+            ? ""
             : "transition-all duration-200",
-          isSelected
-            ? "border border-blue-600 bg-blue-100/20"
-            : isGlobal
-              ? "border border-yellow-400/60 bg-yellow-50/10 hover:border-yellow-500/80"
-              : isNew
-                ? "border border-green-400/60 bg-green-50/10 hover:border-green-500/80"
-                : isModified
-                  ? "border border-purple-500/70 bg-purple-100/15 hover:border-purple-600/90"
-                  : "border border-slate-400/60 bg-slate-50/10 hover:border-slate-500/80"
+          "border",
+          colorClasses.border,
+          colorClasses.text,
         )}
-        style={{ 
+        style={{
           left: `${left}px`,
           top: `${top}px`,
           width: `${width}px`,
           height: `${height}px`,
-          cursor: isSelected 
-            ? dragState?.type === 'move' 
-              ? 'grabbing' 
-              : 'grab'
+          cursor: isSelected
+            ? (dragState?.type === 'move' ? 'grabbing' : 'grab')
             : 'pointer',
         }}
         onClick={(e) => {
@@ -368,13 +370,33 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
           }
         }}
       >
+        {/* Backdrop brightness to gently lift darker areas */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            backdropFilter: 'brightness(1.1)',
+            WebkitBackdropFilter: 'brightness(1.1)',
+            backgroundColor: 'rgba(255,255,255,.40)',
+          }}
+        />
+        {/* Subtle solid tint using currentColor */}
+        <div className="absolute inset-0 pointer-events-none opacity-10" style={{ backgroundColor: 'currentColor' }} />
+        {/* Diagonal stripe overlay */}
+        <div
+          className="absolute inset-0 pointer-events-none opacity-30"
+          style={{
+            backgroundImage: `linear-gradient(135deg, currentColor 2.25%, transparent 2.25%, transparent 50%, currentColor 50%, currentColor 52.25%, transparent 52.25%, transparent 100%)`,
+            backgroundSize: '20px 20px',
+          }}
+        />
+
         {/* Resize handles for selected selection */}
         {isSelected && renderResizeHandles(selection)}
       </div>
     );
 
     return selectionElement;
-  }, [documentSize, selectedSelection, handleSelectionClick, dragState, renderResizeHandles, handleMoveStart]);
+  }, [documentSize, selectedSelection, handleSelectionClick, dragState, renderResizeHandles, handleMoveStart, pendingChanges]);
 
   // Filter selections for current page
   const pageSelections = allSelections.filter(
@@ -414,14 +436,34 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
         {/* Render current drawing */}
         {drawingThisPage && currentDraw && (
           <div
-            className="absolute pointer-events-none border border-blue-400 bg-blue-50/20"
+            className="absolute pointer-events-none border border-blue-400 text-blue-500 overflow-hidden"
             style={{
               left: `${currentDraw.x * documentSize.width}px`,
               top: `${currentDraw.y * documentSize.height}px`,
               width: `${Math.abs(currentDraw.width) * documentSize.width}px`,
               height: `${Math.abs(currentDraw.height) * documentSize.height}px`,
             }}
-          />
+          >
+            {/* Backdrop brightness to gently lift darker areas under live drawing */}
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                backdropFilter: 'brightness(1.08)',
+                WebkitBackdropFilter: 'brightness(1.08)',
+                backgroundColor: 'rgba(255,255,255,0.001)',
+              }}
+            />
+            {/* Subtle solid tint using currentColor */}
+            <div className="absolute inset-0 pointer-events-none opacity-10" style={{ backgroundColor: 'currentColor' }} />
+            {/* Diagonal stripe overlay */}
+            <div
+              className="absolute inset-0 pointer-events-none opacity-30"
+              style={{
+                backgroundImage: `linear-gradient(135deg, currentColor 2.25%, transparent 2.25%, transparent 50%, currentColor 50%, currentColor 52.25%, transparent 52.25%, transparent 100%)`,
+                backgroundSize: '20px 20px',
+              }}
+            />
+          </div>
         )}
       </div>
 
