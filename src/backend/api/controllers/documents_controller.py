@@ -7,11 +7,11 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from backend.core.security import security_manager
+from backend.core.pdf_redactor import redactor, AreaSelection
 from backend.db.models import Document as DocumentModel
 from backend.crud import documents_crud, prompts_crud, selections_crud, projects_crud, files_crud
 from backend.api.schemas import documents_schema, generics_schema, files_schema, prompts_schema, selections_schema
 from backend.api.enums import FileType
-from backend.services.redaction_service import create_redaction_service
 
 
 def _raise_not_found(callback: Callable[..., DocumentModel | None], db: Session, id: UUID, **kwargs) -> DocumentModel:
@@ -497,36 +497,12 @@ def process(db: Session, document_id: UUID, password: str) -> generics_schema.Su
             detail="File integrity verification failed - document may be corrupted"
         )
     
-    # Prepare selections for redaction
-    selections_list = [
-        {
-            'x': sel.x,
-            'y': sel.y,
-            'width': sel.width,
-            'height': sel.height,
-            'page_number': sel.page_number
-        }
-        for sel in document.selections
-    ]
-
-    # Debug log selections
-    try:
-        from loguru import logger as _logger
-        _logger.info(
-            "Processing document {doc} with {count} selections",
-            doc=str(document_id), count=len(selections_list)
-        )
-        if selections_list:
-            _logger.debug("First 3 selections sample: {}", selections_list[:3])
-    except Exception:
-        pass
-    
     # Apply redaction
     try:
-        redaction_service = create_redaction_service()
-        redacted_pdf_data = redaction_service.redactor.redact_document(
+        # redaction_service = create_redaction_service()
+        redacted_pdf_data = redactor.redact_document(
             pdf_data=decrypted_data,
-            selections=selections_list
+            selections=[ AreaSelection.model_validate(i) for i in document.selections ]
         )
     except Exception as e:
         raise HTTPException(
@@ -537,13 +513,12 @@ def process(db: Session, document_id: UUID, password: str) -> generics_schema.Su
     # Calculate file hash for redacted data
     redacted_file_hash = security_manager.generate_file_hash(redacted_pdf_data)
     
-    # Create redacted file (unencrypted, salt=None)
+    # Create redacted file (unencrypted)
     file_data = files_schema.FileCreate(
         file_hash=redacted_file_hash,
         file_type=FileType.REDACTED,
         mime_type=original_file.mime_type,
         data=redacted_pdf_data,
-        salt=None,  # Redacted files are not encrypted
         document_id=document_id,
         file_size=len(redacted_pdf_data)
     )
@@ -553,7 +528,7 @@ def process(db: Session, document_id: UUID, password: str) -> generics_schema.Su
         redacted_file = files_crud.create(db=db, data=file_data)
         
         return generics_schema.Success(
-            message=f"Document processed successfully - redacted file created",
+            message="Document processed successfully - redacted file created",
             detail={
                 "document_id": str(document_id),
                 "redacted_file_id": str(redacted_file.id),
@@ -747,8 +722,8 @@ def download_redacted_file(
             detail="File integrity verification failed - document may be corrupted"
         )
     
-    # Generate filename
-    safe_filename = f"{document.name}_redacted.pdf"
+    # Generate filename: use document ID to avoid leaking names
+    safe_filename = f"{document.id}.pdf"
     
     # Always download as attachment for redacted files and disable caching
     headers = {

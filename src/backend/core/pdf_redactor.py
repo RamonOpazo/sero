@@ -1,196 +1,185 @@
 import pymupdf
-from typing import Dict, List, Any
+from typing import Literal
+from datetime import datetime, timezone
+from pydantic import BaseModel, Field, ConfigDict
 from loguru import logger
 
 
-class PDFRedactionError(Exception):
+class AreaSelection(BaseModel):
+    x: float
+    y: float
+    width: float
+    height: float
+    page_number: int | None
+
+    model_config = ConfigDict(
+        populate_by_name=True,
+        from_attributes=True,
+    )
+
+    def as_rect(self, page: pymupdf.Page) -> pymupdf.Rect:
+        # Use page height for Y coordinates (bug fix)
+        absolute_x0 = self.x * page.rect.width
+        absolute_y0 = self.y * page.rect.height
+        absolute_x1 = absolute_x0 + (self.width * page.rect.width)
+        absolute_y1 = absolute_y0 + (self.height * page.rect.height)
+        return pymupdf.Rect(absolute_x0, absolute_y0, absolute_x1, absolute_y1)
+
+
+class WatermarkSettings(BaseModel):
+    anchor: Literal["NW", "NE", "SW", "SE", "ZH"] = Field("NW")
+    padding: int = Field(10)
+    color: str = Field("#ff0000")
+    size: float = Field(8)
+
+    def as_anchor_point(self, page: pymupdf.Page) -> tuple[float, float]:
+        if self.anchor == "NW":
+            return page.rect.x0 + self.padding, page.rect.y0 + self.padding
+        if self.anchor == "NE":
+            return page.rect.x1 - self.padding, page.rect.y0 + self.padding
+        if self.anchor == "SW":
+            return page.rect.x0 + self.padding, page.rect.y1 - self.padding
+        if self.anchor == "SE":
+            return page.rect.x1 - self.padding, page.rect.y1 - self.padding
+        if self.anchor == "ZH":
+            return page.rect.x0 + page.rect.width / 2, page.rect.y0 + page.rect.height / 2
+        raise ValueError(f"Unknown anchor position: {self.anchor}")
+
+
+def _get_normalized_rgb(color: str) -> tuple[float, float, float]:
+    hex_str = color.lstrip("#")
+    return tuple(int(hex_str[i:i+2], 16) / 255 for i in (0, 2, 4))
+
+
+class PdfRedactionError(Exception):
     pass
 
 
-class PDFRedactor:
-    def __init__(self):
-        # default watermark config
-        self._watermark_text_color = (1, 0, 0)  # red
-        self._watermark_fontsize = 10
-        self._watermark_margin = (10, 14)  # x, y from top-left
-        self._redaction_fill = (0, 0, 0)  # black fill for redaction boxes
-        pass
-    
-    def redact_document(self, pdf_data: bytes, selections: List[Dict[str, Any]]) -> bytes:
-        try:
-            logger.info("Redactor received {} selections", len(selections))
-            if len(selections) > 0:
-                logger.debug("Selections sample (first 3): {}", selections[:3])
-            doc = pymupdf.open("pdf", pdf_data)
-            
-            if doc.is_encrypted:
-                raise PDFRedactionError("PDF is encrypted")
-            
-            if doc.page_count == 0:
-                raise PDFRedactionError("PDF has no pages")
-            
-            processed_pages = set()
-            redaction_count = 0
-            
-            # Perform redactions per selection/page
-            for selection in selections:
-                page_num = selection.get('page_number')
-                if page_num is None:
-                    for page_idx in range(doc.page_count):
-                        count = self._redact_page(doc.load_page(page_idx), [selection])
-                        redaction_count += count
-                        processed_pages.add(page_idx)
-                else:
-                    try:
-                        pn = int(page_num)
-                    except Exception:
-                        logger.warning(f"Invalid page_number in selection: {page_num}")
-                        continue
-                    # Support 0-based or 1-based inputs
-                    page_idx = pn - 1 if pn >= 1 else pn
-                    if 0 <= page_idx < doc.page_count:
-                        count = self._redact_page(doc.load_page(page_idx), [selection])
-                        redaction_count += count
-                        processed_pages.add(page_idx)
-                    else:
-                        logger.warning(f"Selection targets out-of-range page index {page_idx} (from page_number={pn}); doc has {doc.page_count} pages")
-            
-            # Apply all redactions: fall back to per-page application for compatibility
-            try:
-                for page_idx in range(doc.page_count):
-                    page = doc.load_page(page_idx)
-                    try:
-                        page.apply_redactions(images=1, graphics=1, text=1)
-                    except Exception as pe:
-                        logger.warning(f"Page-level redaction apply failed on page {page_idx+1}: {str(pe)}")
-            except Exception as e:
-                logger.warning(f"Failed applying redactions: {str(e)}")
+class PdfRedactor:
+    def __init__(self, watermark_settings: WatermarkSettings) -> None:
+        self._ws = watermark_settings
 
-            # Ensure watermark is applied on every page AFTER redactions
+    @staticmethod
+    def _pdf_date_now_utc() -> str:
+        # PDF date string in UTC per spec: D:YYYYMMDDHHmmSS+00'00'
+        now = datetime.now(tz=timezone.utc)
+        return now.strftime("D:%Y%m%d%H%M%S+00'00'")
+
+    def _scrub_and_set_metadata(self, doc: pymupdf.Document) -> None:
+        """Remove original metadata and set minimal safe metadata."""
+        # Clear XMP metadata if present
+        try:
+            doc.set_xml_metadata("")
+        except Exception:
+            pass
+        # Set basic info dictionary
+        safe_meta = {
+            "producer": "SERO",
+            "creator": "SERO",
+            "title": "Redacted Document",
+            "subject": "Redacted by SERO",
+            "keywords": "",
+            "creationDate": self._pdf_date_now_utc(),
+            "modDate": self._pdf_date_now_utc(),
+            "trapped": "False",
+        }
+        try:
+            doc.set_metadata(safe_meta)
+        except Exception:
+            # Fallback: ignore if backend does not support setting some fields
+            try:
+                # Try a minimal subset
+                doc.set_metadata({
+                    "producer": "SERO",
+                    "creator": "SERO",
+                })
+            except Exception:
+                pass
+
+    @staticmethod
+    def _get_anchor_point(anchor: Literal["NW", "NE", "SW", "SE", "ZH"], padding: int, page_rect: pymupdf.Rect) -> tuple[float, float]:
+        match anchor:
+            case "NW":
+                return page_rect.x0 + padding, page_rect.y0 + padding
+            case "NE":
+                return page_rect.x1 - padding, page_rect.y0 + padding
+            case "SW":
+                return page_rect.x0 + padding, page_rect.y1 - padding
+            case "SE":
+                return page_rect.x1 - padding, page_rect.y1 - padding
+            case "ZH":
+                return page_rect.x0 + page_rect.width / 2, page_rect.y0 + page_rect.height / 2
+            case _:
+                raise ValueError(f"Unknown anchor position: {anchor}")
+
+    def _insert_watermark(self, text: str, page: pymupdf.Page) -> None:
+        point = self._ws.as_anchor_point(page=page)
+        color = _get_normalized_rgb(color=self._ws.color)
+        page.insert_text(point=point, text=text, fontsize=self._ws.size, fontname="courier", color=color, overlay=True)
+
+    def _normalize_and_partition_selections(self, total_pages: int, selections: list[AreaSelection]) -> dict[int, list[AreaSelection]]:
+        # Validate and normalize page numbers to 0-based. None means all pages.
+        per_page: dict[int, list[AreaSelection]] = {i: [] for i in range(total_pages)}
+        for sel in selections:
+            if sel.page_number is None:
+                for i in range(total_pages):
+                    per_page[i].append(sel)
+                continue
+            # Treat provided page numbers as 0-based
+            if sel.page_number < 0 or sel.page_number >= total_pages:
+                raise PdfRedactionError(
+                    f"Selection targets out-of-range page (page_number={sel.page_number}); doc has {total_pages} pages",
+                )
+            per_page[sel.page_number].append(sel)
+        return per_page
+
+    def redact_document(self, pdf_data: bytes, selections: list[AreaSelection]) -> bytes:
+        logger.info(f"Redactor received {len(selections)} selections")
+
+        with pymupdf.open("pdf", pdf_data) as doc:
+            if doc.is_encrypted:
+                raise PdfRedactionError("PDF is encrypted")
+
+            if doc.page_count == 0:
+                raise PdfRedactionError("PDF has no pages")
+
+            paged_selections = self._normalize_and_partition_selections(doc.page_count, selections)
+
+            total_redactions = 0
             for page_idx in range(doc.page_count):
                 page = doc.load_page(page_idx)
-                self._insert_watermark(page)
-            
-            # Write final PDF bytes
-            redacted_data = doc.tobytes()
-            doc.close()
-            
-            logger.info(f"Redacted {redaction_count} areas across {len(processed_pages)} pages")
-            return redacted_data
-            
-        except Exception as e:
-            if isinstance(e, PDFRedactionError):
-                raise
-            raise PDFRedactionError(f"Redaction failed: {str(e)}")
-    
-    def _redact_page(self, page: pymupdf.Page, selections: List[Dict[str, Any]]) -> int:
-        redaction_count = 0
-        page_rect = page.rect
-
-        # Precompute selection rects (support multiple candidates per selection for orientation auto-detect)
-        selection_rects: list[pymupdf.Rect] = []
-        for selection in selections:
-            rects = self._selection_to_rects(selection, page_rect)
-            if rects:
-                logger.debug(
-                    "Page {}: selection {} -> {} rect(s): {}",
-                    page.number + 1,
-                    selection,
-                    len(rects),
-                    [(float(r.x0), float(r.y0), float(r.x1), float(r.y1)) for r in rects]
-                )
-            else:
-                logger.debug("Page {}: selection {} produced no rects", page.number + 1, selection)
-            selection_rects.extend(rects)
-
-        # Debug: outline selection rects to verify mapping
-        try:
-            for sr in selection_rects:
-                page.draw_rect(sr, color=(0, 1, 0), width=0.8, fill=None)
-        except Exception as e:
-            logger.warning(f"Failed to draw selection outlines on page {page.number+1}: {str(e)}")
-
-        # Add redaction annotations for each selection area
-        for rect in selection_rects:
-            try:
-                page.add_redact_annot(rect, fill=self._redaction_fill)
-                redaction_count += 1
-            except Exception as e:
-                logger.warning(f"Failed to add redaction annot on page {page.number+1}: {str(e)}")
-
-        # Redactions are applied at the document level in redact_document
-        return redaction_count
-    
-    def _selection_to_rects(self, selection: Dict[str, Any], page_rect: pymupdf.Rect) -> list[pymupdf.Rect]:
-        rects: list[pymupdf.Rect] = []
-        try:
-            x = float(selection['x'])
-            y = float(selection['y'])
-            width = float(selection['width'])
-            height = float(selection['height'])
-            
-            # Determine if coordinates are normalized (0..1), percent (0..100), or absolute (points)
-            normalized_unit = 0.0 <= x <= 1.0 and 0.0 <= y <= 1.0 and 0.0 < width <= 1.0 and 0.0 < height <= 1.0
-            percent_unit = 0.0 <= x <= 100.0 and 0.0 <= y <= 100.0 and 0.0 < width <= 100.0 and 0.0 < height <= 100.0 and not normalized_unit
-            page_width = page_rect.width
-            page_height = page_rect.height
-
-            candidates: list[tuple[float,float,float,float]] = []
-            if normalized_unit or percent_unit:
-                if percent_unit:
-                    # Convert to normalized 0..1 first
-                    x_n = x / 100.0
-                    y_n = y / 100.0
-                    w_n = width / 100.0
-                    h_n = height / 100.0
+                if not paged_selections[page_idx]:
+                    # Still watermark pages even without selections
+                    pass
                 else:
-                    x_n, y_n, w_n, h_n = x, y, width, height
-                # Assume browser-style coordinates: origin at top-left, y grows downward
-                x0 = x_n * page_width
-                y0 = y_n * page_height
-                x1 = x0 + (w_n * page_width)
-                y1 = y0 + (h_n * page_height)
-                candidates.append((x0, y0, x1, y1))
-            else:
-                candidates.append((x, y, x + width, y + height))
+                    total_redactions += self._redact_page(page=page, selections=paged_selections[page_idx])
+                    # Apply the redactions to actually remove content
+                    page.apply_redactions()
 
-            # Normalize, clamp and convert to Rects
-            for (x0, y0, x1, y1) in candidates:
-                orig = (x0, y0, x1, y1)
-                x0 = max(page_rect.x0, min(page_rect.x1, x0))
-                y0 = max(page_rect.y0, min(page_rect.y1, y0))
-                x1 = max(page_rect.x0, min(page_rect.x1, x1))
-                y1 = max(page_rect.y0, min(page_rect.y1, y1))
-                if x1 < x0:
-                    x0, x1 = x1, x0
-                if y1 < y0:
-                    y0, y1 = y1, y0
-                r = pymupdf.Rect(x0, y0, x1, y1)
-                # Skip zero-area rects
-                if r.width > 0 and r.height > 0:
-                    rects.append(r)
-                    try:
-                        logger.debug("Candidate {} -> clamped rect {}", orig, (float(r.x0), float(r.y0), float(r.x1), float(r.y1)))
-                    except Exception:
-                        pass
-            
-            return rects
-        except (KeyError, TypeError, ValueError):
-            logger.warning(f"Invalid selection data: {selection}")
-            return rects
-    
-    def _insert_watermark(self, page: pymupdf.Page) -> None:
-        try:
-            from datetime import datetime
-            year = datetime.utcnow().year
-            text = f"Processed by SERO - {year}"
-            x, y = self._watermark_margin
-            # Ensure watermark is within page bounds
-            y = max(y, 10)
-            page.insert_text((x, y), text, fontsize=self._watermark_fontsize, color=self._watermark_text_color)
-        except Exception as e:
-            logger.warning(f"Failed to insert watermark: {str(e)}")
+            text = f"Processed by SERO - {datetime.now(tz=timezone.utc).year}"
+            for page_idx in range(doc.page_count):
+                page = doc.load_page(page_idx)
+                self._insert_watermark(text=text, page=page)
+
+            logger.info(f"Redacted {total_redactions} areas across {doc.page_count} pages")
+
+            # Scrub metadata before returning bytes
+            self._scrub_and_set_metadata(doc)
+
+            # Return bytes while document context is active
+            return doc.tobytes()
+
+    def _redact_page(self, page: pymupdf.Page, selections: list[AreaSelection]) -> int:
+        fill = _get_normalized_rgb(color="#000000")
+        for sel in selections:
+            page.add_redact_annot(sel.as_rect(page), fill=fill)
+        return len(selections)
 
 
-def create_redactor() -> PDFRedactor:
-    return PDFRedactor()
+# Singleton instance
+redactor = PdfRedactor(watermark_settings=WatermarkSettings())
+
+
+# Redactor factory
+def create_redactor() -> PdfRedactor:
+    return PdfRedactor(watermark_settings=WatermarkSettings())
