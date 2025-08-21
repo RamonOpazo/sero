@@ -1,6 +1,61 @@
 # CHANGELOG
 
 
+## v1.2.0 (2025-08-21)
+
+### Bug Fixes
+
+- **download**: Use document ID as redacted filename to prevent name leakage; scrub PDF metadata
+  ([`168e090`](https://github.com/RamonOpazo/sero/commit/168e090164781dbe8e9cdd0dfc3224b17ebba938))
+
+- **frontend**: Prevent blob URL ERR_FILE_NOT_FOUND by passing Blob directly to react-pdf\n\n- Use
+  Blob for <Document file> instead of object URL\n- Eliminates lifecycle issues from
+  URL.createObjectURL/revokeObjectURL\n- Fixes toggling between original/redacted without network
+  errors
+  ([`fac1ce6`](https://github.com/RamonOpazo/sero/commit/fac1ce6c0a6db4b764abeea216eb1548be05c74e))
+
+- **viewer**: Force immediate render of processed PDF via volatile blob URL; stabilize URL lifetime
+  and remount logic
+  ([`994d9ca`](https://github.com/RamonOpazo/sero/commit/994d9ca84e75da6cc7a85cbad4aa70c53225ddc6))
+
+### Features
+
+- **backend**: Add shallow document by id and fix is_processed computation
+  ([`1d1659b`](https://github.com/RamonOpazo/sero/commit/1d1659b5704a65e2e8a423aa30557b0e735ee98b))
+
+- Add /documents/id/{id}/shallow endpoint - Correct correlated subqueries for is_processed and
+  counts - Align schemas and controller to new shallow representation
+
+- **backend**: Add watermark and visualize selection word boxes; prep coordinate conversion\n\n-
+  Insert watermark 'Processed by SERO - <year>' on each page\n- Draw red rectangles around words
+  inside user selections for debugging\n- Convert normalized (0..1) selection coords to PDF points;
+  clamp to page bounds\n- Leave actual redaction disabled for now; will finalize next
+  ([`a1000fd`](https://github.com/RamonOpazo/sero/commit/a1000fde98c0621a4bcab6ade66409756bc61c27))
+
+- **backend**: Allow reprocessing by replacing existing redacted file\n\n- Remove existing redacted
+  file(s) before processing\n- Maintain single saved redacted copy per document (latest only)\n-
+  Keeps security posture by not keeping older partially redacted versions
+  ([`651f050`](https://github.com/RamonOpazo/sero/commit/651f050f4249d03f5764631948126a7f70b91ffa))
+
+- **document-viewer**: Introduce UnifiedDocumentViewerProvider and migrate usage
+  ([`8ac9584`](https://github.com/RamonOpazo/sero/commit/8ac9584c67203c3ba4972869768407aade47ad9c))
+
+- add providers/unified-document-viewer-provider composing viewport, selection, prompt - export
+  unified provider from providers barrel; use in feature index - fix build: type-only import, avoid
+  unused vars/params warnings - ensure selection loader runs inside providers (kept in content)
+
+- **frontend**: Use shallow metadata and fix redacted toggle wiring\n\n- Switch listing and editor
+  to shallow API\n- Rely on is_processed to enable redacted toggle\n- Plumb shallow fetch by id into
+  editor view
+  ([`9fc2704`](https://github.com/RamonOpazo/sero/commit/9fc270463baeb631f4c87cd114230905b5e20810))
+
+### Testing
+
+- Update pdf redactor tests to use AreaSelection and WatermarkSettings; align page_number to 0-based
+  and relax invalid PDF assertion
+  ([`412015f`](https://github.com/RamonOpazo/sero/commit/412015fe8fc90bdb74af33327288cf13e131e1e6))
+
+
 ## v1.1.0 (2025-08-20)
 
 ### Bug Fixes
@@ -29,6 +84,11 @@ refactor(prompt): migrate UI to core provider using Domain Manager v2
 
 - switch components to use new provider/hook and V2 state shape - expose pendingChanges from
   provider; use it to flag modified prompts
+
+### Chores
+
+- **release**: V1.1.0 [skip ci]
+  ([`0982bee`](https://github.com/RamonOpazo/sero/commit/0982bee7c01fe3b1611f8c0f5eb669f14a7a9e1f))
 
 ### Features
 
