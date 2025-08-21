@@ -31,11 +31,13 @@ async def lifespan(app: FastAPI):
     logger.info("Shutting down sero...")
 
 
+from backend import get_version
+
 app = FastAPI(
     title="Sero - Document Obfuscation Service",
     description="A web service for medical document obfuscation and data extraction",
-    version="0.2.0",
-    lifespan=lifespan
+    version=get_version(),
+    lifespan=lifespan,
 )
 
 
