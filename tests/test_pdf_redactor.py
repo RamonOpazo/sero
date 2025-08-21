@@ -1,5 +1,5 @@
 import pytest
-from src.backend.core.pdf_redactor import PDFRedactor, PDFRedactionError, create_redactor
+from src.backend.core.pdf_redactor import PdfRedactor, PdfRedactionError, create_redactor
 
 
 class TestPDFRedactor:
@@ -19,15 +19,15 @@ class TestPDFRedactor:
         }
     
     def test_redactor_creation(self):
-        redactor = PDFRedactor()
+        redactor = PdfRedactor()
         assert redactor is not None
         
     def test_create_redactor_factory(self):
         redactor = create_redactor()
-        assert isinstance(redactor, PDFRedactor)
+        assert isinstance(redactor, PdfRedactor)
     
     def test_redact_document_basic(self, sample_pdf_data, sample_selection):
-        redactor = PDFRedactor()
+        redactor = PdfRedactor()
         result = redactor.redact_document(sample_pdf_data, [sample_selection])
         assert isinstance(result, bytes)
         assert len(result) > 0
@@ -37,14 +37,14 @@ class TestPDFRedactor:
             {'x': 0.1, 'y': 0.1, 'width': 0.2, 'height': 0.3, 'page_number': 1},
             {'x': 0.5, 'y': 0.5, 'width': 0.3, 'height': 0.2, 'page_number': 1},
         ]
-        redactor = PDFRedactor()
+        redactor = PdfRedactor()
         result = redactor.redact_document(sample_pdf_data, selections)
         assert isinstance(result, bytes)
         assert len(result) > 0
     
     def test_redact_document_no_page_number(self, sample_pdf_data):
         selection = {'x': 0.1, 'y': 0.2, 'width': 0.3, 'height': 0.4}
-        redactor = PDFRedactor()
+        redactor = PdfRedactor()
         result = redactor.redact_document(sample_pdf_data, [selection])
         assert isinstance(result, bytes)
     
@@ -52,19 +52,19 @@ class TestPDFRedactor:
         invalid_data = b"not a pdf"
         selection = {'x': 0.1, 'y': 0.2, 'width': 0.3, 'height': 0.4, 'page_number': 1}
         
-        redactor = PDFRedactor()
-        with pytest.raises(PDFRedactionError):
+        redactor = PdfRedactor()
+        with pytest.raises(PdfRedactionError):
             redactor.redact_document(invalid_data, [selection])
     
     def test_redact_document_empty_selections(self, sample_pdf_data):
-        redactor = PDFRedactor()
+        redactor = PdfRedactor()
         result = redactor.redact_document(sample_pdf_data, [])
         assert isinstance(result, bytes)
     
     def test_selection_to_rect_conversion(self, sample_pdf_data):
         import pymupdf
         
-        redactor = PDFRedactor()
+        redactor = PdfRedactor()
         doc = pymupdf.open("pdf", sample_pdf_data)
         page = doc.load_page(0)
         page_rect = page.rect
@@ -81,7 +81,7 @@ class TestPDFRedactor:
     def test_selection_to_rect_invalid_data(self, sample_pdf_data):
         import pymupdf
         
-        redactor = PDFRedactor()
+        redactor = PdfRedactor()
         doc = pymupdf.open("pdf", sample_pdf_data)
         page = doc.load_page(0)
         page_rect = page.rect

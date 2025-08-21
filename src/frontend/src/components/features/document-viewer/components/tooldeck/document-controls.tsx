@@ -4,8 +4,10 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Play, Download, Trash2, FileText, Eye, Calendar, Clock } from "lucide-react";
 import { useViewportState } from "../../providers/viewport-provider";
+import { useSelections } from "../../providers/selection-provider";
 import type { MinimalDocumentType } from "@/types";
 import { DocumentsAPI } from "@/lib/documents-api";
+import { EditorAPI } from "@/lib/editor-api";
 import { DocumentPasswordDialog } from "@/views/editor-view/dialogs";
 import { toast } from "sonner";
 
@@ -19,6 +21,7 @@ interface DocumentControlsProps {
  */
 export default function DocumentControls({ document }: DocumentControlsProps) {
   const { isViewingProcessedDocument, dispatch } = useViewportState();
+  const { selectionCount, hasUnsavedChanges, save } = useSelections();
   const [isPasswordDialogOpen, setPasswordDialogOpen] = React.useState(false);
   const [isProcessing, setIsProcessing] = React.useState(false);
   const [processError, setProcessError] = React.useState<string | null>(null);
@@ -188,8 +191,9 @@ export default function DocumentControls({ document }: DocumentControlsProps) {
           variant="default"
           size="sm"
           onClick={() => setPasswordDialogOpen(true)}
-          disabled={isProcessing || isViewingProcessedDocument || !document.original_file}
+          disabled={isProcessing || isViewingProcessedDocument || !document.original_file || selectionCount === 0}
           className="w-full justify-start h-9 text-xs"
+          title={selectionCount === 0 ? "Create a selection to enable processing" : undefined}
         >
           {isProcessing ? (
             <span className="mr-2 h-3 w-3 animate-spin" />
@@ -203,18 +207,76 @@ export default function DocumentControls({ document }: DocumentControlsProps) {
           isOpen={isPasswordDialogOpen}
           onClose={() => { setPasswordDialogOpen(false); setProcessError(null); }}
           onConfirm={async (password) => {
-            setProcessError(null);
-            setIsProcessing(true);
-            const result = await DocumentsAPI.processDocument(document.id, password);
-            setIsProcessing(false);
+            try {
+              setProcessError(null);
+              setIsProcessing(true);
 
-            if (result.ok) {
-              toast.success('Document processing started');
-              // Switch view to the redacted document immediately
+              // Guard: must have at least one selection
+              if (selectionCount === 0) {
+                toast.info('Add a selection first', { description: 'Create at least one redaction area to enable processing.' });
+                setIsProcessing(false);
+                return;
+              }
+
+              // If there are unsaved changes, save them first
+              if (hasUnsavedChanges) {
+                const saveResult = await save();
+                if (!saveResult.ok) {
+                  setIsProcessing(false);
+                  setProcessError('Failed to save selections before processing');
+                  toast.error('Failed to save selections');
+                  return;
+                }
+              }
+
+              // Process on backend
+              const result = await DocumentsAPI.processDocument(document.id, password);
+              if (!result.ok) {
+                setIsProcessing(false);
+                setProcessError('Invalid password or server error');
+                return;
+              }
+
+              // Immediately fetch the fresh redacted file (cache-busting enabled in EditorAPI)
+              const redacted = await EditorAPI.loadRedactedFile(document.id);
+              if (!redacted.ok) {
+                setIsProcessing(false);
+                toast.warning('Processed, but failed to fetch redacted file', { description: 'Try toggling to Redacted view or downloading again.' });
+                // Still switch view; UI will try load later
+                dispatch({ type: 'SET_VIEWING_PROCESSED', payload: true });
+                setPasswordDialogOpen(false);
+                return;
+              }
+
+              // Inject the redacted file + blob into current document and update viewport state
+              const redFile = redacted.value.file as any;
+              const redBlob = redacted.value.blob;
+
+              // Set volatile blob to render immediately in processed view
+              dispatch({ type: 'SET_VOLATILE_BLOB', payload: { blob: redBlob, forProcessed: true } });
+
+              const nextFiles = Array.isArray((document as any).files) ? [...(document as any).files] : [];
+              // Remove any previous redacted entries
+              const filtered = nextFiles.filter((f: any) => f.file_type !== 'redacted');
+              filtered.push({ ...redFile, blob: redBlob });
+
+              const nextDoc: MinimalDocumentType = {
+                ...(document as any),
+                redacted_file: redFile,
+                files: filtered,
+              } as MinimalDocumentType;
+
+              // Update document in viewport and switch to redacted view
+              dispatch({ type: 'SET_DOCUMENT', payload: nextDoc });
               dispatch({ type: 'SET_VIEWING_PROCESSED', payload: true });
+
               setPasswordDialogOpen(false);
-            } else {
-              setProcessError('Invalid password or server error');
+              setIsProcessing(false);
+              toast.success('Document processed successfully');
+            } catch (err) {
+              setIsProcessing(false);
+              setProcessError('Processing failed');
+              toast.error('Processing failed');
             }
           }}
           error={processError}

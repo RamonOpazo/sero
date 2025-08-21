@@ -147,7 +147,7 @@ export const EditorAPI = {
         (async (): Promise<Result<{ blob: Blob; fileName: string }, unknown>> => {
           try {
             // Send GET request to document-based redacted file endpoint
-            const response = await api.safe.get(`/documents/id/${documentId}/download/redacted`, {
+            const response = await api.safe.get(`/documents/id/${documentId}/download/redacted?ts=${Date.now()}`, {
               responseType: "blob"
             });
             

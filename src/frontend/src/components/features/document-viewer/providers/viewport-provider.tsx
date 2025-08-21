@@ -44,6 +44,8 @@ export interface PDFState {
   pageRefs: Map<number, HTMLElement>;
   isRendered: boolean;
   documentContainer: HTMLElement | null;
+  volatileBlob: Blob | null; // transient blob for immediate rendering
+  volatileForProcessed: boolean; // whether volatileBlob corresponds to processed view
 }
 
 // Minimal viewport state - only what UnifiedViewport needs
@@ -72,6 +74,7 @@ export type ViewportAction =
   | { type: 'SET_SHOW_INFO_PANEL'; payload: boolean }
   | { type: 'SET_SHOW_HELP_OVERLAY'; payload: boolean }
   | { type: 'SET_VIEWING_PROCESSED'; payload: boolean }
+  | { type: 'SET_VOLATILE_BLOB'; payload: { blob: Blob | null; forProcessed: boolean } }
   | { type: 'REGISTER_PAGE'; payload: { index: number; element: HTMLElement | null } }
   | { type: 'RESET_VIEW' };
 
@@ -91,7 +94,9 @@ const createInitialState = (): ViewportState => ({
   pdf: {
     pageRefs: new Map(),
     isRendered: false,
-    documentContainer: null
+    documentContainer: null,
+    volatileBlob: null,
+    volatileForProcessed: false,
   },
   ui: {
     mode: 'select',
@@ -238,8 +243,30 @@ function viewportStateReducer(state: ViewportState, action: ViewportAction): Vie
         ...state,
         navigation: {
           ...state.navigation,
-          isViewingProcessedDocument: action.payload
-        }
+          isViewingProcessedDocument: action.payload,
+        },
+        // Clear volatile blob if switching away from its target view
+        pdf: {
+          ...state.pdf,
+          volatileBlob:
+            action.payload && state.pdf.volatileForProcessed
+              ? state.pdf.volatileBlob
+              : (!action.payload && !state.pdf.volatileForProcessed ? state.pdf.volatileBlob : null),
+          volatileForProcessed:
+            action.payload && state.pdf.volatileForProcessed
+              ? true
+              : (!action.payload && !state.pdf.volatileForProcessed ? false : state.pdf.volatileForProcessed),
+        },
+      };
+
+    case 'SET_VOLATILE_BLOB':
+      return {
+        ...state,
+        pdf: {
+          ...state.pdf,
+          volatileBlob: action.payload.blob,
+          volatileForProcessed: action.payload.forProcessed,
+        },
       };
 
     case 'REGISTER_PAGE': {
@@ -388,9 +415,12 @@ export function useViewportState() {
     isRendered: state.pdf.isRendered,
     pageRefs: { current: state.pdf.pageRefs },
     documentContainer: state.pdf.documentContainer,
+    volatileBlob: state.pdf.volatileBlob,
+    volatileForProcessed: state.pdf.volatileForProcessed,
     
     // Actions
     dispatch,
+    setVolatileBlob: useCallback((blob: Blob | null, forProcessed: boolean) => dispatch({ type: 'SET_VOLATILE_BLOB', payload: { blob, forProcessed } }), [dispatch]),
     setZoom: useCallback((zoom: number) => dispatch({ type: 'SET_ZOOM', payload: zoom }), [dispatch]),
     setPan: useCallback((pan: Point) => dispatch({ type: 'SET_PAN', payload: pan }), [dispatch]),
     setMode: useCallback((mode: ViewerMode) => dispatch({ type: 'SET_MODE', payload: mode }), [dispatch]),

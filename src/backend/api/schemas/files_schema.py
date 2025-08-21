@@ -34,8 +34,8 @@ class FileCreate(BaseModel):
     file_type: FileType
     mime_type: str = Field(..., max_length=100)
     data: bytes
-    salt: bytes | None
-    document_id: UUID4 | None
+    salt: bytes | None = Field(None)
+    document_id: UUID4 | None = Field(None)
 
 
 class FileUpdate(BaseModel):
