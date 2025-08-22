@@ -325,6 +325,9 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     const isNew = pendingChanges.creates.some((create: Selection) => create.id === selection.id);
     const isGlobal = selection.page_number === null;
 
+    // Determine staged status: persisted but not committed
+    const isStaged = selection.committed === false;
+
     // Check if this saved selection has been modified from its initial state
     const isModified = !isNew && pendingChanges.updates.some((update: Selection) => update.id === selection.id);
 
@@ -349,6 +352,7 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
             ? ""
             : "transition-all duration-200",
           "border",
+          isStaged ? "border-dashed" : "border-solid",
           colorClasses.border,
           colorClasses.text,
         )}
