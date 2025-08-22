@@ -30,7 +30,7 @@ export interface EncryptedPassword {
 export async function getEphemeralPublicKey(): Promise<EphemeralKeyResponse> {
   console.log('🔐 Requesting ephemeral RSA public key...');
   
-  const response = await fetch('/api/crypto/ephemeral-key');
+  const response = await fetch('/api/security/ephemeral-key');
   
   if (!response.ok) {
     throw new Error(`Failed to get ephemeral key: ${response.status} ${response.statusText}`);
@@ -149,7 +149,7 @@ export function isWebCryptoSupported(): boolean {
  * Get crypto statistics for debugging/monitoring
  */
 export async function getCryptoStats(): Promise<any> {
-  const response = await fetch('/api/crypto/stats');
+  const response = await fetch('/api/security/stats');
   if (!response.ok) {
     throw new Error(`Failed to get crypto stats: ${response.status}`);
   }
