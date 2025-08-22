@@ -15,9 +15,10 @@ interface PasswordDialogProps {
   onConfirm: (password: string) => void
   error?: string | null
   isLoading?: boolean
+  notice?: string
 }
 
-export function DocumentPasswordDialog({ isOpen, onClose, onConfirm, error, isLoading }: PasswordDialogProps) {
+export function DocumentPasswordDialog({ isOpen, onClose, onConfirm, error, isLoading, notice }: PasswordDialogProps) {
   const [password, setPassword] = useState('')
 
   const handleConfirm = () => {
@@ -47,6 +48,11 @@ export function DocumentPasswordDialog({ isOpen, onClose, onConfirm, error, isLo
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent>
         <DialogTitle>Enter Password</DialogTitle>
+        {notice && (
+          <p className="text-xs text-amber-600 bg-amber-100/40 border border-amber-200 rounded px-2 py-1 mb-2">
+            {notice}
+          </p>
+        )}
         <div className="space-y-2">
           <Input
             type="password"
