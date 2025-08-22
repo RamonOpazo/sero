@@ -399,6 +399,47 @@ def add_selection(db: Session, document_id: UUID, selection_data: selections_sch
 
 # ===== AI Apply (staged selections) =====
 
+def commit_staged_selections(db: Session, document_id: UUID, request: selections_schema.SelectionCommitRequest) -> list[selections_schema.Selection]:
+    """Commit staged selections for a document.
+    Either commit all staged selections or a provided subset of selection IDs.
+    Returns all committed selections for the document.
+    """
+    # Ensure document exists
+    _ = _raise_not_found(documents_crud.read, db=db, id=document_id)
+
+    from backend.db.models import Selection as SelectionModel
+
+    if request.commit_all:
+        (
+            db.query(SelectionModel)
+            .filter(
+                SelectionModel.document_id == document_id,
+                SelectionModel.committed == False,
+            )
+            .update({"committed": True}, synchronize_session=False)
+        )
+        db.commit()
+    else:
+        if not request.selection_ids:
+            return []
+        (
+            db.query(SelectionModel)
+            .filter(
+                SelectionModel.document_id == document_id,
+                SelectionModel.id.in_(request.selection_ids),
+            )
+            .update({"committed": True}, synchronize_session=False)
+        )
+        db.commit()
+
+    # Return all committed selections for this document
+    committed = [
+        s for s in selections_crud.read_list_by_document(db=db, document_id=document_id)
+        if getattr(s, "committed", False)
+    ]
+    return [selections_schema.Selection.model_validate(i) for i in committed]
+
+
 def apply_ai_and_stage(db: Session, document_id: UUID) -> list[selections_schema.Selection]:
     """Generate AI selections and stage them (committed=False) via AiService."""
     # Ensure document exists and load prompts/settings

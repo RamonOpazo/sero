@@ -217,10 +217,20 @@ async def add_selection_to_document(
 @router.post("/id/{document_id}/ai/apply", response_model=list[selections_schema.Selection])
 async def apply_ai(
     document_id: UUID,
-    db: Session = Depends(get_db_session)
+    db: Session = Depends(get_db_session),
 ):
     """Apply AI to generate staged selections (committed=False)."""
     return documents_controller.apply_ai_and_stage(db=db, document_id=document_id)
+
+
+@router.patch("/id/{document_id}/selections/commit", response_model=list[selections_schema.Selection])
+async def commit_staged_selections(
+    document_id: UUID,
+    request: selections_schema.SelectionCommitRequest,
+    db: Session = Depends(get_db_session),
+):
+    """Commit staged selections for a document (by IDs or all)."""
+    return documents_controller.commit_staged_selections(db=db, document_id=document_id, request=request)
 
 
 @router.post("/id/{document_id}/process", response_model=generics_schema.Success)

@@ -1,6 +1,11 @@
 from pydantic import BaseModel, UUID4, AwareDatetime, Field, computed_field
 
 
+class SelectionCommitRequest(BaseModel):
+    selection_ids: list[UUID4] | None = Field(default=None)
+    commit_all: bool = Field(default=False)
+
+
 class Selection(BaseModel):
     id: UUID4
     created_at: AwareDatetime
