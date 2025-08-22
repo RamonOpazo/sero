@@ -503,11 +503,12 @@ def process(db: Session, document_id: UUID, password: str) -> generics_schema.Su
             detail="Invalid project password"
         )
     
-    # Check if document has selections
-    if not document.selections:
+    # Check if document has committed selections only
+    committed_selections = [s for s in document.selections if getattr(s, "committed", False)]
+    if not committed_selections:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Document has no selections - cannot process without redaction areas"
+            detail="Document has no committed selections - cannot process"
         )
     
     # If a redacted file already exists, delete it to allow reprocessing (replace semantics)
@@ -552,7 +553,7 @@ def process(db: Session, document_id: UUID, password: str) -> generics_schema.Su
         # redaction_service = create_redaction_service()
         redacted_pdf_data = redactor.redact_document(
             pdf_data=decrypted_data,
-            selections=[ AreaSelection.model_validate(i) for i in document.selections ]
+            selections=[ AreaSelection.model_validate(i) for i in committed_selections ]
         )
     except Exception as e:
         raise HTTPException(

@@ -11,6 +11,7 @@ class Selection(BaseModel):
     width: float
     height: float
     confidence: float | None
+    committed: bool
     document_id: UUID4
 
     @computed_field
@@ -30,6 +31,7 @@ class SelectionCreate(BaseModel):
     width: float = Field(..., ge=0, le=1)
     height: float = Field(..., ge=0, le=1)
     confidence: float | None = Field(None, ge=0, le=1)
+    committed: bool = Field(default=False)
     document_id: UUID4
 
 
@@ -40,3 +42,4 @@ class SelectionUpdate(BaseModel):
     width: float | None = Field(None, ge=0, le=1)
     height: float | None = Field(None, ge=0, le=1)
     confidence: float | None = Field(None, ge=0, le=1)
+    committed: bool | None = Field(None)

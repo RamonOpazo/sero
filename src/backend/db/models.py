@@ -129,6 +129,7 @@ class Selection(Base):
     width: Mapped[float] = mapped_column(Float, nullable=False)  # Width (0-1 normalized)
     height: Mapped[float] = mapped_column(Float, nullable=False)  # Height (0-1 normalized)
     confidence: Mapped[float] = mapped_column(Float, nullable=True)  # AI confidence score (Null if user generated)
+    committed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     document_id: Mapped[uuid.UUID] = mapped_column(UUIDBytes, ForeignKey("documents.id"), nullable=False,)
     
