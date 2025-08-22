@@ -2,7 +2,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 from typing import Dict, Any
 
-from backend.service.crypto_service import get_crypto_service
+from backend.service.crypto_service import get_security_service
 
 
 router = APIRouter()
@@ -31,7 +31,7 @@ async def generate_ephemeral_key() -> EphemeralKeyResponse:
     Returns:
         EphemeralKeyResponse: Contains the public key and metadata
     """
-    svc = get_crypto_service()
+    svc = get_security_service()
     ek = svc.generate_ephemeral_key()
     return EphemeralKeyResponse(
         key_id=ek.key_id,
@@ -45,5 +45,5 @@ async def generate_ephemeral_key() -> EphemeralKeyResponse:
 @router.get("/stats")
 async def get_crypto_stats() -> Dict[str, Any]:
     """Get statistics about ephemeral key usage (for debugging/monitoring)"""
-    svc = get_crypto_service()
+    svc = get_security_service()
     return svc.stats()

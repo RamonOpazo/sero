@@ -14,7 +14,7 @@ class EphemeralKey(BaseModel):
     padding: str = "OAEP-SHA256"
 
 
-class CryptoService(ABC):
+class SecurityService(ABC):
     @abstractmethod
     def generate_ephemeral_key(self) -> EphemeralKey:
         """Generate a new ephemeral RSA key pair and return public metadata."""
@@ -36,7 +36,7 @@ class CryptoService(ABC):
         raise NotImplementedError
 
 
-class SecurityManagerCryptoService(CryptoService):
+class SecurityManagerSecurityService(SecurityService):
     def generate_ephemeral_key(self) -> EphemeralKey:
         key_id, pem = security_manager.generate_ephemeral_rsa_keypair()
         return EphemeralKey(key_id=key_id, public_key=pem)
@@ -57,5 +57,5 @@ class SecurityManagerCryptoService(CryptoService):
         security_manager._cleanup_expired_keys()
 
 
-def get_crypto_service() -> CryptoService:
-    return SecurityManagerCryptoService()
+def get_security_service() -> SecurityService:
+    return SecurityManagerSecurityService()
