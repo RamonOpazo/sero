@@ -12,7 +12,7 @@ from backend.api.enums import FileType
 
 
 def get(db: Session, document_id: UUID) -> documents_schema.Document:
-    document = support_crud.get_or_404(
+    document = support_crud.apply_or_404(
         documents_crud.read, 
         db=db, 
         id=document_id, 
@@ -50,7 +50,7 @@ def get_shallow_list(db: Session, skip: int, limit: int, **filters) -> list[docu
         **filters,
     )
 
-    return support_crud.build_shallow_list_auto(
+    return support_crud.build_shallow_list(
         records,
         schema_cls=documents_schema.DocumentShallow,
         transforms={
@@ -74,7 +74,7 @@ def search_list(db: Session, skip: int, limit: int, name: str | None, project_id
 
 
 def get_tags(db: Session, document_id: UUID) -> list[str]:
-    document = support_crud.get_or_404(documents_crud.read, db=db, id=document_id)
+    document = support_crud.apply_or_404(documents_crud.read, db=db, id=document_id)
     return list(set(document.tags))
 
 
@@ -128,7 +128,7 @@ def create_with_file(db: Session, upload_data: files_schema.FileUpload, password
     try:
         created_documents = support_crud.bulk_create_documents_with_files_and_init(db=db, bulk_data=[result])
         # Return the single created document with joined data
-        document = support_crud.get_or_404(
+        document = support_crud.apply_or_404(
             documents_crud.read, 
             db=db, 
             id=created_documents[0].id, 
@@ -208,7 +208,7 @@ def bulk_create_with_files(db: Session, uploads_data: list[files_schema.FileUplo
 
 def get_ai_settings(db: Session, document_id: UUID) -> documents_schema.DocumentAiSettings:
     # Verify document exists
-    document = support_crud.get_or_404(documents_crud.read, db=db, id=document_id, join_with=["ai_settings"])
+    document = support_crud.apply_or_404(documents_crud.read, db=db, id=document_id, join_with=["ai_settings"])
     from backend.crud import ai_settings_crud
     if document.ai_settings is None:
         from backend.core.config import settings as app_settings
@@ -218,13 +218,13 @@ def get_ai_settings(db: Session, document_id: UUID) -> documents_schema.Document
             "temperature": 0.2,
         })
         # reload
-        document = support_crud.get_or_404(documents_crud.read, db=db, id=document_id, join_with=["ai_settings"])
+        document = support_crud.apply_or_404(documents_crud.read, db=db, id=document_id, join_with=["ai_settings"])
     return documents_schema.DocumentAiSettings.model_validate(document.ai_settings)
 
 
 def update_ai_settings(db: Session, document_id: UUID, data: documents_schema.DocumentAiSettingsUpdate) -> documents_schema.DocumentAiSettings:
     # Ensure document exists
-    document = support_crud.get_or_404(documents_crud.read, db=db, id=document_id, join_with=["ai_settings"])
+    document = support_crud.apply_or_404(documents_crud.read, db=db, id=document_id, join_with=["ai_settings"])
     from backend.crud import ai_settings_crud
     if document.ai_settings is None:
         from backend.core.config import settings as app_settings
@@ -240,7 +240,7 @@ def update_ai_settings(db: Session, document_id: UUID, data: documents_schema.Do
 
 def get_prompts(db: Session, document_id: UUID, skip: int = 0, limit: int = 100) -> list[prompts_schema.Prompt]:
     # Verify document exists
-    support_crud.get_or_404(documents_crud.read, db=db, id=document_id)
+    support_crud.apply_or_404(documents_crud.read, db=db, id=document_id)
     
     # Get prompts by document ID
     prompts = prompts_crud.read_list_by_document(db=db, document_id=document_id, skip=skip, limit=limit)
@@ -249,7 +249,7 @@ def get_prompts(db: Session, document_id: UUID, skip: int = 0, limit: int = 100)
 
 def add_prompt(db: Session, document_id: UUID, prompt_data: prompts_schema.PromptCreate) -> prompts_schema.Prompt:
     # Verify document exists
-    support_crud.get_or_404(documents_crud.read, db=db, id=document_id)
+    support_crud.apply_or_404(documents_crud.read, db=db, id=document_id)
     
     # Set document_id and create prompt
     prompt_data.document_id = document_id
@@ -259,7 +259,7 @@ def add_prompt(db: Session, document_id: UUID, prompt_data: prompts_schema.Promp
 
 def get_selections(db: Session, document_id: UUID, skip: int = 0, limit: int = 100) -> list[selections_schema.Selection]:
     # Verify document exists
-    support_crud.get_or_404(documents_crud.read, db=db, id=document_id)
+    support_crud.apply_or_404(documents_crud.read, db=db, id=document_id)
     
     # Get selections by document ID
     selections = selections_crud.read_list_by_document(db=db, document_id=document_id, skip=skip, limit=limit)
@@ -268,7 +268,7 @@ def get_selections(db: Session, document_id: UUID, skip: int = 0, limit: int = 1
 
 def add_selection(db: Session, document_id: UUID, selection_data: selections_schema.SelectionCreate) -> selections_schema.Selection:
     # Verify document exists
-    support_crud.get_or_404(documents_crud.read, db=db, id=document_id)
+    support_crud.apply_or_404(documents_crud.read, db=db, id=document_id)
     
     # Set document_id and create selection
     selection_data.document_id = document_id
@@ -277,7 +277,7 @@ def add_selection(db: Session, document_id: UUID, selection_data: selections_sch
 
 
 def clear_staged_selections(db: Session, document_id: UUID, request: selections_schema.SelectionClearRequest) -> generics_schema.Success:
-    _ = support_crud.get_or_404(documents_crud.read, db=db, id=document_id)
+    _ = support_crud.apply_or_404(documents_crud.read, db=db, id=document_id)
     deleted_count = support_crud.clear_staged_selections(
         db=db,
         document_id=document_id,
@@ -288,7 +288,7 @@ def clear_staged_selections(db: Session, document_id: UUID, request: selections_
 
 
 def uncommit_selections(db: Session, document_id: UUID, request: selections_schema.SelectionUncommitRequest) -> list[selections_schema.Selection]:
-    _ = support_crud.get_or_404(documents_crud.read, db=db, id=document_id)
+    _ = support_crud.apply_or_404(documents_crud.read, db=db, id=document_id)
     staged = support_crud.uncommit_selections(
         db=db,
         document_id=document_id,
@@ -299,7 +299,7 @@ def uncommit_selections(db: Session, document_id: UUID, request: selections_sche
 
 
 def commit_staged_selections(db: Session, document_id: UUID, request: selections_schema.SelectionCommitRequest) -> list[selections_schema.Selection]:
-    _ = support_crud.get_or_404(documents_crud.read, db=db, id=document_id)
+    _ = support_crud.apply_or_404(documents_crud.read, db=db, id=document_id)
     committed = support_crud.commit_staged_selections(
         db=db,
         document_id=document_id,
@@ -311,7 +311,7 @@ def commit_staged_selections(db: Session, document_id: UUID, request: selections
 
 def apply_ai_and_stage(db: Session, document_id: UUID) -> list[selections_schema.Selection]:
     # Ensure document exists and load prompts/settings
-    document = support_crud.get_or_404(
+    document = support_crud.apply_or_404(
         documents_crud.read,
         db=db,
         id=document_id,
@@ -350,17 +350,17 @@ def apply_ai_and_stage(db: Session, document_id: UUID) -> list[selections_schema
 
 
 def update(db: Session, document_id: UUID, document_data: documents_schema.DocumentUpdate) -> documents_schema.Document:
-    document = support_crud.get_or_404(documents_crud.update, db=db, id=document_id, data=document_data)
+    document = support_crud.apply_or_404(documents_crud.update, db=db, id=document_id, data=document_data)
     return documents_schema.Document.model_validate(document)
 
 
 def delete(db: Session, document_id: UUID) -> generics_schema.Success:
-    support_crud.get_or_404(documents_crud.delete, db=db, id=document_id)
+    support_crud.apply_or_404(documents_crud.delete, db=db, id=document_id)
     return generics_schema.Success(message=f"Document with ID {str(document_id)!r} deleted successfully")
 
 
 def summarize(db: Session, document_id: UUID) -> documents_schema.DocumentSummary:
-    document = support_crud.get_or_404(
+    document = support_crud.apply_or_404(
         documents_crud.read, 
         db=db, 
         id=document_id, 
@@ -391,15 +391,20 @@ def summarize(db: Session, document_id: UUID) -> documents_schema.DocumentSummar
     )
 
 
-def process(db: Session, document_id: UUID, password: str) -> generics_schema.Success:
-    # Use helpers to load doc and original file (400 if missing) and decrypt it
-    document = support_crud.get_document_or_404(db=db, document_id=document_id, join_with=["files", "selections"])
-    original_file = support_crud.get_original_file_or_error(document, not_found_status=status.HTTP_400_BAD_REQUEST)
+def process(
+    db: Session,
+    document_id: UUID,
+    request: files_schema.EncryptedFileDownloadRequest,
+) -> generics_schema.Success:
+    # Load document with files and selections (404 if missing)
+    document = support_crud.apply_or_404(
+        documents_crud.read,
+        db=db,
+        id=document_id,
+        join_with=["files", "selections"],
+    )
 
-    # Verify project password
-    support_crud.verify_project_password_or_401(db=db, project_id=document.project_id, password=password)
-
-    # Check committed selections
+    # Check committed selections first (fail fast before any heavy work)
     committed_selections = [s for s in document.selections if getattr(s, "committed", False)]
     if not committed_selections:
         raise HTTPException(
@@ -407,19 +412,24 @@ def process(db: Session, document_id: UUID, password: str) -> generics_schema.Su
             detail="Document has no committed selections - cannot process"
         )
 
-    # If a redacted file already exists, delete it to allow reprocessing (replace semantics)
-    existing_redacted_files = [file for file in document.files if file.file_type == FileType.REDACTED]
-    for rf in existing_redacted_files:
-        try:
-            files_crud.delete(db=db, id=rf.id)
-        except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to remove existing redacted file before reprocessing: {str(e)}"
-            )
+    # Obtain decrypted original file data in one step (401/404/500 handled inside)
+    _, original_file, decrypted_data = support_crud.get_original_file_data_or_400_401_404_500(
+        db=db,
+        document_or_id=document,
+        encrypted_password_b64=request.encrypted_password,
+        key_id=request.key_id,
+        join_with=["files"],
+    )
 
-    # Decrypt original
-    decrypted_data = support_crud.decrypt_original_file_or_500(original_file=original_file, password=password)
+    # If a redacted file already exists, delete it to allow reprocessing (replace semantics)
+    redacted_file = getattr(document, "redacted_file", None) or next(
+        (f for f in document.files if f.file_type == FileType.REDACTED), None
+    )
+    if redacted_file is not None:
+        # Use unified not-found semantics for delete
+        support_crud.apply_or_404(files_crud.delete, db=db, id=redacted_file.id)
+        # Expire the 'files' relationship cache to avoid stale references
+        db.expire(document, ["files"])  # mark relationship for reload on next access
 
     # Apply redaction
     try:
@@ -446,21 +456,22 @@ def process(db: Session, document_id: UUID, password: str) -> generics_schema.Su
 
     try:
         redacted_file = files_crud.create(db=db, data=file_data)
-        return generics_schema.Success(
-            message="Document processed successfully - redacted file created",
-            detail={
-                "document_id": str(document_id),
-                "redacted_file_id": str(redacted_file.id),
-                "original_file_size": original_file.file_size,
-                "redacted_file_size": len(redacted_pdf_data),
-                "selections_count": len(document.selections)
-            }
-        )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to save redacted file: {str(e)}"
         )
+    
+    return generics_schema.Success(
+        message="Document processed successfully - redacted file created",
+        detail={
+            "document_id": str(document_id),
+            "redacted_file_id": str(redacted_file.id),
+            "original_file_size": original_file.file_size,
+            "redacted_file_size": len(redacted_pdf_data),
+            "selections_count": len(document.selections)
+        }
+    )
 
 
 def download_original_file(
@@ -469,9 +480,9 @@ def download_original_file(
     request: files_schema.EncryptedFileDownloadRequest
 ) -> StreamingResponse:
     # Centralized retrieval + decryption of original file data
-    document, original_file, decrypted_data = support_crud.get_original_file_data(
+    document, original_file, decrypted_data = support_crud.get_original_file_data_or_400_401_404_500(
         db=db,
-        document_id=document_id,
+        document_or_id=document_id,
         encrypted_password_b64=request.encrypted_password,
         key_id=request.key_id,
         join_with=["files"],
@@ -505,7 +516,7 @@ def download_redacted_file(
     document_id: UUID
 ) -> StreamingResponse:
     # Use helpers to fetch document and validated redacted file data
-    document, redacted_file, file_data = support_crud.get_redacted_file_data(db=db, document_id=document_id, join_with=["files"])
+    document, redacted_file, file_data = support_crud.get_redacted_file_data_or_404_500(db=db, document_id=document_id, join_with=["files"])
 
     # Generate filename: use document ID to avoid leaking names
     safe_filename = f"{document.id}.pdf"

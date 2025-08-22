@@ -116,23 +116,27 @@ class TestDocumentsAPIExtended:
         """Test document processing endpoint."""
         document_id = created_document["id"]
         
-        data = {"password": "TestPassword123!"}
+        from uuid import uuid4
+        request_data = {
+            "encrypted_password": "dGVzdF9lbmNyeXB0ZWRfcGFzc3dvcmQ=",  # base64 encoded
+            "key_id": str(uuid4()),
+        }
         
         with patch('backend.api.controllers.documents_controller.process') as mock_process:
             mock_process.return_value = {"success": True, "message": "Document processed successfully"}
             
-            response = client.post(f"/api/documents/id/{document_id}/process", data=data)
+            response = client.post(f"/api/documents/id/{document_id}/process", json=request_data)
             
             # Should call the process controller
             mock_process.assert_called_once()
 
     def test_process_document_missing_password(self, client, created_document):
-        """Test document processing without password."""
+        """Test document processing without required encrypted fields."""
         document_id = created_document["id"]
         
-        response = client.post(f"/api/documents/id/{document_id}/process", data={})
+        response = client.post(f"/api/documents/id/{document_id}/process", json={})
         
-        # Should return 422 for missing password
+        # Should return 422 for missing required fields
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
     def test_get_document_prompts_success(self, client, created_document):

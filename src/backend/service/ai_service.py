@@ -1,9 +1,11 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from typing import Iterable
 from pydantic import BaseModel
 
 from backend.api.schemas.selections_schema import SelectionCreate
+from backend.core.config import settings as app_settings
+from backend.core.ai_ollama import OllamaClient, OllamaOptions
+from backend.core.prompt_composer import compose_selection_instructions
 
 
 class GenerateSelectionsRequest(BaseModel):
@@ -30,11 +32,6 @@ class AiService(ABC):
         """
         raise NotImplementedError
 
-
-# Default service factory (can be extended to support multiple providers)
-from backend.core.config import settings as app_settings
-from backend.core.ai_ollama import OllamaClient, OllamaOptions
-from backend.service.prompt_composer import compose_selection_instructions
 
 class OllamaAiService(AiService):
     def __init__(self) -> None:

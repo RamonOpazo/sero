@@ -9,7 +9,7 @@ from collections import Counter
 
 
 def get(db: Session, project_id: UUID) -> projects_schema.Project:
-    project = support_crud.get_or_404(
+    project = support_crud.apply_or_404(
         projects_crud.read,
         db=db,
         id=project_id,
@@ -38,7 +38,7 @@ def get_shallow_list(db: Session, skip: int, limit: int, **filters) -> list[proj
         **filters,
     )
 
-    return support_crud.build_shallow_list_auto(
+    return support_crud.build_shallow_list(
         records,
         schema_cls=projects_schema.ProjectShallow,
         transforms={
@@ -79,17 +79,17 @@ def update(db: Session, project_id: UUID, project_data: projects_schema.ProjectU
             detail=f"Project with name {project_data.name!r} already exists"
         )
        
-    project = support_crud.get_or_404(projects_crud.update, db=db, id=project_id, data=project_data)
+    project = support_crud.apply_or_404(projects_crud.update, db=db, id=project_id, data=project_data)
     return get(db=db, project_id=project.id)
 
 
 def delete(db: Session, project_id: UUID) -> generics_schema.Success:
-    project = support_crud.get_or_404(callback=projects_crud.delete, db=db, id=project_id)
+    project = support_crud.apply_or_404(callback=projects_crud.delete, db=db, id=project_id)
     return generics_schema.Success(message=f"Project {project.name!r} deleted successfully")
 
 
 def summarize(db: Session, project_id: UUID) -> projects_schema.ProjectSummary:
-    project = support_crud.get_or_404(
+    project = support_crud.apply_or_404(
         projects_crud.read,
         db=db,
         id=project_id,

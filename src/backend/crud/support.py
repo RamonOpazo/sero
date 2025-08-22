@@ -1,11 +1,12 @@
 from __future__ import annotations
 from uuid import UUID
+from base64 import b64decode
+from typing import Callable
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from backend.core.config import settings as app_settings
-from backend.db.models import Selection as SelectionModel, Project as ProjectModel, Document as DocumentModel, AiSettings as AiSettingsModel
-from backend.api.schemas.selections_schema import SelectionCreate
+from backend.db.models import Selection as SelectionModel, Project as ProjectModel, Document as DocumentModel, File as FileModel, AiSettings as AiSettingsModel
 from backend.api.schemas import documents_schema, files_schema
 from backend.core.security import security_manager
 from backend.api.enums import FileType
@@ -14,11 +15,9 @@ from backend.crud.documents import DocumentCrud
 from backend.crud.selections import SelectionCrud
 from backend.crud.ai_settings import AiSettingsCrud
 
-class SupportCrud:
-    """Cross-cutting helper CRUD for controllers to stay declarative.
-    Centralizes common patterns that are not specific to a single model CRUD.
-    """
 
+class SupportCrud:
+    """Cross-cutting helper CRUD for controllers to stay declarative."""
     def __init__(self) -> None:
         # Instantiate CRUDs locally to avoid importing package singletons (prevents circular imports)
         self.projects_crud = ProjectCrud(ProjectModel)
@@ -26,38 +25,64 @@ class SupportCrud:
         self.selections_crud = SelectionCrud(SelectionModel)
         self.ai_settings_crud = AiSettingsCrud(AiSettingsModel)
 
-    # ==== Document + Original File helpers ====
-    def get_document_or_404(self, db: Session, document_id: UUID, *, join_with: list[str] | None = None):
-        return self.get_or_404(
-            self.documents_crud.read,
-            entity_name="Document",
-            not_found_id=document_id,
-            db=db,
-            id=document_id,
-            **({"join_with": join_with} if join_with else {}),
-        )
 
-    def get_original_file_or_error(self, document, *, not_found_status: int = status.HTTP_404_NOT_FOUND):
-        # Prefer dedicated accessors if present on model
-        original_file = getattr(document, "original_file", None)
-        if original_file is None:
-            # fallback: scan files if present
-            for f in getattr(document, "files", []) or []:
-                if getattr(f, "file_type", None) == FileType.ORIGINAL:
-                    original_file = f
-                    break
-        if original_file is None:
+    def apply_or_404[T](self, crud_method: Callable[..., T], *, db: Session, id: UUID, **kwargs) -> T:
+        """Call the given CRUD method with db and id; if it returns None, raise 404."""
+        kwargs.setdefault("db", db)
+        kwargs.setdefault("id", id)
+        result = crud_method(**kwargs)
+        if result is None:
+            # Infer entity name from bound CRUD instance's model
+            bound_self = getattr(crud_method, "__self__", None)
+            model = getattr(bound_self, "model", None)
+            entity_name = getattr(model, "__name__", None) or "Entity"
             raise HTTPException(
-                status_code=not_found_status,
-                detail=("No original file found for this document" if not_found_status == status.HTTP_404_NOT_FOUND else "Document has no original file - cannot process"),
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"{entity_name} with ID {str(id)!r} not found",
             )
-        return original_file
+        return result
 
-    def decrypt_original_file_or_500(self, *, original_file, password: str) -> bytes:
-        if getattr(original_file, "salt", None) is None:
+
+    def _get_redacted_file_or_404(self, document: DocumentModel) -> FileModel:
+        redacted_file = document.redacted_file
+        if redacted_file is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No redacted file found for this document",
+            )
+        return redacted_file
+    
+
+    def _read_redacted_file_or_500(self, *, redacted_file: FileModel) -> bytes:
+        if redacted_file.salt is not None:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Original file has no encryption salt - data corruption",
+                detail="Redacted file appears to be encrypted; system error",
+            )
+        file_data = redacted_file.data
+        if security_manager.generate_file_hash(file_data) != redacted_file.file_hash:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="File integrity verification failed; document may be corrupted",
+            )
+        return file_data
+    
+
+    def _get_original_file_or_404(self, document: DocumentModel) -> FileModel:
+        original_file = document.original_file
+        if original_file is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No original file found for this document",
+            )
+        return original_file
+    
+
+    def _decrypt_original_file_or_500(self, *, original_file: FileModel, password: str) -> bytes:
+        if original_file.salt is None:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Original file has no encryption salt; data corruption",
             )
         decrypted_data = security_manager.decrypt_data(
             encrypted_data=original_file.data,
@@ -67,20 +92,19 @@ class SupportCrud:
         if decrypted_data is None:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to decrypt file - document may be corrupted",
+                detail="Failed to decrypt file; document may be corrupted",
             )
-        # Integrity check
         if security_manager.generate_file_hash(decrypted_data) != original_file.file_hash:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="File integrity verification failed - document may be corrupted",
+                detail="File integrity verification failed; document may be corrupted",
             )
         return decrypted_data
 
-    def decrypt_password_from_encrypted_request(self, *, encrypted_password_b64: str, key_id: str) -> str:
-        import base64
+
+    def _decrypt_password_or_400(self, *, encrypted_password_b64: str, key_id: str) -> str:
         try:
-            encrypted_password_bytes = base64.b64decode(encrypted_password_b64)
+            encrypted_password_bytes = b64decode(encrypted_password_b64)
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -97,65 +121,48 @@ class SupportCrud:
             )
         return decrypted_password
 
-    def get_decrypted_original_file(self, db: Session, *, document_id: UUID, password: str, join_with: list[str] | None = None, not_found_status: int = status.HTTP_404_NOT_FOUND) -> tuple[object, object, bytes]:
-        """Load document, ensure original file exists, decrypt+verify, and return (document, original_file, decrypted_bytes)."""
-        document = self.get_document_or_404(db=db, document_id=document_id, join_with=join_with or ["files"])
-        original_file = self.get_original_file_or_error(document, not_found_status=not_found_status)
-        decrypted_data = self.decrypt_original_file_or_500(original_file=original_file, password=password)
-        return document, original_file, decrypted_data
 
-    def get_original_file_data(self, db: Session, *, document_id: UUID, encrypted_password_b64: str, key_id: str, join_with: list[str] | None = None) -> tuple[object, object, bytes]:
-        """Load document and original file, decrypt request password, verify project password, decrypt file, and return (document, original_file, decrypted_bytes)."""
-        document = self.get_document_or_404(db=db, document_id=document_id, join_with=join_with or ["files"])
-        original_file = self.get_original_file_or_error(document)
-        decrypted_password = self.decrypt_password_from_encrypted_request(encrypted_password_b64=encrypted_password_b64, key_id=key_id)
-        self.verify_project_password_or_401(db=db, project_id=document.project_id, password=decrypted_password)
-        decrypted_data = self.decrypt_original_file_or_500(original_file=original_file, password=decrypted_password)
-        return document, original_file, decrypted_data
+    # def get_decrypted_original_file(self, db: Session, *, document_id: UUID, password: str, join_with: list[str] | None = None, not_found_status: int = status.HTTP_404_NOT_FOUND) -> tuple[object, object, bytes]:
+    #     """Load document, ensure original file exists, decrypt+verify, and return (document, original_file, decrypted_bytes)."""
+    #     document = self.apply_or_404(self.documents_crud.read, db=db, id=document_id, join_with=(join_with or ["files"]))
+    #     original_file = self.get_original_file_or_404(document)
+    #     decrypted_data = self.decrypt_original_file_or_500(original_file=original_file, password=password)
+    #     return document, original_file, decrypted_data
 
-    # ==== Redacted File helpers ====
-    def get_redacted_file_or_error(self, document, *, not_found_status: int = status.HTTP_404_NOT_FOUND):
-        redacted_file = getattr(document, "redacted_file", None)
-        if redacted_file is None:
-            for f in getattr(document, "files", []) or []:
-                if getattr(f, "file_type", None) == FileType.REDACTED:
-                    redacted_file = f
-                    break
-        if redacted_file is None:
-            raise HTTPException(
-                status_code=not_found_status,
-                detail="No redacted file found for this document",
-            )
-        return redacted_file
 
-    def read_redacted_file_or_500(self, *, redacted_file) -> bytes:
-        if getattr(redacted_file, "salt", None) is not None:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Redacted file appears to be encrypted - system error",
-            )
-        file_data = redacted_file.data
-        if security_manager.generate_file_hash(file_data) != redacted_file.file_hash:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="File integrity verification failed - document may be corrupted",
-            )
-        return file_data
+    def get_original_file_data_or_400_401_404_500(
+        self,
+        db: Session,
+        *,
+        document_or_id: DocumentModel | UUID,
+        encrypted_password_b64: str,
+        key_id: str,
+        join_with: list[str] | None = None,
+    ) -> tuple[DocumentModel, FileModel, bytes]:
+        """Load (or use provided) document and original file, decrypt request password, verify project password, decrypt file, and return (document, original_file, decrypted_bytes)."""
+        doc = document_or_id if isinstance(document_or_id, DocumentModel) else self.apply_or_404(self.documents_crud.read, db=db, id=document_or_id, join_with=join_with or ["files"])
+        original_file = self._get_original_file_or_404(doc)
+        decrypted_password = self._decrypt_password_or_400(encrypted_password_b64=encrypted_password_b64, key_id=key_id)
+        self.verify_project_password_or_401(db=db, project_id=doc.project_id, password=decrypted_password)
+        decrypted_data = self._decrypt_original_file_or_500(original_file=original_file, password=decrypted_password)
+        return doc, original_file, decrypted_data
 
-    def get_redacted_file_data(self, db: Session, *, document_id: UUID, join_with: list[str] | None = None) -> tuple[object, object, bytes]:
-        document = self.get_document_or_404(db=db, document_id=document_id, join_with=join_with or ["files"])
-        redacted_file = self.get_redacted_file_or_error(document, not_found_status=status.HTTP_404_NOT_FOUND)
-        file_data = self.read_redacted_file_or_500(redacted_file=redacted_file)
+
+    def get_redacted_file_data_or_404_500(
+        self,
+        db: Session,
+        *,
+        document_id: UUID,
+        join_with: list[str] | None = None,
+    ) -> tuple[DocumentModel, FileModel, bytes]:
+        document = self.apply_or_404(self.documents_crud.read, db=db, id=document_id, join_with=join_with or ["files"])
+        redacted_file = self._get_redacted_file_or_404(document)
+        file_data = self._read_redacted_file_or_500(redacted_file=redacted_file)
         return document, redacted_file, file_data
 
-    # ==== Shallow list transformation helper ====
-    def build_shallow_list_auto(self, records, *, schema_cls, transforms: dict, model_index: int = 0):
-        """Build shallow schema instances from search_shallow results.
-        
-        - Automatically copies fields with identical names from the model to the schema.
-        - Only fields listed in 'transforms' require custom mapping.
-        - 'records' can be tuples where the model is at model_index.
-        """
+
+    def build_shallow_list(self, records, *, schema_cls, transforms: dict, model_index: int = 0):
+        """Build shallow schema instances from search_shallow results."""
         items = []
         schema_fields = set(getattr(schema_cls, 'model_fields', {}).keys())
         for rec in records:
@@ -171,10 +178,9 @@ class SupportCrud:
             items.append(schema_cls.model_validate(data))
         return items
 
+
     def build_summary(self, *, schema_cls, model, transforms: dict):
-        """Build a summary schema instance from a model using declarative transforms.
-        Fields with identical names are auto-copied from the model; others must be provided via transforms.
-        """
+        """Build a summary schema instance from a model using declarative transforms."""
         schema_fields = set(getattr(schema_cls, 'model_fields', {}).keys())
         data = {}
         # Apply explicit transforms
@@ -186,45 +192,17 @@ class SupportCrud:
                 data[field] = getattr(model, field)
         return schema_cls.model_validate(data)
 
-    # ---- General not-found helpers ----
-    def get_or_404(self, callback, *, db: Session | None = None, id: UUID | None = None, entity_name: str | None = None, not_found_id: UUID | None = None, **kwargs):
-        # Allow simplified signature: pass db/id directly without repeating in kwargs
-        if db is not None and "db" not in kwargs:
-            kwargs["db"] = db
-        if id is not None and "id" not in kwargs:
-            kwargs["id"] = id
-        result = callback(**kwargs)
-        if result is None:
-            ename = entity_name or "Entity"
-            nid = not_found_id if not_found_id is not None else id
-            detail = (
-                f"{ename} with ID {str(nid)!r} not found" if nid is not None else f"{ename} not found"
-            )
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=detail)
-        return result
-
-    def assert_exists_or_404(self, exists: bool, *, entity_name: str, entity_id: UUID) -> None:
-        if not exists:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"{entity_name} with ID {str(entity_id)!r} not found",
-            )
-
-    # ---- Security / Project helpers ----
-    def verify_project_password(self, db: Session, project_id: UUID, password: str) -> bool:
-        project = self.projects_crud.read(db=db, id=project_id)
-        if project is None:
-            return False
-        return security_manager.verify_password(plain_password=password, hashed_password=project.password_hash)
 
     def verify_project_password_or_401(self, db: Session, project_id: UUID, password: str) -> None:
-        if not self.verify_project_password(db=db, project_id=project_id, password=password):
+        project = self.apply_or_404(self.projects_crud.read, db=db, id=project_id)
+        is_password_verified = security_manager.verify_password(plain_password=password, hashed_password=project.password_hash)
+        if not is_password_verified:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid project password",
             )
 
-    # ---- AI Settings helpers ----
+
     def ensure_document_ai_settings(self, db: Session, document_id: UUID):
         existing = self.ai_settings_crud.read_by_document(db=db, document_id=document_id)
         if existing is not None:
@@ -236,6 +214,7 @@ class SupportCrud:
             "temperature": 0.2,
         })
         return created
+    
 
     def bulk_create_documents_with_files_and_init(self, db: Session, bulk_data) -> list:
         """Wrap bulk doc creation: create docs+files and ensure AiSettings for each."""
@@ -244,7 +223,7 @@ class SupportCrud:
             self.ensure_document_ai_settings(db=db, document_id=doc.id)
         return created_documents
 
-    # ---- File upload processing ----
+
     def process_upload(self, db: Session, project_id: UUID, upload_data: files_schema.FileUpload, password: str) -> tuple[str, str] | documents_schema.DocumentBulkUpload:
         existing_filenames = set(self.documents_crud.get_existing_filenames_in_project(db=db, project_id=project_id))
         try:
@@ -268,12 +247,12 @@ class SupportCrud:
             return upload_data.file.filename, f"Error: {str(err)}"
         return documents_schema.DocumentBulkUpload(document_data=document_data, file_data=file_data)
 
-    # ---- Selections helpers (staging lifecycle) ----
+
     def commit_staged_selections(self, db: Session, document_id: UUID, selection_ids: list[UUID] | None, commit_all: bool) -> list:
         if commit_all:
             db.query(SelectionModel).filter(
                 SelectionModel.document_id == document_id,
-                SelectionModel.committed == False,
+                SelectionModel.committed.is_(False),
             ).update({"committed": True}, synchronize_session=False)
             db.commit()
         else:
@@ -288,11 +267,12 @@ class SupportCrud:
         committed = [s for s in self.selections_crud.read_list_by_document(db=db, document_id=document_id) if getattr(s, "committed", False)]
         return committed
 
+
     def clear_staged_selections(self, db: Session, document_id: UUID, selection_ids: list[UUID] | None, clear_all: bool) -> int:
         if clear_all:
             deleted = db.query(SelectionModel).filter(
                 SelectionModel.document_id == document_id,
-                SelectionModel.committed == False,
+                SelectionModel.committed.is_(False),
             ).delete(synchronize_session=False)
             db.commit()
             return int(deleted)
@@ -300,17 +280,18 @@ class SupportCrud:
             return 0
         deleted = db.query(SelectionModel).filter(
             SelectionModel.document_id == document_id,
-            SelectionModel.committed == False,
+            SelectionModel.committed.is_(False),
             SelectionModel.id.in_(selection_ids),
         ).delete(synchronize_session=False)
         db.commit()
         return int(deleted)
 
+
     def uncommit_selections(self, db: Session, document_id: UUID, selection_ids: list[UUID] | None, uncommit_all: bool) -> list:
         if uncommit_all:
             db.query(SelectionModel).filter(
                 SelectionModel.document_id == document_id,
-                SelectionModel.committed == True,
+                SelectionModel.committed.is_(True),
             ).update({"committed": False}, synchronize_session=False)
             db.commit()
         else:
@@ -323,4 +304,3 @@ class SupportCrud:
             db.commit()
         staged = [s for s in self.selections_crud.read_list_by_document(db=db, document_id=document_id) if not getattr(s, "committed", False)]
         return staged
-

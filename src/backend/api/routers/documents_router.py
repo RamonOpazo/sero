@@ -151,8 +151,6 @@ async def get_document_tags(
     return documents_controller.get_tags(db=db, document_id=document_id)
 
 
-
-
 @router.get("/id/{document_id}/ai-settings", response_model=documents_schema.DocumentAiSettings)
 async def get_document_ai_settings(
     document_id: UUID,
@@ -256,11 +254,11 @@ async def uncommit(
 @router.post("/id/{document_id}/process", response_model=generics_schema.Success)
 async def process_document(
     document_id: UUID,
-    password: str = Form(...),
+    request: files_schema.EncryptedFileDownloadRequest,
     db: Session = Depends(get_db_session)
 ):
-    """Process a document to generate redacted version."""
-    return documents_controller.process(db=db, document_id=document_id, password=password)
+    """Process a document to generate a redacted version using encrypted password."""
+    return documents_controller.process(db=db, document_id=document_id, request=request)
 
 
 @router.post("/id/{document_id}/download/original", response_class=StreamingResponse)
@@ -269,23 +267,7 @@ async def download_original_file(
     request: files_schema.EncryptedFileDownloadRequest,
     db: Session = Depends(get_db_session)
 ) -> StreamingResponse:
-    """Download the original file for a document using encrypted password.
-    
-    This endpoint provides document-centric file access without requiring
-    separate file ID lookups. Original files are encrypted and require
-    password verification.
-    
-    Args:
-        document_id: UUID of the document
-        request: Contains encrypted password and key metadata
-        db: Database session
-        
-    Returns:
-        StreamingResponse: The decrypted original file
-        
-    Raises:
-        HTTPException: If document not found, no original file, or invalid password
-    """
+    """Download the original file for a document using encrypted password."""
     return documents_controller.download_original_file(
         db=db, 
         document_id=document_id, 
@@ -298,21 +280,7 @@ async def download_redacted_file(
     document_id: UUID,
     db: Session = Depends(get_db_session)
 ) -> StreamingResponse:
-    """Download the redacted file for a document.
-    
-    This endpoint provides direct access to redacted files without password
-    requirements since redacted files are not encrypted.
-    
-    Args:
-        document_id: UUID of the document
-        db: Database session
-        
-    Returns:
-        StreamingResponse: The redacted file
-        
-    Raises:
-        HTTPException: If document not found or no redacted file exists
-    """
+    """Download the redacted file for a document."""
     return documents_controller.download_redacted_file(
         db=db, 
         document_id=document_id

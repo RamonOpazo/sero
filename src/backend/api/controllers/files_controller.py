@@ -12,20 +12,20 @@ from backend.api.enums import FileType
 
 def get(db: Session, file_id: UUID) -> files_schema.File:
     """Get a single file by ID."""
-    file = support_crud.get_or_404(files_crud.read, db=db, id=file_id)
+    file = support_crud.apply_or_404(files_crud.read, db=db, id=file_id)
     return files_schema.File.model_validate(file)
 
 
 def delete(db: Session, file_id: UUID) -> generics_schema.Success:
     """Delete a file by ID."""
-    support_crud.get_or_404(files_crud.delete, db=db, id=file_id)
+    support_crud.apply_or_404(files_crud.delete, db=db, id=file_id)
     return generics_schema.Success(message=f"File with ID {str(file_id)!r} deleted successfully")
 
 
 def download(db: Session, file_id: UUID, password: str, stream: bool) -> StreamingResponse:
     # Get file and verify document exists
     file = get(db=db, file_id=file_id)
-    document = support_crud.get_or_404(documents_crud.read, db=db, id=file.document_id)
+    document = support_crud.apply_or_404(documents_crud.read, db=db, id=file.document_id)
     
     # Verify project password
     support_crud.verify_project_password_or_401(db=db, project_id=document.project_id, password=password)

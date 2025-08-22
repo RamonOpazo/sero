@@ -13,7 +13,7 @@ def create(db: Session, selection_data: selections_schema.SelectionCreate) -> se
 
 def get(db: Session, selection_id: UUID) -> selections_schema.Selection:
     """Get a single selection by ID with document relation."""
-    selection = support_crud.get_or_404(
+    selection = support_crud.apply_or_404(
         selections_crud.read,
         db=db,
         id=selection_id,
@@ -36,11 +36,11 @@ def get_list(db: Session, skip: int, limit: int) -> list[selections_schema.Selec
 
 def update(db: Session, selection_id: UUID, selection_data: selections_schema.SelectionUpdate) -> selections_schema.Selection:
     """Update a selection by ID."""
-    selection = support_crud.get_or_404(selections_crud.update, db=db, id=selection_id, data=selection_data)
+    selection = support_crud.apply_or_404(selections_crud.update, db=db, id=selection_id, data=selection_data)
     return selections_schema.Selection.model_validate(selection)
 
 
 def delete(db: Session, selection_id: UUID) -> generics_schema.Success:
     """Delete a selection by ID."""
-    support_crud.get_or_404(selections_crud.delete, db=db, id=selection_id)
+    support_crud.apply_or_404(selections_crud.delete, db=db, id=selection_id)
     return generics_schema.Success(message=f"Selection with ID {str(selection_id)!r} deleted successfully")
