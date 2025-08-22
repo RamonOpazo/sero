@@ -16,7 +16,6 @@ class TestPromptsController:
             project_data=ProjectCreate(
                 name=f"proj-{uuid.uuid4().hex[:6]}",
                 description="desc",
-                version=1,
                 contact_name="tester",
                 contact_email="tester@example.com",
                 password="StrongPW!123",

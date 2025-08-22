@@ -1,8 +1,6 @@
 """Tests for custom ORM types: AwareDateTime, UUIDBytes, JSONList."""
 
-import pytest
 from datetime import datetime, timezone, timedelta
-from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from backend.db.models import Base, Project
@@ -11,7 +9,6 @@ from backend.db.types import AwareDateTime
 
 def test_timezone_aware_datetime_type():
     """Test that TimezoneAwareDateTime correctly handles timezone conversion."""
-    from backend.db.types import AwareDateTime
     from sqlalchemy.engine import create_engine
     
     # Create an in-memory SQLite database for testing
@@ -36,7 +33,6 @@ def test_timezone_aware_datetime_type():
 
 def test_timezone_naive_datetime_handling():
     """Test that naive datetimes are assumed to be UTC."""
-    from backend.db.types import AwareDateTime
     from sqlalchemy.engine import create_engine
     
     engine = create_engine("sqlite:///:memory:")
@@ -59,6 +55,7 @@ def test_timezone_naive_datetime_handling():
 def test_project_model_timezone_handling():
     """Test that Project model handles timezones correctly."""
     # Create an in-memory SQLite database for testing
+    from sqlalchemy import create_engine
     engine = create_engine("sqlite:///:memory:")
     Base.metadata.create_all(bind=engine)
     
@@ -71,7 +68,6 @@ def test_project_model_timezone_handling():
         project = Project(
             name="Test Project",
             description="Test description", 
-            version=1,
             contact_name="Test User",
             contact_email="test@example.com",
             password_hash=b"test_hash",
@@ -121,8 +117,6 @@ def test_uuidbytes_and_jsonlist_roundtrip():
 def test_pydantic_schema_timezone_validation():
     """Test that Pydantic schemas work correctly with timezone-aware datetimes."""
     from backend.api.schemas.projects_schema import Project as ProjectSchema
-    from backend.core.security import security_manager
-    from unittest.mock import patch
     
     # Create a project with timezone-aware datetime
     utc_now = datetime.now(timezone.utc)
@@ -132,7 +126,6 @@ def test_pydantic_schema_timezone_validation():
         "updated_at": None,
         "name": "Test Project",
         "description": "Test description",
-        "version": 1,
         "contact_name": "Test User", 
         "contact_email": "test@example.com",
         "password_hash": "test_hash",

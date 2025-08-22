@@ -23,7 +23,6 @@ def test_sqlite_database_models_and_relations(test_session):
     project = Project(
         name="SQLite Test Project",
         description="Project for testing SQLite",
-        version=1,
         contact_name="Tester",
         contact_email="tester@example.com",
         password_hash=b"hash",

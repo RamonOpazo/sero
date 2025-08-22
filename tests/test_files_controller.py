@@ -6,7 +6,6 @@ from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 
 from backend.api.controllers import files_controller
-from backend.api.schemas.files_schema import FileCreate, EncryptedFileDownloadRequest
 from backend.api.schemas.documents_schema import DocumentCreate
 from backend.core.security import security_manager
 from backend.db.models import Project as ProjectModel, Document as DocumentModel, File as FileModel
@@ -18,7 +17,6 @@ class TestFilesController:
         proj = ProjectModel(
             name=f"proj-{uuid.uuid4().hex[:6]}",
             description="desc",
-            version=1,
             contact_name="tester",
             contact_email="tester@example.com",
             password_hash=security_manager.hash_password("StrongPW!123").encode("utf-8"),

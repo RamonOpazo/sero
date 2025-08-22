@@ -18,7 +18,6 @@ class Project(Base):
     updated_at: Mapped[datetime] = mapped_column(AwareDateTime, nullable=True)
     name: Mapped[str] = mapped_column(String(100), nullable=False, unique=True)
     description: Mapped[str] = mapped_column(Text, nullable=True)
-    version: Mapped[int] = mapped_column(Integer, nullable=False)
     contact_name: Mapped[str] = mapped_column(String(100), nullable=False)
     contact_email: Mapped[str] = mapped_column(String(100), nullable=False)
     password_hash: Mapped[bytes] = mapped_column(BLOB, nullable=False)

@@ -1,4 +1,4 @@
-from pydantic import BaseModel, UUID4, AwareDatetime, Field
+from pydantic import BaseModel, UUID4, AwareDatetime, Field, ConfigDict
 
 
 class Prompt(BaseModel):
@@ -11,8 +11,7 @@ class Prompt(BaseModel):
     enabled: bool
     document_id: UUID4
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class PromptCreate(BaseModel):

@@ -75,7 +75,6 @@ class TestAppErrorHandlers:
         large_data = {
             "name": "A" * 10000,  # Very long name
             "description": "B" * 50000,  # Very long description
-            "version": 1,
             "contact_name": "Test User",
             "contact_email": "test@example.com",
             "password": "TestPassword123!"
@@ -178,7 +177,6 @@ class TestAppErrorHandlers:
         """Test handling of null values in required fields."""
         project_data = {
             "name": None,
-            "version": 1,
             "contact_name": "Test User",
             "contact_email": "test@example.com",
             "password": "TestPassword123!"
@@ -192,7 +190,6 @@ class TestAppErrorHandlers:
         """Test handling of empty strings in required fields."""
         project_data = {
             "name": "",
-            "version": 1,
             "contact_name": "Test User",
             "contact_email": "test@example.com",
             "password": "TestPassword123!"
@@ -207,7 +204,6 @@ class TestAppErrorHandlers:
         project_data = {
             "name": "Test Project 测试 🚀",
             "description": "Description with émojis and ñ characters",
-            "version": 1,
             "contact_name": "José María García-Sánchez",
             "contact_email": "test@example.com",
             "password": "TestPassword123!"
@@ -226,7 +222,6 @@ class TestAppErrorHandlers:
         project_data = {
             "name": "Test Project",
             "description": "Test description",
-            "version": 0,  # Boundary value
             "contact_name": "Test User",
             "contact_email": "test@example.com",
             "password": "TestPassword123!"
@@ -242,7 +237,6 @@ class TestAppErrorHandlers:
         duplicate_data = {
             "name": created_project["name"],  # Same name as existing project
             "description": "Another project with duplicate name",
-            "version": 2,
             "contact_name": "Another User",
             "contact_email": "another@example.com",
             "password": "AnotherPassword123!"

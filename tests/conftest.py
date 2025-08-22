@@ -14,10 +14,20 @@ from backend.db.models import Base
 
 @pytest.fixture(scope="session")
 def event_loop():
-    """Create an instance of the default event loop for the test session."""
+    """Create an instance of the default event loop for the test session.
+    Ensures proper shutdown of async generators and the default executor to avoid ResourceWarning.
+    """
     loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()
+    try:
+        yield loop
+    finally:
+        try:
+            # Gracefully shutdown async generators and the default executor
+            loop.run_until_complete(loop.shutdown_asyncgens())
+            loop.run_until_complete(loop.shutdown_default_executor())
+        except Exception:
+            pass
+        loop.close()
 
 
 @pytest.fixture(scope="session")
@@ -98,7 +108,6 @@ def sample_project_data():
     return {
         "name": f"Test Project {uuid.uuid4().hex[:8]}",
         "description": "A test project for API testing",
-        "version": 1,
         "contact_name": "Test User",
         "contact_email": "test@example.com",
         "password": "TestPassword123!"

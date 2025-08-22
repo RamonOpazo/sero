@@ -48,14 +48,13 @@ def get_shallow_list(db: Session, skip: int, limit: int, **filters) -> list[proj
     )
 
 
-def search_list(db: Session, skip: int, limit: int, name: str | None, version: int | None) -> list[projects_schema.Project]:
+def search_list(db: Session, skip: int, limit: int, name: str | None) -> list[projects_schema.Project]:
     projects = projects_crud.search(
         db=db,
         skip=skip,
         limit=limit,
         order_by=[("name", "asc")],
         join_with=["documents"],
-        version=version,
         **({"name": ("like", name.replace("*", "%"))} if name is not None else {})  # dismiss name field filter if name is None, else, replace wildcard
     )
     return [ projects_schema.Project.model_validate(i) for i in projects ]

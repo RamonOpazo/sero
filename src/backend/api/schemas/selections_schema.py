@@ -1,4 +1,4 @@
-from pydantic import BaseModel, UUID4, AwareDatetime, Field, computed_field
+from pydantic import BaseModel, UUID4, AwareDatetime, Field, computed_field, ConfigDict
 
 
 class SelectionCommitRequest(BaseModel):
@@ -34,8 +34,7 @@ class Selection(BaseModel):
     def is_ai_generated(self) -> bool:
         return self.confidence is not None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class SelectionCreate(BaseModel):

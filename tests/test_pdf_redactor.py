@@ -68,7 +68,6 @@ class TestPDFRedactor:
     def test_selection_to_rect_conversion(self, sample_pdf_data):
         import pymupdf
         
-        red = PdfRedactor(watermark_settings=WatermarkSettings())
         doc = pymupdf.open("pdf", sample_pdf_data)
         page = doc.load_page(0)
         page_rect = page.rect
@@ -85,11 +84,7 @@ class TestPDFRedactor:
     def test_selection_to_rect_invalid_data(self, sample_pdf_data):
         import pymupdf
         
-        red = PdfRedactor(watermark_settings=WatermarkSettings())
         doc = pymupdf.open("pdf", sample_pdf_data)
-        page = doc.load_page(0)
-        page_rect = page.rect
-        
         invalid_selection = {'x': 'invalid'}
         # Building AreaSelection will fail; ensure graceful handling via try/except
         with pytest.raises(Exception):

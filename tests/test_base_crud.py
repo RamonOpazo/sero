@@ -4,8 +4,6 @@ from sqlalchemy.orm import Session
 from backend.crud.base import BaseCrud
 from backend.db.models import Project, Document, File
 from backend.api.schemas.projects_schema import ProjectCreate, ProjectUpdate
-from backend.api.schemas.documents_schema import DocumentCreate, DocumentUpdate
-from backend.api.schemas.files_schema import FileCreate
 from backend.api.enums import FileType
 from backend.core.security import security_manager
 
@@ -24,7 +22,6 @@ class TestBaseCrud:
         project_data = ProjectCreate(
             name="Test Search Project",
             description="A project for testing search functionality",
-            version=1,
             contact_name="Test User",
             contact_email="test@example.com",
             password="TestPassword123!"
@@ -34,7 +31,6 @@ class TestBaseCrud:
         project = Project(
             name=project_data.name,
             description=project_data.description,
-            version=project_data.version,
             contact_name=project_data.contact_name,
             contact_email=project_data.contact_email,
             password_hash=security_manager.hash_password(project_data.password).encode("utf-8")
@@ -50,33 +46,28 @@ class TestBaseCrud:
         assert len(all_projects) >= 1
         assert any(p.name == "Test Search Project" for p in all_projects)
 
-        # Test 2: Search by version
-        version_projects = project_crud.search(db=test_session, skip=0, limit=100, version=1)
-        assert len(version_projects) >= 1
-        assert any(p.name == "Test Search Project" for p in version_projects)
-
-        # Test 3: Search by exact name
+        # Test 2: Search by exact name
         exact_projects = project_crud.search(db=test_session, skip=0, limit=100, name=("eq", "Test Search Project"))
         assert len(exact_projects) == 1
         assert exact_projects[0].name == "Test Search Project"
 
-        # Test 4: Search by like pattern
+        # Test 3: Search by like pattern
         like_projects = project_crud.search(db=test_session, skip=0, limit=100, name=("like", "%Search%"))
         assert len(like_projects) >= 1
         assert any(p.name == "Test Search Project" for p in like_projects)
 
-        # Test 5: Search by like pattern (exact match)
+        # Test 4: Search by like pattern (exact match)
         exact_like_projects = project_crud.search(db=test_session, skip=0, limit=100, name=("like", "Test Search Project"))
         assert len(exact_like_projects) == 1
         assert exact_like_projects[0].name == "Test Search Project"
 
-        # Test 6: Search with wildcard replacement (controller logic simulation)
+        # Test 5: Search with wildcard replacement (controller logic simulation)
         search_name = "Test Search Project"
         wildcard_projects = project_crud.search(db=test_session, skip=0, limit=100, name=("like", search_name.replace("*", "%")))
         assert len(wildcard_projects) >= 1
         assert any(p.name == "Test Search Project" for p in wildcard_projects)
 
-        # Test 7: Search that should return nothing
+        # Test 6: Search that should return nothing
         no_match_projects = project_crud.search(db=test_session, skip=0, limit=100, name=("like", "%NonExistent%"))
         assert len(no_match_projects) == 0
 
@@ -86,7 +77,6 @@ class TestBaseCrud:
         project = Project(
             name="Test Join Project",
             description="A project for testing joins",
-            version=1,
             contact_name="Test User",
             contact_email="test@example.com",
             password_hash=security_manager.hash_password("TestPassword123!").encode("utf-8")
@@ -112,16 +102,15 @@ class TestBaseCrud:
         """Test searching with ordering."""
         # Create multiple test projects
         projects_data = [
-            ("Z Project", 3),
-            ("A Project", 1),
-            ("M Project", 2)
+            "Z Project",
+            "A Project",
+            "M Project",
         ]
         
-        for name, version in projects_data:
+        for name in projects_data:
             project = Project(
                 name=name,
                 description=f"Description for {name}",
-                version=version,
                 contact_name="Test User",
                 contact_email="test@example.com",
                 password_hash=security_manager.hash_password("TestPassword123!").encode("utf-8")
@@ -142,39 +131,22 @@ class TestBaseCrud:
         project_names = [p.name for p in ordered_projects]
         test_projects = [name for name in project_names if "Project" in name and name in ["A Project", "M Project", "Z Project"]]
         assert test_projects == ["A Project", "M Project", "Z Project"]
-
-        # Search with version ordering (descending)
-        version_ordered = project_crud.search(
-            db=test_session,
-            skip=0,
-            limit=100,
-            order_by=[("version", "desc")]
-        )
         
-        # Check that our test projects are in version descending order
-        test_versions = []
-        for p in version_ordered:
-            if p.name in ["A Project", "M Project", "Z Project"]:
-                test_versions.append(p.version)
-        
-        # Should be [3, 2, 1] for our test projects
-        assert test_versions == [3, 2, 1]
 
     def test_search_multiple_filters(self, test_session: Session, project_crud):
         """Test searching with multiple filters."""
         # Create test projects with different combinations
         projects_data = [
-            ("Multi Test A", 1, "Alpha"),
-            ("Multi Test B", 1, "Beta"), 
-            ("Multi Test C", 2, "Alpha"),
-            ("Other Project", 1, "Alpha")
+            ("Multi Test A", "Alpha"),
+            ("Multi Test B", "Beta"), 
+            ("Multi Test C", "Alpha"),
+            ("Other Project", "Alpha"),
         ]
         
-        for name, version, contact in projects_data:
+        for name, contact in projects_data:
             project = Project(
                 name=name,
                 description=f"Description for {name}",
-                version=version,
                 contact_name=contact,
                 contact_email="test@example.com",
                 password_hash=security_manager.hash_password("TestPassword123!").encode("utf-8")
@@ -188,7 +160,6 @@ class TestBaseCrud:
             db=test_session,
             skip=0,
             limit=100,
-            version=1,
             contact_name=("eq", "Alpha")
         )
         
@@ -197,7 +168,7 @@ class TestBaseCrud:
         assert "Multi Test A" in found_names
         assert "Other Project" in found_names
         assert "Multi Test B" not in found_names  # Wrong contact
-        assert "Multi Test C" not in found_names  # Wrong version
+        assert "Multi Test C" in found_names
 
         # Search with name pattern AND version
         pattern_filtered = project_crud.search(
@@ -205,29 +176,28 @@ class TestBaseCrud:
             skip=0,
             limit=100,
             name=("like", "%Multi Test%"),
-            version=1
+            contact_name=("eq", "Alpha"),
         )
         
-        # Should find "Multi Test A" and "Multi Test B" but not "Multi Test C"
+        # Should find "Multi Test A" and "Multi Test C" but not "Multi Test B"
         pattern_names = [p.name for p in pattern_filtered]
         assert "Multi Test A" in pattern_names
-        assert "Multi Test B" in pattern_names
-        assert "Multi Test C" not in pattern_names
+        assert "Multi Test C" in pattern_names
+        assert "Multi Test B" not in pattern_names
         assert "Other Project" not in pattern_names
 
     def test_search_with_none_values(self, test_session: Session, project_crud):
         """Test that None values are properly ignored in search filters."""
         # Create test projects
         projects_data = [
-            ("None Test A", 1),
-            ("None Test B", 2),
+            "None Test A",
+            "None Test B",
         ]
         
-        for name, version in projects_data:
+        for name in projects_data:
             project = Project(
                 name=name,
                 description=f"Description for {name}",
-                version=version,
                 contact_name="Test User",
                 contact_email="test@example.com",
                 password_hash=security_manager.hash_password("TestPassword123!").encode("utf-8")
@@ -235,19 +205,6 @@ class TestBaseCrud:
             test_session.add(project)
         
         test_session.commit()
-
-        # Search with None version should return all projects (no version filter applied)
-        all_with_none_version = project_crud.search(
-            db=test_session,
-            skip=0,
-            limit=100,
-            version=None  # This should be ignored
-        )
-        
-        # Should find both projects since None is ignored
-        found_names = [p.name for p in all_with_none_version]
-        assert "None Test A" in found_names
-        assert "None Test B" in found_names
 
         # Search with None name should return all projects (no name filter applied)
         all_with_none_name = project_crud.search(
@@ -262,43 +219,14 @@ class TestBaseCrud:
         assert "None Test A" in found_names
         assert "None Test B" in found_names
 
-        # Search with both None values should return all projects
-        all_with_both_none = project_crud.search(
-            db=test_session,
-            skip=0,
-            limit=100,
-            name=None,
-            version=None
-        )
-        
-        # Should find both projects since both None values are ignored
-        found_names = [p.name for p in all_with_both_none]
-        assert "None Test A" in found_names
-        assert "None Test B" in found_names
-
-        # Search with actual version should work normally
-        version_1_projects = project_crud.search(
-            db=test_session,
-            skip=0,
-            limit=100,
-            version=1
-        )
-        
-        # Should find only version 1 project
-        version_1_names = [p.name for p in version_1_projects]
-        assert "None Test A" in version_1_names
-        assert "None Test B" not in version_1_names
-
     def test_create_read_update_delete_count_exist_and_filters(self, test_session: Session):
         # Instantiate CRUDs
         project_crud_local = BaseCrud[Project, ProjectCreate, ProjectUpdate](Project)
-        document_crud = BaseCrud[Document, DocumentCreate, DocumentUpdate](Document)
 
         # Create via CRUD.create
         pc = ProjectCreate(
             name="BaseCrud Project",
             description="desc",
-            version=1,
             contact_name="Tester",
             contact_email="tester@example.com",
             password="StrongPW!123",
@@ -307,7 +235,6 @@ class TestBaseCrud:
         proj = Project(
             name=pc.name,
             description=pc.description,
-            version=pc.version,
             contact_name=pc.contact_name,
             contact_email=pc.contact_email,
             password_hash=security_manager.hash_password(pc.password).encode("utf-8"),
@@ -353,9 +280,9 @@ class TestBaseCrud:
         assert got2 and got2[0].documents and got2[0].documents[0].files
 
         # filters: in, not-in, neq and bad cases
-        in_res = project_crud_local.search(test_session, skip=0, limit=1000, version=("in", [proj.version, 2]))
+        in_res = project_crud_local.search(test_session, skip=0, limit=1000, name=("in", [proj.name, "unused"]))
         assert any(p.id == proj.id for p in in_res)
-        not_in_res = project_crud_local.search(test_session, skip=0, limit=1000, version=("not-in", [99]))
+        not_in_res = project_crud_local.search(test_session, skip=0, limit=1000, name=("not-in", ["__nonexistent__"]))
         assert any(p.id == proj.id for p in not_in_res)
         neq_res = project_crud_local.search(test_session, skip=0, limit=1000, name=("neq", "nope"))
         assert any(p.id == proj.id for p in neq_res)

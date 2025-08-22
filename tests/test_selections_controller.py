@@ -18,7 +18,6 @@ class TestSelectionsController:
         proj = ProjectModel(
             name=f"proj-{uuid.uuid4().hex[:6]}",
             description="desc",
-            version=1,
             contact_name="tester",
             contact_email="tester@example.com",
             password_hash=security_manager.hash_password("StrongPW!123").encode("utf-8"),
@@ -123,9 +122,11 @@ class TestSelectionsController:
         assert len(committed_some) >= 2
         assert all(i.committed is True for i in committed_some if str(i.id) in {str(sids[0]), str(sids[1])})
 
-        # Commit all remaining
+        # Commit all remaining staged selections
         req_all = SelectionCommitRequest(selection_ids=None, commit_all=True)
         committed_all = documents_controller.commit_staged_selections(db=test_session, document_id=doc.id, request=req_all)
+        assert len(committed_all) >= 3
+
         # After commit all, all should be committed
         all_after = documents_controller.get_selections(db=test_session, document_id=doc.id)
         assert len(all_after) == 3

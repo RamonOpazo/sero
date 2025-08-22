@@ -1,5 +1,5 @@
 import base64
-from pydantic import BaseModel, UUID4, AwareDatetime, Field, field_serializer
+from pydantic import BaseModel, UUID4, AwareDatetime, Field, field_serializer, ConfigDict
 from fastapi import UploadFile
 
 from backend.api.enums import FileType
@@ -25,8 +25,7 @@ class File(BaseModel):
     def serialize_salt(self, value: bytes | None, _info):
         return base64.b64encode(value) if value is not None else None
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class FileCreate(BaseModel):

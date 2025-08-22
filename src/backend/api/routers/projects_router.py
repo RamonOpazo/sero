@@ -35,11 +35,10 @@ async def search_projects(
     skip: int = 0,
     limit: int = 100,
     name: str | None = None,
-    version: int | None = None,
     db: Session = Depends(get_db_session)
 ):
     """Search projects with filters."""
-    return projects_controller.search_list(db=db, skip=skip, limit=limit, name=name, version=version)
+    return projects_controller.search_list(db=db, skip=skip, limit=limit, name=name)
 
 
 @router.post("", response_model=projects_schema.Project, status_code=status.HTTP_201_CREATED)

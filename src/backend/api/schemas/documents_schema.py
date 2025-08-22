@@ -1,5 +1,5 @@
 from typing import Annotated
-from pydantic import BaseModel, Field, UUID4, AwareDatetime, BeforeValidator, computed_field
+from pydantic import BaseModel, Field, UUID4, AwareDatetime, BeforeValidator, computed_field, ConfigDict
 
 from backend.api.schemas.files_schema import File, FileCreate
 from backend.api.schemas.prompts_schema import Prompt
@@ -21,8 +21,7 @@ class DocumentAiSettings(BaseModel):
     system_prompt: str | None
     document_id: UUID4
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class DocumentAiSettingsUpdate(BaseModel):
@@ -61,8 +60,7 @@ class Document(BaseModel):
     def redacted_file(self) -> "File | None":
         return next((f for f in self.files if f.file_type == FileType.REDACTED), None)
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class DocumentCreate(BaseModel):
@@ -95,8 +93,7 @@ class DocumentShallow(BaseModel):
     selection_count: int
     is_processed: bool
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class DocumentSummary(BaseModel):
@@ -133,8 +130,7 @@ class DocumentSummary(BaseModel):
     prompt_languages: list[str]  # Unique languages from all prompts
     average_temperature: float | None  # Average temperature of all prompts
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class DocumentBulkUpload(BaseModel):

@@ -75,8 +75,6 @@ class TestAPIIntegration:
         # database transaction issues, we'll test the available file endpoints
         # using the mock file from the created_file fixture
         
-        document_id = created_document["id"]
-        
         # Test getting a non-existent file (should return 404)
         fake_file_id = "00000000-0000-0000-0000-000000000000"
         response = client.get(f"/api/files/id/{fake_file_id}")
@@ -164,7 +162,6 @@ class TestAPIIntegration:
             project_data = {
                 **sample_project_data,
                 "name": f"Test Project {i}",
-                "version": i + 1
             }
             response = client.post("/api/projects", json=project_data)
             assert response.status_code == status.HTTP_201_CREATED

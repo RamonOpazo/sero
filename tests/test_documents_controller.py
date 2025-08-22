@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from fastapi import HTTPException, status
 
-from backend.api.controllers import documents_controller, projects_controller
+from backend.api.controllers import documents_controller
 from backend.api.schemas.documents_schema import DocumentCreate, DocumentUpdate
 from backend.api.schemas.prompts_schema import PromptCreate
 from backend.api.schemas.selections_schema import SelectionCreate
@@ -21,7 +21,6 @@ class TestDocumentsController:
         proj = ProjectModel(
             name=f"proj-{uuid.uuid4().hex[:6]}",
             description="desc",
-            version=1,
             contact_name="tester",
             contact_email="tester@example.com",
             password_hash=security_manager.hash_password(password).encode("utf-8"),
@@ -442,4 +441,3 @@ class TestDocumentsController:
         from backend.api.schemas.documents_schema import DocumentAiSettingsUpdate
         updated = documents_controller.update_ai_settings(db=test_session, document_id=doc2.id, data=DocumentAiSettingsUpdate(temperature=0.5))
         assert updated.document_id == doc2.id and updated.temperature is not None
-

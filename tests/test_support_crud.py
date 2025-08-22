@@ -21,7 +21,6 @@ class TestSupportCrud:
         proj = ProjectModel(
             name=f"proj-{uuid.uuid4().hex[:8]}",
             description="test",
-            version=1,
             contact_name="tester",
             contact_email="t@example.com",
             password_hash=security_manager.hash_password(password).encode("utf-8"),
@@ -322,4 +321,3 @@ class TestSupportCrud:
         from backend.db.models import AiSettings
         settings = test_session.query(AiSettings).filter(AiSettings.document_id == created_docs[0].id).first()
         assert settings is not None
-

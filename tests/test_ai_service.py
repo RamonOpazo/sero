@@ -1,5 +1,3 @@
-import pytest
-
 from backend.service.ai_service import OllamaAiService, GenerateSelectionsRequest
 
 

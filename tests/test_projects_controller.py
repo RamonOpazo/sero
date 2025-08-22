@@ -19,7 +19,6 @@ class TestProjectsController:
         pc = ProjectCreate(
             name=name,
             description="desc",
-            version=1,
             contact_name="tester",
             contact_email="tester@example.com",
             password="StrongPW!123",
@@ -88,7 +87,6 @@ class TestProjectsController:
                 project_data=ProjectCreate(
                     name=name,
                     description="desc",
-                    version=1,
                     contact_name="tester",
                     contact_email="tester@example.com",
                     password="StrongPW!123",
@@ -108,7 +106,7 @@ class TestProjectsController:
         assert len(shallow) >= 2
         s = shallow[0]
         # base fields present
-        assert s.id and s.name and s.version is not None
+        assert s.id and s.name
         # computed shallow fields
         assert hasattr(s, "document_count")
         assert hasattr(s, "has_documents")
@@ -181,17 +179,13 @@ class TestProjectsController:
             projects_controller.get(db=test_session, project_id=proj.id)
         assert exc.value.status_code == status.HTTP_404_NOT_FOUND
 
-    def test_search_list_by_name_and_version(self, test_session: Session):
+    def test_search_list_by_name(self, test_session: Session):
         # Create projects with controlled names
         p1 = self._create_project(test_session, name=f"alpha-{uuid.uuid4().hex[:4]}")
         p2 = self._create_project(test_session, name=f"beta-{uuid.uuid4().hex[:4]}")
-        # Search by wildcard name (should match alpha only)
-        res_name = projects_controller.search_list(db=test_session, skip=0, limit=100, name="alpha*", version=None)
+        # Search by exact name (should match p1 only)
+        res_name = projects_controller.search_list(db=test_session, skip=0, limit=100, name=p1.name)
         names = {i.name for i in res_name}
-        assert any(n.startswith("alpha-") for n in names)
-        assert not any(n.startswith("beta-") for n in names)
-        # Search by version (both are version=1)
-        res_ver = projects_controller.search_list(db=test_session, skip=0, limit=100, name=None, version=1)
-        ids = {str(i.id) for i in res_ver}
-        assert str(p1.id) in ids and str(p2.id) in ids
+        assert p1.name in names
+        assert p2.name not in names
 
