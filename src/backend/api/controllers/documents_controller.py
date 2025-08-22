@@ -400,10 +400,7 @@ def add_selection(db: Session, document_id: UUID, selection_data: selections_sch
 # ===== AI Apply (staged selections) =====
 
 def apply_ai_and_stage(db: Session, document_id: UUID) -> list[selections_schema.Selection]:
-    """Generate AI selections and stage them (committed=False).
-    Implementation will call the AiService and persist returned selections with committed=False.
-    For now, this is a scaffold that returns an empty list until the service is wired.
-    """
+    """Generate AI selections and stage them (committed=False) via AiService."""
     # Ensure document exists and load prompts/settings
     document = _raise_not_found(
         documents_crud.read,
@@ -411,14 +408,32 @@ def apply_ai_and_stage(db: Session, document_id: UUID) -> list[selections_schema
         id=document_id,
         join_with=["prompts", "ai_settings"],
     )
-    # TODO: Call service to generate selections using document.ai_settings and enabled prompts
-    # Example flow (pseudo):
-    #   prompts = [p for p in document.prompts if p.enabled]
-    #   req = GenerateSelectionsRequest(document_id=str(document_id), prompts=[compose(p) for p in prompts])
-    #   res = ai_service.generate_selections(req)
-    #   created = [selections_crud.create(db=db, data=SelectionCreate(..., committed=False, document_id=document_id)) for ...]
-    #   return [selections_schema.Selection.model_validate(i) for i in created]
-    return []
+
+    enabled_prompts = [p for p in document.prompts if getattr(p, "enabled", False)]
+    if not enabled_prompts:
+        return []
+
+    composed_prompts: list[str] = []
+    for p in enabled_prompts:
+        composed_prompts.append(f"Directive: {p.directive}\nTitle: {p.title}\n\nInstructions:\n{p.prompt}")
+
+    from backend.service.ai_service import get_ai_service, GenerateSelectionsRequest
+    import asyncio
+
+    async def _run():
+        svc = get_ai_service()
+        req = GenerateSelectionsRequest(document_id=str(document_id), prompts=composed_prompts)
+        return await svc.generate_selections(req)
+
+    res = asyncio.run(_run())
+
+    created_models = []
+    for sel in res.selections:
+        sel.document_id = document_id
+        sel.committed = False
+        created_models.append(selections_crud.create(db=db, data=sel))
+
+    return [selections_schema.Selection.model_validate(i) for i in created_models]
 
 
 

@@ -25,9 +25,8 @@ Tracking (Steps & Actions)
 
 - Phase 2 (up next):
   9) Implement AI apply flow
-     - Controller: documents_controller.apply_ai_and_stage
-     - Compose prompts from enabled directives
-     - Call Ollama through service
+     - Controller: documents_controller.apply_ai_and_stage (declarative only)
+     - AiService: encapsulates all Ollama logic and parsing
      - Parse model response to SelectionCreate with confidence in [0,1]
      - Persist as committed=False
   10) Add endpoint to commit staged selections
@@ -38,6 +37,9 @@ Tracking (Steps & Actions)
 - Phase 3 (later):
   12) Frontend integration updates for prompts + staged selections UI
   13) Optionally enhance directives and parsing templates
+
+Architecture Notes
+- All AI functionality is abstracted via AiService; controllers remain declarative.
 
 Progress Notes
 - All defaults for AiSettings live in the model. No propagation needed elsewhere.
