@@ -526,7 +526,11 @@ def apply_ai_and_stage(db: Session, document_id: UUID) -> list[selections_schema
 
     async def _run():
         svc = get_ai_service()
-        req = GenerateSelectionsRequest(document_id=str(document_id), prompts=composed_prompts)
+        req = GenerateSelectionsRequest(
+            document_id=str(document_id),
+            system_prompt=(document.ai_settings.system_prompt if getattr(document, "ai_settings", None) else None),
+            prompts=composed_prompts,
+        )
         return await svc.generate_selections(req)
 
     res = asyncio.run(_run())

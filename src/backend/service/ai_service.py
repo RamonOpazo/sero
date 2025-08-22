@@ -8,6 +8,7 @@ from backend.api.schemas.selections_schema import SelectionCreate
 
 class GenerateSelectionsRequest(BaseModel):
     document_id: str
+    system_prompt: str | None = None
     text_context: str | None = None  # future: extracted OCR/text from PDF
     prompts: list[str] = []  # high-level prompts already composed
 
