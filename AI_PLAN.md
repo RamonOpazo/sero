@@ -157,26 +157,37 @@ F1. Type System Audit and Refactor (zod schemas)
   - Confirm Success/Error/Paginated unchanged; adjust if any API response changed.
 
 F2. API Modules Alignment (src/frontend/src/lib)
-- projects-api.ts
-  - Remove any reference to version in payloads and UI messaging.
-  - Ensure endpoints match: GET /api/projects/shallow, POST /api/projects, PUT /api/projects/id/{id}, DELETE /api/projects/id/{id}.
-- Add/verify modules per area (documents, files, prompts, selections, ai)
-  - Ensure method signatures, URLs, and payload shapes mirror backend controllers/routers.
-  - Documents: create, shallow list, search, AI apply, selection commit/uncommit/clear, downloads.
-  - Prompts: create/list/update/delete with simplified fields.
-  - Selections: list/create/update/delete where used; lifecycle actions through documents controller endpoints.
-  - Files: downloads (original/redacted), upload paths used by documents bulk upload.
-  - AI: health check; surface minimal result.
+- projects-api.ts (DONE)
+  - Removed version usage; aligned endpoints and return types.
+- documents-api.ts (DONE)
+  - Shallow list, search by project, create/update returning full Document then mapped to shallow, delete, bulk upload (Success), process via encrypted password JSON.
+  - Added: fetchDocumentShallow, fetchDocumentSummary, fetchDocumentTags.
+- document-viewer-api.ts (IN PROGRESS)
+  - Prompts: create/list/update/delete aligned to simplified fields (DONE).
+  - Selections: list/create/update/delete (DONE).
+  - AI flows: apply AI, commit/uncommit/clear staged (DONE).
+  - AI settings: get/update (DONE).
+- editor-api.ts (PARTIAL)
+  - Original/redacted file downloads via document endpoints (DONE); loads prompts/selections are stubbed (TODO if needed).
+- files (N/A separate module)
+  - Downloads covered via editor-api; bulk upload via documents-api (DONE).
+- ai (PARTIAL)
+  - Health endpoint available; minimal UI wiring pending.
+
+Notes
+- Crypto endpoints fixed to /api/security/* for ephemeral RSA keys and stats.
+- All Result<T> wrappers and toasts aligned across modules.
 
 F3. UI/Views Adjustments
-- Projects
-  - projects-data-table.tsx: remove version column from visible columns list and tableColumns options.
-  - dialogs/create-project-dialog.tsx: remove version from form schema, defaults, and submit payload.
-  - dialogs/edit-project-dialog.tsx (if present): remove version handling.
+- Projects (DONE)
+  - projects-data-table.tsx: removed version column and options (DONE).
+  - dialogs/create-project-dialog.tsx: removed version from form and payload (DONE).
+  - dialogs/edit-project-dialog.tsx: removed version handling (DONE, if applicable).
 - Documents view
-  - Ensure prompt CRUD UI matches new fields (title/prompt/directive/enabled only).
-  - Ensure selection commit/uncommit/clear actions map to controller endpoints.
-  - Ensure downloads align with endpoints; password handling with ephemeral key (if exposed in UI).
+  - Empty-state: "Upload your first document" opens dialog even when list is empty (FIXED, DONE).
+  - Prompt UI: aligned to new fields (title/prompt/directive/enabled) and integrated with provider/manager (DONE).
+  - Selection lifecycle UI: wire apply AI, commit/uncommit/clear staged actions (PENDING - next).
+  - Downloads: original/redacted endpoints used; password encryption with ephemeral key (DONE).
 
 F4. Type-Driven Contract Tests (Frontend)
 - Add tests that validate representative backend JSON against zod schemas.
@@ -224,15 +235,21 @@ F9. Incremental Execution Plan
 - Step 1: Types (DONE)
   - Implement F1 type changes; run typecheck and build.
 - Step 2: API modules (IN PROGRESS)
-  - Update Projects API first (F2), then Documents/Prompts/Selections/Files/AI modules.
+  - Projects API (DONE), Documents API (DONE), Document Viewer API for prompts/selections/AI settings (DONE), editor-api downloads (DONE), AI health (PENDING UI wiring).
   - Smoke test calls with mocked backend or dev server.
-- Step 3: UI adjustments
-  - Fix Projects views (remove version); then adjust Documents prompt/selection UIs.
+- Step 3: UI adjustments (IN PROGRESS)
+  - Projects view fixes (DONE).
+  - Documents view: prompt CRUD (DONE), empty-state upload fix (DONE), selection lifecycle UI (PENDING next), AI settings panel (PENDING), AI apply controls (PENDING).
 - Step 4: Tests
   - Add type contract tests (F4) and API tests (F5) incrementally.
   - Add provider and key component tests (F6, F7).
 - Step 5: Integration tests
   - Implement 1–2 high-value integration tests to cover end-to-end flows.
+
+Immediate Next Tasks (Frontend)
+- Wire selection lifecycle UI: apply AI, show staged selections, commit/uncommit/clear actions in the document viewer.
+- Add AI settings panel in viewer using getAiSettings/updateAiSettings.
+- Optional: load prompts/selections in EditorAPI when fetching files to pre-populate viewer state.
 
 F10. Definition of Done (Frontend Phase)
 - All types reflect backend contracts; no lingering version or deprecated fields.
