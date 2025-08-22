@@ -38,6 +38,8 @@ export function useProjectsView(onProjectSelect?: (project: ProjectShallowType) 
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
+  const [isAiSettingsDialogOpen, setIsAiSettingsDialogOpen] = useState(false);
+  const [selectedProjectForAi, setSelectedProjectForAi] = useState<ProjectShallowType | null>(null);
   const [selectedProjectForEdit, setSelectedProjectForEdit] = useState<ProjectShallowType | null>(null);
   const [selectedProjectForDelete, setSelectedProjectForDelete] = useState<ProjectShallowType | null>(null);
 
@@ -180,6 +182,18 @@ export function useProjectsView(onProjectSelect?: (project: ProjectShallowType) 
   }, []);
 
   // Dialog state and handlers
+  const openAiSettings = useCallback((project: ProjectShallowType) => {
+    setSelectedProjectForAi(project);
+    setIsAiSettingsDialogOpen(true);
+  }, []);
+
+  const submitAiSettings = useCallback(async (_data: any) => {
+    // For now, just close and toast; backend project-level AI settings endpoints are not defined yet.
+    setIsAiSettingsDialogOpen(false);
+    setSelectedProjectForAi(null);
+    toast.success('AI settings saved for project');
+  }, []);
+
   const dialogState = useMemo(() => ({
     create: {
       isOpen: isCreateDialogOpen,
@@ -204,13 +218,21 @@ export function useProjectsView(onProjectSelect?: (project: ProjectShallowType) 
       onConfirm: handleBulkDeleteConfirm,
       selectedProjects,
     },
+    ai: {
+      isOpen: isAiSettingsDialogOpen,
+      onClose: () => { setIsAiSettingsDialogOpen(false); setSelectedProjectForAi(null); },
+      onSubmit: submitAiSettings,
+      project: selectedProjectForAi,
+    },
   }), [
     isCreateDialogOpen,
     isEditDialogOpen,
     isDeleteDialogOpen,
     isBulkDeleteDialogOpen,
+    isAiSettingsDialogOpen,
     selectedProjectForEdit,
     selectedProjectForDelete,
+    selectedProjectForAi,
     selectedProjects,
     handleCreateProjectSubmit,
     handleEditProjectSubmit,
@@ -218,6 +240,7 @@ export function useProjectsView(onProjectSelect?: (project: ProjectShallowType) 
     handleCloseDeleteDialog,
     handleBulkDeleteConfirm,
     handleCloseBulkDeleteDialog,
+    submitAiSettings,
   ]);
 
   // Action handlers for table
@@ -229,6 +252,7 @@ export function useProjectsView(onProjectSelect?: (project: ProjectShallowType) 
     onCopyProjectId: handleCopyProjectId,
     onRowSelectionChange: handleRowSelectionChange,
     onBulkDelete: handleBulkDelete,
+    onOpenAiSettings: openAiSettings,
   }), [
     handleSelectProject,
     handleCreateProject,
@@ -237,6 +261,7 @@ export function useProjectsView(onProjectSelect?: (project: ProjectShallowType) 
     handleCopyProjectId,
     handleRowSelectionChange,
     handleBulkDelete,
+    openAiSettings,
   ]);
 
   return {

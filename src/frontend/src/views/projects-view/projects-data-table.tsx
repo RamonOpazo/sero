@@ -1,10 +1,11 @@
 import { useMemo, useCallback, useState } from 'react';
-import { Eye, Plus, Copy, Edit, Trash2 } from 'lucide-react';
+import { Eye, Plus, Copy, Edit, Trash2, Settings2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { DataTable } from '@/components/features/data-table';
 import { columns, adaptColumns } from '@/components/features/data-table/columns';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { CreateProjectDialog, EditProjectDialog } from './dialogs';
+import { ProjectAiSettingsDialog } from './dialogs/project-ai-settings-dialog';
 import { ConfirmationDialog } from '@/components/shared/ConfirmationDialog';
 import { useProjectsView } from './use-projects-view';
 import type { ProjectShallowType } from '@/types';
@@ -147,6 +148,12 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
           onClick: actionHandlers.onEditProject
         },
         {
+          id: 'ai-settings',
+          label: 'AI Settings',
+          icon: Settings2,
+          onClick: actionHandlers.onOpenAiSettings
+        },
+        {
           id: 'delete',
           label: 'Delete project',
           icon: Trash2,
@@ -279,6 +286,18 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
   return (
     <>
       {content}
+
+      {/* Project AI Settings Dialog */}
+      <ProjectAiSettingsDialog
+        isOpen={dialogState.ai.isOpen}
+        onClose={dialogState.ai.onClose}
+        onSubmit={dialogState.ai.onSubmit}
+        initial={dialogState.ai.project ? {
+          provider: 'ollama',
+          model_name: 'llama3.1',
+          temperature: 0.2,
+        } : undefined}
+      />
 
       {/* Project Creation Dialog */}
       <CreateProjectDialog
