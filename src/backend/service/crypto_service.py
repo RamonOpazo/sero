@@ -1,6 +1,6 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from typing import Optional, Dict, Any, Tuple
+from typing import Optional, Any
 from pydantic import BaseModel
 
 from backend.core.security import security_manager
@@ -26,7 +26,7 @@ class CryptoService(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def stats(self) -> Dict[str, Any]:
+    def stats(self) -> dict[str, Any]:
         """Return debug/monitoring stats for ephemeral keys."""
         raise NotImplementedError
 
@@ -44,7 +44,7 @@ class SecurityManagerCryptoService(CryptoService):
     def decrypt_with_ephemeral_key(self, *, key_id: str, encrypted_data: bytes) -> Optional[str]:
         return security_manager.decrypt_with_ephemeral_key(key_id=key_id, encrypted_data=encrypted_data)
 
-    def stats(self) -> Dict[str, Any]:
+    def stats(self) -> dict[str, Any]:
         ephemeral_keys = getattr(security_manager, "_ephemeral_keys", {})
         return {
             "active_ephemeral_keys": len(ephemeral_keys),
@@ -57,12 +57,5 @@ class SecurityManagerCryptoService(CryptoService):
         security_manager._cleanup_expired_keys()
 
 
-_service_singleton: CryptoService | None = None
-
-
 def get_crypto_service() -> CryptoService:
-    global _service_singleton
-    if _service_singleton is None:
-        _service_singleton = SecurityManagerCryptoService()
-    return _service_singleton
-
+    return SecurityManagerCryptoService()
