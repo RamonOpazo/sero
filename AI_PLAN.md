@@ -11,6 +11,37 @@ Scope (Phase 1)
 - No DB migrations needed; we will start from a clean DB file.
 
 Key Changes
+
+Tracking (Steps & Actions)
+- Phase 1 (done/in progress):
+  1) Add AiSettings model and relation (DONE)
+  2) Simplify Prompt model to title/prompt/directive/enabled (DONE)
+  3) Pydantic schemas for AiSettings + prompts (DONE)
+  4) CRUD/controllers/routers for AiSettings (DONE)
+  5) Document summary uses document-level temperature (DONE)
+  6) Add committed flag to Selection and use only committed in redaction (DONE)
+  7) Scaffold AI service abstraction and Ollama client (DONE)
+  8) Document-scoped AI apply endpoint scaffold (DONE)
+
+- Phase 2 (up next):
+  9) Implement AI apply flow
+     - Controller: documents_controller.apply_ai_and_stage
+     - Compose prompts from enabled directives
+     - Call Ollama through service
+     - Parse model response to SelectionCreate with confidence in [0,1]
+     - Persist as committed=False
+  10) Add endpoint to commit staged selections
+      - PATCH /api/documents/id/{document_id}/selections/commit (payload: selection_ids or commit_all)
+      - Flip committed=True for selected IDs; return updated selections
+  11) Health check endpoint for Ollama (optional)
+
+- Phase 3 (later):
+  12) Frontend integration updates for prompts + staged selections UI
+  13) Optionally enhance directives and parsing templates
+
+Progress Notes
+- All defaults for AiSettings live in the model. No propagation needed elsewhere.
+- Percentages are expressed as 0..1 throughout.
 1) Database
 - New table: ai_settings (Document -> AiSettings is 1:1)
   - provider: str (default "ollama")
