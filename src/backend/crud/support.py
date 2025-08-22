@@ -1,27 +1,35 @@
 from __future__ import annotations
-from typing import Iterable
 from uuid import UUID
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from backend.core.config import settings as app_settings
-from backend.crud import projects_crud, ai_settings_crud, documents_crud, selections_crud
-from backend.db.models import Selection as SelectionModel
+from backend.db.models import Selection as SelectionModel, Project as ProjectModel, Document as DocumentModel, AiSettings as AiSettingsModel
 from backend.api.schemas.selections_schema import SelectionCreate
 from backend.api.schemas import documents_schema, files_schema
 from backend.core.security import security_manager
 from backend.api.enums import FileType
-
+from backend.crud.projects import ProjectCrud
+from backend.crud.documents import DocumentCrud
+from backend.crud.selections import SelectionCrud
+from backend.crud.ai_settings import AiSettingsCrud
 
 class SupportCrud:
     """Cross-cutting helper CRUD for controllers to stay declarative.
     Centralizes common patterns that are not specific to a single model CRUD.
     """
 
+    def __init__(self) -> None:
+        # Instantiate CRUDs locally to avoid importing package singletons (prevents circular imports)
+        self.projects_crud = ProjectCrud(ProjectModel)
+        self.documents_crud = DocumentCrud(DocumentModel)
+        self.selections_crud = SelectionCrud(SelectionModel)
+        self.ai_settings_crud = AiSettingsCrud(AiSettingsModel)
+
     # ==== Document + Original File helpers ====
     def get_document_or_404(self, db: Session, document_id: UUID, *, join_with: list[str] | None = None):
         return self.get_or_404(
-            documents_crud.read,
+            self.documents_crud.read,
             entity_name="Document",
             not_found_id=document_id,
             db=db,
@@ -179,12 +187,18 @@ class SupportCrud:
         return schema_cls.model_validate(data)
 
     # ---- General not-found helpers ----
-    def get_or_404(self, callback, *, entity_name: str, not_found_id: UUID | None = None, **kwargs):
+    def get_or_404(self, callback, *, db: Session | None = None, id: UUID | None = None, entity_name: str | None = None, not_found_id: UUID | None = None, **kwargs):
+        # Allow simplified signature: pass db/id directly without repeating in kwargs
+        if db is not None and "db" not in kwargs:
+            kwargs["db"] = db
+        if id is not None and "id" not in kwargs:
+            kwargs["id"] = id
         result = callback(**kwargs)
         if result is None:
+            ename = entity_name or "Entity"
+            nid = not_found_id if not_found_id is not None else id
             detail = (
-                f"{entity_name} with ID {str(not_found_id)!r} not found"
-                if not_found_id is not None else f"{entity_name} not found"
+                f"{ename} with ID {str(nid)!r} not found" if nid is not None else f"{ename} not found"
             )
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=detail)
         return result
@@ -197,8 +211,14 @@ class SupportCrud:
             )
 
     # ---- Security / Project helpers ----
+    def verify_project_password(self, db: Session, project_id: UUID, password: str) -> bool:
+        project = self.projects_crud.read(db=db, id=project_id)
+        if project is None:
+            return False
+        return security_manager.verify_password(plain_password=password, hashed_password=project.password_hash)
+
     def verify_project_password_or_401(self, db: Session, project_id: UUID, password: str) -> None:
-        if not projects_crud.verify_password(db=db, id=project_id, password=password):
+        if not self.verify_project_password(db=db, project_id=project_id, password=password):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid project password",
@@ -206,11 +226,11 @@ class SupportCrud:
 
     # ---- AI Settings helpers ----
     def ensure_document_ai_settings(self, db: Session, document_id: UUID):
-        existing = ai_settings_crud.read_by_document(db=db, document_id=document_id)
+        existing = self.ai_settings_crud.read_by_document(db=db, document_id=document_id)
         if existing is not None:
             return existing
         # Initialize with sensible defaults from settings
-        created = ai_settings_crud.create_default_for_document(db=db, document_id=document_id, defaults={
+        created = self.ai_settings_crud.create_default_for_document(db=db, document_id=document_id, defaults={
             "provider": getattr(getattr(app_settings, "ai", object()), "provider", "ollama"),
             "model_name": app_settings.ai.model,
             "temperature": 0.2,
@@ -219,14 +239,14 @@ class SupportCrud:
 
     def bulk_create_documents_with_files_and_init(self, db: Session, bulk_data) -> list:
         """Wrap bulk doc creation: create docs+files and ensure AiSettings for each."""
-        created_documents = documents_crud.bulk_create_with_files(db=db, bulk_data=bulk_data)
+        created_documents = self.documents_crud.bulk_create_with_files(db=db, bulk_data=bulk_data)
         for doc in created_documents:
             self.ensure_document_ai_settings(db=db, document_id=doc.id)
         return created_documents
 
     # ---- File upload processing ----
     def process_upload(self, db: Session, project_id: UUID, upload_data: files_schema.FileUpload, password: str) -> tuple[str, str] | documents_schema.DocumentBulkUpload:
-        existing_filenames = set(documents_crud.get_existing_filenames_in_project(db=db, project_id=project_id))
+        existing_filenames = set(self.documents_crud.get_existing_filenames_in_project(db=db, project_id=project_id))
         try:
             file_blob = upload_data.file.file.read()
             safe_filename = security_manager.sanitize_filename(upload_data.file.filename)
@@ -265,7 +285,7 @@ class SupportCrud:
             ).update({"committed": True}, synchronize_session=False)
             db.commit()
         # Return committed
-        committed = [s for s in selections_crud.read_list_by_document(db=db, document_id=document_id) if getattr(s, "committed", False)]
+        committed = [s for s in self.selections_crud.read_list_by_document(db=db, document_id=document_id) if getattr(s, "committed", False)]
         return committed
 
     def clear_staged_selections(self, db: Session, document_id: UUID, selection_ids: list[UUID] | None, clear_all: bool) -> int:
@@ -301,6 +321,6 @@ class SupportCrud:
                 SelectionModel.id.in_(selection_ids),
             ).update({"committed": False}, synchronize_session=False)
             db.commit()
-        staged = [s for s in selections_crud.read_list_by_document(db=db, document_id=document_id) if not getattr(s, "committed", False)]
+        staged = [s for s in self.selections_crud.read_list_by_document(db=db, document_id=document_id) if not getattr(s, "committed", False)]
         return staged
 

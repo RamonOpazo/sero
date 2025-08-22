@@ -1,22 +1,8 @@
 from uuid import UUID
-from typing import Callable
-from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
-from backend.db.models import Selection as SelectionModel
-from backend.crud import selections_crud
+from backend.crud import selections_crud, support_crud
 from backend.api.schemas import selections_schema, generics_schema
-
-
-def _raise_not_found(callback: Callable[..., SelectionModel | None], db: Session, id: UUID, **kwargs) -> SelectionModel:
-    maybe_selection = callback(db=db, id=id, **kwargs)
-    if maybe_selection is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Selection with ID {str(id)!r} not found",
-        )
-    
-    return maybe_selection
 
 
 def create(db: Session, selection_data: selections_schema.SelectionCreate) -> selections_schema.Selection:
@@ -27,7 +13,7 @@ def create(db: Session, selection_data: selections_schema.SelectionCreate) -> se
 
 def get(db: Session, selection_id: UUID) -> selections_schema.Selection:
     """Get a single selection by ID with document relation."""
-    selection = _raise_not_found(
+    selection = support_crud.get_or_404(
         selections_crud.read,
         db=db,
         id=selection_id,
@@ -50,11 +36,11 @@ def get_list(db: Session, skip: int, limit: int) -> list[selections_schema.Selec
 
 def update(db: Session, selection_id: UUID, selection_data: selections_schema.SelectionUpdate) -> selections_schema.Selection:
     """Update a selection by ID."""
-    selection = _raise_not_found(selections_crud.update, db=db, id=selection_id, data=selection_data)
+    selection = support_crud.get_or_404(selections_crud.update, db=db, id=selection_id, data=selection_data)
     return selections_schema.Selection.model_validate(selection)
 
 
 def delete(db: Session, selection_id: UUID) -> generics_schema.Success:
     """Delete a selection by ID."""
-    _raise_not_found(selections_crud.delete, db=db, id=selection_id)
+    support_crud.get_or_404(selections_crud.delete, db=db, id=selection_id)
     return generics_schema.Success(message=f"Selection with ID {str(selection_id)!r} deleted successfully")

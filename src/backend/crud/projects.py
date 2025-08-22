@@ -41,17 +41,6 @@ class ProjectCrud(BaseCrud[Project, projects_schema.ProjectCreate, projects_sche
         )
         return project is not None
     
-    
-    def verify_password(self, db: Session, id: UUID, password: str) -> bool:
-        project = self.read(db=db, id=id)
-        if project is None:
-            return False
-           
-        return security_manager.verify_password(
-            plain_password=password,
-            hashed_password=project.password_hash
-        )
-    
     def search_shallow(self, db: Session, skip: int = 0, limit: int = 100, order_by: list[tuple[str, str]] | None = None, **kwargs) -> list[tuple[Project, int]]:
         """Search projects with document count but without loading document relationships."""
         from sqlalchemy import func

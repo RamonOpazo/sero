@@ -7,6 +7,7 @@ from contextlib import asynccontextmanager
 from sqlalchemy.exc import DatabaseError
 from loguru import logger
 
+from backend import get_version
 from backend.core.config import settings
 from backend.core.logging import init_logging
 from backend.core.database import db_manager
@@ -31,8 +32,6 @@ async def lifespan(app: FastAPI):
     # Shutdown
     logger.info("Shutting down sero...")
 
-
-from backend import get_version
 
 app = FastAPI(
     title="Sero - Document Obfuscation Service",

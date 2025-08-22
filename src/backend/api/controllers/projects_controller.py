@@ -1,28 +1,15 @@
 from uuid import UUID
-from typing import Callable
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
-from backend.db.models import Project as ProjectModel
 from backend.crud import projects_crud, support_crud
 from backend.api.schemas import projects_schema, generics_schema
 from backend.api.enums import ProjectStatus
 from collections import Counter
 
 
-def _raise_not_found(callback: Callable[..., ProjectModel | None], db: Session, id: UUID, **kwargs) -> ProjectModel:
-    maybe_project = callback(db=db, id=id, **kwargs)
-    if maybe_project is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Project with ID {str(id)!r} not found",
-        )
-    
-    return maybe_project
-
-
 def get(db: Session, project_id: UUID) -> projects_schema.Project:
-    project = _raise_not_found(
+    project = support_crud.get_or_404(
         projects_crud.read,
         db=db,
         id=project_id,
@@ -92,17 +79,17 @@ def update(db: Session, project_id: UUID, project_data: projects_schema.ProjectU
             detail=f"Project with name {project_data.name!r} already exists"
         )
        
-    project = _raise_not_found(projects_crud.update, db=db, id=project_id, data=project_data)
+    project = support_crud.get_or_404(projects_crud.update, db=db, id=project_id, data=project_data)
     return get(db=db, project_id=project.id)
 
 
 def delete(db: Session, project_id: UUID) -> generics_schema.Success:
-    project = _raise_not_found(callback=projects_crud.delete, db=db, id=project_id)
+    project = support_crud.get_or_404(callback=projects_crud.delete, db=db, id=project_id)
     return generics_schema.Success(message=f"Project {project.name!r} deleted successfully")
 
 
 def summarize(db: Session, project_id: UUID) -> projects_schema.ProjectSummary:
-    project = _raise_not_found(
+    project = support_crud.get_or_404(
         projects_crud.read,
         db=db,
         id=project_id,

@@ -1,24 +1,18 @@
 import io
 from uuid import UUID
-from typing import Callable
 from fastapi import HTTPException, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from backend.core.security import security_manager
 from backend.core.pdf_redactor import redactor, AreaSelection
-from backend.db.models import Document as DocumentModel
 from backend.crud import support_crud, documents_crud, prompts_crud, selections_crud, files_crud
 from backend.api.schemas import documents_schema, generics_schema, files_schema, prompts_schema, selections_schema
 from backend.api.enums import FileType
 
 
-def _raise_not_found(callback: Callable[..., DocumentModel | None], db: Session, id: UUID, **kwargs) -> DocumentModel:
-    return support_crud.get_or_404(callback, entity_name="Document", not_found_id=id, db=db, id=id, **kwargs)
-
-
 def get(db: Session, document_id: UUID) -> documents_schema.Document:
-    document = _raise_not_found(
+    document = support_crud.get_or_404(
         documents_crud.read, 
         db=db, 
         id=document_id, 
@@ -80,7 +74,7 @@ def search_list(db: Session, skip: int, limit: int, name: str | None, project_id
 
 
 def get_tags(db: Session, document_id: UUID) -> list[str]:
-    document = _raise_not_found(documents_crud.read, db=db, id=document_id)
+    document = support_crud.get_or_404(documents_crud.read, db=db, id=document_id)
     return list(set(document.tags))
 
 
@@ -134,7 +128,7 @@ def create_with_file(db: Session, upload_data: files_schema.FileUpload, password
     try:
         created_documents = support_crud.bulk_create_documents_with_files_and_init(db=db, bulk_data=[result])
         # Return the single created document with joined data
-        document = _raise_not_found(
+        document = support_crud.get_or_404(
             documents_crud.read, 
             db=db, 
             id=created_documents[0].id, 
@@ -214,7 +208,7 @@ def bulk_create_with_files(db: Session, uploads_data: list[files_schema.FileUplo
 
 def get_ai_settings(db: Session, document_id: UUID) -> documents_schema.DocumentAiSettings:
     # Verify document exists
-    document = _raise_not_found(documents_crud.read, db=db, id=document_id, join_with=["ai_settings"])
+    document = support_crud.get_or_404(documents_crud.read, db=db, id=document_id, join_with=["ai_settings"])
     from backend.crud import ai_settings_crud
     if document.ai_settings is None:
         from backend.core.config import settings as app_settings
@@ -224,13 +218,13 @@ def get_ai_settings(db: Session, document_id: UUID) -> documents_schema.Document
             "temperature": 0.2,
         })
         # reload
-        document = _raise_not_found(documents_crud.read, db=db, id=document_id, join_with=["ai_settings"])
+        document = support_crud.get_or_404(documents_crud.read, db=db, id=document_id, join_with=["ai_settings"])
     return documents_schema.DocumentAiSettings.model_validate(document.ai_settings)
 
 
 def update_ai_settings(db: Session, document_id: UUID, data: documents_schema.DocumentAiSettingsUpdate) -> documents_schema.DocumentAiSettings:
     # Ensure document exists
-    document = _raise_not_found(documents_crud.read, db=db, id=document_id, join_with=["ai_settings"])
+    document = support_crud.get_or_404(documents_crud.read, db=db, id=document_id, join_with=["ai_settings"])
     from backend.crud import ai_settings_crud
     if document.ai_settings is None:
         from backend.core.config import settings as app_settings
@@ -246,7 +240,7 @@ def update_ai_settings(db: Session, document_id: UUID, data: documents_schema.Do
 
 def get_prompts(db: Session, document_id: UUID, skip: int = 0, limit: int = 100) -> list[prompts_schema.Prompt]:
     # Verify document exists
-    _raise_not_found(documents_crud.read, db=db, id=document_id)
+    support_crud.get_or_404(documents_crud.read, db=db, id=document_id)
     
     # Get prompts by document ID
     prompts = prompts_crud.read_list_by_document(db=db, document_id=document_id, skip=skip, limit=limit)
@@ -255,7 +249,7 @@ def get_prompts(db: Session, document_id: UUID, skip: int = 0, limit: int = 100)
 
 def add_prompt(db: Session, document_id: UUID, prompt_data: prompts_schema.PromptCreate) -> prompts_schema.Prompt:
     # Verify document exists
-    _raise_not_found(documents_crud.read, db=db, id=document_id)
+    support_crud.get_or_404(documents_crud.read, db=db, id=document_id)
     
     # Set document_id and create prompt
     prompt_data.document_id = document_id
@@ -265,7 +259,7 @@ def add_prompt(db: Session, document_id: UUID, prompt_data: prompts_schema.Promp
 
 def get_selections(db: Session, document_id: UUID, skip: int = 0, limit: int = 100) -> list[selections_schema.Selection]:
     # Verify document exists
-    _raise_not_found(documents_crud.read, db=db, id=document_id)
+    support_crud.get_or_404(documents_crud.read, db=db, id=document_id)
     
     # Get selections by document ID
     selections = selections_crud.read_list_by_document(db=db, document_id=document_id, skip=skip, limit=limit)
@@ -274,7 +268,7 @@ def get_selections(db: Session, document_id: UUID, skip: int = 0, limit: int = 1
 
 def add_selection(db: Session, document_id: UUID, selection_data: selections_schema.SelectionCreate) -> selections_schema.Selection:
     # Verify document exists
-    _raise_not_found(documents_crud.read, db=db, id=document_id)
+    support_crud.get_or_404(documents_crud.read, db=db, id=document_id)
     
     # Set document_id and create selection
     selection_data.document_id = document_id
@@ -283,7 +277,7 @@ def add_selection(db: Session, document_id: UUID, selection_data: selections_sch
 
 
 def clear_staged_selections(db: Session, document_id: UUID, request: selections_schema.SelectionClearRequest) -> generics_schema.Success:
-    _ = _raise_not_found(documents_crud.read, db=db, id=document_id)
+    _ = support_crud.get_or_404(documents_crud.read, db=db, id=document_id)
     deleted_count = support_crud.clear_staged_selections(
         db=db,
         document_id=document_id,
@@ -294,7 +288,7 @@ def clear_staged_selections(db: Session, document_id: UUID, request: selections_
 
 
 def uncommit_selections(db: Session, document_id: UUID, request: selections_schema.SelectionUncommitRequest) -> list[selections_schema.Selection]:
-    _ = _raise_not_found(documents_crud.read, db=db, id=document_id)
+    _ = support_crud.get_or_404(documents_crud.read, db=db, id=document_id)
     staged = support_crud.uncommit_selections(
         db=db,
         document_id=document_id,
@@ -305,7 +299,7 @@ def uncommit_selections(db: Session, document_id: UUID, request: selections_sche
 
 
 def commit_staged_selections(db: Session, document_id: UUID, request: selections_schema.SelectionCommitRequest) -> list[selections_schema.Selection]:
-    _ = _raise_not_found(documents_crud.read, db=db, id=document_id)
+    _ = support_crud.get_or_404(documents_crud.read, db=db, id=document_id)
     committed = support_crud.commit_staged_selections(
         db=db,
         document_id=document_id,
@@ -317,7 +311,7 @@ def commit_staged_selections(db: Session, document_id: UUID, request: selections
 
 def apply_ai_and_stage(db: Session, document_id: UUID) -> list[selections_schema.Selection]:
     # Ensure document exists and load prompts/settings
-    document = _raise_not_found(
+    document = support_crud.get_or_404(
         documents_crud.read,
         db=db,
         id=document_id,
@@ -356,17 +350,17 @@ def apply_ai_and_stage(db: Session, document_id: UUID) -> list[selections_schema
 
 
 def update(db: Session, document_id: UUID, document_data: documents_schema.DocumentUpdate) -> documents_schema.Document:
-    document = _raise_not_found(documents_crud.update, db=db, id=document_id, data=document_data)
+    document = support_crud.get_or_404(documents_crud.update, db=db, id=document_id, data=document_data)
     return documents_schema.Document.model_validate(document)
 
 
 def delete(db: Session, document_id: UUID) -> generics_schema.Success:
-    _raise_not_found(documents_crud.delete, db=db, id=document_id)
+    support_crud.get_or_404(documents_crud.delete, db=db, id=document_id)
     return generics_schema.Success(message=f"Document with ID {str(document_id)!r} deleted successfully")
 
 
 def summarize(db: Session, document_id: UUID) -> documents_schema.DocumentSummary:
-    document = _raise_not_found(
+    document = support_crud.get_or_404(
         documents_crud.read, 
         db=db, 
         id=document_id, 

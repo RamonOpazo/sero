@@ -42,7 +42,7 @@ class Document(Base):
     files: Mapped[list["File"]] = relationship("File", back_populates="document", cascade="all, delete-orphan",)
     prompts: Mapped[list["Prompt"]] = relationship("Prompt", back_populates="document",)
     selections: Mapped[list["Selection"]] = relationship("Selection", back_populates="document",)
-    ai_settings: Mapped["AiSettings" | None] = relationship(
+    ai_settings: Mapped["AiSettings | None"] = relationship(
         "AiSettings", back_populates="document", uselist=False, cascade="all, delete-orphan",
     )
     

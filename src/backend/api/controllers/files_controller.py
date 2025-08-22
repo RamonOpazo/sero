@@ -1,56 +1,34 @@
 import io
 from uuid import UUID
-from typing import Callable
 from fastapi import HTTPException, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from backend.core.security import security_manager
-from backend.db.models import File as FileModel
-from backend.crud import files_crud, projects_crud, documents_crud
+from backend.crud import files_crud, documents_crud, support_crud
 from backend.api.schemas import files_schema, generics_schema
 from backend.api.enums import FileType
 
 
-def _raise_not_found(callback: Callable[..., FileModel | None], db: Session, id: UUID, **kwargs) -> FileModel:
-    maybe_file = callback(db=db, id=id, **kwargs)
-    if maybe_file is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"File with ID {str(id)!r} not found",
-        )
-    
-    return maybe_file
-
-
 def get(db: Session, file_id: UUID) -> files_schema.File:
     """Get a single file by ID."""
-    file = _raise_not_found(files_crud.read, db=db, id=file_id)
+    file = support_crud.get_or_404(files_crud.read, db=db, id=file_id)
     return files_schema.File.model_validate(file)
 
 
 def delete(db: Session, file_id: UUID) -> generics_schema.Success:
     """Delete a file by ID."""
-    _raise_not_found(files_crud.delete, db=db, id=file_id)
+    support_crud.get_or_404(files_crud.delete, db=db, id=file_id)
     return generics_schema.Success(message=f"File with ID {str(file_id)!r} deleted successfully")
 
 
 def download(db: Session, file_id: UUID, password: str, stream: bool) -> StreamingResponse:
     # Get file and verify document exists
     file = get(db=db, file_id=file_id)
-    document = documents_crud.read(db=db, id=file.document_id)
-    if document is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Associated document not found"
-        )
+    document = support_crud.get_or_404(documents_crud.read, db=db, id=file.document_id)
     
     # Verify project password
-    if not projects_crud.verify_password(db=db, id=document.project_id, password=password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid project password"
-        )
+    support_crud.verify_project_password_or_401(db=db, project_id=document.project_id, password=password)
     
     # Decrypt file data (only if encrypted)
     if file.salt is not None:
