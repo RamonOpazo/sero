@@ -1,9 +1,12 @@
 import pytest
-from uuid import uuid4
 from sqlalchemy.orm import Session
+
 from backend.crud.base import BaseCrud
-from backend.db.models import Project
+from backend.db.models import Project, Document, File
 from backend.api.schemas.projects_schema import ProjectCreate, ProjectUpdate
+from backend.api.schemas.documents_schema import DocumentCreate, DocumentUpdate
+from backend.api.schemas.files_schema import FileCreate
+from backend.api.enums import FileType
 from backend.core.security import security_manager
 
 
@@ -41,48 +44,40 @@ class TestBaseCrud:
         test_session.commit()
         test_session.refresh(project)
         
-        print(f"Created project: {project.name} with ID: {project.id}")
 
         # Test 1: Search all projects (no filters)
         all_projects = project_crud.search(db=test_session, skip=0, limit=100)
-        print(f"Search all: Found {len(all_projects)} projects")
         assert len(all_projects) >= 1
         assert any(p.name == "Test Search Project" for p in all_projects)
 
         # Test 2: Search by version
         version_projects = project_crud.search(db=test_session, skip=0, limit=100, version=1)
-        print(f"Search by version: Found {len(version_projects)} projects")
         assert len(version_projects) >= 1
         assert any(p.name == "Test Search Project" for p in version_projects)
 
         # Test 3: Search by exact name
         exact_projects = project_crud.search(db=test_session, skip=0, limit=100, name=("eq", "Test Search Project"))
-        print(f"Search by exact name: Found {len(exact_projects)} projects")
         assert len(exact_projects) == 1
         assert exact_projects[0].name == "Test Search Project"
 
         # Test 4: Search by like pattern
         like_projects = project_crud.search(db=test_session, skip=0, limit=100, name=("like", "%Search%"))
-        print(f"Search by like pattern: Found {len(like_projects)} projects")
         assert len(like_projects) >= 1
         assert any(p.name == "Test Search Project" for p in like_projects)
 
         # Test 5: Search by like pattern (exact match)
         exact_like_projects = project_crud.search(db=test_session, skip=0, limit=100, name=("like", "Test Search Project"))
-        print(f"Search by exact like: Found {len(exact_like_projects)} projects")
         assert len(exact_like_projects) == 1
         assert exact_like_projects[0].name == "Test Search Project"
 
         # Test 6: Search with wildcard replacement (controller logic simulation)
         search_name = "Test Search Project"
         wildcard_projects = project_crud.search(db=test_session, skip=0, limit=100, name=("like", search_name.replace("*", "%")))
-        print(f"Search with wildcard logic: Found {len(wildcard_projects)} projects")
         assert len(wildcard_projects) >= 1
         assert any(p.name == "Test Search Project" for p in wildcard_projects)
 
         # Test 7: Search that should return nothing
         no_match_projects = project_crud.search(db=test_session, skip=0, limit=100, name=("like", "%NonExistent%"))
-        print(f"Search for non-existent: Found {len(no_match_projects)} projects")
         assert len(no_match_projects) == 0
 
     def test_search_with_joins(self, test_session: Session, project_crud):
@@ -101,18 +96,16 @@ class TestBaseCrud:
         test_session.commit()
         test_session.refresh(project)
 
-        # Search with join
+        # Search with join and nested join path (documents.files)
         projects_with_docs = project_crud.search(
-            db=test_session, 
-            skip=0, 
-            limit=100, 
-            join_with=["documents"],
+            db=test_session,
+            skip=0,
+            limit=100,
+            join_with=["documents", "documents.files"],
             name=("eq", "Test Join Project")
         )
-        
         assert len(projects_with_docs) == 1
         assert projects_with_docs[0].name == "Test Join Project"
-        # The documents relationship should be loaded
         assert hasattr(projects_with_docs[0], 'documents')
 
     def test_search_with_ordering(self, test_session: Session, project_crud):
@@ -295,3 +288,83 @@ class TestBaseCrud:
         version_1_names = [p.name for p in version_1_projects]
         assert "None Test A" in version_1_names
         assert "None Test B" not in version_1_names
+
+    def test_create_read_update_delete_count_exist_and_filters(self, test_session: Session):
+        # Instantiate CRUDs
+        project_crud_local = BaseCrud[Project, ProjectCreate, ProjectUpdate](Project)
+        document_crud = BaseCrud[Document, DocumentCreate, DocumentUpdate](Document)
+
+        # Create via CRUD.create
+        pc = ProjectCreate(
+            name="BaseCrud Project",
+            description="desc",
+            version=1,
+            contact_name="Tester",
+            contact_email="tester@example.com",
+            password="StrongPW!123",
+        )
+        # BaseCrud.create uses schema dump; Project requires password_hash, so create ORM manually then use read/update/delete on CRUD
+        proj = Project(
+            name=pc.name,
+            description=pc.description,
+            version=pc.version,
+            contact_name=pc.contact_name,
+            contact_email=pc.contact_email,
+            password_hash=security_manager.hash_password(pc.password).encode("utf-8"),
+        )
+        test_session.add(proj)
+        test_session.commit()
+        test_session.refresh(proj)
+
+        # count/exist/read
+        assert project_crud_local.count(test_session) >= 1
+        assert project_crud_local.exist(test_session, id=proj.id) is True
+        got = project_crud_local.read(test_session, id=proj.id, join_with=["documents"])  # join_with
+        assert got and got.id == proj.id
+
+        # update field via CRUD.update
+        updated = project_crud_local.update(test_session, id=proj.id, data=ProjectUpdate(description="updated"))
+        assert updated and updated.description == "updated"
+        assert updated.updated_at is not None
+
+        # add a document and file for nested join test
+        dc = Document(
+            name="D1.pdf",
+            description=None,
+            project_id=proj.id,
+            tags=[],
+        )
+        test_session.add(dc)
+        test_session.commit()
+        test_session.refresh(dc)
+        f = File(
+            file_hash="0"*64,
+            file_type=FileType.ORIGINAL,
+            mime_type="application/pdf",
+            data=b"e",
+            salt=b"s",
+            document_id=dc.id,
+        )
+        test_session.add(f)
+        test_session.commit()
+
+        # search nested join path
+        got2 = project_crud_local.search(test_session, skip=0, limit=10, join_with=["documents.files"], name=("eq", proj.name))
+        assert got2 and got2[0].documents and got2[0].documents[0].files
+
+        # filters: in, not-in, neq and bad cases
+        in_res = project_crud_local.search(test_session, skip=0, limit=10, version=("in", [1, 2]))
+        assert any(p.id == proj.id for p in in_res)
+        not_in_res = project_crud_local.search(test_session, skip=0, limit=10, version=("not-in", [99]))
+        assert any(p.id == proj.id for p in not_in_res)
+        neq_res = project_crud_local.search(test_session, skip=0, limit=10, name=("neq", "nope"))
+        assert any(p.id == proj.id for p in neq_res)
+        with pytest.raises(ValueError):
+            project_crud_local.search(test_session, skip=0, limit=10, name=("badop", "x"))
+        with pytest.raises(AttributeError):
+            project_crud_local.search(test_session, skip=0, limit=10, not_a_field=("eq", 1))
+
+        # delete
+        deleted = project_crud_local.delete(test_session, id=proj.id)
+        assert deleted and deleted.id == proj.id
+        assert project_crud_local.exist(test_session, id=proj.id) is False

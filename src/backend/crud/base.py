@@ -47,26 +47,36 @@ class BaseCrud(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         col = getattr(self.model, field)
         op, value = data if isinstance(data, tuple) else ("is", None) if data is None else ("eq", data)
         match op:
-            case "eq" | "neq" | "gt" | "ge" | "lt" | "le":
-                return getattr(col, f"__{op}__")(value)
+            case "eq":
+                return col.__eq__(value)
+            case "neq":
+                return col.__ne__(value)
+            case "gt":
+                return col.__gt__(value)
+            case "ge":
+                return col.__ge__(value)
+            case "lt":
+                return col.__lt__(value)
+            case "le":
+                return col.__le__(value)
 
             case "like":
                 return col.like(value)
 
             case "not-like":
-                return col.not_like(value)
+                return col.notlike(value)
 
             case "is":
                 return col.is_(value)
 
             case "not-is":
-                return col.not_is(value)
+                return col.is_not(value)
 
             case "in":
                 return col.in_(value)
 
             case "not-in":
-                return col.not_in(value)
+                return col.notin_(value)
             
             case _:
                 raise ValueError(f"Unrecognized filter operation: {op!r}")
