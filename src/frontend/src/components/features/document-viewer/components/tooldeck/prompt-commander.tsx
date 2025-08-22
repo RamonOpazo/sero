@@ -69,24 +69,16 @@ export default function PromptManagement({ document }: PromptControlsProps) {
     enabled: boolean;
   }) => {
     try {
-      // Transform rule data to prompt format
       const promptText = `Rule Type: ${ruleData.type}\n` +
                         `Priority: ${ruleData.priority.toUpperCase()}\n` +
                         `Title: ${ruleData.title}\n\n` +
                         `Instructions:\n${ruleData.rule}`;
-      
-      // Map priority to temperature (AI creativity level)
-      const temperatureMap = {
-        'high': 0.1,    // Low creativity for critical compliance rules
-        'medium': 0.3,  // Moderate creativity for important rules
-        'low': 0.5      // Higher creativity for optional rules
-      };
-      
       const promptData = {
-        text: promptText,
-        languages: ['english', 'castillian'],
-        temperature: temperatureMap[ruleData.priority],
-      };
+        title: ruleData.title,
+        prompt: promptText,
+        directive: 'process',
+        enabled: true,
+      } as any;
       
       createPrompt(promptData);
       toast.success(`${ruleData.title} rule added (not yet saved)`);
@@ -196,10 +188,11 @@ export default function PromptManagement({ document }: PromptControlsProps) {
       };
       
       updatePrompt(editingPromptId, {
-        text: promptText,
-        temperature: temperatureMap[ruleData.priority],
-        languages: ['english', 'castillian']
-      });
+        title: ruleData.title,
+        prompt: promptText,
+        directive: 'process',
+        enabled: true,
+      } as any);
       
       toast.success(`${ruleData.title} rule updated (not yet saved)`);
       setShowEditDialog(false);
@@ -367,7 +360,7 @@ export default function PromptManagement({ document }: PromptControlsProps) {
           };
         };
         
-        const parsedData = parsePromptText(editingPrompt.text);
+        const parsedData = parsePromptText(editingPrompt.prompt);
         
         return (
           <AddPromptDialog
