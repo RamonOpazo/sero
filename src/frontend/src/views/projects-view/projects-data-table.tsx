@@ -224,42 +224,29 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
   const endIndex = startIndex + pageSize
   const paginatedProjects = filteredProjects.slice(startIndex, endIndex)
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading projects...</p>
-        </div>
+  const content = isLoading ? (
+    <div className="flex items-center justify-center py-8">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+        <p className="text-muted-foreground">Loading projects...</p>
       </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <div className="text-center">
-          <p className="text-destructive mb-2">Failed to load projects</p>
-          <p className="text-sm text-muted-foreground">{error}</p>
-        </div>
+    </div>
+  ) : error ? (
+    <div className="flex items-center justify-center py-8">
+      <div className="text-center">
+        <p className="text-destructive mb-2">Failed to load projects</p>
+        <p className="text-sm text-muted-foreground">{error}</p>
       </div>
-    );
-  }
-
-  if (projects.length === 0) {
-    return (
-      <EmptyState
-        message="No projects found"
-        buttonText="Create your first project"
-        buttonIcon={<Plus className="h-4 w-4" />}
-        onButtonClick={actionHandlers.onCreateProject}
-      />
-    );
-  }
-
-  return (
-    <>
-      <DataTable
+    </div>
+  ) : projects.length === 0 ? (
+    <EmptyState
+      message="No projects found"
+      buttonText="Create your first project"
+      buttonIcon={<Plus className="h-4 w-4" />}
+      onButtonClick={actionHandlers.onCreateProject}
+    />
+  ) : (
+    <DataTable
         columns={legacyColumns}
         data={paginatedProjects}
         selectedRows={selectedProjects}
@@ -287,6 +274,11 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
           pageSizeOptions: [5, 10, 20, 50]
         }}
       />
+  );
+
+  return (
+    <>
+      {content}
 
       {/* Project Creation Dialog */}
       <CreateProjectDialog
