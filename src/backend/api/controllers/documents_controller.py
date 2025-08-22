@@ -162,6 +162,16 @@ def get_tags(db: Session, document_id: UUID) -> list[str]:
 
 def create(db: Session, document_data: documents_schema.DocumentCreate) -> documents_schema.Document:
     document = documents_crud.create(db=db, data=document_data)
+
+    # Initialize AI settings for this document using defaults
+    from backend.crud import ai_settings_crud
+    from backend.core.config import settings as app_settings
+    ai_settings_crud.create_default_for_document(db=db, document_id=document.id, defaults={
+        "provider": app_settings.ai.__dict__.get("provider", "ollama") if hasattr(app_settings.ai, "provider") else "ollama",
+        "model_name": app_settings.ai.model,
+        "temperature": 0.2,
+    })
+
     return documents_schema.Document.model_validate(document)
 
 
@@ -202,8 +212,17 @@ def create_with_file(db: Session, upload_data: files_schema.FileUpload, password
             )
     
     # Use bulk creation for consistency and transaction safety
-    try:
-        created_documents = documents_crud.bulk_create_with_files(db=db, bulk_data=[result])
+        try:
+            created_documents = documents_crud.bulk_create_with_files(db=db, bulk_data=[result])
+            # Initialize AI settings for created document(s)
+            from backend.crud import ai_settings_crud
+            from backend.core.config import settings as app_settings
+            for doc in created_documents:
+                ai_settings_crud.create_default_for_document(db=db, document_id=doc.id, defaults={
+                    "provider": app_settings.ai.__dict__.get("provider", "ollama") if hasattr(app_settings.ai, "provider") else "ollama",
+                    "model_name": app_settings.ai.model,
+                    "temperature": 0.2,
+                })
         # Return the single created document with joined data
         document = _raise_not_found(
             documents_crud.read, 
@@ -283,6 +302,42 @@ def bulk_create_with_files(db: Session, uploads_data: list[files_schema.FileUplo
         }
     )
 
+# ===== AI Settings endpoints =====
+
+def get_ai_settings(db: Session, document_id: UUID) -> documents_schema.DocumentAiSettings:
+    """Get AI settings for a document."""
+    # Verify document exists
+    document = _raise_not_found(documents_crud.read, db=db, id=document_id, join_with=["ai_settings"])
+    from backend.crud import ai_settings_crud
+    if document.ai_settings is None:
+        from backend.core.config import settings as app_settings
+        ai_settings_crud.create_default_for_document(db=db, document_id=document_id, defaults={
+            "provider": app_settings.ai.__dict__.get("provider", "ollama") if hasattr(app_settings.ai, "provider") else "ollama",
+            "model_name": app_settings.ai.model,
+            "temperature": 0.2,
+        })
+        # reload
+        document = _raise_not_found(documents_crud.read, db=db, id=document_id, join_with=["ai_settings"])
+    return documents_schema.DocumentAiSettings.model_validate(document.ai_settings)
+
+
+def update_ai_settings(db: Session, document_id: UUID, data: documents_schema.DocumentAiSettingsUpdate) -> documents_schema.DocumentAiSettings:
+    """Update AI settings for a document."""
+    # Ensure document exists
+    document = _raise_not_found(documents_crud.read, db=db, id=document_id, join_with=["ai_settings"])
+    from backend.crud import ai_settings_crud
+    if document.ai_settings is None:
+        from backend.core.config import settings as app_settings
+        ai_settings = ai_settings_crud.create_default_for_document(db=db, document_id=document_id, defaults={
+            "provider": app_settings.ai.__dict__.get("provider", "ollama") if hasattr(app_settings.ai, "provider") else "ollama",
+            "model_name": app_settings.ai.model,
+            "temperature": 0.2,
+        })
+    else:
+        ai_settings = ai_settings_crud.update_by_document(db=db, document_id=document_id, data=data)
+    return documents_schema.DocumentAiSettings.model_validate(ai_settings)
+
+
 
 def get_prompts(db: Session, document_id: UUID, skip: int = 0, limit: int = 100) -> list[prompts_schema.Prompt]:
     """Get prompts for a document."""
@@ -361,7 +416,7 @@ def summarize(db: Session, document_id: UUID) -> documents_schema.DocumentSummar
         documents_crud.read, 
         db=db, 
         id=document_id, 
-        join_with=["files", "prompts", "selections", "project"]
+        join_with=["files", "prompts", "selections", "project", "ai_settings"]
     )
     
     # File analysis
@@ -378,16 +433,11 @@ def summarize(db: Session, document_id: UUID) -> documents_schema.DocumentSummar
     ai_selections_count = sum(1 for s in document.selections if s.is_ai_generated)
     manual_selections_count = len(document.selections) - ai_selections_count
     
-    # Prompt analysis
-    all_languages = []
-    temperatures = []
-    
-    for prompt in document.prompts:
-        all_languages.extend(prompt.languages)
-        temperatures.append(prompt.temperature)
-    
-    prompt_languages = list(set(all_languages))  # Unique languages
-    average_temperature = sum(temperatures) / len(temperatures) if temperatures else None
+    # Prompt analysis (languages removed from Prompt; report empty list)
+    prompt_languages: list[str] = []
+
+    # Temperature now comes from per-document AI settings
+    average_temperature = document.ai_settings.temperature if getattr(document, "ai_settings", None) else None
     
     return documents_schema.DocumentSummary(
         document_id=document.id,
