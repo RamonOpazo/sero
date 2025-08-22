@@ -96,6 +96,15 @@ class SupportCrud:
         decrypted_data = self.decrypt_original_file_or_500(original_file=original_file, password=password)
         return document, original_file, decrypted_data
 
+    def get_original_file_data(self, db: Session, *, document_id: UUID, encrypted_password_b64: str, key_id: str, join_with: list[str] | None = None) -> tuple[object, object, bytes]:
+        """Load document and original file, decrypt request password, verify project password, decrypt file, and return (document, original_file, decrypted_bytes)."""
+        document = self.get_document_or_404(db=db, document_id=document_id, join_with=join_with or ["files"])
+        original_file = self.get_original_file_or_error(document)
+        decrypted_password = self.decrypt_password_from_encrypted_request(encrypted_password_b64=encrypted_password_b64, key_id=key_id)
+        self.verify_project_password_or_401(db=db, project_id=document.project_id, password=decrypted_password)
+        decrypted_data = self.decrypt_original_file_or_500(original_file=original_file, password=decrypted_password)
+        return document, original_file, decrypted_data
+
     # ==== Redacted File helpers ====
     def get_redacted_file_or_error(self, document, *, not_found_status: int = status.HTTP_404_NOT_FOUND):
         redacted_file = getattr(document, "redacted_file", None)
@@ -130,6 +139,44 @@ class SupportCrud:
         redacted_file = self.get_redacted_file_or_error(document, not_found_status=status.HTTP_404_NOT_FOUND)
         file_data = self.read_redacted_file_or_500(redacted_file=redacted_file)
         return document, redacted_file, file_data
+
+    # ==== Shallow list transformation helper ====
+    def build_shallow_list_auto(self, records, *, schema_cls, transforms: dict, model_index: int = 0):
+        """Build shallow schema instances from search_shallow results.
+        
+        - Automatically copies fields with identical names from the model to the schema.
+        - Only fields listed in 'transforms' require custom mapping.
+        - 'records' can be tuples where the model is at model_index.
+        """
+        items = []
+        schema_fields = set(getattr(schema_cls, 'model_fields', {}).keys())
+        for rec in records:
+            model = rec[model_index] if isinstance(rec, tuple) else rec
+            data = {}
+            # First, apply explicit transforms
+            for key, fn in (transforms or {}).items():
+                data[key] = fn({"record": rec, "model": model})
+            # Then, auto-map remaining matching fields from the model
+            for field in schema_fields - set((transforms or {}).keys()):
+                if hasattr(model, field):
+                    data[field] = getattr(model, field)
+            items.append(schema_cls.model_validate(data))
+        return items
+
+    def build_summary(self, *, schema_cls, model, transforms: dict):
+        """Build a summary schema instance from a model using declarative transforms.
+        Fields with identical names are auto-copied from the model; others must be provided via transforms.
+        """
+        schema_fields = set(getattr(schema_cls, 'model_fields', {}).keys())
+        data = {}
+        # Apply explicit transforms
+        for key, fn in (transforms or {}).items():
+            data[key] = fn({"model": model})
+        # Auto-map remaining fields
+        for field in schema_fields - set((transforms or {}).keys()):
+            if hasattr(model, field):
+                data[field] = getattr(model, field)
+        return schema_cls.model_validate(data)
 
     # ---- General not-found helpers ----
     def get_or_404(self, callback, *, entity_name: str, not_found_id: UUID | None = None, **kwargs):

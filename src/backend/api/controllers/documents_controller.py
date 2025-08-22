@@ -1,4 +1,3 @@
-import base64
 import io
 from uuid import UUID
 from typing import Callable
@@ -9,15 +8,13 @@ from sqlalchemy.orm import Session
 from backend.core.security import security_manager
 from backend.core.pdf_redactor import redactor, AreaSelection
 from backend.db.models import Document as DocumentModel
-from backend.crud import documents_crud, prompts_crud, selections_crud, projects_crud, files_crud
+from backend.crud import support_crud, documents_crud, prompts_crud, selections_crud, files_crud
 from backend.api.schemas import documents_schema, generics_schema, files_schema, prompts_schema, selections_schema
 from backend.api.enums import FileType
 
 
-from backend.crud.support import SupportCrud
-
 def _raise_not_found(callback: Callable[..., DocumentModel | None], db: Session, id: UUID, **kwargs) -> DocumentModel:
-    return SupportCrud().get_or_404(callback, entity_name="Document", not_found_id=id, db=db, id=id, **kwargs)
+    return support_crud.get_or_404(callback, entity_name="Document", not_found_id=id, db=db, id=id, **kwargs)
 
 
 def get(db: Session, document_id: UUID) -> documents_schema.Document:
@@ -31,38 +28,13 @@ def get(db: Session, document_id: UUID) -> documents_schema.Document:
 
 
 def get_shallow(db: Session, document_id: UUID) -> documents_schema.DocumentShallow:
-    """Get shallow document by ID with counts and processed flag."""
-    documents_with_meta = documents_crud.search_shallow(
-        db=db,
-        skip=0,
-        limit=1,
-        order_by=[("created_at", "desc")],
-        id=document_id
-    )
-    
-    if not documents_with_meta:
+    items = get_shallow_list(db=db, skip=0, limit=1, id=document_id)
+    if not items:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Document with ID {str(document_id)!r} not found",
         )
-    
-    # Extract the single result
-    document, prompt_count, selection_count, is_processed = documents_with_meta[0]
-    
-    shallow_data = {
-        "id": document.id,
-        "created_at": document.created_at,
-        "updated_at": document.updated_at,
-        "name": document.name,
-        "description": document.description,
-        "project_id": document.project_id,
-        "tags": document.tags,
-        "prompt_count": int(prompt_count or 0),
-        "selection_count": int(selection_count or 0),
-        "is_processed": bool(is_processed),
-    }
-    
-    return documents_schema.DocumentShallow.model_validate(shallow_data)
+    return items[0]
 
 
 def get_list(db: Session, skip: int, limit: int) -> list[documents_schema.Document]:
@@ -75,34 +47,24 @@ def get_list(db: Session, skip: int, limit: int) -> list[documents_schema.Docume
     return [ documents_schema.Document.model_validate(i) for i in documents ]
 
 
-def get_shallow_list(db: Session, skip: int, limit: int) -> list[documents_schema.DocumentShallow]:
-    """Get shallow list of documents with prompt/selection counts and processed flag."""
-    documents_with_meta = documents_crud.search_shallow(
+def get_shallow_list(db: Session, skip: int, limit: int, **filters) -> list[documents_schema.DocumentShallow]:
+    records = documents_crud.search_shallow(
         db=db,
         skip=skip,
         limit=limit,
-        order_by=[("name", "asc"), ("created_at", "desc")]
+        order_by=[("name", "asc"), ("created_at", "desc")],
+        **filters,
     )
-    
-    # Convert to shallow schema with metadata
-    shallow_documents: list[documents_schema.DocumentShallow] = []
-    for document, prompt_count, selection_count, is_processed in documents_with_meta:
-        shallow_data = {
-            "id": document.id,
-            "created_at": document.created_at,
-            "updated_at": document.updated_at,
-            "name": document.name,
-            "description": document.description,
-            "project_id": document.project_id,
-            "tags": document.tags,
-            "prompt_count": int(prompt_count or 0),
-            "selection_count": int(selection_count or 0),
-            "is_processed": bool(is_processed),
-        }
-        shallow_documents.append(documents_schema.DocumentShallow.model_validate(shallow_data))
-    
-    return shallow_documents
 
+    return support_crud.build_shallow_list_auto(
+        records,
+        schema_cls=documents_schema.DocumentShallow,
+        transforms={
+            "prompt_count": lambda ctx: int(ctx["record"][1] or 0),
+            "selection_count": lambda ctx: int(ctx["record"][2] or 0),
+            "is_processed": lambda ctx: bool(ctx["record"][3]),
+        },
+    )
 
 def search_list(db: Session, skip: int, limit: int, name: str | None, project_id: UUID | None) -> list[documents_schema.Document]:
     documents = documents_crud.search(
@@ -118,11 +80,8 @@ def search_list(db: Session, skip: int, limit: int, name: str | None, project_id
 
 
 def get_tags(db: Session, document_id: UUID) -> list[str]:
-    """Get tags for a document."""
     document = _raise_not_found(documents_crud.read, db=db, id=document_id)
     return list(set(document.tags))
-
-
 
 
 def create(db: Session, document_data: documents_schema.DocumentCreate) -> documents_schema.Document:
@@ -141,13 +100,11 @@ def create(db: Session, document_data: documents_schema.DocumentCreate) -> docum
 
 
 def create_with_file(db: Session, upload_data: files_schema.FileUpload, password: str) -> documents_schema.Document:
-    """Create a document with an associated original PDF file using bulk creation infrastructure."""
     # Verify project password first
-    from backend.crud.support import SupportCrud
-    SupportCrud().verify_project_password_or_401(db=db, project_id=upload_data.project_id, password=password)
+    support_crud.verify_project_password_or_401(db=db, project_id=upload_data.project_id, password=password)
     
     # Use the existing processing logic
-    result = SupportCrud().process_upload(db=db, project_id=upload_data.project_id, upload_data=upload_data, password=password)
+    result = support_crud.process_upload(db=db, project_id=upload_data.project_id, upload_data=upload_data, password=password)
     
     # Handle processing errors
     if isinstance(result, tuple):
@@ -175,8 +132,7 @@ def create_with_file(db: Session, upload_data: files_schema.FileUpload, password
     
     # Use bulk creation for consistency and transaction safety
     try:
-        from backend.crud.support import SupportCrud
-        created_documents = SupportCrud().bulk_create_documents_with_files_and_init(db=db, bulk_data=[result])
+        created_documents = support_crud.bulk_create_documents_with_files_and_init(db=db, bulk_data=[result])
         # Return the single created document with joined data
         document = _raise_not_found(
             documents_crud.read, 
@@ -208,14 +164,13 @@ def bulk_create_with_files(db: Session, uploads_data: list[files_schema.FileUplo
         )
     
     project_id = uploads_data[0].project_id
-    from backend.crud.support import SupportCrud
-    SupportCrud().verify_project_password_or_401(db=db, project_id=project_id, password=password)
+    support_crud.verify_project_password_or_401(db=db, project_id=project_id, password=password)
     
     if any(upload.project_id != project_id for upload in uploads_data):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="All files must belong to the same project")
 
     # Run processing logic and filter out failed results
-    results = [SupportCrud().process_upload(db=db, project_id=project_id, upload_data=x, password=password) for x in uploads_data]
+    results = [support_crud.process_upload(db=db, project_id=project_id, upload_data=x, password=password) for x in uploads_data]
     successes = [ data for data in results if isinstance(data, documents_schema.DocumentBulkUpload) ]
     errors = [ error for error in results if isinstance(error, tuple) ]
     
@@ -256,10 +211,8 @@ def bulk_create_with_files(db: Session, uploads_data: list[files_schema.FileUplo
         }
     )
 
-# ===== AI Settings endpoints =====
 
 def get_ai_settings(db: Session, document_id: UUID) -> documents_schema.DocumentAiSettings:
-    """Get AI settings for a document."""
     # Verify document exists
     document = _raise_not_found(documents_crud.read, db=db, id=document_id, join_with=["ai_settings"])
     from backend.crud import ai_settings_crud
@@ -276,7 +229,6 @@ def get_ai_settings(db: Session, document_id: UUID) -> documents_schema.Document
 
 
 def update_ai_settings(db: Session, document_id: UUID, data: documents_schema.DocumentAiSettingsUpdate) -> documents_schema.DocumentAiSettings:
-    """Update AI settings for a document."""
     # Ensure document exists
     document = _raise_not_found(documents_crud.read, db=db, id=document_id, join_with=["ai_settings"])
     from backend.crud import ai_settings_crud
@@ -292,9 +244,7 @@ def update_ai_settings(db: Session, document_id: UUID, data: documents_schema.Do
     return documents_schema.DocumentAiSettings.model_validate(ai_settings)
 
 
-
 def get_prompts(db: Session, document_id: UUID, skip: int = 0, limit: int = 100) -> list[prompts_schema.Prompt]:
-    """Get prompts for a document."""
     # Verify document exists
     _raise_not_found(documents_crud.read, db=db, id=document_id)
     
@@ -304,7 +254,6 @@ def get_prompts(db: Session, document_id: UUID, skip: int = 0, limit: int = 100)
 
 
 def add_prompt(db: Session, document_id: UUID, prompt_data: prompts_schema.PromptCreate) -> prompts_schema.Prompt:
-    """Add a prompt to a document."""
     # Verify document exists
     _raise_not_found(documents_crud.read, db=db, id=document_id)
     
@@ -315,7 +264,6 @@ def add_prompt(db: Session, document_id: UUID, prompt_data: prompts_schema.Promp
 
 
 def get_selections(db: Session, document_id: UUID, skip: int = 0, limit: int = 100) -> list[selections_schema.Selection]:
-    """Get selections for a document."""
     # Verify document exists
     _raise_not_found(documents_crud.read, db=db, id=document_id)
     
@@ -325,7 +273,6 @@ def get_selections(db: Session, document_id: UUID, skip: int = 0, limit: int = 1
 
 
 def add_selection(db: Session, document_id: UUID, selection_data: selections_schema.SelectionCreate) -> selections_schema.Selection:
-    """Add a selection to a document."""
     # Verify document exists
     _raise_not_found(documents_crud.read, db=db, id=document_id)
     
@@ -335,13 +282,9 @@ def add_selection(db: Session, document_id: UUID, selection_data: selections_sch
     return selections_schema.Selection.model_validate(selection)
 
 
-# ===== AI Apply (staged selections) =====
-
 def clear_staged_selections(db: Session, document_id: UUID, request: selections_schema.SelectionClearRequest) -> generics_schema.Success:
-    """Clear staged selections (committed=False) either all or a subset by IDs."""
     _ = _raise_not_found(documents_crud.read, db=db, id=document_id)
-    from backend.crud.support import SupportCrud
-    deleted_count = SupportCrud().clear_staged_selections(
+    deleted_count = support_crud.clear_staged_selections(
         db=db,
         document_id=document_id,
         selection_ids=list(request.selection_ids or []),
@@ -351,10 +294,8 @@ def clear_staged_selections(db: Session, document_id: UUID, request: selections_
 
 
 def uncommit_selections(db: Session, document_id: UUID, request: selections_schema.SelectionUncommitRequest) -> list[selections_schema.Selection]:
-    """Flip committed selections to staged (committed=False) for all or provided IDs."""
     _ = _raise_not_found(documents_crud.read, db=db, id=document_id)
-    from backend.crud.support import SupportCrud
-    staged = SupportCrud().uncommit_selections(
+    staged = support_crud.uncommit_selections(
         db=db,
         document_id=document_id,
         selection_ids=list(request.selection_ids or []),
@@ -364,10 +305,8 @@ def uncommit_selections(db: Session, document_id: UUID, request: selections_sche
 
 
 def commit_staged_selections(db: Session, document_id: UUID, request: selections_schema.SelectionCommitRequest) -> list[selections_schema.Selection]:
-    """Commit staged selections for a document and return committed selections."""
     _ = _raise_not_found(documents_crud.read, db=db, id=document_id)
-    from backend.crud.support import SupportCrud
-    committed = SupportCrud().commit_staged_selections(
+    committed = support_crud.commit_staged_selections(
         db=db,
         document_id=document_id,
         selection_ids=list(request.selection_ids or []),
@@ -377,7 +316,6 @@ def commit_staged_selections(db: Session, document_id: UUID, request: selections
 
 
 def apply_ai_and_stage(db: Session, document_id: UUID) -> list[selections_schema.Selection]:
-    """Generate AI selections and stage them (committed=False) via AiService."""
     # Ensure document exists and load prompts/settings
     document = _raise_not_found(
         documents_crud.read,
@@ -417,8 +355,6 @@ def apply_ai_and_stage(db: Session, document_id: UUID) -> list[selections_schema
     return [selections_schema.Selection.model_validate(i) for i in created_models]
 
 
-
-
 def update(db: Session, document_id: UUID, document_data: documents_schema.DocumentUpdate) -> documents_schema.Document:
     document = _raise_not_found(documents_crud.update, db=db, id=document_id, data=document_data)
     return documents_schema.Document.model_validate(document)
@@ -430,78 +366,44 @@ def delete(db: Session, document_id: UUID) -> generics_schema.Success:
 
 
 def summarize(db: Session, document_id: UUID) -> documents_schema.DocumentSummary:
-    """Generate a comprehensive summary of a document including all its components."""
-    # Get document with all related data
     document = _raise_not_found(
         documents_crud.read, 
         db=db, 
         id=document_id, 
         join_with=["files", "prompts", "selections", "project", "ai_settings"]
     )
-    
-    # File analysis
-    original_file = document.original_file
-    redacted_file = document.redacted_file
-    
-    has_original_file = original_file is not None
-    has_redacted_file = redacted_file is not None
-    original_file_size = original_file.file_size if original_file else None
-    redacted_file_size = redacted_file.file_size if redacted_file else None
-    total_file_size = (original_file_size or 0) + (redacted_file_size or 0)
-        
-    # Selection analysis
-    ai_selections_count = sum(1 for s in document.selections if s.is_ai_generated)
-    manual_selections_count = len(document.selections) - ai_selections_count
-    
-    # Prompt analysis (languages removed from Prompt; report empty list)
-    prompt_languages: list[str] = []
 
-    # Temperature now comes from per-document AI settings
-    average_temperature = document.ai_settings.temperature if getattr(document, "ai_settings", None) else None
-    
-    return documents_schema.DocumentSummary(
-        document_id=document.id,
-        name=document.name,
-        description=document.description,
-        created_at=document.created_at,
-        updated_at=document.updated_at,
-        project_name=document.project.name,
-        project_id=document.project_id,
-        has_original_file=has_original_file,
-        has_redacted_file=has_redacted_file,
-        original_file_size=original_file_size,
-        redacted_file_size=redacted_file_size,
-        total_file_size=total_file_size,
-        prompt_count=len(document.prompts),
-        selection_count=len(document.selections),
-        tag_count=len(list(set(document.tags))),
-        tags=list(set(document.tags)),
-        is_processed=has_redacted_file,
-        ai_selections_count=ai_selections_count,
-        manual_selections_count=manual_selections_count,
-        prompt_languages=prompt_languages,
-        average_temperature=average_temperature
+    return support_crud.build_summary(
+        schema_cls=documents_schema.DocumentSummary,
+        model=document,
+        transforms={
+            "document_id": lambda ctx: ctx["model"].id,
+            "project_name": lambda ctx: ctx["model"].project.name,
+            "has_original_file": lambda ctx: ctx["model"].original_file is not None,
+            "has_redacted_file": lambda ctx: ctx["model"].redacted_file is not None,
+            "original_file_size": lambda ctx: (ctx["model"].original_file.file_size if ctx["model"].original_file else None),
+            "redacted_file_size": lambda ctx: (ctx["model"].redacted_file.file_size if ctx["model"].redacted_file else None),
+            "total_file_size": lambda ctx: ((ctx["model"].original_file.file_size if ctx["model"].original_file else 0) + (ctx["model"].redacted_file.file_size if ctx["model"].redacted_file else 0)),
+            "prompt_count": lambda ctx: len(ctx["model"].prompts),
+            "selection_count": lambda ctx: len(ctx["model"].selections),
+            "tag_count": lambda ctx: len(list(set(ctx["model"].tags))),
+            "tags": lambda ctx: list(set(ctx["model"].tags)),
+            "is_processed": lambda ctx: (ctx["model"].redacted_file is not None),
+            "ai_selections_count": lambda ctx: sum(1 for s in ctx["model"].selections if s.is_ai_generated),
+            "manual_selections_count": lambda ctx: sum(1 for s in ctx["model"].selections if not s.is_ai_generated),
+            "prompt_languages": lambda ctx: [],
+            "average_temperature": lambda ctx: (ctx["model"].ai_settings.temperature if getattr(ctx["model"], "ai_settings", None) else None),
+        },
     )
 
 
 def process(db: Session, document_id: UUID, password: str) -> generics_schema.Success:
-    """Process a document to generate a redacted version.
-    
-    This method will:
-    1. Verify document exists and has original file
-    2. Verify password is correct for the project
-    3. Decrypt the original file using the password
-    4. Apply redaction based on selections
-    5. Generate a redacted PDF file (not encrypted)
-    6. Store the redacted file with salt=None
-    """
     # Use helpers to load doc and original file (400 if missing) and decrypt it
-    from backend.crud.support import SupportCrud
-    document = SupportCrud().get_document_or_404(db=db, document_id=document_id, join_with=["files", "selections"])
-    original_file = SupportCrud().get_original_file_or_error(document, not_found_status=status.HTTP_400_BAD_REQUEST)
+    document = support_crud.get_document_or_404(db=db, document_id=document_id, join_with=["files", "selections"])
+    original_file = support_crud.get_original_file_or_error(document, not_found_status=status.HTTP_400_BAD_REQUEST)
 
     # Verify project password
-    SupportCrud().verify_project_password_or_401(db=db, project_id=document.project_id, password=password)
+    support_crud.verify_project_password_or_401(db=db, project_id=document.project_id, password=password)
 
     # Check committed selections
     committed_selections = [s for s in document.selections if getattr(s, "committed", False)]
@@ -523,7 +425,7 @@ def process(db: Session, document_id: UUID, password: str) -> generics_schema.Su
             )
 
     # Decrypt original
-    decrypted_data = SupportCrud().decrypt_original_file_or_500(original_file=original_file, password=password)
+    decrypted_data = support_crud.decrypt_original_file_or_500(original_file=original_file, password=password)
 
     # Apply redaction
     try:
@@ -572,38 +474,14 @@ def download_original_file(
     document_id: UUID, 
     request: files_schema.EncryptedFileDownloadRequest
 ) -> StreamingResponse:
-    """Download the original file for a document using encrypted password.
-    
-    This method provides document-centric access to original files without
-    requiring separate file ID lookups. It handles password decryption,
-    file decryption, and integrity verification.
-    
-    Args:
-        db: Database session
-        document_id: UUID of the document
-        request: Contains encrypted password and key metadata
-        
-    Returns:
-        StreamingResponse: The decrypted original file
-        
-    Raises:
-        HTTPException: For various error conditions
-    """
-    # Use helpers to load, decrypt password, verify project, and decrypt original file
-    from backend.crud.support import SupportCrud
-    support = SupportCrud()
-
-    document = support.get_document_or_404(db=db, document_id=document_id, join_with=["files"])
-    original_file = support.get_original_file_or_error(document, not_found_status=status.HTTP_404_NOT_FOUND)
-
-    decrypted_password = support.decrypt_password_from_encrypted_request(
+    # Centralized retrieval + decryption of original file data
+    document, original_file, decrypted_data = support_crud.get_original_file_data(
+        db=db,
+        document_id=document_id,
         encrypted_password_b64=request.encrypted_password,
         key_id=request.key_id,
+        join_with=["files"],
     )
-
-    support.verify_project_password_or_401(db=db, project_id=document.project_id, password=decrypted_password)
-
-    decrypted_data = support.decrypt_original_file_or_500(original_file=original_file, password=decrypted_password)
 
     # Generate filename
     safe_filename = f"{document.name}_original.pdf"
@@ -632,25 +510,8 @@ def download_redacted_file(
     db: Session, 
     document_id: UUID
 ) -> StreamingResponse:
-    """Download the redacted file for a document.
-    
-    This method provides direct access to redacted files without password
-    requirements since redacted files are stored unencrypted.
-    
-    Args:
-        db: Database session
-        document_id: UUID of the document
-        
-    Returns:
-        StreamingResponse: The redacted file
-        
-    Raises:
-        HTTPException: If document or redacted file not found
-    """
     # Use helpers to fetch document and validated redacted file data
-    from backend.crud.support import SupportCrud
-    support = SupportCrud()
-    document, redacted_file, file_data = support.get_redacted_file_data(db=db, document_id=document_id, join_with=["files"])
+    document, redacted_file, file_data = support_crud.get_redacted_file_data(db=db, document_id=document_id, join_with=["files"])
 
     # Generate filename: use document ID to avoid leaking names
     safe_filename = f"{document.id}.pdf"

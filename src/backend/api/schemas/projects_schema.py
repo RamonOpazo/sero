@@ -112,10 +112,6 @@ class ProjectSummary(BaseModel):
     total_ai_selections: int
     total_manual_selections: int
     
-    # Language analysis
-    unique_languages: list[str]
-    average_temperature: float | None
-    
     # Document processing timeline
     oldest_document_date: AwareDatetime | None
     newest_document_date: AwareDatetime | None
