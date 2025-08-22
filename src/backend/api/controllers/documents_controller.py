@@ -14,45 +14,10 @@ from backend.api.schemas import documents_schema, generics_schema, files_schema,
 from backend.api.enums import FileType
 
 
+from backend.crud.support import SupportCrud
+
 def _raise_not_found(callback: Callable[..., DocumentModel | None], db: Session, id: UUID, **kwargs) -> DocumentModel:
-    maybe_document = callback(db=db, id=id, **kwargs)
-    if maybe_document is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Document with ID {str(id)!r} not found",
-        )
-    
-    return maybe_document
-
-
-def _process_upload(db: Session, project_id: UUID, upload_data: files_schema.FileUpload, password: str) -> tuple[str, str] | documents_schema.DocumentBulkUpload:
-    existing_filenames = set(documents_crud.get_existing_filenames_in_project(db=db, project_id=project_id))
-
-    try:
-        file_blob = upload_data.file.file.read()
-        safe_filename = security_manager.sanitize_filename(upload_data.file.filename)
-        if not security_manager.validate_file_size(file_size=len(file_blob)):
-            return upload_data.file.filename, "File too large"
-    
-        if not security_manager.validate_file_type(mime_type=upload_data.file.content_type, file_data=file_blob):
-            return upload_data.file.filename, "Invalid PDF; only PDFs allowed"
-    
-        if safe_filename in existing_filenames:
-            return upload_data.file.filename, "Filename already exists in project"
-    
-        encrypted_data, salt = security_manager.encrypt_data(data=file_blob, password=password)
-        file_hash = security_manager.generate_file_hash(file_data=file_blob)
-        file_data = files_schema.FileCreate(
-            file_hash=file_hash, mime_type=upload_data.file.content_type,
-            data=encrypted_data, salt=salt, file_type=FileType.ORIGINAL,
-            document_id=None  # Placeholder for bulk operation
-        )
-        document_data = documents_schema.DocumentCreate(name=safe_filename, project_id=project_id, description=upload_data.description)
-    
-    except Exception as err:
-        return upload_data.file.filename, f"Error: {str(err)}"
-
-    return documents_schema.DocumentBulkUpload(document_data=document_data, file_data=file_data)
+    return SupportCrud().get_or_404(callback, entity_name="Document", not_found_id=id, db=db, id=id, **kwargs)
 
 
 def get(db: Session, document_id: UUID) -> documents_schema.Document:
@@ -178,14 +143,11 @@ def create(db: Session, document_data: documents_schema.DocumentCreate) -> docum
 def create_with_file(db: Session, upload_data: files_schema.FileUpload, password: str) -> documents_schema.Document:
     """Create a document with an associated original PDF file using bulk creation infrastructure."""
     # Verify project password first
-    if not projects_crud.verify_password(db=db, id=upload_data.project_id, password=password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid project password"
-        )
+    from backend.crud.support import SupportCrud
+    SupportCrud().verify_project_password_or_401(db=db, project_id=upload_data.project_id, password=password)
     
     # Use the existing processing logic
-    result = _process_upload(db=db, project_id=upload_data.project_id, upload_data=upload_data, password=password)
+    result = SupportCrud().process_upload(db=db, project_id=upload_data.project_id, upload_data=upload_data, password=password)
     
     # Handle processing errors
     if isinstance(result, tuple):
@@ -212,17 +174,9 @@ def create_with_file(db: Session, upload_data: files_schema.FileUpload, password
             )
     
     # Use bulk creation for consistency and transaction safety
-        try:
-            created_documents = documents_crud.bulk_create_with_files(db=db, bulk_data=[result])
-            # Initialize AI settings for created document(s)
-            from backend.crud import ai_settings_crud
-            from backend.core.config import settings as app_settings
-            for doc in created_documents:
-                ai_settings_crud.create_default_for_document(db=db, document_id=doc.id, defaults={
-                    "provider": app_settings.ai.__dict__.get("provider", "ollama") if hasattr(app_settings.ai, "provider") else "ollama",
-                    "model_name": app_settings.ai.model,
-                    "temperature": 0.2,
-                })
+    try:
+        from backend.crud.support import SupportCrud
+        created_documents = SupportCrud().bulk_create_documents_with_files_and_init(db=db, bulk_data=[result])
         # Return the single created document with joined data
         document = _raise_not_found(
             documents_crud.read, 
@@ -231,7 +185,7 @@ def create_with_file(db: Session, upload_data: files_schema.FileUpload, password
             join_with=["files", "prompts", "selections"]
         )
         return documents_schema.Document.model_validate(document)
-        
+    
     except Exception as err:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -254,14 +208,14 @@ def bulk_create_with_files(db: Session, uploads_data: list[files_schema.FileUplo
         )
     
     project_id = uploads_data[0].project_id
-    if not projects_crud.verify_password(db=db, id=project_id, password=password):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid project password")
+    from backend.crud.support import SupportCrud
+    SupportCrud().verify_project_password_or_401(db=db, project_id=project_id, password=password)
     
     if any(upload.project_id != project_id for upload in uploads_data):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="All files must belong to the same project")
 
     # Run processing logic and filter out failed results
-    results = list(map(lambda x: _process_upload(db=db, project_id=project_id, upload_data=x, password=password), uploads_data))
+    results = [SupportCrud().process_upload(db=db, project_id=project_id, upload_data=x, password=password) for x in uploads_data]
     successes = [ data for data in results if isinstance(data, documents_schema.DocumentBulkUpload) ]
     errors = [ error for error in results if isinstance(error, tuple) ]
     
@@ -342,11 +296,7 @@ def update_ai_settings(db: Session, document_id: UUID, data: documents_schema.Do
 def get_prompts(db: Session, document_id: UUID, skip: int = 0, limit: int = 100) -> list[prompts_schema.Prompt]:
     """Get prompts for a document."""
     # Verify document exists
-    if not documents_crud.exist(db=db, id=document_id):
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Document with ID {str(document_id)!r} not found"
-        )
+    _raise_not_found(documents_crud.read, db=db, id=document_id)
     
     # Get prompts by document ID
     prompts = prompts_crud.read_list_by_document(db=db, document_id=document_id, skip=skip, limit=limit)
@@ -356,11 +306,7 @@ def get_prompts(db: Session, document_id: UUID, skip: int = 0, limit: int = 100)
 def add_prompt(db: Session, document_id: UUID, prompt_data: prompts_schema.PromptCreate) -> prompts_schema.Prompt:
     """Add a prompt to a document."""
     # Verify document exists
-    if not documents_crud.exist(db=db, id=document_id):
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Document with ID {str(document_id)!r} not found"
-        )
+    _raise_not_found(documents_crud.read, db=db, id=document_id)
     
     # Set document_id and create prompt
     prompt_data.document_id = document_id
@@ -371,11 +317,7 @@ def add_prompt(db: Session, document_id: UUID, prompt_data: prompts_schema.Promp
 def get_selections(db: Session, document_id: UUID, skip: int = 0, limit: int = 100) -> list[selections_schema.Selection]:
     """Get selections for a document."""
     # Verify document exists
-    if not documents_crud.exist(db=db, id=document_id):
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Document with ID {str(document_id)!r} not found"
-        )
+    _raise_not_found(documents_crud.read, db=db, id=document_id)
     
     # Get selections by document ID
     selections = selections_crud.read_list_by_document(db=db, document_id=document_id, skip=skip, limit=limit)
@@ -385,11 +327,7 @@ def get_selections(db: Session, document_id: UUID, skip: int = 0, limit: int = 1
 def add_selection(db: Session, document_id: UUID, selection_data: selections_schema.SelectionCreate) -> selections_schema.Selection:
     """Add a selection to a document."""
     # Verify document exists
-    if not documents_crud.exist(db=db, id=document_id):
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Document with ID {str(document_id)!r} not found"
-        )
+    _raise_not_found(documents_crud.read, db=db, id=document_id)
     
     # Set document_id and create selection
     selection_data.document_id = document_id
@@ -402,104 +340,39 @@ def add_selection(db: Session, document_id: UUID, selection_data: selections_sch
 def clear_staged_selections(db: Session, document_id: UUID, request: selections_schema.SelectionClearRequest) -> generics_schema.Success:
     """Clear staged selections (committed=False) either all or a subset by IDs."""
     _ = _raise_not_found(documents_crud.read, db=db, id=document_id)
-    from backend.db.models import Selection as SelectionModel
-
-    if request.clear_all:
-        deleted = (
-            db.query(SelectionModel)
-            .filter(SelectionModel.document_id == document_id, SelectionModel.committed == False)
-            .delete(synchronize_session=False)
-        )
-        db.commit()
-        return generics_schema.Success(message="Cleared all staged selections", detail={"deleted_count": int(deleted)})
-
-    if not request.selection_ids:
-        return generics_schema.Success(message="No selections to clear", detail={"deleted_count": 0})
-
-    deleted = (
-        db.query(SelectionModel)
-        .filter(
-            SelectionModel.document_id == document_id,
-            SelectionModel.committed == False,
-            SelectionModel.id.in_(request.selection_ids),
-        )
-        .delete(synchronize_session=False)
+    from backend.crud.support import SupportCrud
+    deleted_count = SupportCrud().clear_staged_selections(
+        db=db,
+        document_id=document_id,
+        selection_ids=list(request.selection_ids or []),
+        clear_all=bool(request.clear_all),
     )
-    db.commit()
-    return generics_schema.Success(message="Cleared selected staged selections", detail={"deleted_count": int(deleted)})
+    return generics_schema.Success(message=("Cleared all staged selections" if request.clear_all else "Cleared selected staged selections"), detail={"deleted_count": int(deleted_count)})
 
 
 def uncommit_selections(db: Session, document_id: UUID, request: selections_schema.SelectionUncommitRequest) -> list[selections_schema.Selection]:
     """Flip committed selections to staged (committed=False) for all or provided IDs."""
     _ = _raise_not_found(documents_crud.read, db=db, id=document_id)
-    from backend.db.models import Selection as SelectionModel
-
-    if request.uncommit_all:
-        (
-            db.query(SelectionModel)
-            .filter(SelectionModel.document_id == document_id, SelectionModel.committed == True)
-            .update({"committed": False}, synchronize_session=False)
-        )
-        db.commit()
-    else:
-        if not request.selection_ids:
-            return []
-        (
-            db.query(SelectionModel)
-            .filter(
-                SelectionModel.document_id == document_id,
-                SelectionModel.id.in_(request.selection_ids),
-            )
-            .update({"committed": False}, synchronize_session=False)
-        )
-        db.commit()
-
-    # Return all staged selections after operation
-    staged = [
-        s for s in selections_crud.read_list_by_document(db=db, document_id=document_id)
-        if not getattr(s, "committed", False)
-    ]
+    from backend.crud.support import SupportCrud
+    staged = SupportCrud().uncommit_selections(
+        db=db,
+        document_id=document_id,
+        selection_ids=list(request.selection_ids or []),
+        uncommit_all=bool(request.uncommit_all),
+    )
     return [selections_schema.Selection.model_validate(i) for i in staged]
 
 
 def commit_staged_selections(db: Session, document_id: UUID, request: selections_schema.SelectionCommitRequest) -> list[selections_schema.Selection]:
-    """Commit staged selections for a document.
-    Either commit all staged selections or a provided subset of selection IDs.
-    Returns all committed selections for the document.
-    """
-    # Ensure document exists
+    """Commit staged selections for a document and return committed selections."""
     _ = _raise_not_found(documents_crud.read, db=db, id=document_id)
-
-    from backend.db.models import Selection as SelectionModel
-
-    if request.commit_all:
-        (
-            db.query(SelectionModel)
-            .filter(
-                SelectionModel.document_id == document_id,
-                SelectionModel.committed == False,
-            )
-            .update({"committed": True}, synchronize_session=False)
-        )
-        db.commit()
-    else:
-        if not request.selection_ids:
-            return []
-        (
-            db.query(SelectionModel)
-            .filter(
-                SelectionModel.document_id == document_id,
-                SelectionModel.id.in_(request.selection_ids),
-            )
-            .update({"committed": True}, synchronize_session=False)
-        )
-        db.commit()
-
-    # Return all committed selections for this document
-    committed = [
-        s for s in selections_crud.read_list_by_document(db=db, document_id=document_id)
-        if getattr(s, "committed", False)
-    ]
+    from backend.crud.support import SupportCrud
+    committed = SupportCrud().commit_staged_selections(
+        db=db,
+        document_id=document_id,
+        selection_ids=list(request.selection_ids or []),
+        commit_all=bool(request.commit_all),
+    )
     return [selections_schema.Selection.model_validate(i) for i in committed]
 
 
@@ -622,42 +495,22 @@ def process(db: Session, document_id: UUID, password: str) -> generics_schema.Su
     5. Generate a redacted PDF file (not encrypted)
     6. Store the redacted file with salt=None
     """
-    # Get document with files and selections
-    document = _raise_not_found(
-        documents_crud.read, 
-        db=db, 
-        id=document_id, 
-        join_with=["files", "selections"]
-    )
-    
-    # Find original file
-    original_file = None
-    for file in document.files:
-        if file.file_type == FileType.ORIGINAL:
-            original_file = file
-            break
-    
-    if original_file is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Document has no original file - cannot process"
-        )
-    
+    # Use helpers to load doc and original file (400 if missing) and decrypt it
+    from backend.crud.support import SupportCrud
+    document = SupportCrud().get_document_or_404(db=db, document_id=document_id, join_with=["files", "selections"])
+    original_file = SupportCrud().get_original_file_or_error(document, not_found_status=status.HTTP_400_BAD_REQUEST)
+
     # Verify project password
-    if not projects_crud.verify_password(db=db, id=document.project_id, password=password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid project password"
-        )
-    
-    # Check if document has committed selections only
+    SupportCrud().verify_project_password_or_401(db=db, project_id=document.project_id, password=password)
+
+    # Check committed selections
     committed_selections = [s for s in document.selections if getattr(s, "committed", False)]
     if not committed_selections:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Document has no committed selections - cannot process"
         )
-    
+
     # If a redacted file already exists, delete it to allow reprocessing (replace semantics)
     existing_redacted_files = [file for file in document.files if file.file_type == FileType.REDACTED]
     for rf in existing_redacted_files:
@@ -669,35 +522,11 @@ def process(db: Session, document_id: UUID, password: str) -> generics_schema.Su
                 detail=f"Failed to remove existing redacted file before reprocessing: {str(e)}"
             )
 
-    # Decrypt original file data (original files are always encrypted)
-    if original_file.salt is None:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Original file has no encryption salt - data corruption"
-        )
-    
-    decrypted_data = security_manager.decrypt_data(
-        encrypted_data=original_file.data, 
-        password=password, 
-        salt=original_file.salt
-    )
-    
-    if decrypted_data is None:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to decrypt file - document may be corrupted"
-        )
-    
-    # Verify file integrity
-    if security_manager.generate_file_hash(decrypted_data) != original_file.file_hash:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="File integrity verification failed - document may be corrupted"
-        )
-    
+    # Decrypt original
+    decrypted_data = SupportCrud().decrypt_original_file_or_500(original_file=original_file, password=password)
+
     # Apply redaction
     try:
-        # redaction_service = create_redaction_service()
         redacted_pdf_data = redactor.redact_document(
             pdf_data=decrypted_data,
             selections=[ AreaSelection.model_validate(i) for i in committed_selections ]
@@ -707,11 +536,9 @@ def process(db: Session, document_id: UUID, password: str) -> generics_schema.Su
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Redaction failed: {str(e)}"
         )
-    
-    # Calculate file hash for redacted data
+
+    # Save redacted file
     redacted_file_hash = security_manager.generate_file_hash(redacted_pdf_data)
-    
-    # Create redacted file (unencrypted)
     file_data = files_schema.FileCreate(
         file_hash=redacted_file_hash,
         file_type=FileType.REDACTED,
@@ -720,11 +547,9 @@ def process(db: Session, document_id: UUID, password: str) -> generics_schema.Su
         document_id=document_id,
         file_size=len(redacted_pdf_data)
     )
-    
+
     try:
-        # Create the redacted file
         redacted_file = files_crud.create(db=db, data=file_data)
-        
         return generics_schema.Success(
             message="Document processed successfully - redacted file created",
             detail={
@@ -764,84 +589,25 @@ def download_original_file(
     Raises:
         HTTPException: For various error conditions
     """
-    # Get document with files
-    document = _raise_not_found(
-        documents_crud.read, 
-        db=db, 
-        id=document_id, 
-        join_with=["files"]
-    )
-    
-    # Find original file
-    original_file = None
-    for file in document.files:
-        if file.file_type == FileType.ORIGINAL:
-            original_file = file
-            break
-    
-    if original_file is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No original file found for this document"
-        )
-    
-    # Decode the base64-encoded encrypted password
-    try:
-        encrypted_password_bytes = base64.b64decode(request.encrypted_password)
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid base64-encoded encrypted password: {e}"
-        )
-    
-    # Decrypt the password using the ephemeral key
-    decrypted_password = security_manager.decrypt_with_ephemeral_key(
+    # Use helpers to load, decrypt password, verify project, and decrypt original file
+    from backend.crud.support import SupportCrud
+    support = SupportCrud()
+
+    document = support.get_document_or_404(db=db, document_id=document_id, join_with=["files"])
+    original_file = support.get_original_file_or_error(document, not_found_status=status.HTTP_404_NOT_FOUND)
+
+    decrypted_password = support.decrypt_password_from_encrypted_request(
+        encrypted_password_b64=request.encrypted_password,
         key_id=request.key_id,
-        encrypted_data=encrypted_password_bytes
     )
-    
-    if decrypted_password is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Failed to decrypt password. Key may be expired or invalid."
-        )
-    
-    # Verify project password
-    if not projects_crud.verify_password(db=db, id=document.project_id, password=decrypted_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid project password"
-        )
-    
-    # Decrypt file data (original files are always encrypted)
-    if original_file.salt is None:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Original file has no encryption salt - data corruption"
-        )
-    
-    decrypted_data = security_manager.decrypt_data(
-        encrypted_data=original_file.data, 
-        password=decrypted_password, 
-        salt=original_file.salt
-    )
-    
-    if decrypted_data is None:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to decrypt file - document may be corrupted"
-        )
-    
-    # Verify file integrity
-    if security_manager.generate_file_hash(decrypted_data) != original_file.file_hash:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="File integrity verification failed - document may be corrupted"
-        )
-    
+
+    support.verify_project_password_or_401(db=db, project_id=document.project_id, password=decrypted_password)
+
+    decrypted_data = support.decrypt_original_file_or_500(original_file=original_file, password=decrypted_password)
+
     # Generate filename
     safe_filename = f"{document.name}_original.pdf"
-    
+
     # Determine headers based on stream parameter
     if request.stream:
         headers = {
@@ -854,7 +620,7 @@ def download_original_file(
         headers = {
             "Content-Disposition": f'attachment; filename="{safe_filename}"'
         }
-    
+
     return StreamingResponse(
         io.BytesIO(decrypted_data),
         media_type=original_file.mime_type,
@@ -881,56 +647,22 @@ def download_redacted_file(
     Raises:
         HTTPException: If document or redacted file not found
     """
-    # Get document with files
-    document = _raise_not_found(
-        documents_crud.read, 
-        db=db, 
-        id=document_id, 
-        join_with=["files"]
-    )
-    
-    # Find redacted file
-    redacted_file = None
-    for file in document.files:
-        if file.file_type == FileType.REDACTED:
-            redacted_file = file
-            break
-    
-    if redacted_file is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No redacted file found for this document"
-        )
-    
-    # Redacted files are not encrypted (salt should be None)
-    if redacted_file.salt is not None:
-        # This shouldn't happen, but handle gracefully
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Redacted file appears to be encrypted - system error"
-        )
-    
-    # Use the file data directly (no decryption needed)
-    file_data = redacted_file.data
-    
-    # Verify file integrity
-    if security_manager.generate_file_hash(file_data) != redacted_file.file_hash:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="File integrity verification failed - document may be corrupted"
-        )
-    
+    # Use helpers to fetch document and validated redacted file data
+    from backend.crud.support import SupportCrud
+    support = SupportCrud()
+    document, redacted_file, file_data = support.get_redacted_file_data(db=db, document_id=document_id, join_with=["files"])
+
     # Generate filename: use document ID to avoid leaking names
     safe_filename = f"{document.id}.pdf"
-    
+
     # Always download as attachment for redacted files and disable caching
     headers = {
-        "Content-Disposition": f'attachment; filename="{safe_filename}"',
+        "Content-Disposition": f'attachment; filename=\"{safe_filename}\"',
         "Cache-Control": "no-cache, no-store, must-revalidate",
         "Pragma": "no-cache",
         "Expires": "0",
     }
-    
+
     return StreamingResponse(
         io.BytesIO(file_data),
         media_type=redacted_file.mime_type,

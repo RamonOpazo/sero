@@ -6,17 +6,11 @@ from sqlalchemy.orm import Session
 from backend.db.models import Prompt as PromptModel
 from backend.crud import prompts_crud
 from backend.api.schemas import prompts_schema, generics_schema
+from backend.crud.support import SupportCrud
 
 
 def _raise_not_found(callback: Callable[..., PromptModel | None], db: Session, id: UUID, **kwargs) -> PromptModel:
-    maybe_prompt = callback(db=db, id=id, **kwargs)
-    if maybe_prompt is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Prompt with ID {str(id)!r} not found",
-        )
-    
-    return maybe_prompt
+    return SupportCrud().get_or_404(callback, entity_name="Prompt", not_found_id=id, db=db, id=id, **kwargs)
 
 
 def create(db: Session, prompt_data: prompts_schema.PromptCreate) -> prompts_schema.Prompt:
