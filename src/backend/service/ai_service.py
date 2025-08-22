@@ -34,6 +34,7 @@ class AiService(ABC):
 # Default service factory (can be extended to support multiple providers)
 from backend.core.config import settings as app_settings
 from backend.core.ai_ollama import OllamaClient, OllamaOptions
+from backend.service.prompt_composer import compose_selection_instructions
 
 class OllamaAiService(AiService):
     def __init__(self) -> None:
@@ -44,12 +45,10 @@ class OllamaAiService(AiService):
 
     async def generate_selections(self, request: GenerateSelectionsRequest) -> GenerateSelectionsResponse:
         # Ask the model to output strict JSON for selections
-        schema_hint = (
-            "You must respond with JSON only. Schema: {\"selections\": ["
-            "{\"page_number\": int|null, \"x\": float, \"y\": float, \"width\": float, \"height\": float, \"confidence\": float}"
-            "]}"
+        final_prompt = compose_selection_instructions(
+            system_prompt=request.system_prompt,
+            rules=request.prompts,
         )
-        final_prompt = "\n\n---\n\n".join([schema_hint] + request.prompts)
         raw = await self.client.generate(model=app_settings.ai.model, prompt=final_prompt, options=OllamaOptions())
         
         # Parse JSON into SelectionCreate objects

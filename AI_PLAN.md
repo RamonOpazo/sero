@@ -24,6 +24,7 @@ Tracking (Steps & Actions)
   8) Document-scoped AI apply endpoint scaffold (DONE)
 
 - Phase 2 (in progress):
+  8.1) Centralize prompt composition (DONE)
   9) Implement AI apply flow (IN PROGRESS)
      - Controller: documents_controller.apply_ai_and_stage (declarative only)
      - AiService: encapsulates all Ollama logic and parsing (add JSON schema parsing)
@@ -43,6 +44,9 @@ Tracking (Steps & Actions)
   13) Optionally enhance directives and parsing templates
 
 Architecture Notes
+- Centralized prompt composition in backend/service/prompt_composer.py used by AiService.
+- AiService also exposes health() so all AI concerns are abstracted.
+- All AI functionality is abstracted via AiService; controllers remain declarative.
 - AiService also exposes health() so all AI concerns are abstracted.
 - All AI functionality is abstracted via AiService; controllers remain declarative.
 
