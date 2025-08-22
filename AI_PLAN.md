@@ -23,22 +23,27 @@ Tracking (Steps & Actions)
   7) Scaffold AI service abstraction and Ollama client (DONE)
   8) Document-scoped AI apply endpoint scaffold (DONE)
 
-- Phase 2 (up next):
-  9) Implement AI apply flow
+- Phase 2 (in progress):
+  9) Implement AI apply flow (IN PROGRESS)
      - Controller: documents_controller.apply_ai_and_stage (declarative only)
-     - AiService: encapsulates all Ollama logic and parsing
+     - AiService: encapsulates all Ollama logic and parsing (add JSON schema parsing)
      - Parse model response to SelectionCreate with confidence in [0,1]
      - Persist as committed=False
-  10) Add endpoint to commit staged selections
+  10) Add endpoint to commit staged selections (DONE)
       - PATCH /api/documents/id/{document_id}/selections/commit (payload: selection_ids or commit_all)
       - Flip committed=True for selected IDs; return updated selections
-  11) Health check endpoint for Ollama (optional)
+  11) Health check endpoint for Ollama (TODO)
+      - GET /api/ai/health -> { ok: boolean }
+  12) Manage staged selections (TODO)
+      - POST /api/documents/id/{document_id}/selections/staged/clear (selection_ids or clear_all)
+      - PATCH /api/documents/id/{document_id}/selections/uncommit (selection_ids or uncommit_all)
 
 - Phase 3 (later):
   12) Frontend integration updates for prompts + staged selections UI
   13) Optionally enhance directives and parsing templates
 
 Architecture Notes
+- AiService also exposes health() so all AI concerns are abstracted.
 - All AI functionality is abstracted via AiService; controllers remain declarative.
 
 Progress Notes
