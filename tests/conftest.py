@@ -1,8 +1,6 @@
 import pytest
 import asyncio
-import tempfile
 import uuid
-from pathlib import Path
 from unittest.mock import patch
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -16,21 +14,29 @@ from backend.db.models import Base
 
 @pytest.fixture(scope="session")
 def event_loop():
-    """Create an instance of the default event loop for the test session."""
+    """Create an instance of the default event loop for the test session.
+    Ensures proper shutdown of async generators and the default executor to avoid ResourceWarning.
+    """
     loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()
+    try:
+        yield loop
+    finally:
+        try:
+            # Gracefully shutdown async generators and the default executor
+            loop.run_until_complete(loop.shutdown_asyncgens())
+            loop.run_until_complete(loop.shutdown_default_executor())
+        except Exception:
+            pass
+        loop.close()
 
 
-@pytest.fixture
-def temp_db_path():
-    """Create a temporary database file path."""
-    import os
-    fd, path = tempfile.mkstemp(suffix=".sqlite")
-    os.close(fd)  # Close the file descriptor immediately
-    os.unlink(path)  # Remove the empty file so SQLite can create it properly
-    yield Path(path)
-    Path(path).unlink(missing_ok=True)
+@pytest.fixture(scope="session")
+def temp_db_path(tmp_path_factory):
+    """Create a temporary database file path using pytest's tmp_path_factory."""
+    db_dir = tmp_path_factory.mktemp("db")
+    path = db_dir / "test.sqlite"
+    # No need to pre-create or unlink; SQLite will create the file as needed
+    yield path
 
 
 @pytest.fixture
@@ -102,7 +108,6 @@ def sample_project_data():
     return {
         "name": f"Test Project {uuid.uuid4().hex[:8]}",
         "description": "A test project for API testing",
-        "version": 1,
         "contact_name": "Test User",
         "contact_email": "test@example.com",
         "password": "TestPassword123!"

@@ -1,8 +1,39 @@
 from typing import Annotated
-from pydantic import BaseModel, Field, UUID4, AwareDatetime, BeforeValidator, computed_field
+from pydantic import BaseModel, Field, UUID4, AwareDatetime, BeforeValidator, computed_field, ConfigDict
 
 from backend.api.schemas.files_schema import File, FileCreate
 from backend.api.schemas.prompts_schema import Prompt
+from pydantic import BaseModel, UUID4, AwareDatetime, Field
+
+
+class DocumentAiSettings(BaseModel):
+    id: UUID4
+    created_at: AwareDatetime
+    updated_at: AwareDatetime | None
+    provider: str
+    model_name: str
+    temperature: float
+    top_p: float | None
+    max_tokens: int | None
+    num_ctx: int | None
+    seed: int | None
+    stop_tokens: list[str]
+    system_prompt: str | None
+    document_id: UUID4
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class DocumentAiSettingsUpdate(BaseModel):
+    provider: str | None = None
+    model_name: str | None = None
+    temperature: float | None = Field(None, ge=0, le=1)
+    top_p: float | None = Field(None, ge=0, le=1)
+    max_tokens: int | None = Field(None, ge=1)
+    num_ctx: int | None = Field(None, ge=1)
+    seed: int | None = None
+    stop_tokens: list[str] | None = None
+    system_prompt: str | None = None
 from backend.api.schemas.selections_schema import Selection
 from backend.api.enums import FileType
 
@@ -29,8 +60,7 @@ class Document(BaseModel):
     def redacted_file(self) -> "File | None":
         return next((f for f in self.files if f.file_type == FileType.REDACTED), None)
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class DocumentCreate(BaseModel):
@@ -63,8 +93,7 @@ class DocumentShallow(BaseModel):
     selection_count: int
     is_processed: bool
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class DocumentSummary(BaseModel):
@@ -101,8 +130,7 @@ class DocumentSummary(BaseModel):
     prompt_languages: list[str]  # Unique languages from all prompts
     average_temperature: float | None  # Average temperature of all prompts
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class DocumentBulkUpload(BaseModel):

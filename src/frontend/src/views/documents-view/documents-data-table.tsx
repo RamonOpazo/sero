@@ -295,8 +295,10 @@ export function DocumentsDataTable({ onDocumentSelect }: DocumentsDataTableProps
   const endIndex = startIndex + pageSize
   const paginatedDocuments = filteredDocuments.slice(startIndex, endIndex)
 
+  let content: React.ReactNode = null;
+
   if (isLoading) {
-    return (
+    content = (
       <div className="flex items-center justify-center py-8">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
@@ -304,10 +306,8 @@ export function DocumentsDataTable({ onDocumentSelect }: DocumentsDataTableProps
         </div>
       </div>
     );
-  }
-
-  if (error) {
-    return (
+  } else if (error) {
+    content = (
       <div className="flex items-center justify-center py-8">
         <div className="text-center">
           <p className="text-destructive mb-2">Failed to load documents</p>
@@ -315,21 +315,17 @@ export function DocumentsDataTable({ onDocumentSelect }: DocumentsDataTableProps
         </div>
       </div>
     );
-  }
-
-  if (documents.length === 0) {
-    return (
+  } else if (documents.length === 0) {
+    content = (
       <EmptyState
-        message={`No documents found${state.currentProject ? ` in "${state.currentProject.name}"` : ''}`}
+        message={`No documents found${state.currentProject ? ` in \"${state.currentProject.name}\"` : ''}`}
         buttonText="Upload your first document"
         buttonIcon={<Plus className="h-4 w-4" />}
         onButtonClick={actionHandlers.onCreateDocument}
       />
     );
-  }
-
-  return (
-    <>
+  } else {
+    content = (
       <DataTable
         columns={legacyColumns}
         data={paginatedDocuments}
@@ -358,6 +354,12 @@ export function DocumentsDataTable({ onDocumentSelect }: DocumentsDataTableProps
           pageSizeOptions: [5, 10, 20, 50]
         }}
       />
+    );
+  }
+
+  return (
+    <>
+      {content}
       
       {/* Document Upload Dialog */}
       <UploadDocumentsDialog

@@ -50,7 +50,7 @@ class DocumentCrud(BaseCrud[Document, documents_schema.DocumentCreate, documents
         """Search documents with prompt/selection counts and is_processed flag using efficient subqueries.
         Avoids row multiplication by not joining related tables.
         """
-        from sqlalchemy import func, exists, and_, select
+        from sqlalchemy import func, and_, select
         from backend.db.models import File, Prompt, Selection
         from backend.api.enums import FileType
         

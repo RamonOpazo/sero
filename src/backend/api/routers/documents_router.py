@@ -151,6 +151,23 @@ async def get_document_tags(
     return documents_controller.get_tags(db=db, document_id=document_id)
 
 
+@router.get("/id/{document_id}/ai-settings", response_model=documents_schema.DocumentAiSettings)
+async def get_document_ai_settings(
+    document_id: UUID,
+    db: Session = Depends(get_db_session)
+):
+    """Get AI settings for a document."""
+    return documents_controller.get_ai_settings(db=db, document_id=document_id)
+
+
+@router.put("/id/{document_id}/ai-settings", response_model=documents_schema.DocumentAiSettings)
+async def update_document_ai_settings(
+    document_id: UUID,
+    data: documents_schema.DocumentAiSettingsUpdate,
+    db: Session = Depends(get_db_session)
+):
+    """Update AI settings for a document."""
+    return documents_controller.update_ai_settings(db=db, document_id=document_id, data=data)
 
 
 @router.get("/id/{document_id}/prompts", response_model=list[prompts_schema.Prompt])
@@ -195,14 +212,53 @@ async def add_selection_to_document(
     return documents_controller.add_selection(db=db, document_id=document_id, selection_data=selection_data)
 
 
+@router.post("/id/{document_id}/ai/apply", response_model=list[selections_schema.Selection])
+async def apply_ai(
+    document_id: UUID,
+    db: Session = Depends(get_db_session),
+):
+    """Apply AI to generate staged selections (committed=False)."""
+    return documents_controller.apply_ai_and_stage(db=db, document_id=document_id)
+
+
+@router.patch("/id/{document_id}/selections/commit", response_model=list[selections_schema.Selection])
+async def commit_staged_selections(
+    document_id: UUID,
+    request: selections_schema.SelectionCommitRequest,
+    db: Session = Depends(get_db_session),
+):
+    """Commit staged selections for a document (by IDs or all)."""
+    return documents_controller.commit_staged_selections(db=db, document_id=document_id, request=request)
+
+
+@router.post("/id/{document_id}/selections/staged/clear", response_model=generics_schema.Success)
+async def clear_staged(
+    document_id: UUID,
+    request: selections_schema.SelectionClearRequest,
+    db: Session = Depends(get_db_session),
+):
+    """Clear staged selections (all or a subset by IDs)."""
+    return documents_controller.clear_staged_selections(db=db, document_id=document_id, request=request)
+
+
+@router.patch("/id/{document_id}/selections/uncommit", response_model=list[selections_schema.Selection])
+async def uncommit(
+    document_id: UUID,
+    request: selections_schema.SelectionUncommitRequest,
+    db: Session = Depends(get_db_session),
+):
+    """Flip committed selections back to staged (all or subset)."""
+    return documents_controller.uncommit_selections(db=db, document_id=document_id, request=request)
+
+
 @router.post("/id/{document_id}/process", response_model=generics_schema.Success)
 async def process_document(
     document_id: UUID,
-    password: str = Form(...),
+    request: files_schema.EncryptedFileDownloadRequest,
     db: Session = Depends(get_db_session)
 ):
-    """Process a document to generate redacted version."""
-    return documents_controller.process(db=db, document_id=document_id, password=password)
+    """Process a document to generate a redacted version using encrypted password."""
+    return documents_controller.process(db=db, document_id=document_id, request=request)
 
 
 @router.post("/id/{document_id}/download/original", response_class=StreamingResponse)
@@ -211,23 +267,7 @@ async def download_original_file(
     request: files_schema.EncryptedFileDownloadRequest,
     db: Session = Depends(get_db_session)
 ) -> StreamingResponse:
-    """Download the original file for a document using encrypted password.
-    
-    This endpoint provides document-centric file access without requiring
-    separate file ID lookups. Original files are encrypted and require
-    password verification.
-    
-    Args:
-        document_id: UUID of the document
-        request: Contains encrypted password and key metadata
-        db: Database session
-        
-    Returns:
-        StreamingResponse: The decrypted original file
-        
-    Raises:
-        HTTPException: If document not found, no original file, or invalid password
-    """
+    """Download the original file for a document using encrypted password."""
     return documents_controller.download_original_file(
         db=db, 
         document_id=document_id, 
@@ -240,21 +280,7 @@ async def download_redacted_file(
     document_id: UUID,
     db: Session = Depends(get_db_session)
 ) -> StreamingResponse:
-    """Download the redacted file for a document.
-    
-    This endpoint provides direct access to redacted files without password
-    requirements since redacted files are not encrypted.
-    
-    Args:
-        document_id: UUID of the document
-        db: Database session
-        
-    Returns:
-        StreamingResponse: The redacted file
-        
-    Raises:
-        HTTPException: If document not found or no redacted file exists
-    """
+    """Download the redacted file for a document."""
     return documents_controller.download_redacted_file(
         db=db, 
         document_id=document_id

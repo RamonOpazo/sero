@@ -12,6 +12,7 @@ export const SelectionSchema = z.object({
   width: z.number(),
   height: z.number(),
   confidence: z.number().nullable(),
+  committed: z.boolean(),
   document_id: UUIDSchema,
   is_ai_generated: z.boolean(), // computed field
 });
@@ -24,6 +25,7 @@ export const SelectionCreateSchema = z.object({
   width: z.number().min(0).max(1),
   height: z.number().min(0).max(1),
   confidence: z.number().min(0).max(1).nullable().optional(),
+  committed: z.boolean().default(false),
   document_id: UUIDSchema,
 });
 
@@ -34,6 +36,7 @@ export const SelectionUpdateSchema = z.object({
   width: z.number().min(0).max(1).optional(),
   height: z.number().min(0).max(1).optional(),
   confidence: z.number().min(0).max(1).nullable().optional(),
+  committed: z.boolean().optional(),
 });
 
 // Types

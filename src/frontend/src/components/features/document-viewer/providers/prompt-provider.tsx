@@ -64,10 +64,11 @@ export function PromptProvider({ children, documentId, initialPrompts }: PromptP
       document_id: currentId.current,
       created_at: new Date().toISOString(),
       updated_at: null,
-      text: data.text,
-      temperature: data.temperature,
-      languages: data.languages,
-    };
+      title: (data as any).title,
+      prompt: (data as any).prompt,
+      directive: (data as any).directive,
+      enabled: (data as any).enabled ?? true,
+    } as PromptType;
     dispatch('CREATE_ITEM', temp);
   }, [dispatch]);
 

@@ -1,7 +1,8 @@
 import { toast } from 'sonner';
-import type { ApiResponse, DocumentShallowType, DocumentCreateType, DocumentUpdateType, DocumentBulkUploadRequestType } from '@/types';
+import type { ApiResponse, DocumentShallowType, DocumentCreateType, DocumentUpdateType, DocumentBulkUploadRequestType, DocumentType } from '@/types';
 import { AsyncResultWrapper, type Result } from '@/lib/result';
 import { api } from '@/lib/axios';
+import { encryptPasswordSecurely, isWebCryptoSupported } from '@/lib/crypto';
 
 /**
  * Documents API utility - centralized document CRUD operations
@@ -11,6 +12,24 @@ import { api } from '@/lib/axios';
  * - useDocumentsView hook (for direct operations)
  * - Any other components that need document API access
  */
+
+function toShallow(doc: DocumentType): DocumentShallowType {
+  const prompt_count = Array.isArray((doc as any).prompts) ? (doc as any).prompts.length : 0;
+  const selection_count = Array.isArray((doc as any).selections) ? (doc as any).selections.length : 0;
+  const is_processed = Boolean((doc as any).redacted_file);
+  return {
+    id: doc.id,
+    created_at: doc.created_at,
+    updated_at: doc.updated_at,
+    name: doc.name,
+    description: doc.description,
+    project_id: doc.project_id,
+    tags: doc.tags,
+    prompt_count,
+    selection_count,
+    is_processed,
+  };
+}
 
 export const DocumentsAPI = {
   /**
@@ -36,7 +55,48 @@ export const DocumentsAPI = {
   },
 
   /**
+   * Get a single shallow document by ID
+   */
+  async fetchDocumentShallow(documentId: string): Promise<Result<DocumentShallowType, unknown>> {
+    return await AsyncResultWrapper
+      .from(api.safe.get(`/documents/id/${documentId}/shallow`) as Promise<Result<DocumentShallowType, unknown>>)
+      .catch((error: unknown) => {
+        toast.error("Failed to fetch document", { description: "Please refresh and try again." });
+        throw error;
+      })
+      .toResult();
+  },
+
+  /**
+   * Get document summary by ID
+   */
+  async fetchDocumentSummary(documentId: string) {
+    return await AsyncResultWrapper
+      .from(api.safe.get(`/documents/id/${documentId}/summary`))
+      .catch((error: unknown) => {
+        toast.error("Failed to load summary", { description: "Please try again." });
+        throw error;
+      })
+      .toResult();
+  },
+
+  /**
+   * Get document tags by ID
+   */
+  async fetchDocumentTags(documentId: string): Promise<Result<string[], unknown>> {
+    return await AsyncResultWrapper
+      .from(api.safe.get(`/documents/id/${documentId}/tags`) as Promise<Result<string[], unknown>>)
+      .catch((error: unknown) => {
+        toast.error("Failed to load tags", { description: "Please try again." });
+        throw error;
+      })
+      .toResult();
+  },
+
+  /**
    * Fetch documents for a specific project
+   * Note: Backend does not support project filter on /documents/shallow.
+   * We therefore use /documents/search (returns full Document[]) and map to shallow.
    */
   async fetchDocumentsForProject(projectId: string, skip = 0, limit = 100): Promise<Result<DocumentShallowType[], unknown>> {
     const params = new URLSearchParams();
@@ -44,10 +104,11 @@ export const DocumentsAPI = {
     if (limit !== 100) params.append('limit', limit.toString());
     params.append('project_id', projectId);
     const queryString = params.toString();
-    const url = `/documents/shallow${queryString ? `?${queryString}` : ''}`;
+    const url = `/documents/search${queryString ? `?${queryString}` : ''}`;
 
     return await AsyncResultWrapper
-      .from(api.safe.get(url) as Promise<Result<DocumentShallowType[], unknown>>)
+      .from(api.safe.get(url) as Promise<Result<DocumentType[], unknown>>)
+      .map((docs: DocumentType[]) => docs.map(toShallow))
       .catch((error: unknown) => {
         toast.error(
           "Failed to fetch documents",
@@ -63,11 +124,12 @@ export const DocumentsAPI = {
    */
   async createDocument(documentData: DocumentCreateType): Promise<Result<DocumentShallowType, unknown>> {
     return AsyncResultWrapper
-      .from(api.safe.post(`/documents`, documentData) as Promise<Result<DocumentShallowType, unknown>>)
+      .from(api.safe.post(`/documents`, documentData) as Promise<Result<DocumentType, unknown>>)
+      .map((doc: DocumentType) => toShallow(doc))
       .tap(() => {
         toast.success(
           "Document created successfully",
-          { description: `Created "${documentData.name}"` }
+          { description: `Created \"${documentData.name}\"` }
         );
       })
       .catch((error: unknown) => {
@@ -83,17 +145,18 @@ export const DocumentsAPI = {
   /**
    * Update an existing document
    */
-  async updateDocument(documentId: string, documentData: DocumentUpdateType): Promise<Result<ApiResponse, unknown>> {
+  async updateDocument(documentId: string, documentData: DocumentUpdateType): Promise<Result<DocumentShallowType, unknown>> {
     return AsyncResultWrapper
       .from(api.safe.put(`/documents/id/${documentId}`, {
         name: documentData.name?.trim(),
         description: documentData.description?.trim(),
         tags: documentData.tags,
-      }) as Promise<Result<ApiResponse, unknown>>)
+      }) as Promise<Result<DocumentType, unknown>>)
+      .map((doc: DocumentType) => toShallow(doc))
       .tap(() => {
         toast.success(
           "Document updated successfully",
-          { description: `Updated "${documentData.name || 'document'}"` }
+          { description: `Updated \"${documentData.name || 'document'}\"` }
         );
       })
       .catch((error: unknown) => {
@@ -151,8 +214,9 @@ export const DocumentsAPI = {
 
   /**
    * Upload documents in bulk
+   * Note: Backend returns a Success response, not the created documents list.
    */
-  async uploadDocuments(uploadData: DocumentBulkUploadRequestType): Promise<Result<DocumentShallowType[], unknown>> {
+  async uploadDocuments(uploadData: DocumentBulkUploadRequestType): Promise<Result<ApiResponse, unknown>> {
     const formData = new FormData();
     formData.append('project_id', uploadData.project_id);
     formData.append('password', uploadData.password);
@@ -171,16 +235,11 @@ export const DocumentsAPI = {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
-      }) as Promise<Result<DocumentShallowType[], unknown>>)
-      .tap((documents) => {
-        const documentCount = documents.length;
+      }) as Promise<Result<ApiResponse, unknown>>)
+      .tap((resp) => {
         toast.success(
-          `Successfully uploaded ${documentCount} document${documentCount !== 1 ? "s" : ""}`,
-          { 
-            description: documentCount === 1 
-              ? `Uploaded "${documents[0].name}"` 
-              : `Uploaded ${documentCount} documents` 
-          }
+          "Successfully uploaded documents",
+          { description: resp?.message ?? 'Upload complete' } as any
         );
       })
       .catch((error: unknown) => {
@@ -195,15 +254,22 @@ export const DocumentsAPI = {
 
   /**
    * Process an original document to produce a redacted file
+   * Uses encrypted password as required by backend.
    */
   async processDocument(documentId: string, password: string): Promise<Result<ApiResponse, unknown>> {
-    const form = new FormData();
-    form.append('password', password);
+    if (!isWebCryptoSupported()) {
+      const error = new Error('Web Crypto API not supported in this browser');
+      return { ok: false, error };
+    }
 
     return AsyncResultWrapper
-      .from(api.safe.post(`/documents/id/${documentId}/process`, form, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      }) as Promise<Result<ApiResponse, unknown>>)
+      .from((async () => {
+        const encrypted = await encryptPasswordSecurely(password);
+        return api.safe.post(`/documents/id/${documentId}/process`, {
+          key_id: encrypted.keyId,
+          encrypted_password: encrypted.encryptedPassword,
+        }) as Promise<Result<ApiResponse, unknown>>;
+      })())
       .tap(() => {
         toast.success(
           "Processing started",

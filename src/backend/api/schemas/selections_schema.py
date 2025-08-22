@@ -1,4 +1,19 @@
-from pydantic import BaseModel, UUID4, AwareDatetime, Field, computed_field
+from pydantic import BaseModel, UUID4, AwareDatetime, Field, computed_field, ConfigDict
+
+
+class SelectionCommitRequest(BaseModel):
+    selection_ids: list[UUID4] | None = Field(default=None)
+    commit_all: bool = Field(default=False)
+
+
+class SelectionClearRequest(BaseModel):
+    selection_ids: list[UUID4] | None = Field(default=None)
+    clear_all: bool = Field(default=False)
+
+
+class SelectionUncommitRequest(BaseModel):
+    selection_ids: list[UUID4] | None = Field(default=None)
+    uncommit_all: bool = Field(default=False)
 
 
 class Selection(BaseModel):
@@ -11,6 +26,7 @@ class Selection(BaseModel):
     width: float
     height: float
     confidence: float | None
+    committed: bool
     document_id: UUID4
 
     @computed_field
@@ -18,8 +34,7 @@ class Selection(BaseModel):
     def is_ai_generated(self) -> bool:
         return self.confidence is not None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class SelectionCreate(BaseModel):
@@ -30,6 +45,7 @@ class SelectionCreate(BaseModel):
     width: float = Field(..., ge=0, le=1)
     height: float = Field(..., ge=0, le=1)
     confidence: float | None = Field(None, ge=0, le=1)
+    committed: bool = Field(default=False)
     document_id: UUID4
 
 
@@ -40,3 +56,4 @@ class SelectionUpdate(BaseModel):
     width: float | None = Field(None, ge=0, le=1)
     height: float | None = Field(None, ge=0, le=1)
     confidence: float | None = Field(None, ge=0, le=1)
+    committed: bool | None = Field(None)

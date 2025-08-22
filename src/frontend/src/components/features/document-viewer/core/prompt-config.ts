@@ -22,10 +22,11 @@ const promptApiAdapter: ApiAdapter<PromptType, Omit<PromptCreateType, 'document_
     return result as any;
   },
   update: async (id: string, data: Partial<PromptType>) => {
-    const updates: Partial<Pick<PromptType, 'text'|'temperature'|'languages'>> = {
-      text: data.text,
-      temperature: data.temperature,
-      languages: data.languages,
+    const updates: Partial<Pick<PromptType, 'title' | 'prompt' | 'directive' | 'enabled'>> = {
+      title: data.title,
+      prompt: data.prompt,
+      directive: data.directive,
+      enabled: data.enabled,
     };
     const result = await DocumentViewerAPI.updatePrompt(id, updates);
     if (result.ok) {
@@ -42,14 +43,16 @@ const promptApiAdapter: ApiAdapter<PromptType, Omit<PromptCreateType, 'document_
 
 const promptTransforms: ApiTransforms<PromptType, Omit<PromptCreateType, 'document_id'>> = {
   forCreate: (prompt: PromptType): Omit<PromptCreateType, 'document_id'> => ({
-    text: prompt.text,
-    temperature: prompt.temperature,
-    languages: prompt.languages,
+    title: prompt.title,
+    prompt: prompt.prompt,
+    directive: prompt.directive,
+    enabled: prompt.enabled,
   }),
   forUpdate: (prompt: PromptType): Partial<PromptType> => ({
-    text: prompt.text,
-    temperature: prompt.temperature,
-    languages: prompt.languages,
+    title: prompt.title,
+    prompt: prompt.prompt,
+    directive: prompt.directive,
+    enabled: prompt.enabled,
   }),
   // Prompts come from API already shaped as PromptType, passthrough
   fromApi: (apiItem: unknown): PromptType => apiItem as PromptType,
@@ -62,7 +65,7 @@ const promptTransforms: ApiTransforms<PromptType, Omit<PromptCreateType, 'docume
 const promptComparators: Comparators<PromptType> = {
   getId: (p: PromptType) => p.id,
   areEqual: (a: PromptType, b: PromptType) => (
-    a.text === b.text && a.temperature === b.temperature && JSON.stringify(a.languages) === JSON.stringify(b.languages)
+    a.title === b.title && a.prompt === b.prompt && a.directive === b.directive && a.enabled === b.enabled
   ),
 };
 

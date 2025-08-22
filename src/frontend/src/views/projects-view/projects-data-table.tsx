@@ -1,10 +1,11 @@
 import { useMemo, useCallback, useState } from 'react';
-import { Eye, Plus, Copy, Edit, Trash2 } from 'lucide-react';
+import { Eye, Plus, Copy, Edit, Trash2, Settings2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { DataTable } from '@/components/features/data-table';
 import { columns, adaptColumns } from '@/components/features/data-table/columns';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { CreateProjectDialog, EditProjectDialog } from './dialogs';
+import { ProjectAiSettingsDialog } from './dialogs/project-ai-settings-dialog';
 import { ConfirmationDialog } from '@/components/shared/ConfirmationDialog';
 import { useProjectsView } from './use-projects-view';
 import type { ProjectShallowType } from '@/types';
@@ -25,8 +26,8 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
   
   // Column visibility state - exclude pinned columns from state management
   const [visibleColumns, setVisibleColumns] = useState<string[]>([
-    'description', 'document_count', 'updated_at', 
-    'contact_name', 'version', 'contact_email', 'created_at'
+'description', 'document_count', 'updated_at', 
+    'contact_name', 'contact_email', 'created_at'
   ])
 
   // Extract all business logic to custom hook
@@ -147,6 +148,12 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
           onClick: actionHandlers.onEditProject
         },
         {
+          id: 'ai-settings',
+          label: 'AI Settings',
+          icon: Settings2,
+          onClick: actionHandlers.onOpenAiSettings
+        },
+        {
           id: 'delete',
           label: 'Delete project',
           icon: Trash2,
@@ -164,7 +171,6 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
     { key: 'document_count', header: 'Documents' },
     { key: 'updated_at', header: 'Last Updated' },
     { key: 'contact_name', header: 'Contact Person' },
-    { key: 'version', header: 'Version' },
     { key: 'contact_email', header: 'Email Address' },
     { key: 'created_at', header: 'Created' }
   ], []);
@@ -225,42 +231,29 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
   const endIndex = startIndex + pageSize
   const paginatedProjects = filteredProjects.slice(startIndex, endIndex)
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading projects...</p>
-        </div>
+  const content = isLoading ? (
+    <div className="flex items-center justify-center py-8">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+        <p className="text-muted-foreground">Loading projects...</p>
       </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <div className="text-center">
-          <p className="text-destructive mb-2">Failed to load projects</p>
-          <p className="text-sm text-muted-foreground">{error}</p>
-        </div>
+    </div>
+  ) : error ? (
+    <div className="flex items-center justify-center py-8">
+      <div className="text-center">
+        <p className="text-destructive mb-2">Failed to load projects</p>
+        <p className="text-sm text-muted-foreground">{error}</p>
       </div>
-    );
-  }
-
-  if (projects.length === 0) {
-    return (
-      <EmptyState
-        message="No projects found"
-        buttonText="Create your first project"
-        buttonIcon={<Plus className="h-4 w-4" />}
-        onButtonClick={actionHandlers.onCreateProject}
-      />
-    );
-  }
-
-  return (
-    <>
-      <DataTable
+    </div>
+  ) : projects.length === 0 ? (
+    <EmptyState
+      message="No projects found"
+      buttonText="Create your first project"
+      buttonIcon={<Plus className="h-4 w-4" />}
+      onButtonClick={actionHandlers.onCreateProject}
+    />
+  ) : (
+    <DataTable
         columns={legacyColumns}
         data={paginatedProjects}
         selectedRows={selectedProjects}
@@ -287,6 +280,23 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
           showPagination: true,
           pageSizeOptions: [5, 10, 20, 50]
         }}
+      />
+  );
+
+  return (
+    <>
+      {content}
+
+      {/* Project AI Settings Dialog */}
+      <ProjectAiSettingsDialog
+        isOpen={dialogState.ai.isOpen}
+        onClose={dialogState.ai.onClose}
+        onSubmit={dialogState.ai.onSubmit}
+        initial={dialogState.ai.project ? {
+          provider: 'ollama',
+          model_name: 'llama3.1',
+          temperature: 0.2,
+        } : undefined}
       />
 
       {/* Project Creation Dialog */}

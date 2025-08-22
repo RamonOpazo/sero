@@ -21,7 +21,7 @@ interface DocumentControlsProps {
  */
 export default function DocumentControls({ document }: DocumentControlsProps) {
   const { isViewingProcessedDocument, dispatch } = useViewportState();
-  const { selectionCount, hasUnsavedChanges, save } = useSelections();
+  const { selectionCount, hasUnsavedChanges, save, allSelections } = useSelections();
   const [isPasswordDialogOpen, setPasswordDialogOpen] = React.useState(false);
   const [isProcessing, setIsProcessing] = React.useState(false);
   const [processError, setProcessError] = React.useState<string | null>(null);
@@ -208,6 +208,10 @@ export default function DocumentControls({ document }: DocumentControlsProps) {
         <DocumentPasswordDialog
           isOpen={isPasswordDialogOpen}
           onClose={() => { setPasswordDialogOpen(false); setProcessError(null); }}
+          notice={(() => {
+            const stagedCount = (allSelections || []).filter((s: any) => !s.committed).length;
+            return stagedCount > 0 ? `Note: ${stagedCount} staged selection${stagedCount === 1 ? '' : 's'} will be committed before processing.` : undefined;
+          })()}
           onConfirm={async (password) => {
             try {
               setProcessError(null);
@@ -229,6 +233,23 @@ export default function DocumentControls({ document }: DocumentControlsProps) {
                   toast.error('Failed to save selections');
                   return;
                 }
+              }
+
+              // Commit all staged selections before processing (backend requires committed selections)
+              try {
+                const api = (await import('@/lib/document-viewer-api')).DocumentViewerAPI;
+                const commitRes = await api.commitStagedSelections(document.id, { commit_all: true });
+                if (!commitRes.ok) {
+                  setIsProcessing(false);
+                  setProcessError('Failed to commit staged selections');
+                  toast.error('Failed to commit selections');
+                  return;
+                }
+              } catch (e) {
+                setIsProcessing(false);
+                setProcessError('Failed to commit staged selections');
+                toast.error('Failed to commit selections');
+                return;
               }
 
               // Process on backend

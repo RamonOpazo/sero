@@ -11,7 +11,6 @@ export const ProjectSchema = z.object({
   updated_at: ISO8601DateTimeSchema.nullable(),
   name: z.string(),
   description: z.string().nullable(),
-  version: z.number().int(),
   contact_name: z.string(),
   contact_email: z.string(),
   password_hash: z.string(), // base64 encoded bytes
@@ -26,7 +25,6 @@ export const ProjectShallowSchema = z.object({
   updated_at: ISO8601DateTimeSchema.nullable(),
   name: z.string(),
   description: z.string().nullable(),
-  version: z.number().int(),
   contact_name: z.string(),
   contact_email: z.string(),
   
@@ -38,7 +36,6 @@ export const ProjectShallowSchema = z.object({
 export const ProjectCreateSchema = z.object({
   name: z.string().min(1).max(100),
   description: z.string().max(500).nullable().optional(),
-  version: z.number().int().default(1),
   contact_name: z.string().min(1).max(100),
   contact_email: z.string().min(1).max(100),
   password: z.string().min(8),
@@ -47,7 +44,6 @@ export const ProjectCreateSchema = z.object({
 export const ProjectUpdateSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   description: z.string().max(500).nullable().optional(),
-  version: z.number().int().optional(),
   contact_name: z.string().min(1).max(100).optional(),
   contact_email: z.string().min(1).max(100).optional(),
 });
@@ -56,7 +52,6 @@ export const ProjectSummarySchema = z.object({
   project_id: UUIDSchema,
   name: z.string(),
   description: z.string().nullable(),
-  version: z.number().int(),
   contact_name: z.string(),
   contact_email: z.string(),
   created_at: ISO8601DateTimeSchema,
@@ -80,10 +75,6 @@ export const ProjectSummarySchema = z.object({
   total_tags: z.number().int(),
   total_ai_selections: z.number().int(),
   total_manual_selections: z.number().int(),
-  
-  // Language analysis
-  unique_languages: z.array(z.string()),
-  average_temperature: z.number().nullable(),
   
   // Document processing timeline
   oldest_document_date: ISO8601DateTimeSchema.nullable(),

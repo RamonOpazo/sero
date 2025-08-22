@@ -1,5 +1,5 @@
 import { toast } from 'sonner';
-import type { PromptType, PromptCreateType, SelectionType, SelectionCreateType } from '@/types';
+import type { PromptType, PromptCreateType, SelectionType, SelectionCreateType, DocumentAiSettingsType, DocumentAiSettingsUpdateType } from '@/types';
 import { AsyncResultWrapper, type Result } from '@/lib/result';
 import { api } from '@/lib/axios';
 
@@ -12,6 +12,34 @@ import { api } from '@/lib/axios';
  */
 
 export const DocumentViewerAPI = {
+  // ===== AI SETTINGS =====
+  
+  /**
+   * Get AI settings for a document
+   */
+  async getAiSettings(documentId: string): Promise<Result<DocumentAiSettingsType, unknown>> {
+    return AsyncResultWrapper
+      .from(api.safe.get(`/documents/id/${documentId}/ai-settings`) as Promise<Result<DocumentAiSettingsType, unknown>>)
+      .catch((error: unknown) => {
+        toast.error("Failed to load AI settings", { description: "Please try again." });
+        throw error;
+      })
+      .toResult();
+  },
+
+  /**
+   * Update AI settings for a document
+   */
+  async updateAiSettings(documentId: string, updates: DocumentAiSettingsUpdateType): Promise<Result<DocumentAiSettingsType, unknown>> {
+    return AsyncResultWrapper
+      .from(api.safe.put(`/documents/id/${documentId}/ai-settings`, updates) as Promise<Result<DocumentAiSettingsType, unknown>>)
+      .catch((error: unknown) => {
+        toast.error("Failed to update AI settings", { description: "Please try again." });
+        throw error;
+      })
+      .toResult();
+  },
+
   // ===== PROMPT OPERATIONS =====
   
   /**
@@ -51,7 +79,7 @@ export const DocumentViewerAPI = {
   /**
    * Update an existing prompt
    */
-  async updatePrompt(promptId: string, updates: Partial<Pick<PromptType, 'text' | 'temperature' | 'languages'>>): Promise<Result<void, unknown>> {
+  async updatePrompt(promptId: string, updates: Partial<Pick<PromptType, 'title' | 'prompt' | 'directive' | 'enabled'>>): Promise<Result<void, unknown>> {
     return AsyncResultWrapper
       .from(api.safe.put(`/prompts/id/${promptId}`, updates))
       .tap(() => void 0)
@@ -77,6 +105,70 @@ export const DocumentViewerAPI = {
   },
 
   // ===== SELECTION OPERATIONS =====
+
+  /**
+   * Apply AI to generate staged selections (committed=false)
+   */
+  async applyAi(documentId: string): Promise<Result<SelectionType[], unknown>> {
+    return AsyncResultWrapper
+      .from(api.safe.post(`/documents/id/${documentId}/ai/apply`) as Promise<Result<SelectionType[], unknown>>)
+      .catch((error: unknown) => {
+        toast.error("Failed to apply AI", { description: "Please try again." });
+        throw error;
+      })
+      .toResult();
+  },
+
+  /**
+   * Commit staged selections (by IDs or all)
+   */
+  async commitStagedSelections(documentId: string, args: { selection_ids?: string[]; commit_all?: boolean }): Promise<Result<SelectionType[], unknown>> {
+    const payload = {
+      selection_ids: args.selection_ids ?? null,
+      commit_all: Boolean(args.commit_all),
+    };
+    return AsyncResultWrapper
+      .from(api.safe.patch(`/documents/id/${documentId}/selections/commit`, payload) as Promise<Result<SelectionType[], unknown>>)
+      .catch((error: unknown) => {
+        toast.error("Failed to commit selections", { description: "Please try again." });
+        throw error;
+      })
+      .toResult();
+  },
+
+  /**
+   * Clear staged selections (by IDs or all)
+   */
+  async clearStagedSelections(documentId: string, args: { selection_ids?: string[]; clear_all?: boolean }): Promise<Result<{ success: boolean; message?: string }, unknown>> {
+    const payload = {
+      selection_ids: args.selection_ids ?? null,
+      clear_all: Boolean(args.clear_all),
+    };
+    return AsyncResultWrapper
+      .from(api.safe.post(`/documents/id/${documentId}/selections/staged/clear`, payload) as Promise<Result<{ success: boolean; message?: string }, unknown>>)
+      .catch((error: unknown) => {
+        toast.error("Failed to clear staged selections", { description: "Please try again." });
+        throw error;
+      })
+      .toResult();
+  },
+
+  /**
+   * Uncommit selections (by IDs or all)
+   */
+  async uncommitSelections(documentId: string, args: { selection_ids?: string[]; uncommit_all?: boolean }): Promise<Result<SelectionType[], unknown>> {
+    const payload = {
+      selection_ids: args.selection_ids ?? null,
+      uncommit_all: Boolean(args.uncommit_all),
+    };
+    return AsyncResultWrapper
+      .from(api.safe.patch(`/documents/id/${documentId}/selections/uncommit`, payload) as Promise<Result<SelectionType[], unknown>>)
+      .catch((error: unknown) => {
+        toast.error("Failed to uncommit selections", { description: "Please try again." });
+        throw error;
+      })
+      .toResult();
+  },
 
   /**
    * Fetch document selections by document ID

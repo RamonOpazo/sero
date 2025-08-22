@@ -144,7 +144,7 @@ export default function PromptList({ onEditPrompt }: Props) {
     <ScrollArea className="h-80 hide-scrollbar w-full">
       <div className="space-y-1 w-full max-w-full">
         {promptsWithTypeInfo.map((prompt) => {
-          const { ruleType, priority, title, instructions } = parsePromptText(prompt.text);
+          const { ruleType, priority, title, instructions } = parsePromptText(prompt.prompt || '');
           const isNew = prompt.type === 'new';
           const isModified = prompt.isModified;
 

@@ -2,6 +2,47 @@ import sys
 import subprocess
 import uvicorn
 from pathlib import Path
+from importlib.metadata import PackageNotFoundError, version as pkg_version
+
+
+DIST_NAME = "sero"
+
+
+def _version_from_metadata() -> str:
+    try:
+        return pkg_version(DIST_NAME)
+    except PackageNotFoundError:
+        return ""
+
+
+def _version_from_git() -> str:
+    try:
+        # Prefer annotated tags; fallback prints commit when no tags
+        result = subprocess.run(
+            ["git", "describe", "--tags", "--dirty", "--always"],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        v = result.stdout.strip()
+        # Normalize common 'v' prefix from tags like v1.2.3
+        return v[1:] if v.startswith("v") else v
+    except Exception:
+        return ""
+
+
+def get_version() -> str:
+    """Resolve the current Sero version.
+    Order of resolution:
+    1) Installed package metadata (importlib.metadata)
+    2) Git describe (for editable/source checkouts)
+    3) Fallback to a sentinel version
+    """
+    v = _version_from_metadata() or _version_from_git()
+    return v or "0.0.0+unknown"
+
+
+__version__ = get_version()
 
 
 def main() -> None:
@@ -30,10 +71,10 @@ def test_cov() -> None:
     """Run tests with coverage report."""
     try:
         result = subprocess.run([
-            "uv", "run", "pytest", 
-            "--cov=src/backend", 
+            "uv", "run", "pytest",
+            "--cov=src/backend",
             "--cov-report=html",
-            "--cov-report=term-missing"
+            "--cov-report=term-missing",
         ], check=True)
         print("\nCoverage report generated in .coverage_html/index.html")
         sys.exit(result.returncode)
@@ -62,18 +103,8 @@ def db_init() -> None:
 
 
 def version() -> None:
-    """Show Sero version information."""
+    """Show Sero version information (CLI)."""
     try:
-        # Try to read version from pyproject.toml
-        pyproject_path = Path(__file__).parent.parent.parent / "pyproject.toml"
-        if pyproject_path.exists():
-            import tomllib
-            with open(pyproject_path, "rb") as f:
-                data = tomllib.load(f)
-                version = data.get("project", {}).get("version", "unknown")
-                name = data.get("project", {}).get("name", "sero")
-                print(f"{name} v{version}")
-        else:
-            print("Sero (development version)")
+        print(f"{DIST_NAME} v{get_version()}")
     except Exception:
         print("Sero (version unknown)")

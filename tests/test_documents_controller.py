@@ -1,0 +1,443 @@
+import base64
+import uuid
+import pytest
+from sqlalchemy.orm import Session
+
+from fastapi import HTTPException, status
+
+from backend.api.controllers import documents_controller
+from backend.api.schemas.documents_schema import DocumentCreate, DocumentUpdate
+from backend.api.schemas.prompts_schema import PromptCreate
+from backend.api.schemas.selections_schema import SelectionCreate
+from backend.api.schemas.files_schema import EncryptedFileDownloadRequest
+from backend.core.security import security_manager
+from backend.core.pdf_redactor import redactor
+from backend.db.models import Project as ProjectModel, Document as DocumentModel, File as FileModel, Selection as SelectionModel
+from backend.api.enums import FileType
+
+
+class TestDocumentsController:
+    def _create_project(self, db: Session, *, password: str = "StrongPW!123") -> ProjectModel:
+        proj = ProjectModel(
+            name=f"proj-{uuid.uuid4().hex[:6]}",
+            description="desc",
+            contact_name="tester",
+            contact_email="tester@example.com",
+            password_hash=security_manager.hash_password(password).encode("utf-8"),
+        )
+        db.add(proj)
+        db.commit()
+        db.refresh(proj)
+        return proj
+
+    def _create_document(self, db: Session, project_id) -> DocumentModel:
+        dc = DocumentCreate(name=f"doc-{uuid.uuid4().hex[:6]}.pdf", description=None, project_id=project_id, tags=[])
+        # Use controller create to initialize AI settings, etc.
+        created = documents_controller.create(db=db, document_data=dc)
+        # Load ORM for seeding files and selections
+        model = db.query(DocumentModel).filter(DocumentModel.id == created.id).first()
+        return model
+
+    def _attach_original(self, db: Session, document: DocumentModel, payload: bytes, password: str = "StrongPW!123") -> FileModel:
+        encrypted, salt = security_manager.encrypt_data(payload, password)
+        f = FileModel(
+            file_hash=security_manager.generate_file_hash(payload),
+            file_type=FileType.ORIGINAL,
+            mime_type="application/pdf",
+            data=encrypted,
+            salt=salt,
+            document_id=document.id,
+        )
+        db.add(f)
+        db.commit()
+        db.refresh(f)
+        return f
+
+    def _attach_redacted(self, db: Session, document: DocumentModel, payload: bytes) -> FileModel:
+        f = FileModel(
+            file_hash=security_manager.generate_file_hash(payload),
+            file_type=FileType.REDACTED,
+            mime_type="application/pdf",
+            data=payload,
+            salt=None,
+            document_id=document.id,
+        )
+        db.add(f)
+        db.commit()
+        db.refresh(f)
+        return f
+
+    def test_create_get_list_shallow_and_search(self, test_session: Session):
+        proj = self._create_project(test_session)
+        doc = self._create_document(test_session, proj.id)
+
+        got = documents_controller.get(db=test_session, document_id=doc.id)
+        assert got.id == doc.id and got.name == doc.name
+
+        lst = documents_controller.get_list(db=test_session, skip=0, limit=100)
+        assert any(str(i.id) == str(doc.id) for i in lst)
+
+        shallow = documents_controller.get_shallow_list(db=test_session, skip=0, limit=100)
+        assert any(str(i.id) == str(doc.id) for i in shallow)
+        s = documents_controller.get_shallow(db=test_session, document_id=doc.id)
+        assert s.id == doc.id
+        with pytest.raises(HTTPException) as exc:
+            documents_controller.get_shallow(db=test_session, document_id=uuid.UUID(int=0))
+        assert exc.value.status_code == status.HTTP_404_NOT_FOUND
+
+        # search by name wildcard and by project filter
+        res = documents_controller.search_list(db=test_session, skip=0, limit=100, name="doc-*", project_id=proj.id)
+        assert any(str(i.id) == str(doc.id) for i in res)
+
+    def test_tags_prompts_selections(self, test_session: Session):
+        proj = self._create_project(test_session)
+        doc = self._create_document(test_session, proj.id)
+
+        # tags default empty
+        tags = documents_controller.get_tags(db=test_session, document_id=doc.id)
+        assert tags == []
+
+        # prompts
+        p = documents_controller.add_prompt(db=test_session, document_id=doc.id, prompt_data=PromptCreate(prompt="Analyze", directive="dir", title="t", enabled=True, document_id=doc.id))
+        got_prompts = documents_controller.get_prompts(db=test_session, document_id=doc.id, skip=0, limit=100)
+        assert any(pp.id == p.id for pp in got_prompts)
+
+        # selections
+        sc = SelectionCreate(page_number=1, x=0.1, y=0.2, width=0.3, height=0.4, confidence=None, committed=False, document_id=doc.id)
+        sel = documents_controller.add_selection(db=test_session, document_id=doc.id, selection_data=sc)
+        got_selections = documents_controller.get_selections(db=test_session, document_id=doc.id, skip=0, limit=100)
+        assert any(ss.id == sel.id for ss in got_selections)
+
+    def test_ai_settings_get_and_update(self, test_session: Session):
+        proj = self._create_project(test_session)
+        doc = self._create_document(test_session, proj.id)
+
+        ai1 = documents_controller.get_ai_settings(db=test_session, document_id=doc.id)
+        assert ai1.model_name and ai1.temperature is not None
+
+        from backend.api.schemas.documents_schema import DocumentAiSettingsUpdate
+        ai2 = documents_controller.update_ai_settings(db=test_session, document_id=doc.id, data=DocumentAiSettingsUpdate(temperature=0.7))
+        assert ai2.temperature == 0.7
+
+    def test_update_and_delete(self, test_session: Session):
+        proj = self._create_project(test_session)
+        doc = self._create_document(test_session, proj.id)
+
+        old_name = doc.name
+        updated = documents_controller.update(db=test_session, document_id=doc.id, document_data=DocumentUpdate(name=f"updated-{uuid.uuid4().hex[:4]}"))
+        assert updated.id == doc.id and updated.name != old_name
+
+        out = documents_controller.delete(db=test_session, document_id=doc.id)
+        assert "deleted successfully" in out.message
+        with pytest.raises(HTTPException) as exc:
+            documents_controller.get(db=test_session, document_id=doc.id)
+        assert exc.value.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_apply_ai_and_stage_no_enabled_prompts(self, test_session: Session):
+        proj = self._create_project(test_session)
+        doc = self._create_document(test_session, proj.id)
+        # no prompts enabled -> returns empty
+        res = documents_controller.apply_ai_and_stage(db=test_session, document_id=doc.id)
+        assert res == []
+
+    def test_process_success_and_downloads(self, test_session: Session, client, monkeypatch):
+        password = "StrongPW!123"
+        proj = self._create_project(test_session, password=password)
+        doc = self._create_document(test_session, proj.id)
+        # attach original and one committed selection
+        self._attach_original(test_session, doc, payload=b"%PDF-1.4 minimal", password=password)
+        staged = SelectionModel(document_id=doc.id, x=0.1, y=0.1, width=0.2, height=0.2, page_number=1, committed=True)
+        test_session.add(staged)
+        test_session.commit()
+
+        # if a redacted exists, it should be replaced (ensure only one after)
+        self._attach_redacted(test_session, doc, payload=b"OLD")
+
+        # mock ephemeral decrypt to return correct password and redactor to produce deterministic bytes
+        monkeypatch.setattr(security_manager, "decrypt_with_ephemeral_key", lambda key_id, encrypted_data: password)
+        monkeypatch.setattr(redactor, "redact_document", lambda pdf_data, selections: b"REDACTED-BYTES")
+
+        req = EncryptedFileDownloadRequest(key_id="k", encrypted_password=base64.b64encode(b"ignored").decode("ascii"), stream=False)
+        out = documents_controller.process(db=test_session, document_id=doc.id, request=req)
+        assert out.detail and int(out.detail.get("redacted_file_size", 0)) == len(b"REDACTED-BYTES")
+
+        # download redacted via API to easily read streaming
+        res = client.get(f"/api/documents/id/{doc.id}/download/redacted")
+        assert res.status_code == 200 and res.content == b"REDACTED-BYTES"
+        # headers
+        assert res.headers.get("Content-Disposition", "").startswith("attachment;")
+        assert res.headers.get("Cache-Control") == "no-cache, no-store, must-revalidate"
+
+    def test_process_no_committed_selections_400(self, test_session: Session, monkeypatch):
+        password = "StrongPW!123"
+        proj = self._create_project(test_session, password=password)
+        doc = self._create_document(test_session, proj.id)
+        self._attach_original(test_session, doc, payload=b"%PDF-1.4 minimal", password=password)
+        # no committed selections
+        monkeypatch.setattr(security_manager, "decrypt_with_ephemeral_key", lambda key_id, encrypted_data: password)
+        req = EncryptedFileDownloadRequest(key_id="k", encrypted_password=base64.b64encode(b"ignored").decode("ascii"), stream=False)
+        with pytest.raises(HTTPException) as exc:
+            documents_controller.process(db=test_session, document_id=doc.id, request=req)
+        assert exc.value.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_download_original_file_via_controller(self, test_session: Session, client, monkeypatch):
+        password = "StrongPW!123"
+        proj = self._create_project(test_session, password=password)
+        doc = self._create_document(test_session, proj.id)
+        self._attach_original(test_session, doc, payload=b"ORIG", password=password)
+        # via router for easy stream handling; mock ephemeral decrypt
+        monkeypatch.setattr(security_manager, "decrypt_with_ephemeral_key", lambda key_id, encrypted_data: password)
+        enc_b64 = base64.b64encode(b"ignored").decode("ascii")
+        res = client.post(f"/api/documents/id/{doc.id}/download/original", json={
+            "key_id": "k",
+            "encrypted_password": enc_b64,
+            "stream": False,
+        })
+        assert res.status_code == 200
+        assert res.content == b"ORIG"
+        assert "attachment" in res.headers.get("Content-Disposition", "")
+
+    def test_create_with_file_error_mappings_and_success(self, test_session: Session, monkeypatch):
+        # Setup project and fake upload input
+        proj = self._create_project(test_session)
+        class DummyUpload:
+            def __init__(self, project_id):
+                self.project_id = project_id
+                class F:
+                    def __init__(self):
+                        self.file = None
+                        self.filename = "f.pdf"
+                        self.content_type = "application/pdf"
+                self.file = F()
+        from backend.api.schemas.documents_schema import DocumentCreate
+        from backend.api.schemas.files_schema import FileCreate
+        from backend.api.schemas.documents_schema import DocumentBulkUpload
+
+        # No-op password verification
+        monkeypatch.setattr(documents_controller.support_crud, "verify_project_password_or_401", lambda db, project_id, password: None)
+        # Provide settings.processing for error message formatting
+        monkeypatch.setattr(security_manager, "settings", type("T", (), {"processing": type("P", (), {"max_file_size": 10 * 1024 * 1024})()})(), raising=False)
+
+        # Error: too large -> 413
+        monkeypatch.setattr(documents_controller.support_crud, "process_upload", lambda db, project_id, upload_data, password: ("f.pdf", "File too large"))
+        with pytest.raises(HTTPException) as e413:
+            documents_controller.create_with_file(db=test_session, upload_data=DummyUpload(proj.id), password="pw")
+        assert e413.value.status_code == status.HTTP_413_REQUEST_ENTITY_TOO_LARGE
+
+        # Error: invalid pdf -> 400
+        monkeypatch.setattr(documents_controller.support_crud, "process_upload", lambda db, project_id, upload_data, password: ("f.pdf", "Invalid PDF"))
+        with pytest.raises(HTTPException) as e400:
+            documents_controller.create_with_file(db=test_session, upload_data=DummyUpload(proj.id), password="pw")
+        assert e400.value.status_code == status.HTTP_400_BAD_REQUEST
+
+        # Error: filename exists -> 409
+        monkeypatch.setattr(documents_controller.support_crud, "process_upload", lambda db, project_id, upload_data, password: ("f.pdf", "Filename already exists"))
+        with pytest.raises(HTTPException) as e409:
+            documents_controller.create_with_file(db=test_session, upload_data=DummyUpload(proj.id), password="pw")
+        assert e409.value.status_code == status.HTTP_409_CONFLICT
+
+        # Error: generic -> 500
+        monkeypatch.setattr(documents_controller.support_crud, "process_upload", lambda db, project_id, upload_data, password: ("f.pdf", "Boom"))
+        with pytest.raises(HTTPException) as e500:
+            documents_controller.create_with_file(db=test_session, upload_data=DummyUpload(proj.id), password="pw")
+        assert e500.value.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+
+        # Success path: returns bulk descriptor -> use existing ORM doc as created result
+        # create an ORM doc to mirror created outcome
+        model_doc = DocumentModel(name="s.pdf", description=None, project_id=proj.id, tags=[])
+        test_session.add(model_doc)
+        test_session.commit()
+        test_session.refresh(model_doc)
+        # process_upload returns a DocumentBulkUpload instance
+        def fake_process(db, project_id, upload_data, password):
+            return DocumentBulkUpload(
+                document_data=DocumentCreate(name="s.pdf", description=None, project_id=proj.id, tags=[]),
+                file_data=FileCreate(file_hash="0"*64, file_type=FileType.ORIGINAL, mime_type="application/pdf", data=b"e", salt=b"s", document_id=None),
+            )
+        monkeypatch.setattr(documents_controller.support_crud, "process_upload", fake_process)
+        # bulk_create_documents_with_files_and_init returns our model
+        monkeypatch.setattr(documents_controller.support_crud, "bulk_create_documents_with_files_and_init", lambda db, bulk_data: [model_doc])
+        out = documents_controller.create_with_file(db=test_session, upload_data=DummyUpload(proj.id), password="pw")
+        assert out.id == model_doc.id
+
+    def test_bulk_upload_variants(self, test_session: Session, monkeypatch):
+        # empty
+        empty = documents_controller.bulk_create_with_files(db=test_session, uploads_data=[], password="pw")
+        assert empty.detail["total_files"] == 0
+
+        # mismatched project ids -> 400
+        class DummyU:
+            def __init__(self, project_id):
+                self.project_id = project_id
+        p1 = self._create_project(test_session)
+        p2 = self._create_project(test_session)
+        # bypass password verify to reach mismatch branch
+        monkeypatch.setattr(documents_controller.support_crud, "verify_project_password_or_401", lambda db, project_id, password: None)
+        with pytest.raises(HTTPException) as e400:
+            documents_controller.bulk_create_with_files(db=test_session, uploads_data=[DummyU(p1.id), DummyU(p2.id)], password="pw")
+        assert e400.value.status_code == status.HTTP_400_BAD_REQUEST
+
+        # Success with mixed results and template, and bulk error path
+        proj = self._create_project(test_session)
+        monkeypatch.setattr(documents_controller.support_crud, "verify_project_password_or_401", lambda db, project_id, password: None)
+        # Two successes and one error
+        from backend.api.schemas.documents_schema import DocumentBulkUpload, DocumentCreate
+        from backend.api.schemas.files_schema import FileCreate
+        def fake_proc(db, project_id, upload_data, password):
+            if getattr(upload_data, "_err", False):
+                return ("bad.pdf", "Invalid PDF")
+            return DocumentBulkUpload(
+                document_data=DocumentCreate(name=f"{uuid.uuid4().hex[:4]}.pdf", description=None, project_id=proj.id, tags=[]),
+                file_data=FileCreate(file_hash="0"*64, file_type=FileType.ORIGINAL, mime_type="application/pdf", data=b"e", salt=b"s", document_id=None),
+            )
+        monkeypatch.setattr(documents_controller.support_crud, "process_upload", fake_proc)
+        # stub bulk_create_with_files to return minimal records with expected attrs
+        class R:
+            def __init__(self, name):
+                class F:
+                    def __init__(self):
+                        self.id = uuid.uuid4()
+                self.name = name
+                self.files = [F()]
+                self.id = uuid.uuid4()
+        def fake_bulk(db, bulk_data):
+            return [R(b.document_data.name) for b in bulk_data]
+        monkeypatch.setattr(documents_controller.documents_crud, "bulk_create_with_files", fake_bulk)
+
+        class DU:
+            def __init__(self, project_id, err=False):
+                self.project_id = project_id
+                self._err = err
+        res_ok = documents_controller.bulk_create_with_files(db=test_session, uploads_data=[DU(proj.id), DU(proj.id), DU(proj.id, err=True)], password="pw", template_description="templ")
+        assert res_ok.detail["success_count"] == 2 and res_ok.detail["error_count"] == 1
+        # bulk error path
+        monkeypatch.setattr(documents_controller.documents_crud, "bulk_create_with_files", lambda db, bulk_data: (_ for _ in ()).throw(Exception("boom")))
+        with pytest.raises(HTTPException) as e500:
+            documents_controller.bulk_create_with_files(db=test_session, uploads_data=[DU(proj.id)], password="pw")
+        assert e500.value.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+
+    def test_apply_ai_and_stage_with_enabled_prompts(self, test_session: Session, monkeypatch):
+        proj = self._create_project(test_session)
+        doc = self._create_document(test_session, proj.id)
+        # add an enabled prompt
+        from backend.api.schemas.prompts_schema import PromptCreate
+        documents_controller.add_prompt(db=test_session, document_id=doc.id, prompt_data=PromptCreate(title="t", prompt="p", directive="d", enabled=True, document_id=doc.id))
+        # mock AI service
+        class FakeSvc:
+            async def generate_selections(self, req):
+                from backend.api.schemas.selections_schema import SelectionCreate
+                return type("Resp", (), {
+                    "selections": [SelectionCreate(page_number=1, x=0.1, y=0.1, width=0.2, height=0.2, confidence=0.9, committed=False, document_id=doc.id)]
+                })()
+        monkeypatch.setattr("backend.service.ai_service.get_ai_service", lambda: FakeSvc())
+        out = documents_controller.apply_ai_and_stage(db=test_session, document_id=doc.id)
+        assert len(out) == 1 and out[0].committed is False
+
+    def test_summarize_document_fields(self, test_session: Session):
+        proj = self._create_project(test_session)
+        doc = self._create_document(test_session, proj.id)
+        # attach files, prompts, selections
+        self._attach_original(test_session, doc, payload=b"ORIG")
+        self._attach_redacted(test_session, doc, payload=b"REDACT")
+        documents_controller.add_prompt(db=test_session, document_id=doc.id, prompt_data=PromptCreate(title="t", prompt="p", directive="d", enabled=True, document_id=doc.id))
+        sc1 = SelectionModel(document_id=doc.id, x=0.1, y=0.1, width=0.2, height=0.2, page_number=1, committed=False, confidence=0.8)
+        sc2 = SelectionModel(document_id=doc.id, x=0.2, y=0.2, width=0.2, height=0.2, page_number=1, committed=False, confidence=None)
+        test_session.add_all([sc1, sc2])
+        test_session.commit()
+        summ = documents_controller.summarize(db=test_session, document_id=doc.id)
+        assert summ.has_original_file and summ.has_redacted_file
+        assert summ.prompt_count >= 1 and summ.selection_count >= 2
+        assert summ.ai_selections_count >= 1 and summ.manual_selections_count >= 1
+
+    def test_process_error_paths(self, test_session: Session, monkeypatch):
+        password = "StrongPW!123"
+        proj = self._create_project(test_session, password=password)
+        doc = self._create_document(test_session, proj.id)
+        self._attach_original(test_session, doc, payload=b"%PDF-1.4 minimal", password=password)
+        s = SelectionModel(document_id=doc.id, x=0.1, y=0.1, width=0.2, height=0.2, page_number=1, committed=True)
+        test_session.add(s)
+        test_session.commit()
+        monkeypatch.setattr(security_manager, "decrypt_with_ephemeral_key", lambda key_id, encrypted_data: password)
+        req = EncryptedFileDownloadRequest(key_id="k", encrypted_password=base64.b64encode(b"ignored").decode("ascii"), stream=False)
+
+        # redactor failure -> 500
+        monkeypatch.setattr(redactor, "redact_document", lambda pdf_data, selections: (_ for _ in ()).throw(Exception("fail")))
+        with pytest.raises(HTTPException) as e500a:
+            documents_controller.process(db=test_session, document_id=doc.id, request=req)
+        assert e500a.value.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+
+        # save redacted failure -> 500
+        monkeypatch.setattr(redactor, "redact_document", lambda pdf_data, selections: b"OK")
+        monkeypatch.setattr(documents_controller.files_crud, "create", lambda db, data: (_ for _ in ()).throw(Exception("save-fail")))
+        with pytest.raises(HTTPException) as e500b:
+            documents_controller.process(db=test_session, document_id=doc.id, request=req)
+        assert e500b.value.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+
+    def test_download_original_stream_inline_headers(self, test_session: Session, client, monkeypatch):
+        password = "StrongPW!123"
+        proj = self._create_project(test_session, password=password)
+        doc = self._create_document(test_session, proj.id)
+        self._attach_original(test_session, doc, payload=b"ORIG", password=password)
+        monkeypatch.setattr(security_manager, "decrypt_with_ephemeral_key", lambda key_id, encrypted_data: password)
+        enc_b64 = base64.b64encode(b"ignored").decode("ascii")
+        res = client.post(f"/api/documents/id/{doc.id}/download/original", json={
+            "key_id": "k",
+            "encrypted_password": enc_b64,
+            "stream": True,
+        })
+        assert res.status_code == 200 and res.content == b"ORIG"
+        # inline header
+        assert res.headers.get("Content-Disposition", "") == "inline"
+        assert res.headers.get("Cache-Control") == "no-cache, no-store, must-revalidate"
+        assert res.headers.get("Pragma") == "no-cache"
+        assert res.headers.get("Expires") == "0"
+
+    def test_create_with_file_generic_exception_500(self, test_session: Session, monkeypatch):
+        # Cause generic exception inside create_with_file try block
+        proj = self._create_project(test_session)
+        class DummyUpload:
+            def __init__(self, project_id):
+                self.project_id = project_id
+                class F:
+                    def __init__(self):
+                        self.file = None
+                        self.filename = "f.pdf"
+                        self.content_type = "application/pdf"
+                self.file = F()
+        from backend.api.schemas.documents_schema import DocumentCreate
+        from backend.api.schemas.files_schema import FileCreate
+        from backend.api.schemas.documents_schema import DocumentBulkUpload
+        # No-op password verify and settings fixture
+        monkeypatch.setattr(documents_controller.support_crud, "verify_project_password_or_401", lambda db, project_id, password: None)
+        monkeypatch.setattr(security_manager, "settings", type("T", (), {"processing": type("P", (), {"max_file_size": 10 * 1024 * 1024})()})(), raising=False)
+        # Return a valid bulk upload descriptor
+        def fake_process(db, project_id, upload_data, password):
+            return DocumentBulkUpload(
+                document_data=DocumentCreate(name="s.pdf", description=None, project_id=proj.id, tags=[]),
+                file_data=FileCreate(file_hash="0"*64, file_type=FileType.ORIGINAL, mime_type="application/pdf", data=b"e", salt=b"s", document_id=None),
+            )
+        monkeypatch.setattr(documents_controller.support_crud, "process_upload", fake_process)
+        # Force exception in bulk_create_documents_with_files_and_init
+        monkeypatch.setattr(documents_controller.support_crud, "bulk_create_documents_with_files_and_init", lambda db, bulk_data: (_ for _ in ()).throw(Exception("boom")))
+        with pytest.raises(HTTPException) as e500:
+            documents_controller.create_with_file(db=test_session, upload_data=DummyUpload(proj.id), password="pw")
+        assert e500.value.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+
+    def test_get_and_update_ai_settings_when_missing(self, test_session: Session):
+        # Create doc via ORM to ensure no ai_settings exist
+        proj = self._create_project(test_session)
+        doc = DocumentModel(name=f"doc-{uuid.uuid4().hex[:6]}.pdf", description=None, project_id=proj.id, tags=[])
+        test_session.add(doc)
+        test_session.commit()
+        test_session.refresh(doc)
+        # get_ai_settings should create defaults
+        got = documents_controller.get_ai_settings(db=test_session, document_id=doc.id)
+        assert got.document_id == doc.id and got.temperature is not None
+        # Now update_ai_settings on a different fresh doc without settings to hit the None branch
+        doc2 = DocumentModel(name=f"doc-{uuid.uuid4().hex[:6]}.pdf", description=None, project_id=proj.id, tags=[])
+        test_session.add(doc2)
+        test_session.commit()
+        test_session.refresh(doc2)
+        from backend.api.schemas.documents_schema import DocumentAiSettingsUpdate
+        updated = documents_controller.update_ai_settings(db=test_session, document_id=doc2.id, data=DocumentAiSettingsUpdate(temperature=0.5))
+        assert updated.document_id == doc2.id and updated.temperature is not None

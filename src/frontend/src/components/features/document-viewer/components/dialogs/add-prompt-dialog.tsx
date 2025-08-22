@@ -82,8 +82,8 @@ interface InitialRuleData {
   title: string;
   rule: string;
   priority: 'high' | 'medium' | 'low';
-  temperature: number;
-  languages: string[];
+  temperature?: number;
+  languages?: string[];
 }
 
 interface AddPromptDialogProps {

@@ -1,5 +1,5 @@
 import { toast } from 'sonner';
-import type { ApiResponse, ProjectShallowType, ProjectCreateType, ProjectUpdateType } from '@/types';
+import type { ApiResponse, ProjectType, ProjectShallowType, ProjectCreateType, ProjectUpdateType, ProjectSummaryType } from '@/types';
 import { AsyncResultWrapper, type Result } from '@/lib/result';
 import { api } from '@/lib/axios';
 
@@ -14,9 +14,9 @@ import { api } from '@/lib/axios';
 
 export const ProjectsAPI = {
   /**
-   * Fetch projects with optional pagination
+   * Fetch shallow projects (without nested documents) with optional pagination
    */
-  async fetchProjects(skip = 0, limit = 100): Promise<Result<ProjectShallowType[], unknown>> {
+  async fetchProjectsShallow(skip = 0, limit = 100): Promise<Result<ProjectShallowType[], unknown>> {
     const params = new URLSearchParams();
     if (skip > 0) params.append('skip', skip.toString());
     if (limit !== 100) params.append('limit', limit.toString());
@@ -36,11 +36,93 @@ export const ProjectsAPI = {
   },
 
   /**
+   * Convenience alias to previous function name
+   */
+  async fetchProjects(skip = 0, limit = 100) {
+    return this.fetchProjectsShallow(skip, limit);
+  },
+
+  /**
+   * Fetch full projects (includes nested documents)
+   */
+  async fetchProjectsFull(skip = 0, limit = 100): Promise<Result<ProjectType[], unknown>> {
+    const params = new URLSearchParams();
+    if (skip > 0) params.append('skip', skip.toString());
+    if (limit !== 100) params.append('limit', limit.toString());
+    const queryString = params.toString();
+    const url = `/projects${queryString ? `?${queryString}` : ''}`;
+
+    return await AsyncResultWrapper
+      .from(api.safe.get(url) as Promise<Result<ProjectType[], unknown>>)
+      .catch((error: unknown) => {
+        toast.error(
+          "Failed to fetch projects",
+          { description: "Please refresh the page to try again." }
+        );
+        throw error;
+      })
+      .toResult();
+  },
+
+  /**
+   * Get a single project by ID (full)
+   */
+  async getProject(projectId: string): Promise<Result<ProjectType, unknown>> {
+    return AsyncResultWrapper
+      .from(api.safe.get(`/projects/id/${projectId}`) as Promise<Result<ProjectType, unknown>>)
+      .catch((error: unknown) => {
+        toast.error(
+          "Failed to load project",
+          { description: "Please try again." }
+        );
+        throw error;
+      })
+      .toResult();
+  },
+
+  /**
+   * Search projects by name (full)
+   */
+  async searchProjects(name: string, skip = 0, limit = 100): Promise<Result<ProjectType[], unknown>> {
+    const params = new URLSearchParams();
+    if (skip > 0) params.append('skip', skip.toString());
+    if (limit !== 100) params.append('limit', limit.toString());
+    if (name) params.append('name', name);
+    const url = `/projects/search?${params.toString()}`;
+    return AsyncResultWrapper
+      .from(api.safe.get(url) as Promise<Result<ProjectType[], unknown>>)
+      .catch((error: unknown) => {
+        toast.error(
+          "Failed to search projects",
+          { description: "Please refine your search and try again." }
+        );
+        throw error;
+      })
+      .toResult();
+  },
+
+  /**
+   * Get project summary
+   */
+  async getProjectSummary(projectId: string): Promise<Result<ProjectSummaryType, unknown>> {
+    return AsyncResultWrapper
+      .from(api.safe.get(`/projects/id/${projectId}/summary`) as Promise<Result<ProjectSummaryType, unknown>>)
+      .catch((error: unknown) => {
+        toast.error(
+          "Failed to load project summary",
+          { description: "Please try again." }
+        );
+        throw error;
+      })
+      .toResult();
+  },
+
+  /**
    * Create a new project
    */
-  async createProject(projectData: ProjectCreateType): Promise<Result<ProjectShallowType, unknown>> {
+  async createProject(projectData: ProjectCreateType): Promise<Result<ProjectType, unknown>> {
     return AsyncResultWrapper
-      .from(api.safe.post(`/projects`, projectData) as Promise<Result<ProjectShallowType, unknown>>)
+      .from(api.safe.post(`/projects`, projectData) as Promise<Result<ProjectType, unknown>>)
       .tap(() => {
         toast.success(
           "Project created successfully",
@@ -60,15 +142,14 @@ export const ProjectsAPI = {
   /**
    * Update an existing project
    */
-  async updateProject(projectId: string, projectData: ProjectUpdateType): Promise<Result<ApiResponse, unknown>> {
+  async updateProject(projectId: string, projectData: ProjectUpdateType): Promise<Result<ProjectType, unknown>> {
     return AsyncResultWrapper
       .from(api.safe.put(`/projects/id/${projectId}`, {
         name: projectData.name?.trim(),
         description: projectData.description?.trim(),
         contact_name: projectData.contact_name?.trim(),
         contact_email: projectData.contact_email?.trim(),
-        version: projectData.version,
-      }) as Promise<Result<ApiResponse, unknown>>)
+      }) as Promise<Result<ProjectType, unknown>>)
       .tap(() => {
         toast.success(
           "Project updated successfully",
