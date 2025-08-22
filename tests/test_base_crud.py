@@ -353,11 +353,11 @@ class TestBaseCrud:
         assert got2 and got2[0].documents and got2[0].documents[0].files
 
         # filters: in, not-in, neq and bad cases
-        in_res = project_crud_local.search(test_session, skip=0, limit=10, version=("in", [1, 2]))
+        in_res = project_crud_local.search(test_session, skip=0, limit=1000, version=("in", [proj.version, 2]))
         assert any(p.id == proj.id for p in in_res)
-        not_in_res = project_crud_local.search(test_session, skip=0, limit=10, version=("not-in", [99]))
+        not_in_res = project_crud_local.search(test_session, skip=0, limit=1000, version=("not-in", [99]))
         assert any(p.id == proj.id for p in not_in_res)
-        neq_res = project_crud_local.search(test_session, skip=0, limit=10, name=("neq", "nope"))
+        neq_res = project_crud_local.search(test_session, skip=0, limit=1000, name=("neq", "nope"))
         assert any(p.id == proj.id for p in neq_res)
         with pytest.raises(ValueError):
             project_crud_local.search(test_session, skip=0, limit=10, name=("badop", "x"))

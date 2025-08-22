@@ -1,8 +1,6 @@
 import pytest
 import asyncio
-import tempfile
 import uuid
-from pathlib import Path
 from unittest.mock import patch
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -22,15 +20,13 @@ def event_loop():
     loop.close()
 
 
-@pytest.fixture
-def temp_db_path():
-    """Create a temporary database file path."""
-    import os
-    fd, path = tempfile.mkstemp(suffix=".sqlite")
-    os.close(fd)  # Close the file descriptor immediately
-    os.unlink(path)  # Remove the empty file so SQLite can create it properly
-    yield Path(path)
-    Path(path).unlink(missing_ok=True)
+@pytest.fixture(scope="session")
+def temp_db_path(tmp_path_factory):
+    """Create a temporary database file path using pytest's tmp_path_factory."""
+    db_dir = tmp_path_factory.mktemp("db")
+    path = db_dir / "test.sqlite"
+    # No need to pre-create or unlink; SQLite will create the file as needed
+    yield path
 
 
 @pytest.fixture
