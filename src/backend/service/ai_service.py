@@ -20,6 +20,15 @@ class GenerateSelectionsResponse(BaseModel):
     selections: list[SelectionCreate]
 
 
+class ProviderCatalog(BaseModel):
+    name: str = Field(..., description="Provider name, e.g., 'ollama'")
+    models: list[str] = Field(default_factory=list, description="Available model names for this provider")
+
+
+class AiCatalog(BaseModel):
+    providers: list[ProviderCatalog] = Field(default_factory=list)
+
+
 class AiService(ABC):
     @abstractmethod
     async def health(self) -> bool:
@@ -33,6 +42,11 @@ class AiService(ABC):
         """
         raise NotImplementedError
 
+    @abstractmethod
+    async def catalog(self) -> AiCatalog:
+        """Return available providers and their models."""
+        raise NotImplementedError
+
 
 class OllamaAiService(AiService):
     def __init__(self) -> None:
@@ -40,6 +54,11 @@ class OllamaAiService(AiService):
 
     async def health(self) -> bool:
         return await self.client.health()
+
+    async def catalog(self) -> AiCatalog:
+        models = await self.client.list_models()
+        provider = ProviderCatalog(name="ollama", models=models)
+        return AiCatalog(providers=[provider])
 
     @staticmethod
     def _clamp01(val: float | int | None, default: float = 0.0) -> float:

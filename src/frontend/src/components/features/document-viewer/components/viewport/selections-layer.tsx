@@ -112,6 +112,7 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
       height: 0,
       page_number: currentPage,
       document_id: currentDocument.id,
+      committed: false,
     };
     
     startDraw(initialSelection);
@@ -142,6 +143,7 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
         height: Math.abs(currentY - startPoint.y),
         page_number: currentPage,
         document_id: currentDocument!.id,
+        committed: false,
       };
       
       // Ensure selection stays within bounds (0-1)

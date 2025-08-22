@@ -147,36 +147,6 @@ export default function InfoLayer({ document, documentSize, isVisible, onToggleV
               <span className="text-muted-foreground"> (c:{promptPending.creates.length}, u:{promptPending.updates.length}, d:{promptPending.deletes.length})</span>
             )}
           </div>
-          {allPrompts.length > 0 && (
-            <>
-              <div>
-                <span className="text-muted-foreground">Avg temperature:</span>{' '}
-                <span>{(() => {
-                  const vals = allPrompts.map(p => p.temperature).filter(v => typeof v === 'number') as number[];
-                  if (!vals.length) return 'n/a';
-                  const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
-                  return avg.toFixed(2);
-                })()}</span>
-              </div>
-              <div className="flex flex-wrap gap-1">
-                <span className="text-muted-foreground">Languages:</span>
-                {(() => {
-                  const set = new Set<string>();
-                  allPrompts.forEach(p => (p.languages || []).forEach(l => set.add(l)));
-                  const arr = Array.from(set);
-                  return arr.length ? (
-                    <span className="flex flex-wrap gap-1">
-                      {arr.map(l => (
-                        <span key={l} className="px-1.5 py-0.5 border rounded text-[10px] leading-4 bg-background/70">{l}</span>
-                      ))}
-                    </span>
-                  ) : (
-                    <span>n/a</span>
-                  );
-                })()}
-              </div>
-            </>
-          )}
         </div>
       </div>
 

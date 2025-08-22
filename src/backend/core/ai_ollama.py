@@ -40,3 +40,20 @@ class OllamaClient:
             data = r.json()
             return data.get("response", "")
 
+    async def list_models(self) -> list[str]:
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                r = await client.get(f"{self.base_url}/api/tags")
+                r.raise_for_status()
+                data = r.json()
+                models = data.get("models", [])
+                names: list[str] = []
+                if isinstance(models, list):
+                    for m in models:
+                        name = (m or {}).get("name")
+                        if isinstance(name, str):
+                            names.append(name)
+                return names
+        except Exception:
+            return []
+

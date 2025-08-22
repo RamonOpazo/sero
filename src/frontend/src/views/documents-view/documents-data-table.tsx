@@ -340,7 +340,7 @@ export function DocumentsDataTable({ onDocumentSelect }: DocumentsDataTableProps
         showActions={true}
         // Column visibility features
         tableColumns={tableColumns}
-        visibleColumns={visibleDocumentColumns}
+        visibleColumns={visibleColumns}
         onColumnVisibilityChange={handleColumnVisibilityChange}
         // Custom buttons
         customButtons={customButtons}

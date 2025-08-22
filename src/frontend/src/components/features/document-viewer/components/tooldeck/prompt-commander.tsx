@@ -180,13 +180,6 @@ export default function PromptManagement({ document }: PromptControlsProps) {
                         `Title: ${ruleData.title}\n\n` +
                         `Instructions:\n${ruleData.rule}`;
       
-      // Map priority to temperature (AI creativity level)
-      const temperatureMap = {
-        'high': 0.1,    // Low creativity for critical compliance rules
-        'medium': 0.3,  // Moderate creativity for important rules
-        'low': 0.5      // Higher creativity for optional rules
-      };
-      
       updatePrompt(editingPromptId, {
         title: ruleData.title,
         prompt: promptText,
@@ -374,9 +367,7 @@ export default function PromptManagement({ document }: PromptControlsProps) {
               type: parsedData.type as any,
               title: parsedData.title,
               rule: parsedData.rule,
-              priority: parsedData.priority as any,
-              temperature: editingPrompt.temperature,
-              languages: editingPrompt.languages
+              priority: parsedData.priority as any
             }}
           />
         );

@@ -97,7 +97,8 @@ const selectionTransforms: ApiTransforms<Selection, Omit<SelectionCreateType, 'd
     width: selection.width,
     height: selection.height,
     page_number: selection.page_number,
-    confidence: selection.confidence
+    confidence: selection.confidence,
+    committed: selection.committed ?? false,
   }),
   
   forUpdate: (selection: Selection): Partial<Selection> => ({
