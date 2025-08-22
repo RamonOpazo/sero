@@ -35,7 +35,6 @@ interface CreateProjectDialogProps {
 const formSchema = z.object({
   name: z.string().min(1, 'Project name is required').max(100, 'Project name must be less than 100 characters'),
   description: z.string().max(500, 'Description must be less than 500 characters').optional(),
-  version: z.number().int(),
   contact_name: z.string().min(1, 'Contact name is required').max(100, 'Contact name must be less than 100 characters'),
   contact_email: z.string().min(1, 'Contact email is required').max(100, 'Contact email must be less than 100 characters').email('Please enter a valid email address'),
   password: z.string().min(8, 'Password must be at least 8 characters long'),
@@ -49,7 +48,6 @@ export function CreateProjectDialog({ isOpen, onClose, onSubmit }: CreateProject
     defaultValues: {
       name: '',
       description: '',
-      version: 1,
       contact_name: '',
       contact_email: '',
       password: '',
@@ -64,7 +62,6 @@ export function CreateProjectDialog({ isOpen, onClose, onSubmit }: CreateProject
         contact_name: data.contact_name.trim(),
         contact_email: data.contact_email.trim(),
         password: data.password,
-        version: data.version || 1,
       };
       
       // Only include description if it has content

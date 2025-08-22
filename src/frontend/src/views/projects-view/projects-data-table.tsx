@@ -25,8 +25,8 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
   
   // Column visibility state - exclude pinned columns from state management
   const [visibleColumns, setVisibleColumns] = useState<string[]>([
-    'description', 'document_count', 'updated_at', 
-    'contact_name', 'version', 'contact_email', 'created_at'
+'description', 'document_count', 'updated_at', 
+    'contact_name', 'contact_email', 'created_at'
   ])
 
   // Extract all business logic to custom hook
@@ -164,7 +164,6 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
     { key: 'document_count', header: 'Documents' },
     { key: 'updated_at', header: 'Last Updated' },
     { key: 'contact_name', header: 'Contact Person' },
-    { key: 'version', header: 'Version' },
     { key: 'contact_email', header: 'Email Address' },
     { key: 'created_at', header: 'Created' }
   ], []);

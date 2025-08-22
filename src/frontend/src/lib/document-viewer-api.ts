@@ -51,7 +51,7 @@ export const DocumentViewerAPI = {
   /**
    * Update an existing prompt
    */
-  async updatePrompt(promptId: string, updates: Partial<Pick<PromptType, 'text' | 'temperature' | 'languages'>>): Promise<Result<void, unknown>> {
+  async updatePrompt(promptId: string, updates: Partial<Pick<PromptType, 'title' | 'prompt' | 'directive' | 'enabled'>>): Promise<Result<void, unknown>> {
     return AsyncResultWrapper
       .from(api.safe.put(`/prompts/id/${promptId}`, updates))
       .tap(() => void 0)

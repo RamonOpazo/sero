@@ -221,9 +221,9 @@ F8. Test Organization Guidance for React
 - Avoid: one giant unified test directory only; it hinders discoverability and slows dev velocity.
 
 F9. Incremental Execution Plan
-- Step 1: Types
+- Step 1: Types (DONE)
   - Implement F1 type changes; run typecheck and build.
-- Step 2: API modules
+- Step 2: API modules (IN PROGRESS)
   - Update Projects API first (F2), then Documents/Prompts/Selections/Files/AI modules.
   - Smoke test calls with mocked backend or dev server.
 - Step 3: UI adjustments

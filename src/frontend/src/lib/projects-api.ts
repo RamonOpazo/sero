@@ -67,7 +67,6 @@ export const ProjectsAPI = {
         description: projectData.description?.trim(),
         contact_name: projectData.contact_name?.trim(),
         contact_email: projectData.contact_email?.trim(),
-        version: projectData.version,
       }) as Promise<Result<ApiResponse, unknown>>)
       .tap(() => {
         toast.success(
