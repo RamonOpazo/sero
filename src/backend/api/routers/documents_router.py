@@ -214,6 +214,15 @@ async def add_selection_to_document(
     return documents_controller.add_selection(db=db, document_id=document_id, selection_data=selection_data)
 
 
+@router.post("/id/{document_id}/ai/apply", response_model=list[selections_schema.Selection])
+async def apply_ai(
+    document_id: UUID,
+    db: Session = Depends(get_db_session)
+):
+    """Apply AI to generate staged selections (committed=False)."""
+    return documents_controller.apply_ai_and_stage(db=db, document_id=document_id)
+
+
 @router.post("/id/{document_id}/process", response_model=generics_schema.Success)
 async def process_document(
     document_id: UUID,
