@@ -5,7 +5,8 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from backend.core.security import security_manager
-from backend.core.pdf_redactor import redactor, AreaSelection
+from backend.core.pdf_redactor import AreaSelection
+from backend.service.redactor_service import get_redactor_service
 from backend.crud import support_crud, documents_crud, prompts_crud, selections_crud, files_crud
 from backend.api.schemas import documents_schema, generics_schema, files_schema, prompts_schema, selections_schema
 from backend.api.enums import FileType
@@ -433,7 +434,7 @@ def process(
 
     # Apply redaction
     try:
-        redacted_pdf_data = redactor.redact_document(
+        redacted_pdf_data = get_redactor_service().redact(
             pdf_data=decrypted_data,
             selections=[ AreaSelection.model_validate(i) for i in committed_selections ]
         )
