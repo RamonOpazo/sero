@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from backend.core.config import settings as app_settings
 from backend.db.models import Selection as SelectionModel, Project as ProjectModel, Document as DocumentModel, File as FileModel, AiSettings as AiSettingsModel
 from backend.api.schemas import documents_schema, files_schema
+from backend.service.crypto_service import get_crypto_service
 from backend.core.security import security_manager
 from backend.api.enums import FileType
 from backend.crud.projects import ProjectCrud
@@ -110,7 +111,7 @@ class SupportCrud:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Invalid base64-encoded encrypted password: {e}",
             )
-        decrypted_password = security_manager.decrypt_with_ephemeral_key(
+        decrypted_password = get_crypto_service().decrypt_with_ephemeral_key(
             key_id=key_id,
             encrypted_data=encrypted_password_bytes,
         )

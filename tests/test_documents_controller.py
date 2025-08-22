@@ -393,6 +393,37 @@ class TestDocumentsController:
         assert res.headers.get("Pragma") == "no-cache"
         assert res.headers.get("Expires") == "0"
 
+    def test_create_with_file_generic_exception_500(self, test_session: Session, monkeypatch):
+        # Cause generic exception inside create_with_file try block
+        proj = self._create_project(test_session)
+        class DummyUpload:
+            def __init__(self, project_id):
+                self.project_id = project_id
+                class F:
+                    def __init__(self):
+                        self.file = None
+                        self.filename = "f.pdf"
+                        self.content_type = "application/pdf"
+                self.file = F()
+        from backend.api.schemas.documents_schema import DocumentCreate
+        from backend.api.schemas.files_schema import FileCreate
+        from backend.api.schemas.documents_schema import DocumentBulkUpload
+        # No-op password verify and settings fixture
+        monkeypatch.setattr(documents_controller.support_crud, "verify_project_password_or_401", lambda db, project_id, password: None)
+        monkeypatch.setattr(security_manager, "settings", type("T", (), {"processing": type("P", (), {"max_file_size": 10 * 1024 * 1024})()})(), raising=False)
+        # Return a valid bulk upload descriptor
+        def fake_process(db, project_id, upload_data, password):
+            return DocumentBulkUpload(
+                document_data=DocumentCreate(name="s.pdf", description=None, project_id=proj.id, tags=[]),
+                file_data=FileCreate(file_hash="0"*64, file_type=FileType.ORIGINAL, mime_type="application/pdf", data=b"e", salt=b"s", document_id=None),
+            )
+        monkeypatch.setattr(documents_controller.support_crud, "process_upload", fake_process)
+        # Force exception in bulk_create_documents_with_files_and_init
+        monkeypatch.setattr(documents_controller.support_crud, "bulk_create_documents_with_files_and_init", lambda db, bulk_data: (_ for _ in ()).throw(Exception("boom")))
+        with pytest.raises(HTTPException) as e500:
+            documents_controller.create_with_file(db=test_session, upload_data=DummyUpload(proj.id), password="pw")
+        assert e500.value.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+
     def test_get_and_update_ai_settings_when_missing(self, test_session: Session):
         # Create doc via ORM to ensure no ai_settings exist
         proj = self._create_project(test_session)

@@ -5,7 +5,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from backend.core.database import get_db_session
-from backend.core.security import security_manager
+from backend.service.crypto_service import get_crypto_service
 from backend.api.schemas import files_schema, generics_schema
 from backend.api.controllers import files_controller
 
@@ -69,7 +69,7 @@ async def download_file_secure(
         )
     
     # Decrypt the password using the ephemeral key
-    decrypted_password = security_manager.decrypt_with_ephemeral_key(
+    decrypted_password = get_crypto_service().decrypt_with_ephemeral_key(
         key_id=request.key_id,
         encrypted_data=encrypted_password_bytes
     )
