@@ -1,4 +1,4 @@
-"""Test timezone-aware datetime handling with SQLite."""
+"""Tests for custom ORM types: AwareDateTime, UUIDBytes, JSONList."""
 
 import pytest
 from datetime import datetime, timezone, timedelta
@@ -96,6 +96,26 @@ def test_project_model_timezone_handling():
         
     finally:
         db.close()
+
+
+def test_uuidbytes_and_jsonlist_roundtrip():
+    from backend.db.types import UUIDBytes, JSONList
+    import uuid
+    # UUIDBytes roundtrip
+    u = uuid.uuid4()
+    typ = UUIDBytes()
+    stored = typ.process_bind_param(u, None)
+    assert isinstance(stored, (bytes, bytearray)) and len(stored) == 16
+    back = typ.process_result_value(stored, None)
+    assert back == u
+
+    # JSONList roundtrip
+    lst = ["a", "b", {"c": 1}]
+    jl = JSONList()
+    stored_list = jl.process_bind_param(lst, None)
+    assert isinstance(stored_list, str)
+    back_list = jl.process_result_value(stored_list, None)
+    assert back_list == lst
 
 
 def test_pydantic_schema_timezone_validation():
