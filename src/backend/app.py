@@ -16,8 +16,9 @@ from backend.api.routers import (
     files_router,
     prompts_router,
     selections_router,
-    crypto_router
+    crypto_router,
 )
+from backend.api.routers import ai_router
 
 
 @asynccontextmanager
@@ -79,6 +80,7 @@ app.include_router(files_router.router, prefix="/api/files", tags=["files"])
 app.include_router(prompts_router.router, prefix="/api/prompts", tags=["prompts"])
 app.include_router(selections_router.router, prefix="/api/selections", tags=["selections"])
 app.include_router(crypto_router.router, prefix="/api/crypto", tags=["crypto"])
+app.include_router(ai_router.router, prefix="/api/ai", tags=["ai"])
 
 
 # Static files setup

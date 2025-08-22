@@ -6,6 +6,16 @@ class SelectionCommitRequest(BaseModel):
     commit_all: bool = Field(default=False)
 
 
+class SelectionClearRequest(BaseModel):
+    selection_ids: list[UUID4] | None = Field(default=None)
+    clear_all: bool = Field(default=False)
+
+
+class SelectionUncommitRequest(BaseModel):
+    selection_ids: list[UUID4] | None = Field(default=None)
+    uncommit_all: bool = Field(default=False)
+
+
 class Selection(BaseModel):
     id: UUID4
     created_at: AwareDatetime

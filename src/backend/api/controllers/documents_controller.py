@@ -399,6 +399,69 @@ def add_selection(db: Session, document_id: UUID, selection_data: selections_sch
 
 # ===== AI Apply (staged selections) =====
 
+def clear_staged_selections(db: Session, document_id: UUID, request: selections_schema.SelectionClearRequest) -> generics_schema.Success:
+    """Clear staged selections (committed=False) either all or a subset by IDs."""
+    _ = _raise_not_found(documents_crud.read, db=db, id=document_id)
+    from backend.db.models import Selection as SelectionModel
+
+    if request.clear_all:
+        deleted = (
+            db.query(SelectionModel)
+            .filter(SelectionModel.document_id == document_id, SelectionModel.committed == False)
+            .delete(synchronize_session=False)
+        )
+        db.commit()
+        return generics_schema.Success(message="Cleared all staged selections", detail={"deleted_count": int(deleted)})
+
+    if not request.selection_ids:
+        return generics_schema.Success(message="No selections to clear", detail={"deleted_count": 0})
+
+    deleted = (
+        db.query(SelectionModel)
+        .filter(
+            SelectionModel.document_id == document_id,
+            SelectionModel.committed == False,
+            SelectionModel.id.in_(request.selection_ids),
+        )
+        .delete(synchronize_session=False)
+    )
+    db.commit()
+    return generics_schema.Success(message="Cleared selected staged selections", detail={"deleted_count": int(deleted)})
+
+
+def uncommit_selections(db: Session, document_id: UUID, request: selections_schema.SelectionUncommitRequest) -> list[selections_schema.Selection]:
+    """Flip committed selections to staged (committed=False) for all or provided IDs."""
+    _ = _raise_not_found(documents_crud.read, db=db, id=document_id)
+    from backend.db.models import Selection as SelectionModel
+
+    if request.uncommit_all:
+        (
+            db.query(SelectionModel)
+            .filter(SelectionModel.document_id == document_id, SelectionModel.committed == True)
+            .update({"committed": False}, synchronize_session=False)
+        )
+        db.commit()
+    else:
+        if not request.selection_ids:
+            return []
+        (
+            db.query(SelectionModel)
+            .filter(
+                SelectionModel.document_id == document_id,
+                SelectionModel.id.in_(request.selection_ids),
+            )
+            .update({"committed": False}, synchronize_session=False)
+        )
+        db.commit()
+
+    # Return all staged selections after operation
+    staged = [
+        s for s in selections_crud.read_list_by_document(db=db, document_id=document_id)
+        if not getattr(s, "committed", False)
+    ]
+    return [selections_schema.Selection.model_validate(i) for i in staged]
+
+
 def commit_staged_selections(db: Session, document_id: UUID, request: selections_schema.SelectionCommitRequest) -> list[selections_schema.Selection]:
     """Commit staged selections for a document.
     Either commit all staged selections or a provided subset of selection IDs.

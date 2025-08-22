@@ -233,6 +233,26 @@ async def commit_staged_selections(
     return documents_controller.commit_staged_selections(db=db, document_id=document_id, request=request)
 
 
+@router.post("/id/{document_id}/selections/staged/clear", response_model=generics_schema.Success)
+async def clear_staged(
+    document_id: UUID,
+    request: selections_schema.SelectionClearRequest,
+    db: Session = Depends(get_db_session),
+):
+    """Clear staged selections (all or a subset by IDs)."""
+    return documents_controller.clear_staged_selections(db=db, document_id=document_id, request=request)
+
+
+@router.patch("/id/{document_id}/selections/uncommit", response_model=list[selections_schema.Selection])
+async def uncommit(
+    document_id: UUID,
+    request: selections_schema.SelectionUncommitRequest,
+    db: Session = Depends(get_db_session),
+):
+    """Flip committed selections back to staged (all or subset)."""
+    return documents_controller.uncommit_selections(db=db, document_id=document_id, request=request)
+
+
 @router.post("/id/{document_id}/process", response_model=generics_schema.Success)
 async def process_document(
     document_id: UUID,
