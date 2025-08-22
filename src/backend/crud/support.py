@@ -122,14 +122,6 @@ class SupportCrud:
         return decrypted_password
 
 
-    # def get_decrypted_original_file(self, db: Session, *, document_id: UUID, password: str, join_with: list[str] | None = None, not_found_status: int = status.HTTP_404_NOT_FOUND) -> tuple[object, object, bytes]:
-    #     """Load document, ensure original file exists, decrypt+verify, and return (document, original_file, decrypted_bytes)."""
-    #     document = self.apply_or_404(self.documents_crud.read, db=db, id=document_id, join_with=(join_with or ["files"]))
-    #     original_file = self.get_original_file_or_404(document)
-    #     decrypted_data = self.decrypt_original_file_or_500(original_file=original_file, password=password)
-    #     return document, original_file, decrypted_data
-
-
     def get_original_file_data_or_400_401_404_500(
         self,
         db: Session,
@@ -166,7 +158,13 @@ class SupportCrud:
         items = []
         schema_fields = set(getattr(schema_cls, 'model_fields', {}).keys())
         for rec in records:
-            model = rec[model_index] if isinstance(rec, tuple) else rec
+            # Handle SQLAlchemy Row/RowMapping or tuple
+            try:
+                candidate = rec[model_index]  # works for tuples and SA Rows
+            except Exception:
+                candidate = rec
+            model = candidate
+
             data = {}
             # First, apply explicit transforms
             for key, fn in (transforms or {}).items():

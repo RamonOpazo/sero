@@ -84,7 +84,7 @@ def update(db: Session, project_id: UUID, project_data: projects_schema.ProjectU
 
 
 def delete(db: Session, project_id: UUID) -> generics_schema.Success:
-    project = support_crud.apply_or_404(callback=projects_crud.delete, db=db, id=project_id)
+    project = support_crud.apply_or_404(projects_crud.delete, db=db, id=project_id)
     return generics_schema.Success(message=f"Project {project.name!r} deleted successfully")
 
 
