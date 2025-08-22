@@ -1,6 +1,90 @@
 # CHANGELOG
 
 
+## v1.3.0 (2025-08-22)
+
+### Documentation
+
+- Update AI_PLAN.md — mark completed frontend alignment, note crypto endpoint fix, and list next UI
+  tasks (selection lifecycle, AI settings panel)
+  ([`5f99e83`](https://github.com/RamonOpazo/sero/commit/5f99e83fb80f2f8209e180c5b8581a463a64df16))
+
+- **plan**: Add steps/actions tracking and phase breakdown to AI_PLAN
+  ([`f24d98e`](https://github.com/RamonOpazo/sero/commit/f24d98efc2293155a97d0ec5eba7dc6ee0c87004))
+
+- **plan**: Track health and staged management; mark commit step done
+  ([`65f5631`](https://github.com/RamonOpazo/sero/commit/65f563167c28a1c23b054f2447aa77325d3d864f))
+
+### Features
+
+- Derive version at runtime via importlib.metadata with git fallback; surface version in FastAPI and
+  CLI
+  ([`8a504a9`](https://github.com/RamonOpazo/sero/commit/8a504a9ff5a339c2e8a7b822062cd38383e9d7b7))
+
+- **ai**: Abstract instruction composition via system_prompt in request; make AiService.health
+  abstract
+  ([`8ec0798`](https://github.com/RamonOpazo/sero/commit/8ec079888b1573ace3211c3d496896a6d0807637))
+
+- **ai**: Add abstract health() to AiService; add AI health endpoint; implement staged
+  clear/uncommit endpoints; add JSON parsing in Ollama service
+  ([`85054db`](https://github.com/RamonOpazo/sero/commit/85054dbc42b45132c5d5b6bedbe0f4cce5ec1cbb))
+
+- **ai**: Add document-scoped AI apply endpoint scaffold under documents routes
+  ([`b59b27d`](https://github.com/RamonOpazo/sero/commit/b59b27dba7fe4d7b361d69db72c0a914c6a590db))
+
+- **ai**: Add per-document AiSettings, simplify Prompt model, and scaffold offline Ollama service
+  ([`f9c48f0`](https://github.com/RamonOpazo/sero/commit/f9c48f06876524dd4211cc0f8adf9ef5b4bc60cf))
+
+- **ai**: Centralize instruction composition via prompt_composer; wire service to use it; update
+  plan
+  ([`3207e48`](https://github.com/RamonOpazo/sero/commit/3207e48bb7d6243d3ef67875432a4eb51de85804))
+
+- **frontend**: Align Help overlay with Info — sidebar width, minimal sections, and smooth
+  enter/exit transitions
+  ([`341cd1e`](https://github.com/RamonOpazo/sero/commit/341cd1ef9ee1142ae7c5788492b1987626e97459))
+
+- **frontend**: Refine selection visuals — add subtle brightness backdrop, solid tint, and tighter
+  135° hatch spacing
+  ([`0140946`](https://github.com/RamonOpazo/sero/commit/01409464eead0b92d94d04d75ab929f2078202be))
+
+- **selection**: Add commit endpoint to flip staged selections to committed; add request schema
+  ([`69bf1c8`](https://github.com/RamonOpazo/sero/commit/69bf1c89b615fab4a0b0f5e9b22397addf09cb5b))
+
+- **selection**: Add staged selections via committed flag and use only committed in redaction
+  ([`d73eecb`](https://github.com/RamonOpazo/sero/commit/d73eecb763fd7ba13f12dc63352f7664b1552513))
+
+- **viewer**: Add T toggle for original/redacted; convert Help to KeyboardShortcutsDialog and wire
+  toolbar + shortcuts
+  ([`b49f814`](https://github.com/RamonOpazo/sero/commit/b49f814b02e9d1ec5451e9e13e9ccb3293eb4bdc))
+
+### Refactoring
+
+- Move project password verify to SupportCrud; remove ProjectCrud.verify_password; apply get_or_404
+  across controllers; break circular imports
+  ([`ef5d4c5`](https://github.com/RamonOpazo/sero/commit/ef5d4c5244b66631df71e58b2650ae26ed44a99b))
+
+- Remove Project.version across backend and tests; migrate Pydantic configs to ConfigDict; fix tests
+  and event loop shutdown; deflake BaseCrud filters
+  ([`04c2dd3`](https://github.com/RamonOpazo/sero/commit/04c2dd3a0797156a5824e54ae8e02a4348adf417))
+
+- Unify shallow and summary builders; centralize original/redacted file flows; clean projects
+  controller most_common_tags
+  ([`90c49fc`](https://github.com/RamonOpazo/sero/commit/90c49fc8927f572f133c101ed56d12fa66c62eb0))
+
+- **ai**: Delegate all AI logic to AiService and keep controllers declarative; update plan
+  ([`593c2a7`](https://github.com/RamonOpazo/sero/commit/593c2a77b8aabc61c4a4ddc19694ba9edcab2bba))
+
+- **controller**: Centralize not-found checks; add SupportCrud helpers for original/redacted file
+  flows; refactor documents controller to use helpers; minor cleanups
+  ([`6ddcb42`](https://github.com/RamonOpazo/sero/commit/6ddcb4201af4f7fd7b8683f8545709499f61e341))
+
+### Testing
+
+- **base_crud**: Deflake filter assertions by increasing limits and using created project's version
+  in 'in' filter
+  ([`157a25f`](https://github.com/RamonOpazo/sero/commit/157a25ff457d187f541f4498854dfa4004ed1e79))
+
+
 ## v1.2.0 (2025-08-21)
 
 ### Bug Fixes
@@ -17,6 +101,11 @@
 - **viewer**: Force immediate render of processed PDF via volatile blob URL; stabilize URL lifetime
   and remount logic
   ([`994d9ca`](https://github.com/RamonOpazo/sero/commit/994d9ca84e75da6cc7a85cbad4aa70c53225ddc6))
+
+### Chores
+
+- **release**: V1.2.0 [skip ci]
+  ([`f499fe1`](https://github.com/RamonOpazo/sero/commit/f499fe10289d849ced94b7d30971c9de19db5b6c))
 
 ### Features
 
