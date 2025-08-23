@@ -59,14 +59,14 @@ export function PromptProvider({ children, documentId, initialPrompts }: PromptP
 
   // CRUD helpers
   const createPrompt = useCallback((data: Omit<PromptType, 'id' | 'created_at' | 'updated_at' | 'document_id'>) => {
-    const fromEnabled = (data as any).enabled;
-    const inferredState = (data as any).state ?? (fromEnabled === true ? 'committed' : 'staged');
+    const inferredScope = (data as any).scope ?? 'document';
+    const inferredState = (data as any).state ?? 'staged';
     const temp: PromptType = {
       id: `prompt-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
       document_id: currentId.current,
       created_at: new Date().toISOString(),
       updated_at: null,
-      scope: (data as any).scope ?? 'document',
+      scope: inferredScope,
       state: inferredState,
       title: (data as any).title,
       prompt: (data as any).prompt,
