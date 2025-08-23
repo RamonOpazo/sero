@@ -68,7 +68,7 @@ async def get_project_ai_settings(
     return projects_controller.get_ai_settings(db=db, project_id=project_id)
 
 
-@router.put("/id/{project_id}/ai-settings", response_model=settings_schema.AiSettingsUpdate)
+@router.put("/id/{project_id}/ai-settings", response_model=settings_schema.AiSettings)
 async def update_project_ai_settings(
     project_id: UUID,
     data: settings_schema.AiSettingsUpdate,
