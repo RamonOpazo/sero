@@ -96,6 +96,9 @@ const selectionApiAdapter: ApiAdapter<Selection, Omit<SelectionCreateType, 'docu
 
 const selectionTransforms: ApiTransforms<Selection, Omit<SelectionCreateType, 'document_id'>> = {
   forCreate: (selection: Selection): Omit<SelectionCreateType, 'document_id'> => ({
+    // Ensure required fields for creation are present
+    scope: selection.scope ?? 'document',
+    state: selection.state ?? 'staged',
     x: selection.x,
     y: selection.y,
     width: selection.width,

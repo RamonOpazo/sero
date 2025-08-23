@@ -104,21 +104,6 @@ export default function DocumentControls({ document }: DocumentControlsProps) {
               {document.description}
             </div>
           )}
-
-        {document.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {document.tags.slice(0, 4).map((tag, index) => (
-              <Badge key={index} variant="outline" className="text-xs px-1.5 py-0.5">
-                {tag}
-              </Badge>
-            ))}
-            {document.tags.length > 4 && (
-              <Badge variant="outline" className="text-xs px-1.5 py-0.5">
-                +{document.tags.length - 4}
-              </Badge>
-            )}
-          </div>
-        )}
         <Button
           variant="outline"
           size="sm"

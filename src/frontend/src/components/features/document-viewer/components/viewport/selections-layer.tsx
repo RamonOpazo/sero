@@ -106,13 +106,14 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     
     // Start drawing in the new selection system
     const initialSelection: SelectionCreateType = {
+      scope: 'document',
+      state: 'staged',
       x,
       y,
       width: 0,
       height: 0,
       page_number: currentPage,
       document_id: currentDocument.id,
-      committed: false,
     };
     
     startDraw(initialSelection);
@@ -137,13 +138,14 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
       
       // Create selection from start point to current point
       const newSelection: SelectionCreateType = {
+        scope: 'document',
+        state: 'staged',
         x: Math.min(startPoint.x, currentX),
         y: Math.min(startPoint.y, currentY),
         width: Math.abs(currentX - startPoint.x),
         height: Math.abs(currentY - startPoint.y),
         page_number: currentPage,
         document_id: currentDocument!.id,
-        committed: false,
       };
       
       // Ensure selection stays within bounds (0-1)
@@ -326,7 +328,7 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     const isGlobal = selection.page_number === null;
 
     // Determine staged status: persisted but not committed
-    const isStaged = selection.committed === false;
+    const isStaged = selection.state === 'staged';
 
     // Check if this saved selection has been modified from its initial state
     const isModified = !isNew && pendingChanges.updates.some((update: Selection) => update.id === selection.id);

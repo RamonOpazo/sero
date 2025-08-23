@@ -2,7 +2,7 @@ import { useMemo, useCallback, useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useWorkspace } from '@/providers/workspace-provider';
 import { ProjectsAPI } from '@/lib/projects-api';
-import type { ProjectShallowType, ProjectCreateType, ProjectUpdateType } from '@/types';
+import type { ProjectShallowType, ProjectCreateType, ProjectUpdateType, ProjectAiSettingsUpdateType } from '@/types';
 
 export function useProjectsView(onProjectSelect?: (project: ProjectShallowType) => void) {
   const { state, selectProject } = useWorkspace();

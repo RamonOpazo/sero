@@ -105,7 +105,6 @@ export default function InfoLayer({ document, documentSize, isVisible, onToggleV
             <div><span className="text-muted-foreground">Updated:</span> <span>{formatDate(document.updated_at)}</span></div>
           )}
           <div><span className="text-muted-foreground">Status:</span> <span>{document.files?.length > 1 ? "processed" : "pending"}</span></div>
-          <div><span className="text-muted-foreground">Tags:</span> <span>{document.tags.length}</span></div>
         </div>
       </div>
 
