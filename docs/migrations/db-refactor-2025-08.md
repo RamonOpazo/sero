@@ -11,11 +11,11 @@ Branch: feat/db-refactor-scoped-settings
   - ai_setting (required)
   - watermark_setting (required)
   - annotation_setting (required)
-- Prompts and selections gain explicit scope and state:
-  - scope: PROJECT or DOCUMENT
+- Prompts and selections gain explicit state and remain document-scoped:
+  - scope: DOCUMENT (for both)
   - state: STAGED (default) or COMMITTED
-- Selections can be associated either with a project or a document (mutually exclusive FK).
-- Prompts remain attached to documents for content but gain scope/state metadata. Enabled flag removed in favor of state.
+- Prompts and selections require document_id (no project-level scoping).
+- Enabled flag removed in favor of state (prompts).
 - Dedicated template table with unique(project_id) ensuring one template per project.
 - Remove Document.tags.
 
@@ -31,12 +31,12 @@ Branch: feat/db-refactor-scoped-settings
 - File
   - No structural changes
 - Selection
-  - Add: scope (PROJECT|DOCUMENT), state (STAGED|COMMITTED default STAGED), project_id (nullable), document_id (nullable)
-  - Constraint: exactly one of project_id or document_id must be non-null; page_number nullable implies global
+  - Add: scope (DOCUMENT), state (STAGED|COMMITTED default STAGED)
+  - page_number nullable implies global
   - Remove: committed (replaced by state)
 - Prompt
   - Keep: title, directive, prompt (content)
-  - Add: scope (PROJECT|DOCUMENT), state (STAGED|COMMITTED default STAGED)
+  - Add: scope (DOCUMENT), state (STAGED|COMMITTED default STAGED)
   - Remove: enabled
 - Settings (new tables, required, one-to-one with Project)
   - ai_setting: provider, model_name, temperature, top_p NULL, max_tokens NULL, num_ctx NULL, seed NULL, stop_tokens, system_prompt, project_id FK
@@ -48,8 +48,9 @@ Branch: feat/db-refactor-scoped-settings
 ## Enum Changes
 
 - New enums:
-  - ScopeType: PROJECT, DOCUMENT
+  - ScopeType: DOCUMENT
   - CommitState: STAGED, COMMITTED
+  - AnchorOption: NW, NE, SE, SW, ZH
 - FileType unchanged
 
 ## Migration Strategy
@@ -65,13 +66,11 @@ Given SQLite without alembic migrations, we will use an in-app migration routine
 - Add unique index on templates.project_id
 - Add unique index on each settings table project_id
 
-### 2. Selections: scope/state and project scoping
-- Add columns: scope TEXT NOT NULL DEFAULT 'DOCUMENT', state TEXT NOT NULL DEFAULT 'STAGED', project_id BLOB NULL
-- Add check constraint: (project_id IS NOT NULL) != (document_id IS NOT NULL)
+### 2. Selections: add scope/state (document-only)
+- Add columns: scope TEXT NOT NULL DEFAULT 'DOCUMENT', state TEXT NOT NULL DEFAULT 'STAGED'
 - Migrate data:
-  - Set scope='DOCUMENT' where document_id IS NOT NULL
-  - If any global selections exist (page_number IS NULL and intended to be project-wide), a separate domain decision is needed; by default we keep them as document-scoped with page_number NULL; project-wide selections can be created in future.
-- Drop column committed after successful data backfill to state: set state='COMMITTED' where committed=1 else 'STAGED'
+  - Set state='COMMITTED' where committed=1, else 'STAGED'
+- Drop column committed after successful data backfill
 
 ### 3. Prompts: scope/state and enabled removal
 - Add columns: scope TEXT NOT NULL DEFAULT 'DOCUMENT', state TEXT NOT NULL DEFAULT 'STAGED'
@@ -112,12 +111,9 @@ Note: Actual DDL will be implemented via SQLAlchemy models metadata create_all a
 - Selections
   - ALTER TABLE selections ADD COLUMN scope TEXT NOT NULL DEFAULT 'DOCUMENT';
   - ALTER TABLE selections ADD COLUMN state TEXT NOT NULL DEFAULT 'STAGED';
-  - ALTER TABLE selections ADD COLUMN project_id BLOB NULL;
   - UPDATE selections SET state='COMMITTED' WHERE committed=1;
-  - UPDATE selections SET scope='DOCUMENT' WHERE document_id IS NOT NULL;
   - -- After code updates and data checks:
   - -- ALTER TABLE selections DROP COLUMN committed; -- SQLite requires table rebuild
-  - -- Add CHECK constraint via table rebuild: (project_id IS NOT NULL) != (document_id IS NOT NULL)
 
 - Prompts
   - ALTER TABLE prompts ADD COLUMN scope TEXT NOT NULL DEFAULT 'DOCUMENT';
@@ -139,14 +135,14 @@ Note: Actual DDL will be implemented via SQLAlchemy models metadata create_all a
 ## Application Defaults
 
 - ai_setting: provider=ollama, model_name=from config, temperature=0.2, top_p=NULL, max_tokens=NULL, num_ctx=NULL, seed=NULL, stop_tokens=[], system_prompt=NULL
-- watermark_setting: sensible UI defaults (anchor='bottom-right', padding=8, fg_color='#000', bg_color=NULL, text='CONFIDENTIAL', text_size=12)
-- annotation_setting: bg_color='#000', fg_color=NULL, text=NULL, text_size=NULL
+- watermark_setting: anchor=NW, padding=8, fg_color='#ff0000', bg_color=NULL, text='Redacted with SERO – MIT Licensed', text_size=12
+- annotation_setting: bg_color='#000000', fg_color=NULL, text=NULL, text_size=NULL
 
 ## Open Questions (resolved)
 - Settings scope: Project-only, mandatory one-to-one
 - Templates: Dedicated table with unique(project_id)
 - Prompts: Keep prompt content; add scope/state; remove enabled
-- Selections: Add scope/state; page_number nullable means global; support project or document FK (mutually exclusive)
+- Selections: Add scope/state; page_number nullable means global; document-only (document_id required)
 - Tags: Removed
 
 ## Operational Notes
