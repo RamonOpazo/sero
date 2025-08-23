@@ -187,12 +187,29 @@ export function useProjectsView(onProjectSelect?: (project: ProjectShallowType) 
     setIsAiSettingsDialogOpen(true);
   }, []);
 
-  const submitAiSettings = useCallback(async (_data: any) => {
-    // For now, just close and toast; backend project-level AI settings endpoints are not defined yet.
-    setIsAiSettingsDialogOpen(false);
-    setSelectedProjectForAi(null);
-    toast.success('AI settings saved for project');
-  }, []);
+  const submitAiSettings = useCallback(async (form: any) => {
+    if (!selectedProjectForAi) return;
+    // Normalize stop_tokens: string of comma-separated to string[] expected by backend
+    const updates: ProjectAiSettingsUpdateType = {
+      provider: form.provider,
+      model_name: form.model_name,
+      temperature: form.temperature,
+      top_p: form.top_p ?? null,
+      max_tokens: form.max_tokens ?? null,
+      num_ctx: form.num_ctx ?? null,
+      seed: form.seed ?? null,
+      stop_tokens: typeof form.stop_tokens === 'string' ? (form.stop_tokens || '').split(',').map((s: string) => s.trim()).filter((s: string) => s.length > 0) : form.stop_tokens,
+      system_prompt: form.system_prompt ?? null,
+    };
+    const result = await ProjectsAPI.updateProjectAiSettings(selectedProjectForAi.id, updates);
+    if (result.ok) {
+      setIsAiSettingsDialogOpen(false);
+      setSelectedProjectForAi(null);
+      toast.success('AI settings saved for project');
+    } else {
+      throw result.error as any;
+    }
+  }, [selectedProjectForAi]);
 
   const dialogState = useMemo(() => ({
     create: {

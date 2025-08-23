@@ -292,11 +292,7 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
         isOpen={dialogState.ai.isOpen}
         onClose={dialogState.ai.onClose}
         onSubmit={dialogState.ai.onSubmit}
-        initial={dialogState.ai.project ? {
-          provider: 'ollama',
-          model_name: 'llama3.1',
-          temperature: 0.2,
-        } : undefined}
+        initial={undefined}
       />
 
       {/* Project Creation Dialog */}
