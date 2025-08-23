@@ -45,7 +45,6 @@ class Document(BaseModel):
     name: str
     description: str | None
     project_id: UUID4
-    tags: list[str]
     files: Annotated[list["File"], BeforeValidator(lambda x: [] if x is None else x)]
     prompts: Annotated[list[Prompt], BeforeValidator(lambda x: [] if x is None else x)]
     selections: Annotated[list[Selection], BeforeValidator(lambda x: [] if x is None else x)]
@@ -67,13 +66,11 @@ class DocumentCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
     description: str | None = Field(None)
     project_id: UUID4
-    tags: list[str] = Field(default_factory=list)
 
 
 class DocumentUpdate(BaseModel):
     name: str | None = Field(None, min_length=1, max_length=100)
     description: str | None = Field(None)
-    tags: list[str] | None = Field(None)
 
 
 class DocumentShallow(BaseModel):
@@ -86,7 +83,6 @@ class DocumentShallow(BaseModel):
     name: str
     description: str | None
     project_id: UUID4
-    tags: list[str]
     
     # Minimal metadata
     prompt_count: int
@@ -118,8 +114,6 @@ class DocumentSummary(BaseModel):
     # Processing components counts
     prompt_count: int
     selection_count: int
-    tag_count: int
-    tags: list[str]  # List of tag labels
     
     # Processing status indicators
     is_processed: bool

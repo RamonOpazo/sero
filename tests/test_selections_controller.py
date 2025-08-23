@@ -9,7 +9,7 @@ from backend.api.schemas.selections_schema import SelectionCreate, SelectionUpda
 from backend.api.schemas.documents_schema import DocumentCreate
 from backend.core.security import security_manager
 from backend.db.models import Project as ProjectModel, Document as DocumentModel, File as FileModel
-from backend.api.enums import FileType
+from backend.api.enums import FileType, CommitState
 
 
 class TestSelectionsController:
@@ -28,13 +28,12 @@ class TestSelectionsController:
         return proj
 
     def _create_document(self, db: Session, project_id) -> DocumentModel:
-        dc = DocumentCreate(name=f"doc-{uuid.uuid4().hex[:6]}.pdf", description=None, project_id=project_id, tags=[])
+        dc = DocumentCreate(name=f"doc-{uuid.uuid4().hex[:6]}.pdf", description=None, project_id=project_id)
         # create directly via ORM for tight control
         doc = DocumentModel(
             name=dc.name,
             description=dc.description,
             project_id=project_id,
-            tags=[],
         )
         db.add(doc)
         db.commit()
@@ -61,7 +60,7 @@ class TestSelectionsController:
         doc = self._create_document(test_session, proj.id)
 
         # Create
-        sc = SelectionCreate(page_number=1, x=0.1, y=0.2, width=0.3, height=0.4, confidence=0.8, committed=False, document_id=doc.id)
+        sc = SelectionCreate(page_number=1, x=0.1, y=0.2, width=0.3, height=0.4, confidence=0.8, document_id=doc.id)
         created = selections_controller.create(db=test_session, selection_data=sc)
         assert created.id and created.document_id == doc.id
         assert created.is_ai_generated is True
@@ -77,10 +76,10 @@ class TestSelectionsController:
         assert str(created.id) in ids
 
         # Update
-        su = SelectionUpdate(page_number=2, x=0.2, y=0.3, width=0.4, height=0.5, confidence=0.9, committed=True)
+        su = SelectionUpdate(page_number=2, x=0.2, y=0.3, width=0.4, height=0.5, confidence=0.9, state=CommitState.COMMITTED)
         updated = selections_controller.update(db=test_session, selection_id=created.id, selection_data=su)
         assert updated.page_number == 2
-        assert updated.committed is True
+        assert updated.state == CommitState.COMMITTED
 
         # Delete
         out = selections_controller.delete(db=test_session, selection_id=created.id)
@@ -109,10 +108,10 @@ class TestSelectionsController:
         proj = self._create_project(test_session)
         doc = self._create_document(test_session, proj.id)
 
-        # Seed 3 staged selections (committed False)
+        # Seed 3 staged selections
         sids = []
         for i in range(3):
-            sc = SelectionCreate(page_number=1, x=0.1+i*0.1, y=0.1, width=0.2, height=0.3, confidence=None, committed=False, document_id=doc.id)
+            sc = SelectionCreate(page_number=1, x=0.1+i*0.1, y=0.1, width=0.2, height=0.3, confidence=None, document_id=doc.id)
             created = selections_controller.create(db=test_session, selection_data=sc)
             sids.append(created.id)
 
@@ -120,7 +119,7 @@ class TestSelectionsController:
         req_some = SelectionCommitRequest(selection_ids=[sids[0], sids[1]], commit_all=False)
         committed_some = documents_controller.commit_staged_selections(db=test_session, document_id=doc.id, request=req_some)
         assert len(committed_some) >= 2
-        assert all(i.committed is True for i in committed_some if str(i.id) in {str(sids[0]), str(sids[1])})
+        assert all(i.state == CommitState.COMMITTED for i in committed_some if str(i.id) in {str(sids[0]), str(sids[1])})
 
         # Commit all remaining staged selections
         req_all = SelectionCommitRequest(selection_ids=None, commit_all=True)
@@ -130,7 +129,7 @@ class TestSelectionsController:
         # After commit all, all should be committed
         all_after = documents_controller.get_selections(db=test_session, document_id=doc.id)
         assert len(all_after) == 3
-        assert all(i.committed is True for i in all_after)
+        assert all(i.state == CommitState.COMMITTED for i in all_after)
 
         # Uncommit some
         unreq_some = SelectionUncommitRequest(selection_ids=[sids[0]], uncommit_all=False)
@@ -140,7 +139,7 @@ class TestSelectionsController:
         unreq_all = SelectionUncommitRequest(selection_ids=None, uncommit_all=True)
         staged_all = documents_controller.uncommit_selections(db=test_session, document_id=doc.id, request=unreq_all)
         assert len(staged_all) == 3
-        assert all(i.committed is False for i in staged_all)
+        assert all(i.state == CommitState.STAGED for i in staged_all)
 
         # Clear staged (delete uncommitted)
         clr_req = SelectionClearRequest(selection_ids=None, clear_all=True)

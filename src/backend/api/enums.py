@@ -32,3 +32,11 @@ class ScopeType(StrEnum):
 class CommitState(StrEnum):
     STAGED = auto()
     COMMITTED = auto()
+
+
+class AnchorOption(StrEnum):
+    NW = auto()
+    NE = auto()
+    SE = auto()
+    SW = auto()
+    ZH = auto()

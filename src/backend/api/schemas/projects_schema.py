@@ -100,15 +100,10 @@ class ProjectSummary(BaseModel):
     # Processing components statistics
     total_prompts: int
     total_selections: int
-    total_tags: int
-    total_ai_selections: int
-    total_manual_selections: int
     
     # Document processing timeline
     oldest_document_date: AwareDatetime | None
     newest_document_date: AwareDatetime | None
-    
-    # Top tags
-    most_common_tags: list[tuple[str, int]]  # (tag_label, count)
+
     
     model_config = ConfigDict(from_attributes=True)

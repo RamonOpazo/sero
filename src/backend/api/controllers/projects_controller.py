@@ -92,7 +92,7 @@ def summarize(db: Session, project_id: UUID) -> projects_schema.ProjectSummary:
         projects_crud.read,
         db=db,
         id=project_id,
-        join_with=[ "documents.files", "documents.prompts", "documents.selections", "documents.ai_settings" ]
+        join_with=[ "documents.files", "documents.prompts", "documents.selections" ]
     )
 
     def doc_iter(ctx):
@@ -120,13 +120,9 @@ def summarize(db: Session, project_id: UUID) -> projects_schema.ProjectSummary:
             ),
             "total_prompts": lambda ctx: sum(len(d.prompts) for d in doc_iter(ctx)),
             "total_selections": lambda ctx: sum(len(d.selections) for d in doc_iter(ctx)),
-            "total_tags": lambda ctx: sum(len(d.tags) for d in doc_iter(ctx)),
             "total_ai_selections": lambda ctx: sum(1 for d in doc_iter(ctx) for s in d.selections if s.is_ai_generated),
             "total_manual_selections": lambda ctx: sum(1 for d in doc_iter(ctx) for s in d.selections if not s.is_ai_generated),
             "oldest_document_date": lambda ctx: (min((d.created_at for d in doc_iter(ctx)), default=None)),
             "newest_document_date": lambda ctx: (max((d.created_at for d in doc_iter(ctx)), default=None)),
-            "most_common_tags": lambda ctx, Counter=Counter: (
-                sorted(Counter(tag for d in doc_iter(ctx) for tag in d.tags).items(), key=lambda x: x[1], reverse=True)[:10]
-            ),
         },
     )
