@@ -31,7 +31,9 @@ const selectionApiAdapter: ApiAdapter<Selection, Omit<SelectionCreateType, 'docu
         created_at: apiSelection.created_at,
         updated_at: apiSelection.updated_at,
         is_ai_generated: apiSelection.is_ai_generated,
-        committed: (apiSelection as any).committed ?? false,
+        scope: (apiSelection as any).scope ?? 'document',
+        state: (apiSelection as any).state ?? 'staged',
+        is_global_page: (apiSelection as any).is_global_page ?? (apiSelection.page_number == null),
       }));
       return { ok: true, value: selections };
     }
@@ -54,7 +56,9 @@ const selectionApiAdapter: ApiAdapter<Selection, Omit<SelectionCreateType, 'docu
         created_at: result.value.created_at,
         updated_at: result.value.updated_at,
         is_ai_generated: result.value.is_ai_generated,
-        committed: (result.value as any).committed ?? false,
+        scope: (result.value as any).scope ?? 'document',
+        state: (result.value as any).state ?? 'staged',
+        is_global_page: (result.value as any).is_global_page ?? (result.value.page_number == null),
       };
       return { ok: true, value: selection };
     }
@@ -98,7 +102,6 @@ const selectionTransforms: ApiTransforms<Selection, Omit<SelectionCreateType, 'd
     height: selection.height,
     page_number: selection.page_number,
     confidence: selection.confidence,
-    committed: selection.committed ?? false,
   }),
   
   forUpdate: (selection: Selection): Partial<Selection> => ({
@@ -124,7 +127,9 @@ const selectionTransforms: ApiTransforms<Selection, Omit<SelectionCreateType, 'd
       created_at: apiSelection.created_at,
       updated_at: apiSelection.updated_at,
       is_ai_generated: apiSelection.is_ai_generated,
-      committed: (apiSelection as any).committed ?? false,
+      scope: (apiSelection as any).scope ?? 'document',
+      state: (apiSelection as any).state ?? 'staged',
+      is_global_page: (apiSelection as any).is_global_page ?? (apiSelection.page_number == null),
     };
   }
 };
