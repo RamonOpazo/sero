@@ -97,6 +97,10 @@ class TestDocumentsController:
         ai1 = projects_controller.get_ai_settings(db=test_session, project_id=proj.id)
         assert ai1.model_name and ai1.temperature is not None
 
+        # Call again to hit the 'return existing settings' branch
+        ai_existing = projects_controller.get_ai_settings(db=test_session, project_id=proj.id)
+        assert ai_existing.id == ai1.id
+
         ai2 = projects_controller.update_ai_settings(db=test_session, project_id=proj.id, data=AiSettingsUpdate(temperature=0.7))
         assert ai2.temperature == 0.7
 
