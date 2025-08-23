@@ -202,12 +202,12 @@ class SupportCrud:
             )
 
 
-    def ensure_document_ai_settings(self, db: Session, document_id: UUID):
-        existing = self.ai_settings_crud.read_by_document(db=db, document_id=document_id)
+    def ensure_project_ai_settings(self, db: Session, project_id: UUID):
+        existing = self.ai_settings_crud.read_by_project(db=db, project_id=project_id)
         if existing is not None:
             return existing
         # Initialize with sensible defaults from settings
-        created = self.ai_settings_crud.create_default_for_document(db=db, document_id=document_id, defaults={
+        created = self.ai_settings_crud.create_default_for_project(db=db, project_id=project_id, defaults={
             "provider": getattr(getattr(app_settings, "ai", object()), "provider", "ollama"),
             "model_name": app_settings.ai.model,
             "temperature": 0.2,
@@ -216,10 +216,10 @@ class SupportCrud:
     
 
     def bulk_create_documents_with_files_and_init(self, db: Session, bulk_data) -> list:
-        """Wrap bulk doc creation: create docs+files and ensure AiSettings for each."""
+        """Wrap bulk doc creation: create docs+files and ensure AiSettings for each project."""
         created_documents = self.documents_crud.bulk_create_with_files(db=db, bulk_data=bulk_data)
         for doc in created_documents:
-            self.ensure_document_ai_settings(db=db, document_id=doc.id)
+            self.ensure_project_ai_settings(db=db, project_id=doc.project_id)
         return created_documents
 
 
