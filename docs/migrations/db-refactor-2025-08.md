@@ -2,15 +2,14 @@
 
 This document describes the planned database schema refactor for Sero backend, along with data migration steps and rollout strategy. The goal is to streamline workflow by introducing explicit project-scoped settings, scoping and state for prompts and selections, and a dedicated template table. Tags are removed from documents.
 
-Status: PLANNED
+Status: IN PROGRESS
 Branch: feat/db-refactor-scoped-settings
 
 ## Summary of Changes
 
-- Project-scoped settings (one-to-one and mandatory):
-  - ai_setting (required)
-  - watermark_setting (required)
-  - annotation_setting (required)
+- Project-scoped settings (one-to-one via UNIQUE(project_id)):
+  - ai_settings, watermark_settings, annotation_settings
+  - Created with sensible defaults during migration; presence enforced at the application level
 - Prompts and selections gain explicit state and remain document-scoped:
   - scope: DOCUMENT (for both)
   - state: STAGED (default) or COMMITTED
@@ -27,7 +26,7 @@ Branch: feat/db-refactor-scoped-settings
 - Document
   - Keep: id, timestamps, name, description, project_id
   - Remove: tags
-  - Optional one-to-one ai_setting is NOT used (settings are project-only now)
+  - Project-level settings only (no document-level settings)
 - File
   - No structural changes
 - Selection
@@ -38,10 +37,10 @@ Branch: feat/db-refactor-scoped-settings
   - Keep: title, directive, prompt (content)
   - Add: scope (DOCUMENT), state (STAGED|COMMITTED default STAGED)
   - Remove: enabled
-- Settings (new tables, required, one-to-one with Project)
-  - ai_setting: provider, model_name, temperature, top_p NULL, max_tokens NULL, num_ctx NULL, seed NULL, stop_tokens, system_prompt, project_id FK
-  - watermark_setting: anchor, padding, bg_color NULL, fg_color, text, text_size, project_id FK
-  - annotation_setting: bg_color, fg_color NULL, text NULL, text_size NULL, project_id FK
+- Settings (new tables, one-to-one with Project; presence enforced at app level)
+  - ai_settings: provider, model_name, temperature, top_p NULL, max_tokens NULL, num_ctx NULL, seed NULL, stop_tokens, system_prompt, project_id FK (UNIQUE)
+  - watermark_settings: anchor, padding, bg_color NULL, fg_color, text, text_size, project_id FK (UNIQUE)
+  - annotation_settings: bg_color, fg_color NULL, text NULL, text_size NULL, project_id FK (UNIQUE)
 - Template (new)
   - id, timestamps, project_id FK, document_id FK, unique(project_id)
 
@@ -52,6 +51,30 @@ Branch: feat/db-refactor-scoped-settings
   - CommitState: STAGED, COMMITTED
   - AnchorOption: NW, NE, SE, SW, ZH
 - FileType unchanged
+
+## Field Constraints (DB-aligned)
+
+- Projects
+  - name: VARCHAR(100)
+  - contact_name: VARCHAR(100)
+  - contact_email: VARCHAR(100)
+- Documents
+  - name: VARCHAR(100)
+- Files
+  - file_hash: CHAR(64) (SHA-256 hex)
+  - mime_type: VARCHAR(100)
+- Prompts
+  - title: VARCHAR(150)
+  - directive: VARCHAR(50)
+- Settings
+  - AiSettings.provider: VARCHAR(50)
+  - AiSettings.model_name: VARCHAR(100)
+  - WatermarkSettings.bg_color: VARCHAR(7) HEX (#RRGGBB)
+  - WatermarkSettings.fg_color: VARCHAR(7) HEX (#RRGGBB)
+  - WatermarkSettings.text: VARCHAR(255)
+  - AnnotationSettings.bg_color: VARCHAR(7) HEX (#RRGGBB)
+  - AnnotationSettings.fg_color: VARCHAR(7) HEX (#RRGGBB)
+  - AnnotationSettings.text: VARCHAR(255)
 
 ## Migration Strategy
 
@@ -82,8 +105,8 @@ Given SQLite without alembic migrations, we will use an in-app migration routine
 - No data transformation required
 
 ### 5. Project-scoped settings with defaults
-- For each existing project, insert one ai_setting, one watermark_setting, one annotation_setting with sensible defaults derived from application config
-- Enforce unique(project_id) for each settings table
+- For each existing project, insert one ai_setting, one watermark_setting, one annotation_setting with sensible defaults derived from application config (create if missing)
+- Enforce unique(project_id) for each settings table (one-to-one); presence is enforced at the application/service layer
 
 ### 6. Template table
 - Create table templates with project_id and document_id (FKs)
@@ -94,6 +117,7 @@ Given SQLite without alembic migrations, we will use an in-app migration routine
 - Update ORM models, Pydantic schemas, and CRUD/controllers to reflect new fields and relationships
 - Adjust service logic to read settings from project tables
 - Maintain compatibility of existing APIs where possible; add filters for scope and state selections/prompts
+- Completed: ORM models and Pydantic schemas updated; next: update CRUD operations one-by-one
 
 ### 8. Validation and Tests
 - Run full test suite: uv run sero-test

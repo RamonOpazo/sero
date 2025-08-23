@@ -1,4 +1,4 @@
-from pydantic import BaseModel, UUID4, AwareDatetime, Field, computed_field, ConfigDict
+from pydantic import BaseModel, UUID4, AwareDatetime, Field, ConfigDict
 from backend.api.enums import ScopeType, CommitState
 
 
@@ -30,11 +30,8 @@ class Selection(BaseModel):
     height: float
     confidence: float | None
     document_id: UUID4
-
-    @computed_field
-    @property
-    def is_ai_generated(self) -> bool:
-        return self.confidence is not None
+    is_ai_generated: bool
+    is_global_page: bool
 
     model_config = ConfigDict(from_attributes=True)
 

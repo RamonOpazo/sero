@@ -102,7 +102,6 @@ class Prompt(Base):
     prompt: Mapped[str] = mapped_column(Text, nullable=False,)
     directive: Mapped[str] = mapped_column(String(50), nullable=False,)
 
-    # Scope targets (exactly one must be non-null)
     document_id: Mapped[uuid.UUID] = mapped_column(UUIDBytes, ForeignKey("documents.id"), nullable=False,)
     
     document: Mapped["Document"] = relationship("Document", back_populates="prompts",)
@@ -124,7 +123,6 @@ class Selection(Base):
     height: Mapped[float] = mapped_column(Float, nullable=False)  # Height (0-1 normalized)
     confidence: Mapped[float | None] = mapped_column(Float, nullable=True,)  # AI confidence score (Null if user generated)
 
-    # Scope targets (exactly one must be non-null),
     document_id: Mapped[uuid.UUID] = mapped_column(UUIDBytes, ForeignKey("documents.id"), nullable=False,)
     
     document: Mapped["Document"] = relationship("Document", back_populates="selections",)

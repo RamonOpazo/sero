@@ -3,38 +3,8 @@ from pydantic import BaseModel, Field, UUID4, AwareDatetime, BeforeValidator, co
 
 from backend.api.schemas.files_schema import File, FileCreate
 from backend.api.schemas.prompts_schema import Prompt
-from pydantic import BaseModel, UUID4, AwareDatetime, Field
-
-
-class DocumentAiSettings(BaseModel):
-    id: UUID4
-    created_at: AwareDatetime
-    updated_at: AwareDatetime | None
-    provider: str
-    model_name: str
-    temperature: float
-    top_p: float | None
-    max_tokens: int | None
-    num_ctx: int | None
-    seed: int | None
-    stop_tokens: list[str]
-    system_prompt: str | None
-    document_id: UUID4
-
-    model_config = ConfigDict(from_attributes=True)
-
-
-class DocumentAiSettingsUpdate(BaseModel):
-    provider: str | None = None
-    model_name: str | None = None
-    temperature: float | None = Field(None, ge=0, le=1)
-    top_p: float | None = Field(None, ge=0, le=1)
-    max_tokens: int | None = Field(None, ge=1)
-    num_ctx: int | None = Field(None, ge=1)
-    seed: int | None = None
-    stop_tokens: list[str] | None = None
-    system_prompt: str | None = None
 from backend.api.schemas.selections_schema import Selection
+from backend.api.schemas.templates_schema import Template
 from backend.api.enums import FileType
 
 
@@ -42,12 +12,13 @@ class Document(BaseModel):
     id: UUID4
     created_at: AwareDatetime
     updated_at: AwareDatetime | None
-    name: str
+    name: str = Field(max_length=100,)
     description: str | None
     project_id: UUID4
     files: Annotated[list["File"], BeforeValidator(lambda x: [] if x is None else x)]
     prompts: Annotated[list[Prompt], BeforeValidator(lambda x: [] if x is None else x)]
     selections: Annotated[list[Selection], BeforeValidator(lambda x: [] if x is None else x)]
+    template: Template | None
 
     @computed_field
     @property
@@ -74,13 +45,11 @@ class DocumentUpdate(BaseModel):
 
 
 class DocumentShallow(BaseModel):
-    """Shallow document schema without nested file data for efficient listing.
-    Includes prompt and selection counts and is_processed flag.
-    """
+    """Shallow document schema without nested file data for efficient listing."""
     id: UUID4
     created_at: AwareDatetime
     updated_at: AwareDatetime | None
-    name: str
+    name: str = Field(max_length=100,)
     description: str | None
     project_id: UUID4
     
@@ -88,6 +57,7 @@ class DocumentShallow(BaseModel):
     prompt_count: int
     selection_count: int
     is_processed: bool
+    is_template: bool
     
     model_config = ConfigDict(from_attributes=True)
 
@@ -95,7 +65,7 @@ class DocumentShallow(BaseModel):
 class DocumentSummary(BaseModel):
     """Summary of a document including all its components and processing status."""
     document_id: UUID4
-    name: str
+    name: str = Field(max_length=100,)
     description: str | None
     created_at: AwareDatetime
     updated_at: AwareDatetime | None
@@ -103,6 +73,10 @@ class DocumentSummary(BaseModel):
     # Project information
     project_name: str
     project_id: UUID4
+    
+    # Processing status indicators
+    is_processed: bool
+    is_template: bool
     
     # File information
     has_original_file: bool
@@ -114,15 +88,6 @@ class DocumentSummary(BaseModel):
     # Processing components counts
     prompt_count: int
     selection_count: int
-    
-    # Processing status indicators
-    is_processed: bool
-    ai_selections_count: int  # Selections with confidence score (AI-generated)
-    manual_selections_count: int  # Selections without confidence score (user-generated)
-    
-    # Prompt analysis
-    prompt_languages: list[str]  # Unique languages from all prompts
-    average_temperature: float | None  # Average temperature of all prompts
     
     model_config = ConfigDict(from_attributes=True)
 
