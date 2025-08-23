@@ -90,8 +90,11 @@ class TestSupportCrud:
         self._attach_original_file(test_session, doc, payload, password)
 
         # Monkeypatch ephemeral decryptor to return the correct password regardless of inputs
-        from backend.service.crypto_service import get_security_service
-        monkeypatch.setattr(get_security_service(), "decrypt_with_ephemeral_key", lambda key_id, encrypted_data: password)
+        class FakeSec:
+            def decrypt_with_ephemeral_key(self, key_id, encrypted_data):
+                return password
+        import backend.service.crypto_service as crypto_mod
+        monkeypatch.setattr(crypto_mod, "get_security_service", lambda: FakeSec())
 
         enc_b64 = base64.b64encode(b"ignored").decode("ascii")
         got_doc, got_file, got_data = support.get_original_file_data_or_400_401_404_500(
@@ -111,8 +114,11 @@ class TestSupportCrud:
         self._attach_original_file(test_session, doc, b"contents", password="CorrectPW")
 
         # Return a wrong password
-        from backend.service.crypto_service import get_security_service
-        monkeypatch.setattr(get_security_service(), "decrypt_with_ephemeral_key", lambda key_id, encrypted_data: "WrongPW")
+        class FakeSec:
+            def decrypt_with_ephemeral_key(self, key_id, encrypted_data):
+                return "WrongPW"
+        import backend.service.crypto_service as crypto_mod
+        monkeypatch.setattr(crypto_mod, "get_security_service", lambda: FakeSec())
 
         enc_b64 = base64.b64encode(b"ignored").decode("ascii")
         with pytest.raises(HTTPException) as exc:

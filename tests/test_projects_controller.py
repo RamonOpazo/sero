@@ -28,13 +28,12 @@ class TestProjectsController:
         return db.query(ProjectModel).filter(ProjectModel.id == created.id).first()
 
     def _create_document(self, db: Session, project_id) -> DocumentModel:
-        dc = DocumentCreate(name=f"doc-{uuid.uuid4().hex[:6]}.pdf", description=None, project_id=project_id, tags=[])
+        dc = DocumentCreate(name=f"doc-{uuid.uuid4().hex[:6]}.pdf", description=None, project_id=project_id)
         # create directly via ORM for tight control
         doc = DocumentModel(
             name=dc.name,
             description=dc.description,
             project_id=project_id,
-            tags=[],
             created_at=datetime.now(timezone.utc),
         )
         db.add(doc)

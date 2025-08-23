@@ -335,6 +335,7 @@ def summarize(db: Session, document_id: UUID) -> documents_schema.DocumentSummar
             "prompt_count": lambda ctx: len(ctx["model"].prompts),
             "selection_count": lambda ctx: len(ctx["model"].selections),
             "is_processed": lambda ctx: (ctx["model"].redacted_file is not None),
+            "is_template": lambda ctx: bool(getattr(ctx["model"], "template", None)),
             "ai_selections_count": lambda ctx: sum(1 for s in ctx["model"].selections if s.is_ai_generated),
             "manual_selections_count": lambda ctx: sum(1 for s in ctx["model"].selections if not s.is_ai_generated),
             "prompt_languages": lambda ctx: [],

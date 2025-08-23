@@ -4,7 +4,6 @@ from sqlalchemy.orm import Session
 from backend.crud import projects_crud, support_crud, ai_settings_crud
 from backend.api.schemas import projects_schema, generics_schema, settings_schema
 from backend.api.enums import ProjectStatus
-from collections import Counter
 
 
 def get_ai_settings(db: Session, project_id: UUID) -> settings_schema.AiSettings:

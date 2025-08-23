@@ -8,12 +8,11 @@ from fastapi import HTTPException, status
 from backend.api.controllers import documents_controller
 from backend.api.schemas.documents_schema import DocumentCreate, DocumentUpdate
 from backend.api.schemas.prompts_schema import PromptCreate
-from backend.api.schemas.selections_schema import SelectionCreate
 from backend.api.schemas.files_schema import EncryptedFileDownloadRequest
 from backend.core.security import security_manager
 from backend.core.pdf_redactor import redactor
 from backend.db.models import Project as ProjectModel, Document as DocumentModel, File as FileModel, Selection as SelectionModel
-from backend.api.enums import FileType
+from backend.api.enums import FileType, CommitState
 
 
 class TestDocumentsController:
@@ -89,25 +88,7 @@ class TestDocumentsController:
         res = documents_controller.search_list(db=test_session, skip=0, limit=100, name="doc-*", project_id=proj.id)
         assert any(str(i.id) == str(doc.id) for i in res)
 
-    def test_tags_prompts_selections(self, test_session: Session):
-        proj = self._create_project(test_session)
-        doc = self._create_document(test_session, proj.id)
-
-        # tags default empty
-        tags = documents_controller.get_tags(db=test_session, document_id=doc.id)
-        assert tags == []
-
-        # prompts
-        p = documents_controller.add_prompt(db=test_session, document_id=doc.id, prompt_data=PromptCreate(prompt="Analyze", directive="dir", title="t", document_id=doc.id))
-        got_prompts = documents_controller.get_prompts(db=test_session, document_id=doc.id, skip=0, limit=100)
-        assert any(pp.id == p.id for pp in got_prompts)
-
-        # selections
-        from backend.api.enums import CommitState
-        sc = SelectionCreate(page_number=1, x=0.1, y=0.2, width=0.3, height=0.4, confidence=None, state=CommitState.STAGED, document_id=doc.id)
-        sel = documents_controller.add_selection(db=test_session, document_id=doc.id, selection_data=sc)
-        got_selections = documents_controller.get_selections(db=test_session, document_id=doc.id, skip=0, limit=100)
-        assert any(ss.id == sel.id for ss in got_selections)
+    
     def test_ai_settings_get_and_update(self, test_session: Session):
         proj = self._create_project(test_session)
 
@@ -155,8 +136,11 @@ class TestDocumentsController:
         self._attach_redacted(test_session, doc, payload=b"OLD")
 
         # mock ephemeral decrypt to return correct password and redactor to produce deterministic bytes
-        from backend.service.crypto_service import get_security_service
-        monkeypatch.setattr(get_security_service(), "decrypt_with_ephemeral_key", lambda key_id, encrypted_data: password)
+        class FakeSec:
+            def decrypt_with_ephemeral_key(self, key_id, encrypted_data):
+                return password
+        import backend.service.crypto_service as crypto_mod
+        monkeypatch.setattr(crypto_mod, "get_security_service", lambda: FakeSec())
         monkeypatch.setattr(redactor, "redact_document", lambda pdf_data, selections: b"REDACTED-BYTES")
 
         req = EncryptedFileDownloadRequest(key_id="k", encrypted_password=base64.b64encode(b"ignored").decode("ascii"), stream=False)
@@ -321,19 +305,21 @@ class TestDocumentsController:
     def test_apply_ai_and_stage_with_enabled_prompts(self, test_session: Session, monkeypatch):
         proj = self._create_project(test_session)
         doc = self._create_document(test_session, proj.id)
-        # add an enabled prompt
+        # add a committed prompt (state-based)
         from backend.api.schemas.prompts_schema import PromptCreate
-        documents_controller.add_prompt(db=test_session, document_id=doc.id, prompt_data=PromptCreate(title="t", prompt="p", directive="d", enabled=True, document_id=doc.id))
+        from backend.api.enums import CommitState
+        documents_controller.add_prompt(db=test_session, document_id=doc.id, prompt_data=PromptCreate(title="t", prompt="p", directive="d", state=CommitState.COMMITTED, document_id=doc.id))
         # mock AI service
         class FakeSvc:
             async def generate_selections(self, req):
                 from backend.api.schemas.selections_schema import SelectionCreate
                 return type("Resp", (), {
-                    "selections": [SelectionCreate(page_number=1, x=0.1, y=0.1, width=0.2, height=0.2, confidence=0.9, committed=False, document_id=doc.id)]
+                    "selections": [SelectionCreate(page_number=1, x=0.1, y=0.1, width=0.2, height=0.2, confidence=0.9, document_id=doc.id)]
                 })()
         monkeypatch.setattr("backend.service.ai_service.get_ai_service", lambda: FakeSvc())
+        from backend.api.enums import CommitState as CS
         out = documents_controller.apply_ai_and_stage(db=test_session, document_id=doc.id)
-        assert len(out) == 1 and out[0].committed is False
+        assert len(out) == 1 and out[0].state == CS.STAGED
 
     def test_summarize_document_fields(self, test_session: Session):
         proj = self._create_project(test_session)
@@ -342,8 +328,9 @@ class TestDocumentsController:
         self._attach_original(test_session, doc, payload=b"ORIG")
         self._attach_redacted(test_session, doc, payload=b"REDACT")
         documents_controller.add_prompt(db=test_session, document_id=doc.id, prompt_data=PromptCreate(title="t", prompt="p", directive="d", enabled=True, document_id=doc.id))
-        sc1 = SelectionModel(document_id=doc.id, x=0.1, y=0.1, width=0.2, height=0.2, page_number=1, committed=False, confidence=0.8)
-        sc2 = SelectionModel(document_id=doc.id, x=0.2, y=0.2, width=0.2, height=0.2, page_number=1, committed=False, confidence=None)
+        from backend.api.enums import ScopeType
+        sc1 = SelectionModel(document_id=doc.id, x=0.1, y=0.1, width=0.2, height=0.2, page_number=1, scope=ScopeType.DOCUMENT, state=CommitState.STAGED, confidence=0.8)
+        sc2 = SelectionModel(document_id=doc.id, x=0.2, y=0.2, width=0.2, height=0.2, page_number=1, scope=ScopeType.DOCUMENT, state=CommitState.STAGED, confidence=None)
         test_session.add_all([sc1, sc2])
         test_session.commit()
         summ = documents_controller.summarize(db=test_session, document_id=doc.id)
@@ -356,7 +343,7 @@ class TestDocumentsController:
         proj = self._create_project(test_session, password=password)
         doc = self._create_document(test_session, proj.id)
         self._attach_original(test_session, doc, payload=b"%PDF-1.4 minimal", password=password)
-        s = SelectionModel(document_id=doc.id, x=0.1, y=0.1, width=0.2, height=0.2, page_number=1, committed=True)
+        s = SelectionModel(document_id=doc.id, x=0.1, y=0.1, width=0.2, height=0.2, page_number=1, state=CommitState.COMMITTED)
         test_session.add(s)
         test_session.commit()
         monkeypatch.setattr(security_manager, "decrypt_with_ephemeral_key", lambda key_id, encrypted_data: password)

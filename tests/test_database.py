@@ -38,7 +38,7 @@ def test_sqlite_database_models_and_relations(test_session):
         mime_type="application/pdf",
         data=b"%PDF-1.4 minimal",
         salt=b"salty",
-        file_hash="examplehash",
+        file_hash="0" * 64,
     )
     prompt = Prompt(
         document=document,
