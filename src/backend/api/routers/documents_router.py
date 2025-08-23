@@ -151,23 +151,6 @@ async def get_document_tags(
     return documents_controller.get_tags(db=db, document_id=document_id)
 
 
-@router.get("/id/{document_id}/ai-settings", response_model=documents_schema.DocumentAiSettings)
-async def get_document_ai_settings(
-    document_id: UUID,
-    db: Session = Depends(get_db_session)
-):
-    """Get AI settings for a document."""
-    return documents_controller.get_ai_settings(db=db, document_id=document_id)
-
-
-@router.put("/id/{document_id}/ai-settings", response_model=documents_schema.DocumentAiSettings)
-async def update_document_ai_settings(
-    document_id: UUID,
-    data: documents_schema.DocumentAiSettingsUpdate,
-    db: Session = Depends(get_db_session)
-):
-    """Update AI settings for a document."""
-    return documents_controller.update_ai_settings(db=db, document_id=document_id, data=data)
 
 
 @router.get("/id/{document_id}/prompts", response_model=list[prompts_schema.Prompt])

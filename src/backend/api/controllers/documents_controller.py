@@ -192,38 +192,6 @@ def bulk_create_with_files(db: Session, uploads_data: list[files_schema.FileUplo
     )
 
 
-def get_ai_settings(db: Session, document_id: UUID) -> documents_schema.DocumentAiSettings:
-    # Verify document exists
-    document = support_crud.apply_or_404(documents_crud.read, db=db, id=document_id, join_with=["ai_settings"])
-    from backend.crud import ai_settings_crud
-    if document.ai_settings is None:
-        from backend.core.config import settings as app_settings
-        ai_settings_crud.create_default_for_document(db=db, document_id=document_id, defaults={
-            "provider": app_settings.ai.__dict__.get("provider", "ollama") if hasattr(app_settings.ai, "provider") else "ollama",
-            "model_name": app_settings.ai.model,
-            "temperature": 0.2,
-        })
-        # reload
-        document = support_crud.apply_or_404(documents_crud.read, db=db, id=document_id, join_with=["ai_settings"])
-    return documents_schema.DocumentAiSettings.model_validate(document.ai_settings)
-
-
-def update_ai_settings(db: Session, document_id: UUID, data: documents_schema.DocumentAiSettingsUpdate) -> documents_schema.DocumentAiSettings:
-    # Ensure document exists
-    document = support_crud.apply_or_404(documents_crud.read, db=db, id=document_id, join_with=["ai_settings"])
-    from backend.crud import ai_settings_crud
-    if document.ai_settings is None:
-        from backend.core.config import settings as app_settings
-        ai_settings = ai_settings_crud.create_default_for_document(db=db, document_id=document_id, defaults={
-            "provider": app_settings.ai.__dict__.get("provider", "ollama") if hasattr(app_settings.ai, "provider") else "ollama",
-            "model_name": app_settings.ai.model,
-            "temperature": 0.2,
-        })
-    else:
-        ai_settings = ai_settings_crud.update_by_document(db=db, document_id=document_id, data=data)
-    return documents_schema.DocumentAiSettings.model_validate(ai_settings)
-
-
 def get_prompts(db: Session, document_id: UUID, skip: int = 0, limit: int = 100) -> list[prompts_schema.Prompt]:
     # Verify document exists
     support_crud.apply_or_404(documents_crud.read, db=db, id=document_id)

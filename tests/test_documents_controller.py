@@ -31,8 +31,8 @@ class TestDocumentsController:
         return proj
 
     def _create_document(self, db: Session, project_id) -> DocumentModel:
-        dc = DocumentCreate(name=f"doc-{uuid.uuid4().hex[:6]}.pdf", description=None, project_id=project_id, tags=[])
-        # Use controller create to initialize AI settings, etc.
+        dc = DocumentCreate(name=f"doc-{uuid.uuid4().hex[:6]}.pdf", description=None, project_id=project_id)
+        # Use controller create
         created = documents_controller.create(db=db, document_data=dc)
         # Load ORM for seeding files and selections
         model = db.query(DocumentModel).filter(DocumentModel.id == created.id).first()
@@ -98,25 +98,26 @@ class TestDocumentsController:
         assert tags == []
 
         # prompts
-        p = documents_controller.add_prompt(db=test_session, document_id=doc.id, prompt_data=PromptCreate(prompt="Analyze", directive="dir", title="t", enabled=True, document_id=doc.id))
+        p = documents_controller.add_prompt(db=test_session, document_id=doc.id, prompt_data=PromptCreate(prompt="Analyze", directive="dir", title="t", document_id=doc.id))
         got_prompts = documents_controller.get_prompts(db=test_session, document_id=doc.id, skip=0, limit=100)
         assert any(pp.id == p.id for pp in got_prompts)
 
         # selections
-        sc = SelectionCreate(page_number=1, x=0.1, y=0.2, width=0.3, height=0.4, confidence=None, committed=False, document_id=doc.id)
+        from backend.api.enums import CommitState
+        sc = SelectionCreate(page_number=1, x=0.1, y=0.2, width=0.3, height=0.4, confidence=None, state=CommitState.STAGED, document_id=doc.id)
         sel = documents_controller.add_selection(db=test_session, document_id=doc.id, selection_data=sc)
         got_selections = documents_controller.get_selections(db=test_session, document_id=doc.id, skip=0, limit=100)
         assert any(ss.id == sel.id for ss in got_selections)
-
     def test_ai_settings_get_and_update(self, test_session: Session):
         proj = self._create_project(test_session)
         doc = self._create_document(test_session, proj.id)
 
-        ai1 = documents_controller.get_ai_settings(db=test_session, document_id=doc.id)
+        from backend.api.controllers import projects_controller
+        from backend.api.schemas.settings_schema import AiSettingsUpdate
+        ai1 = projects_controller.get_ai_settings(db=test_session, project_id=proj.id)
         assert ai1.model_name and ai1.temperature is not None
 
-        from backend.api.schemas.documents_schema import DocumentAiSettingsUpdate
-        ai2 = documents_controller.update_ai_settings(db=test_session, document_id=doc.id, data=DocumentAiSettingsUpdate(temperature=0.7))
+        ai2 = projects_controller.update_ai_settings(db=test_session, project_id=proj.id, data=AiSettingsUpdate(temperature=0.7))
         assert ai2.temperature == 0.7
 
     def test_update_and_delete(self, test_session: Session):
@@ -146,7 +147,8 @@ class TestDocumentsController:
         doc = self._create_document(test_session, proj.id)
         # attach original and one committed selection
         self._attach_original(test_session, doc, payload=b"%PDF-1.4 minimal", password=password)
-        staged = SelectionModel(document_id=doc.id, x=0.1, y=0.1, width=0.2, height=0.2, page_number=1, committed=True)
+        from backend.api.enums import CommitState, ScopeType
+        staged = SelectionModel(document_id=doc.id, x=0.1, y=0.1, width=0.2, height=0.2, page_number=1, scope=ScopeType.DOCUMENT, state=CommitState.COMMITTED)
         test_session.add(staged)
         test_session.commit()
 
@@ -154,7 +156,8 @@ class TestDocumentsController:
         self._attach_redacted(test_session, doc, payload=b"OLD")
 
         # mock ephemeral decrypt to return correct password and redactor to produce deterministic bytes
-        monkeypatch.setattr(security_manager, "decrypt_with_ephemeral_key", lambda key_id, encrypted_data: password)
+        from backend.service.crypto_service import get_security_service
+        monkeypatch.setattr(get_security_service(), "decrypt_with_ephemeral_key", lambda key_id, encrypted_data: password)
         monkeypatch.setattr(redactor, "redact_document", lambda pdf_data, selections: b"REDACTED-BYTES")
 
         req = EncryptedFileDownloadRequest(key_id="k", encrypted_password=base64.b64encode(b"ignored").decode("ascii"), stream=False)
@@ -426,18 +429,19 @@ class TestDocumentsController:
     def test_get_and_update_ai_settings_when_missing(self, test_session: Session):
         # Create doc via ORM to ensure no ai_settings exist
         proj = self._create_project(test_session)
-        doc = DocumentModel(name=f"doc-{uuid.uuid4().hex[:6]}.pdf", description=None, project_id=proj.id, tags=[])
+        doc = DocumentModel(name=f"doc-{uuid.uuid4().hex[:6]}.pdf", description=None, project_id=proj.id)
         test_session.add(doc)
         test_session.commit()
         test_session.refresh(doc)
-        # get_ai_settings should create defaults
-        got = documents_controller.get_ai_settings(db=test_session, document_id=doc.id)
-        assert got.document_id == doc.id and got.temperature is not None
+        # get_ai_settings should create defaults at project-level
+        from backend.api.controllers import projects_controller
+        ai = projects_controller.get_ai_settings(db=test_session, project_id=proj.id)
+        assert ai.project_id == proj.id and ai.temperature is not None
         # Now update_ai_settings on a different fresh doc without settings to hit the None branch
-        doc2 = DocumentModel(name=f"doc-{uuid.uuid4().hex[:6]}.pdf", description=None, project_id=proj.id, tags=[])
+        doc2 = DocumentModel(name=f"doc-{uuid.uuid4().hex[:6]}.pdf", description=None, project_id=proj.id)
         test_session.add(doc2)
         test_session.commit()
         test_session.refresh(doc2)
-        from backend.api.schemas.documents_schema import DocumentAiSettingsUpdate
-        updated = documents_controller.update_ai_settings(db=test_session, document_id=doc2.id, data=DocumentAiSettingsUpdate(temperature=0.5))
-        assert updated.document_id == doc2.id and updated.temperature is not None
+        from backend.api.schemas.settings_schema import AiSettingsUpdate
+        updated = projects_controller.update_ai_settings(db=test_session, project_id=proj.id, data=AiSettingsUpdate(temperature=0.5))
+        assert updated.project_id == proj.id and updated.temperature is not None
