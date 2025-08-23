@@ -57,18 +57,18 @@ class Document(Base):
 class File(Base):
     __tablename__ = "files"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUIDBytes, primary_key=True, default=lambda: uuid.uuid4())
-    created_at: Mapped[datetime] = mapped_column(AwareDateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at: Mapped[datetime] = mapped_column(AwareDateTime, nullable=True)
-    file_hash: Mapped[str] = mapped_column(String(64), nullable=False)  # SHA-256
-    file_type: Mapped[FileType] = mapped_column(Enum(FileType), nullable=False)
-    mime_type: Mapped[str] = mapped_column(String(100), nullable=False)
-    data: Mapped[bytes] = mapped_column(BLOB, nullable=False)
-    salt: Mapped[bytes] = mapped_column(BLOB, nullable=True)
+    id: Mapped[uuid.UUID] = mapped_column(UUIDBytes, primary_key=True, default=lambda: uuid.uuid4(),)
+    created_at: Mapped[datetime] = mapped_column(AwareDateTime, default=lambda: datetime.now(timezone.utc),)
+    updated_at: Mapped[datetime] = mapped_column(AwareDateTime, nullable=True,)
+    file_hash: Mapped[str] = mapped_column(String(64), nullable=False,)  # SHA-256
+    file_type: Mapped[FileType] = mapped_column(Enum(FileType), nullable=False, default=FileType.ORIGINAL,)
+    mime_type: Mapped[str] = mapped_column(String(100), nullable=False,)
+    data: Mapped[bytes] = mapped_column(BLOB, nullable=False,)
+    salt: Mapped[bytes] = mapped_column(BLOB, nullable=True,)
 
-    document_id: Mapped[uuid.UUID] = mapped_column(UUIDBytes, ForeignKey("documents.id"), nullable=False)
+    document_id: Mapped[uuid.UUID] = mapped_column(UUIDBytes, ForeignKey("documents.id"), nullable=False,)
     
-    document: Mapped["Document"] = relationship("Document", back_populates="files")
+    document: Mapped["Document"] = relationship("Document", back_populates="files",)
 
     @property
     def file_size(self) -> int:
