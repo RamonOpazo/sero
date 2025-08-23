@@ -93,8 +93,8 @@ class TestSupportCrud:
         class FakeSec:
             def decrypt_with_ephemeral_key(self, key_id, encrypted_data):
                 return password
-        import backend.service.crypto_service as crypto_mod
-        monkeypatch.setattr(crypto_mod, "get_security_service", lambda: FakeSec())
+        import backend.crud.support as support_mod
+        monkeypatch.setattr(support_mod, "get_security_service", lambda: FakeSec())
 
         enc_b64 = base64.b64encode(b"ignored").decode("ascii")
         got_doc, got_file, got_data = support.get_original_file_data_or_400_401_404_500(
@@ -117,8 +117,8 @@ class TestSupportCrud:
         class FakeSec:
             def decrypt_with_ephemeral_key(self, key_id, encrypted_data):
                 return "WrongPW"
-        import backend.service.crypto_service as crypto_mod
-        monkeypatch.setattr(crypto_mod, "get_security_service", lambda: FakeSec())
+        import backend.crud.support as support_mod
+        monkeypatch.setattr(support_mod, "get_security_service", lambda: FakeSec())
 
         enc_b64 = base64.b64encode(b"ignored").decode("ascii")
         with pytest.raises(HTTPException) as exc:

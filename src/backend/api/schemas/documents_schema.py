@@ -88,6 +88,8 @@ class DocumentSummary(BaseModel):
     # Processing components counts
     prompt_count: int
     selection_count: int
+    ai_selections_count: int
+    manual_selections_count: int
     
     model_config = ConfigDict(from_attributes=True)
 

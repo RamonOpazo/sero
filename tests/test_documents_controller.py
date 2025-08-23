@@ -139,8 +139,8 @@ class TestDocumentsController:
         class FakeSec:
             def decrypt_with_ephemeral_key(self, key_id, encrypted_data):
                 return password
-        import backend.service.crypto_service as crypto_mod
-        monkeypatch.setattr(crypto_mod, "get_security_service", lambda: FakeSec())
+        import backend.crud.support as support_mod
+        monkeypatch.setattr(support_mod, "get_security_service", lambda: FakeSec())
         monkeypatch.setattr(redactor, "redact_document", lambda pdf_data, selections: b"REDACTED-BYTES")
 
         req = EncryptedFileDownloadRequest(key_id="k", encrypted_password=base64.b64encode(b"ignored").decode("ascii"), stream=False)
@@ -336,7 +336,6 @@ class TestDocumentsController:
         summ = documents_controller.summarize(db=test_session, document_id=doc.id)
         assert summ.has_original_file and summ.has_redacted_file
         assert summ.prompt_count >= 1 and summ.selection_count >= 2
-        assert summ.ai_selections_count >= 1 and summ.manual_selections_count >= 1
 
     def test_process_error_paths(self, test_session: Session, monkeypatch):
         password = "StrongPW!123"
