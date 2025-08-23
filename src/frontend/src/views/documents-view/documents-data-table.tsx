@@ -30,7 +30,7 @@ export function DocumentsDataTable({ onDocumentSelect }: DocumentsDataTableProps
   
   // Column visibility state - exclude pinned columns from state management
   const [visibleColumns, setVisibleColumns] = useState<string[]>([
-    'description', 'tags', 'file_count', 'prompt_count', 
+    'description', 'file_count', 'prompt_count', 
     'selection_count', 'status', 'created_at'
   ])
   
@@ -64,30 +64,6 @@ export function DocumentsDataTable({ onDocumentSelect }: DocumentsDataTableProps
         </Badge>
       );
     }
-  }, []);
-
-  const tagsRenderer = useCallback((document: DocumentShallowType) => {
-    if (document.tags.length === 0) {
-      return <span className="text-muted-foreground text-sm">No tags</span>;
-    }
-    
-    const displayTags = document.tags.slice(0, 3);
-    const remainingCount = document.tags.length - displayTags.length;
-    
-    return (
-      <div className="flex flex-wrap gap-1">
-        {displayTags.map((tag, index) => (
-          <Badge key={index} variant="outline" className="text-xs">
-            {tag}
-          </Badge>
-        ))}
-        {remainingCount > 0 && (
-          <Badge variant="outline" className="text-xs">
-            +{remainingCount}
-          </Badge>
-        )}
-      </div>
-    );
   }, []);
 
   // Pure UI rendering functions
@@ -125,17 +101,6 @@ export function DocumentsDataTable({ onDocumentSelect }: DocumentsDataTableProps
       width: '250px',
       placeholder: 'No description'
     }),
-    
-    // Custom Tags column
-    columns.custom<DocumentShallowType, string[]>(
-      'tags',
-      'tags',
-      {
-        header: 'Tags',
-        width: '180px',
-        render: (_value, row) => tagsRenderer(row)
-      }
-    ),
     
     // Prompt count - displayed as badge
     columns.number<DocumentShallowType>('prompt_count', {
@@ -224,12 +189,11 @@ export function DocumentsDataTable({ onDocumentSelect }: DocumentsDataTableProps
         }
       ]
     })
-  ], [processedStatusRenderer, tagsRenderer, nameRenderer, actionHandlers]);
+  ], [processedStatusRenderer, nameRenderer, actionHandlers]);
   
   // Column options for visibility toggle - exclude pinned columns
   const tableColumns: ColumnOption[] = useMemo(() => [
     { key: 'description', header: 'Description' },
-    { key: 'tags', header: 'Tags' },
     { key: 'prompt_count', header: '# Prompts' },
     { key: 'selection_count', header: '# Selections' },
     { key: 'status', header: 'Status' },
@@ -260,8 +224,7 @@ export function DocumentsDataTable({ onDocumentSelect }: DocumentsDataTableProps
       
       return (
         document.name.toLowerCase().includes(searchTerm) ||
-        (document.description?.toLowerCase().includes(searchTerm)) ||
-        document.tags.some(tag => tag.toLowerCase().includes(searchTerm))
+        (document.description?.toLowerCase().includes(searchTerm))
       );
     });
   }, [documents, searchValue]);

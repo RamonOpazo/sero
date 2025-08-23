@@ -13,7 +13,6 @@ export const DocumentSchema = z.object({
   name: z.string(),
   description: z.string().nullable(),
   project_id: UUIDSchema,
-  tags: z.array(z.string()),
   files: z.array(z.lazy(() => FileSchema)),
   prompts: z.array(z.lazy(() => PromptSchema)),
   selections: z.array(z.lazy(() => SelectionSchema)),
@@ -28,11 +27,11 @@ export const DocumentShallowSchema = z.object({
   name: z.string(),
   description: z.string().nullable(),
   project_id: UUIDSchema,
-  tags: z.array(z.string()),
   // Minimal metadata
   prompt_count: z.number().int(),
   selection_count: z.number().int(),
   is_processed: z.boolean(),
+  is_template: z.boolean(),
 });
 
 export const DocumentCreateSchema = z.object({
@@ -40,13 +39,11 @@ export const DocumentCreateSchema = z.object({
   name: z.string().min(1).max(100),
   description: z.string().optional(),
   project_id: UUIDSchema,
-  tags: z.array(z.string()).default([]),
 });
 
 export const DocumentUpdateSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   description: z.string().nullable().optional(),
-  tags: z.array(z.string()).optional(),
 });
 
 // Document Summary schema
@@ -71,17 +68,12 @@ export const DocumentSummarySchema = z.object({
   // Processing components counts
   prompt_count: z.number().int(),
   selection_count: z.number().int(),
-  tag_count: z.number().int(),
-  tags: z.array(z.string()),
   
   // Processing status indicators
   is_processed: z.boolean(),
+  is_template: z.boolean(),
   ai_selections_count: z.number().int(),
   manual_selections_count: z.number().int(),
-  
-  // Prompt analysis
-  prompt_languages: z.array(z.string()),
-  average_temperature: z.number().nullable(),
 });
 
 // Document AI settings schemas
@@ -150,7 +142,6 @@ export const MinimalDocumentSchema = z.object({
   name: z.string(),
   description: z.string().nullable(),
   project_id: UUIDSchema,
-  tags: z.array(z.string()),
   files: z.array(z.lazy(() => FileSchema)),
   original_file: z.lazy(() => FileSchema).nullable(), // computed field
   redacted_file: z.lazy(() => FileSchema).nullable(), // computed field

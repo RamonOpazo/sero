@@ -189,7 +189,6 @@ export function useEditorView(fileType: 'original' | 'redacted') {
       created_at: documentMetadata.created_at,
       updated_at: documentMetadata.updated_at,
       project_id: documentMetadata.project_id,
-      tags: documentMetadata.tags,
       files: filesWithBlobs as any,
       original_file: (originalPointer as any) || null,
       redacted_file: (redactedPointer as any) || null,
@@ -204,7 +203,6 @@ export function useEditorView(fileType: 'original' | 'redacted') {
     documentMetadata?.created_at,
     documentMetadata?.updated_at,
     documentMetadata?.project_id,
-    documentMetadata?.tags,
     // Loaded file data dependencies
     fileData?.file?.id,
     fileData?.file?.file_hash,
