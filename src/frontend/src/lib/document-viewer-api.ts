@@ -1,5 +1,5 @@
 import { toast } from 'sonner';
-import type { PromptType, PromptCreateType, SelectionType, SelectionCreateType, DocumentAiSettingsType, DocumentAiSettingsUpdateType } from '@/types';
+import type { PromptType, PromptCreateType, SelectionType, SelectionCreateType } from '@/types';
 import { AsyncResultWrapper, type Result } from '@/lib/result';
 import { api } from '@/lib/axios';
 
@@ -12,34 +12,6 @@ import { api } from '@/lib/axios';
  */
 
 export const DocumentViewerAPI = {
-  // ===== AI SETTINGS =====
-  
-  /**
-   * Get AI settings for a document
-   */
-  async getAiSettings(documentId: string): Promise<Result<DocumentAiSettingsType, unknown>> {
-    return AsyncResultWrapper
-      .from(api.safe.get(`/documents/id/${documentId}/ai-settings`) as Promise<Result<DocumentAiSettingsType, unknown>>)
-      .catch((error: unknown) => {
-        toast.error("Failed to load AI settings", { description: "Please try again." });
-        throw error;
-      })
-      .toResult();
-  },
-
-  /**
-   * Update AI settings for a document
-   */
-  async updateAiSettings(documentId: string, updates: DocumentAiSettingsUpdateType): Promise<Result<DocumentAiSettingsType, unknown>> {
-    return AsyncResultWrapper
-      .from(api.safe.put(`/documents/id/${documentId}/ai-settings`, updates) as Promise<Result<DocumentAiSettingsType, unknown>>)
-      .catch((error: unknown) => {
-        toast.error("Failed to update AI settings", { description: "Please try again." });
-        throw error;
-      })
-      .toResult();
-  },
-
   // ===== PROMPT OPERATIONS =====
   
   /**
