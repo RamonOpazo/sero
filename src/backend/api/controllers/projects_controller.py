@@ -127,6 +127,7 @@ def summarize(db: Session, project_id: UUID) -> projects_schema.ProjectSummary:
                     ProjectStatus.COMPLETED if sum(1 for d in doc_iter(ctx) if d.redacted_file is not None) == len(doc_iter(ctx)) else ProjectStatus.IN_PROGRESS
                 )
             ),
+            "has_template": lambda ctx: bool(getattr(ctx["model"], "template", None)),
             "document_count": lambda ctx: len(doc_iter(ctx)),
             "documents_with_original_files": lambda ctx: sum(1 for d in doc_iter(ctx) if d.original_file is not None),
             "documents_with_redacted_files": lambda ctx: sum(1 for d in doc_iter(ctx) if d.redacted_file is not None),

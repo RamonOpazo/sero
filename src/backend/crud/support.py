@@ -174,6 +174,9 @@ class SupportCrud:
             for field in schema_fields - set((transforms or {}).keys()):
                 if hasattr(model, field):
                     data[field] = getattr(model, field)
+            # Heuristic fields
+            if "is_template" in schema_fields and "is_template" not in data and hasattr(model, "template"):
+                data["is_template"] = bool(getattr(model, "template", None))
             items.append(schema_cls.model_validate(data))
         return items
 

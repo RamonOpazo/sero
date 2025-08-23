@@ -110,7 +110,6 @@ class TestDocumentsController:
         assert any(ss.id == sel.id for ss in got_selections)
     def test_ai_settings_get_and_update(self, test_session: Session):
         proj = self._create_project(test_session)
-        doc = self._create_document(test_session, proj.id)
 
         from backend.api.controllers import projects_controller
         from backend.api.schemas.settings_schema import AiSettingsUpdate

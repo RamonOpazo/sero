@@ -129,7 +129,8 @@ def test_pydantic_schema_timezone_validation():
         "contact_name": "Test User", 
         "contact_email": "test@example.com",
         "password_hash": "test_hash",
-        "documents": []
+        "documents": [],
+        "template": None
     }
     
     # This should not raise a validation error

@@ -22,7 +22,7 @@ class Project(BaseModel):
     ai_settings: AiSettings | None = Field(None)
     watermark_settings: WatermarkSettings | None = Field(None)
     annotation_settings: AnnotationSettings | None = Field(None)
-    template: Template | None
+    template: Template | None = Field(None)
 
     @computed_field
     @property
