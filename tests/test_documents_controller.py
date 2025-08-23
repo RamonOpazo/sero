@@ -246,7 +246,7 @@ class TestDocumentsController:
 
         # Success path: returns bulk descriptor -> use existing ORM doc as created result
         # create an ORM doc to mirror created outcome
-        model_doc = DocumentModel(name="s.pdf", description=None, project_id=proj.id, tags=[])
+        model_doc = DocumentModel(name="s.pdf", description=None, project_id=proj.id)
         test_session.add(model_doc)
         test_session.commit()
         test_session.refresh(model_doc)
@@ -289,7 +289,7 @@ class TestDocumentsController:
             if getattr(upload_data, "_err", False):
                 return ("bad.pdf", "Invalid PDF")
             return DocumentBulkUpload(
-                document_data=DocumentCreate(name=f"{uuid.uuid4().hex[:4]}.pdf", description=None, project_id=proj.id, tags=[]),
+                document_data=DocumentCreate(name=f"{uuid.uuid4().hex[:4]}.pdf", description=None, project_id=proj.id),
                 file_data=FileCreate(file_hash="0"*64, file_type=FileType.ORIGINAL, mime_type="application/pdf", data=b"e", salt=b"s", document_id=None),
             )
         monkeypatch.setattr(documents_controller.support_crud, "process_upload", fake_proc)
@@ -415,7 +415,7 @@ class TestDocumentsController:
         # Return a valid bulk upload descriptor
         def fake_process(db, project_id, upload_data, password):
             return DocumentBulkUpload(
-                document_data=DocumentCreate(name="s.pdf", description=None, project_id=proj.id, tags=[]),
+                document_data=DocumentCreate(name="s.pdf", description=None, project_id=proj.id),
                 file_data=FileCreate(file_hash="0"*64, file_type=FileType.ORIGINAL, mime_type="application/pdf", data=b"e", salt=b"s", document_id=None),
             )
         monkeypatch.setattr(documents_controller.support_crud, "process_upload", fake_process)
