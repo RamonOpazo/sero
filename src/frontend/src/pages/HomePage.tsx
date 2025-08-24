@@ -43,39 +43,41 @@ export function HomePage() {
           </Button>
           <Button variant="outline" size="lg" asChild>
             <Link to="/documentation">
-              <BookOpen className="mr-2 h-4 w-4" /> Documentation
+              <BookOpen className="mr-2 h-4 w-4" /> Read the Docs
             </Link>
           </Button>
         </div>
+
+        <div className="flex flex-col justify-center lg:justify-start gap-2">
+          <h2>How SERO Works</h2>
+          <p className="text-muted-foreground">
+            SERO allows healthcare professionals to redact patient information
+            with precision. Choose between manual redaction for full control,
+            or AI-powered redaction for speed and efficiency.
+          </p>
+          <p className="text-muted-foreground">
+            With industry-standard encryption and simple document workflows,
+            SERO ensures data remains private and compliant while still useful
+            for research and operations.
+          </p>
+
+          <h3>Learn More</h3>
+          <ul>
+            <li>
+              <Link to="/documentation/getting-started">Getting Started</Link>
+            </li>
+            <li>
+              <Link to="/documentation/security-model">Security Model</Link>
+            </li>
+            <li>
+              <Link to="/documentation/redaction-pipeline">The Redaction Pipeline</Link>
+            </li>
+            <li>
+              <Link to="/documentation/integration">Integration Guide</Link>
+            </li>
+          </ul>
+        </div>
       </div>
-
-      <h2>How SERO Works</h2>
-      <p className="mt-6 text-lg leading-8 text-muted-foreground">
-        SERO allows healthcare professionals to redact patient information
-        with precision. Choose between manual redaction for full control,
-        or AI-powered redaction for speed and efficiency.
-      </p>
-      <p className="mt-6 text-lg leading-8 text-muted-foreground">
-        With industry-standard encryption and simple document workflows,
-        SERO ensures data remains private and compliant while still useful
-        for research and operations.
-      </p>
-
-      <h3>Learn More</h3>
-      <ul>
-        <li>
-          <Link to="/documentation/getting-started">Getting Started</Link>
-        </li>
-        <li>
-          <Link to="/documentation/security-model">Security Model</Link>
-        </li>
-        <li>
-          <Link to="/documentation/redaction-pipeline">The Redaction Pipeline</Link>
-        </li>
-        <li>
-          <Link to="/documentation/integration">Integration Guide</Link>
-        </li>
-      </ul>
     </div>
   );
 }

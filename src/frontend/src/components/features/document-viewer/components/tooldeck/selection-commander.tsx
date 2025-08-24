@@ -23,27 +23,27 @@ export default function SelectionManagement({ document }: SelectionControlsProps
 
   const {
     state: selectionState,
+    uiSelections,
     allSelections,
-    pendingChanges,
-    pendingChangesCount,
     clearAll,
     clearPage,
     discardAllChanges,
-  } = useSelections();
+  } = useSelections() as any;
 
   const [isApplyingAI, setIsApplyingAI] = useState(false);
   const { selectionStats: scSel, canStage, canCommit, isStaging, isCommitting, stageAll, commitAll, stageMessages, commitMessages } = useStageCommit(document.id);
   const [showStageDialog, setShowStageDialog] = useState(false);
   const [showCommitDialog, setShowCommitDialog] = useState(false);
 
-  // Calculate selection statistics using the clean PendingChanges API
+  // Calculate selection statistics using lifecycle uiSelections
   const selectionStats = useMemo(() => {
-    const newCount = pendingChanges.creates.length;
-    const existingCount = (selectionState as any).persistedItems?.length || 0;
-    const totalCount = allSelections.length;
-    const modifiedSavedCount = pendingChanges.updates.length;
-    const pendingDeletionsCount = pendingChanges.deletes.length;
-    const totalUnsavedChanges = pendingChangesCount;
+    const ui = (uiSelections || []) as any[];
+    const newCount = ui.filter(s => s.isPersisted === false).length;
+    const existingCount = ui.filter(s => s.isPersisted === true).length;
+    const totalCount = ui.length;
+    const modifiedSavedCount = ui.filter(s => s.isPersisted === true && s.dirty === true).length;
+    const pendingDeletionsCount = ui.filter(s => s.stage === 'staged_deletion').length;
+    const totalUnsavedChanges = ui.filter(s => s.dirty === true).length;
     const hasUnsavedChanges = totalUnsavedChanges > 0;
 
     return {
@@ -55,7 +55,7 @@ export default function SelectionManagement({ document }: SelectionControlsProps
       totalUnsavedChanges,
       hasUnsavedChanges
     };
-  }, [pendingChanges, pendingChangesCount, (selectionState as any).persistedItems?.length, allSelections.length]);
+  }, [uiSelections]);
 
   // Apply AI to generate staged selections
   const handleApplyAI = useCallback(async () => {

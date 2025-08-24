@@ -65,7 +65,7 @@ Phased rollout (PRs)
 - PR2: Provider lifecycle store; derive UI stats from lifecycle ✅
 - PR3: Save/commit using lifecycle; keep legacy APIs unused ✅
 - PR4: Switch hooks/UI fully to lifecycle ✅
-- PR5: Remove legacy persisted/draft/baseline for selections and cleanup
+- PR5: Remove legacy persisted/draft/baseline for selections and cleanup ✅
 
 Testing
 - Unit tests for mapping, lifecycle transitions, save/commit flows, and edge cases

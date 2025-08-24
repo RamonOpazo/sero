@@ -581,6 +581,7 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
     
     // Computed values
     allSelections,
+    uiSelections,
     hasUnsavedChanges,
     pendingChanges,
     pendingChangesCount,
