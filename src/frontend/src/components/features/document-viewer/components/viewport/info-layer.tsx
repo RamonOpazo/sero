@@ -36,8 +36,18 @@ function FileDetails({ file, formatFileSize, formatDate }: FileDetailsProps) {
 
 export default function InfoLayer({ document, documentSize, isVisible, onToggleVisibility }: Props) {
   const { currentPage, numPages, zoom } = useViewportState();
-  const { selectionCount, getGlobalSelections, getPageSelections, pendingChanges: selPending, pendingChangesCount: selPendingCount, hasUnsavedChanges: selUnsaved } = useSelections();
+  const { selectionCount, getGlobalSelections, getPageSelections, uiSelections, hasUnsavedChanges: selUnsaved } = useSelections() as any;
   const { allPrompts, pendingChanges: promptPending, pendingChangesCount: promptPendingCount } = usePrompts();
+
+  const selLifecycle = React.useMemo(() => {
+    const ui = (uiSelections || []) as any[];
+    const unstaged = ui.filter(s => s.dirty === true).length;
+    const stagedCreation = ui.filter(s => s.stage === 'staged_creation').length;
+    const stagedEdition = ui.filter(s => s.stage === 'staged_edition').length;
+    const stagedDeletion = ui.filter(s => s.stage === 'staged_deletion').length;
+    const committed = ui.filter(s => s.stage === 'committed').length;
+    return { unstaged, stagedCreation, stagedEdition, stagedDeletion, committed };
+  }, [uiSelections]);
 
   const formatFileSize = useCallback((bytes: number) => {
     if (bytes === 0) return '0 Bytes';
@@ -124,13 +134,9 @@ export default function InfoLayer({ document, documentSize, isVisible, onToggleV
           <div><span className="text-muted-foreground">Total:</span> <span className="font-medium">{selectionCount}</span></div>
           <div><span className="text-muted-foreground">Global:</span> <span>{getGlobalSelections().length}</span></div>
           <div><span className="text-muted-foreground">On page:</span> <span>{getPageSelections(currentPage).length}</span></div>
-          <div>
-            <span className="text-muted-foreground">Pending:</span>{' '}
-            <span>{selPendingCount}</span>
-            {selPendingCount > 0 && (
-              <span className="text-muted-foreground"> (c:{selPending.creates.length}, u:{selPending.updates.length}, d:{selPending.deletes.length})</span>
-            )}
-          </div>
+          <div><span className="text-muted-foreground">Unstaged:</span> <span className="font-medium">{selLifecycle.unstaged}</span></div>
+          <div><span className="text-muted-foreground">Staged:</span> <span>c:{selLifecycle.stagedCreation}, u:{selLifecycle.stagedEdition}, d:{selLifecycle.stagedDeletion}</span></div>
+          <div><span className="text-muted-foreground">Committed:</span> <span>{selLifecycle.committed}</span></div>
           <div><span className="text-muted-foreground">Unsaved:</span> <span>{selUnsaved ? 'yes' : 'no'}</span></div>
         </div>
       </div>
