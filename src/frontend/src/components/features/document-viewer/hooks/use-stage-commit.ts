@@ -4,10 +4,14 @@ import type { TypedMessage } from "@/components/shared/typed-confirmation-dialog
 import type { PromptType } from "@/types";
 import { useSelections } from "../providers/selection-provider";
 import { usePrompts } from "../providers/prompt-provider";
+import { UISelectionStage } from "../types/selection-lifecycle";
 
 export interface StageCommitStats {
   committed: number;
   stagedPersisted: number;
+  stagedCreation?: number;
+  stagedEdition?: number;
+  stagedDeletion?: number;
   created: number;
   updated: number;
   deleted: number;
@@ -30,11 +34,10 @@ export interface UseStageCommitResult {
 export function useStageCommit(documentId: string | number): UseStageCommitResult {
   const {
     state: selectionState,
-    allSelections,
-    pendingChanges: selectionPending,
-    pendingChangesCount: selectionPendingCount,
-    save: saveSelections,
-  } = useSelections();
+    uiSelections,
+    saveLifecycle,
+    commitLifecycle,
+  } = useSelections() as any;
 
   const {
     state: promptState,
@@ -51,47 +54,17 @@ export function useStageCommit(documentId: string | number): UseStageCommitResul
 
   // Selection stats
   const selectionStats = useMemo<StageCommitStats>(() => {
-    const persistedItems: any[] = (selectionState as any).persistedItems || [];
-    const committed = allSelections.filter((s: any) => s && (s as any).state === 'committed').length;
-
-    const pendingUpdateIds = new Set<string>((selectionPending.updates || []).map((u: any) => u?.id).filter(Boolean));
-
-    // Determine which persisted items are effectively staged on the backend (or already persisted as staged)
-    const persistedStagedIds = new Set<string>(
-      persistedItems
-        .filter((s: any) => s && (((s as any).is_staged === true) || (((s as any).state && (s as any).state !== 'committed') && !pendingUpdateIds.has((s as any).id))))
-        .map((s: any) => (s as any).id)
-        .filter(Boolean)
-    );
-
-    const stagedPersisted = persistedStagedIds.size;
-
-    // Filter pending changes so we don't double-count items whose local pending change is a state flip to a staged_* and
-    // the item is already considered stagedPersisted (because the UI shows it as staged)
-    const filteredCreates = (selectionPending.creates || []); // new items are genuinely unstaged until saved
-
-    const filteredUpdates = (selectionPending.updates || []).filter((u: any) => {
-      const id = u?.id;
-      const stateStr = u?.state;
-      // If this update is merely setting a staged state and the item is already counted as stagedPersisted, exclude
-      if (id && persistedStagedIds.has(id) && stateStr && stateStr !== 'committed') return false;
-      return true;
-    });
-
-    const filteredDeletes = (selectionPending.deletes || []).filter((d: any) => {
-      const id = d?.id;
-      // If the item is already considered stagedPersisted (e.g., staged_deletion), exclude it from unstaged deletes
-      if (id && persistedStagedIds.has(id)) return false;
-      return true;
-    });
-
-    const created = filteredCreates.length;
-    const updated = filteredUpdates.length;
-    const deleted = filteredDeletes.length;
-    const pending = created + updated + deleted;
-
-    return { committed, stagedPersisted, created, updated, deleted, pending };
-  }, [selectionState, allSelections, selectionPending]);
+    const committed = (uiSelections || []).filter((s: any) => s.stage === UISelectionStage.Committed).length;
+    const stagedCreation = (uiSelections || []).filter((s: any) => s.stage === UISelectionStage.StagedCreation).length;
+    const stagedEdition = (uiSelections || []).filter((s: any) => s.stage === UISelectionStage.StagedEdition).length;
+    const stagedDeletion = (uiSelections || []).filter((s: any) => s.stage === UISelectionStage.StagedDeletion).length;
+    const stagedPersisted = stagedCreation + stagedEdition + stagedDeletion;
+    const created = (uiSelections || []).filter((s: any) => s.isPersisted === false).length;
+    const updated = (uiSelections || []).filter((s: any) => s.isPersisted === true && s.stage === UISelectionStage.Unstaged && s.dirty === true).length;
+    const deleted = 0;
+    const pending = (uiSelections || []).filter((s: any) => s.dirty === true).length;
+    return { committed, stagedPersisted, stagedCreation, stagedEdition, stagedDeletion, created, updated, deleted, pending } as StageCommitStats;
+  }, [uiSelections]);
 
   // Prompt stats
   const promptStats = useMemo<StageCommitStats>(() => {
@@ -141,7 +114,7 @@ export function useStageCommit(documentId: string | number): UseStageCommitResul
     setIsStaging(true);
     try {
       const results = await Promise.allSettled([
-        selectionStats.pending > 0 ? saveSelections() : Promise.resolve({ ok: true }) as any,
+        selectionStats.pending > 0 ? saveLifecycle() : Promise.resolve({ ok: true }) as any,
         promptStats.pending > 0 ? savePrompts() : Promise.resolve({ ok: true }) as any,
       ]);
       const ok = results.every(r => r.status === 'fulfilled' && (r as PromiseFulfilledResult<any>).value?.ok !== false);
@@ -152,9 +125,6 @@ export function useStageCommit(documentId: string | number): UseStageCommitResul
         if (selectionStats.pending > 0) parts.push(`selections(${selectionStats.pending})`);
         if (promptStats.pending > 0) parts.push(`prompts(${promptStats.pending})`);
         toast.success(`Staged ${parts.join(' + ')}`);
-      }
-      if (typeof (selectionState as any).reload === 'function') {
-        await (selectionState as any).reload();
       }
       await loadPrompts();
     } finally {
@@ -171,7 +141,7 @@ export function useStageCommit(documentId: string | number): UseStageCommitResul
     try {
       // Ensure latest staged items are persisted first
       if (selectionStats.pending > 0) {
-        const resSel = await saveSelections();
+        const resSel = await saveLifecycle();
         if (!resSel.ok) {
           toast.error('Failed to stage selection changes before commit');
           setIsCommitting(false);
@@ -188,8 +158,7 @@ export function useStageCommit(documentId: string | number): UseStageCommitResul
       }
 
       // 1) Commit selections via API endpoint (commits creations/editions and deletes staged deletions)
-      const { DocumentViewerAPI } = await import('@/lib/document-viewer-api');
-      const commitSel = await DocumentViewerAPI.commitStagedSelections(documentId as any, { commit_all: true });
+      const commitSel = await commitLifecycle();
       if (!commitSel.ok) {
         toast.error('Failed to commit selections');
         setIsCommitting(false);
@@ -203,9 +172,6 @@ export function useStageCommit(documentId: string | number): UseStageCommitResul
       }
 
       // Reload both providers
-      if (typeof (selectionState as any).reload === 'function') {
-        await (selectionState as any).reload();
-      }
       await loadPrompts();
 
       toast.success('Committed all staged selections and prompts');
