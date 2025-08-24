@@ -49,11 +49,12 @@ export function HomePage() {
         </div>
 
         <div className="flex flex-col justify-center lg:justify-start gap-2">
-          <h2>How SERO Works</h2>
+          <h2 className="mt-4">How does SERO works?</h2>
           <p className="text-muted-foreground">
             SERO allows healthcare professionals to redact patient information
             with precision. Choose between manual redaction for full control,
-            or AI-powered redaction for speed and efficiency.
+            AI-powered redaction for speed and efficiency, or combine both
+            approaches for maximum security.
           </p>
           <p className="text-muted-foreground">
             With industry-standard encryption and simple document workflows,
@@ -61,8 +62,8 @@ export function HomePage() {
             for research and operations.
           </p>
 
-          <h3>Learn More</h3>
-          <ul>
+          <h2 className="mt-4">Do you want to learn more?</h2>
+          <ul className="text-muted-foreground list-disc ml-6">
             <li>
               <Link to="/documentation/getting-started">Getting Started</Link>
             </li>

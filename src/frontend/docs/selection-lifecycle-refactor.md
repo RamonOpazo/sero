@@ -53,7 +53,7 @@ Hook: useStageCommit
 - canCommit = any stage in staged_* set
 
 Legacy API bridging
-- Keep getPendingChanges as an adapter derived from lifecycle state until all callers migrate.
+- getPendingChanges adapter removed for selections; lifecycle is now the source of truth.
 
 Edge cases
 - Draft deletion: remove from uiSelections (no API)

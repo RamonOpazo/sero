@@ -51,27 +51,14 @@ export default function SelectionList() {
 
   // Use all selections from the manager with type information and modification status
   const selectionsWithTypeInfo = useMemo(() => {
-    const saved = ((selectionState as any).persistedItems || []).map((sel: Selection) => {
-      // Check if this persisted selection has pending updates
-      const isModified = pendingChanges.updates.some((update: Selection) => update.id === sel.id);
-      
-      return {
-        ...sel,
-        type: 'saved' as const,
-        isModified,
-        displayId: sel.id,
-      };
+    const ui = ((selectionState as any).persistedItems || []).concat((selectionState as any).draftItems || []) as Selection[];
+    return ui.map((sel: Selection) => {
+      const stateNorm = getNormalizedState((sel as any).state);
+      const type = stateNorm === 'draft' ? 'new' : 'saved';
+      const isModified = stateNorm !== 'draft' && stateNorm !== 'committed';
+      return { ...sel, type, isModified, displayId: sel.id } as any;
     });
-    
-    const newOnes = ((selectionState as any).draftItems || []).map((sel: Selection) => ({
-      ...sel,
-      type: 'new' as const,
-      isModified: false,
-      displayId: sel.id,
-    }));
-    
-    return [...saved, ...newOnes];
-  }, [selectionState, pendingChanges]);
+  }, [selectionState]);
 
   // Group selections by type for better organization
   const groupedSelections = useMemo(() => {
