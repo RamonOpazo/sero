@@ -194,8 +194,11 @@ export default function DocumentControls({ document }: DocumentControlsProps) {
           isOpen={isPasswordDialogOpen}
           onClose={() => { setPasswordDialogOpen(false); setProcessError(null); }}
           notice={(() => {
-            const stagedCount = (allSelections || []).filter((s: any) => !s.committed).length;
-            return stagedCount > 0 ? `Note: ${stagedCount} staged selection${stagedCount === 1 ? '' : 's'} will be committed before processing.` : undefined;
+            const stagedCount = (allSelections || []).filter((s: any) => s && s.state === 'staged').length;
+            const parts: string[] = [];
+            if (hasUnsavedChanges) parts.push('pending changes will be staged');
+            if (stagedCount > 0) parts.push(`${stagedCount} staged selection${stagedCount === 1 ? '' : 's'} present`);
+            return parts.length ? `Note: ${parts.join(' • ')}. Only committed selections are used for processing.` : 'Only committed selections are used for processing.';
           })()}
           onConfirm={async (password) => {
             try {
@@ -218,23 +221,6 @@ export default function DocumentControls({ document }: DocumentControlsProps) {
                   toast.error('Failed to save selections');
                   return;
                 }
-              }
-
-              // Commit all staged selections before processing (backend requires committed selections)
-              try {
-                const api = (await import('@/lib/document-viewer-api')).DocumentViewerAPI;
-                const commitRes = await api.commitStagedSelections(document.id, { commit_all: true });
-                if (!commitRes.ok) {
-                  setIsProcessing(false);
-                  setProcessError('Failed to commit staged selections');
-                  toast.error('Failed to commit selections');
-                  return;
-                }
-              } catch (e) {
-                setIsProcessing(false);
-                setProcessError('Failed to commit staged selections');
-                toast.error('Failed to commit selections');
-                return;
               }
 
               // Process on backend
