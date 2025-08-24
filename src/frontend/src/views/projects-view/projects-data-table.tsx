@@ -3,7 +3,7 @@ import { Eye, Plus, Copy, Edit, Trash2, Settings2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { DataTable } from '@/components/features/data-table';
 import { columns, adaptColumns } from '@/components/features/data-table/columns';
-import { EmptyState } from '@/components/shared/EmptyState';
+import { EmptyState } from '@/components/shared/empty-state';
 import { CreateProjectDialog, EditProjectDialog } from './dialogs';
 import { ProjectAiSettingsDialog } from './dialogs/project-ai-settings-dialog';
 import { TypedConfirmationDialog } from '@/components/shared/typed-confirmation-dialog';
@@ -26,7 +26,7 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
   
   // Column visibility state - exclude pinned columns from state management
   const [visibleColumns, setVisibleColumns] = useState<string[]>([
-'description', 'document_count', 'updated_at', 
+    'description', 'document_count', 'updated_at', 
     'contact_name', 'contact_email', 'created_at'
   ])
 

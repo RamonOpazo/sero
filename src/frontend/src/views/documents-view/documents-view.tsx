@@ -12,8 +12,6 @@ export function DocumentsView() {
   };
 
   return (
-    <div className="space-y-6">
-      <DocumentsDataTable onDocumentSelect={handleSelectDocument} />
-    </div>
+    <DocumentsDataTable onDocumentSelect={handleSelectDocument} />
   );
 }

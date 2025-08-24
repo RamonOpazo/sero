@@ -3,7 +3,7 @@ import { Eye, Plus, CheckCircle2, AlertCircle, Copy, Edit, Trash2 } from 'lucide
 import { toast } from 'sonner';
 import { DataTable } from '@/components/features/data-table';
 import { columns, adaptColumns } from '@/components/features/data-table/columns';
-import { EmptyState } from '@/components/shared/EmptyState';
+import { EmptyState } from '@/components/shared/empty-state';
 import { Badge } from '@/components/ui/badge';
 import { useWorkspace } from '@/providers/workspace-provider';
 import { useDocumentsView } from './use-documents-view';
