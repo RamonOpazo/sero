@@ -244,11 +244,11 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
   const deleteSelectedSelection = useCallback(() => {
     const selectedId = (state as any).selectedItemId;
     if (selectedId && typeof selectedId === 'string') {
-      dispatch('DELETE_ITEM', selectedId);
+      deleteSelection(selectedId);
       return true;
     }
     return false;
-  }, [dispatch, state]);
+  }, [deleteSelection, state]);
   
   // ========================================
   // STATE TRANSITIONS
