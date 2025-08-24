@@ -297,7 +297,7 @@ def apply_ai_and_stage(db: Session, document_id: UUID) -> list[selections_schema
     created_models = []
     for sel in res.selections:
         sel.document_id = document_id
-        sel.state = CommitState.STAGED
+        sel.state = CommitState.STAGED_CREATION
         created_models.append(selections_crud.create(db=db, data=sel))
 
     return [selections_schema.Selection.model_validate(i) for i in created_models]

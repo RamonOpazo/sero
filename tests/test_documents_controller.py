@@ -323,7 +323,7 @@ class TestDocumentsController:
         monkeypatch.setattr("backend.service.ai_service.get_ai_service", lambda: FakeSvc())
         from backend.api.enums import CommitState as CS
         out = documents_controller.apply_ai_and_stage(db=test_session, document_id=doc.id)
-        assert len(out) == 1 and out[0].state == CS.STAGED
+        assert len(out) == 1 and getattr(out[0], "is_staged", False) is True
 
     def test_summarize_document_fields(self, test_session: Session):
         proj = self._create_project(test_session)
@@ -333,8 +333,8 @@ class TestDocumentsController:
         self._attach_redacted(test_session, doc, payload=b"REDACT")
         documents_controller.add_prompt(db=test_session, document_id=doc.id, prompt_data=PromptCreate(title="t", prompt="p", directive="d", enabled=True, document_id=doc.id))
         from backend.api.enums import ScopeType
-        sc1 = SelectionModel(document_id=doc.id, x=0.1, y=0.1, width=0.2, height=0.2, page_number=1, scope=ScopeType.DOCUMENT, state=CommitState.STAGED, confidence=0.8)
-        sc2 = SelectionModel(document_id=doc.id, x=0.2, y=0.2, width=0.2, height=0.2, page_number=1, scope=ScopeType.DOCUMENT, state=CommitState.STAGED, confidence=None)
+        sc1 = SelectionModel(document_id=doc.id, x=0.1, y=0.1, width=0.2, height=0.2, page_number=1, scope=ScopeType.DOCUMENT, state=CommitState.STAGED_CREATION, confidence=0.8)
+        sc2 = SelectionModel(document_id=doc.id, x=0.2, y=0.2, width=0.2, height=0.2, page_number=1, scope=ScopeType.DOCUMENT, state=CommitState.STAGED_CREATION, confidence=None)
         test_session.add_all([sc1, sc2])
         test_session.commit()
         summ = documents_controller.summarize(db=test_session, document_id=doc.id)

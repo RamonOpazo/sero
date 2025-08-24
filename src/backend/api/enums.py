@@ -30,7 +30,9 @@ class ScopeType(StrEnum):
 
 
 class CommitState(StrEnum):
-    STAGED = auto()
+    STAGED_CREATION = auto()
+    STAGED_EDITION = auto()
+    STAGED_DELETION = auto()
     COMMITTED = auto()
 
 

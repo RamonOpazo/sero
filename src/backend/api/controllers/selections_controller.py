@@ -12,7 +12,7 @@ def create(db: Session, selection_data: selections_schema.SelectionCreate) -> se
     support_crud.apply_or_404(documents_crud.read, db=db, id=selection_data.document_id)
     # Force staged by default
     if getattr(selection_data, "state", None) is None:
-        selection_data.state = CommitState.STAGED
+        selection_data.state = CommitState.STAGED_CREATION
     selection = selections_crud.create(db=db, data=selection_data)
     return selections_schema.Selection.model_validate(selection)
 

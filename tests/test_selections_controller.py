@@ -139,7 +139,7 @@ class TestSelectionsController:
         unreq_all = SelectionUncommitRequest(selection_ids=None, uncommit_all=True)
         staged_all = documents_controller.uncommit_selections(db=test_session, document_id=doc.id, request=unreq_all)
         assert len(staged_all) == 3
-        assert all(i.state == CommitState.STAGED for i in staged_all)
+        assert all(i.state == CommitState.STAGED_EDITION for i in staged_all)
 
         # Clear staged (delete uncommitted)
         clr_req = SelectionClearRequest(selection_ids=None, clear_all=True)

@@ -172,8 +172,8 @@ class TestSupportCrud:
         doc = self._create_document(test_session, proj.id)
         # Create staged selections
         from backend.api.enums import CommitState, ScopeType
-        s1 = SelectionModel(document_id=doc.id, x=0.1, y=0.1, width=0.2, height=0.2, page_number=1, scope=ScopeType.DOCUMENT, state=CommitState.STAGED)
-        s2 = SelectionModel(document_id=doc.id, x=0.2, y=0.2, width=0.3, height=0.3, page_number=1, scope=ScopeType.DOCUMENT, state=CommitState.STAGED)
+        s1 = SelectionModel(document_id=doc.id, x=0.1, y=0.1, width=0.2, height=0.2, page_number=1, scope=ScopeType.DOCUMENT, state=CommitState.STAGED_CREATION)
+        s2 = SelectionModel(document_id=doc.id, x=0.2, y=0.2, width=0.3, height=0.3, page_number=1, scope=ScopeType.DOCUMENT, state=CommitState.STAGED_CREATION)
         test_session.add_all([s1, s2])
         test_session.commit()
 
@@ -189,7 +189,7 @@ class TestSupportCrud:
         assert len(staged) >= 2
         from backend.api.enums import CommitState
         refreshed2 = support.selections_crud.read_list_by_document(test_session, document_id=doc.id)
-        assert all(getattr(s, "state", None) == CommitState.STAGED for s in refreshed2)
+        assert all(getattr(s, "state", None) == CommitState.STAGED_EDITION for s in refreshed2)
 
         # Clear staged (all)
         deleted_count = support.clear_staged_selections(test_session, document_id=doc.id, selection_ids=None, clear_all=True)

@@ -12,7 +12,7 @@ def create(db: Session, prompt_data: prompts_schema.PromptCreate) -> prompts_sch
     support_crud.apply_or_404(documents_crud.read, db=db, id=prompt_data.document_id)
     # Default to staged if not provided
     if getattr(prompt_data, "state", None) is None:
-        prompt_data.state = CommitState.STAGED
+        prompt_data.state = CommitState.STAGED_CREATION
     prompt = prompts_crud.create(db=db, data=prompt_data)
     return prompts_schema.Prompt.model_validate(prompt)
 
