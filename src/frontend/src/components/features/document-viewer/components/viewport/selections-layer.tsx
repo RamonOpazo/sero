@@ -256,6 +256,12 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     e.stopPropagation();
     e.preventDefault();
     
+    // Prevent editing for committed or staged_deletion selections
+    const stateStr = ((selection as any).state || '').toString();
+    if (stateStr === 'committed' || stateStr === 'staged_deletion') {
+      return;
+    }
+
     // Begin a batch so drag updates coalesce into a single history entry
     beginBatchOperation();
 
@@ -275,6 +281,12 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     e.stopPropagation();
     e.preventDefault();
     
+    // Prevent editing for committed or staged_deletion selections
+    const stateStr = ((selection as any).state || '').toString();
+    if (stateStr === 'committed' || stateStr === 'staged_deletion') {
+      return;
+    }
+
     // Begin a batch so drag updates coalesce into a single history entry
     beginBatchOperation();
 

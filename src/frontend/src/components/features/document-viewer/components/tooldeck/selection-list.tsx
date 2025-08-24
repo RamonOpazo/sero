@@ -18,7 +18,8 @@ export default function SelectionList() {
     deleteSelection,
     setSelectionPage,
     setOnSelectionDoubleClick,
-    pendingChanges
+    pendingChanges,
+    convertSelectionToStagedEdition,
   } = useSelections();
   
   const { setCurrentPage, currentPage, numPages } = useViewportState();
@@ -111,7 +112,8 @@ export default function SelectionList() {
     const selection = selectionsWithTypeInfo.find(sel => sel.id === selectionId);
     const stateStr = ((selection as any)?.state || '').toString();
     const isCommitted = stateStr === 'committed';
-    if (isCommitted) return;
+    const isStagedDeletion = stateStr === 'staged_deletion';
+    if (isCommitted || isStagedDeletion) return;
 
     // Always open dialog for better UX - prevents accidental changes
     setDialogState({ isOpen: true, selectionId });
@@ -134,7 +136,8 @@ export default function SelectionList() {
   const handleSelectionDoubleClick = useCallback((selection: Selection) => {
     const stateStr = ((selection as any).state || '').toString();
     const isCommitted = stateStr === 'committed';
-    if (isCommitted) {
+    const isStagedDeletion = stateStr === 'staged_deletion';
+    if (isCommitted || isStagedDeletion) {
       setConvertDialog({ open: true, selectionId: selection.id });
       return;
     }
@@ -280,7 +283,7 @@ export default function SelectionList() {
         onClose={() => setConvertDialog({ open: false, selectionId: null })}
         onConfirm={async () => {
           if (convertDialog.selectionId) {
-            await (useSelections() as any).convertCommittedSelectionToStaged(convertDialog.selectionId);
+            await convertSelectionToStagedEdition(convertDialog.selectionId);
             // Close regardless; UI will reflect updated state via provider
             setConvertDialog({ open: false, selectionId: null });
           }

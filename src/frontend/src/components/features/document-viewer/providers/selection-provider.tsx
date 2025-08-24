@@ -43,6 +43,7 @@ interface SelectionContextValue {
   
   // *** STATE TRANSITIONS ***
   convertCommittedSelectionToStaged: (id: string) => Promise<boolean>;
+  convertSelectionToStagedEdition: (id: string) => Promise<boolean>;
   
   // *** HISTORY OF CHANGES ***
   undo: () => void;
@@ -157,6 +158,26 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
     };
     dispatch('START_DRAW', selectionWithId);
   }, [dispatch]);
+
+  const convertSelectionToStagedEdition = useCallback(async (id: string) => {
+    try {
+      const item = (manager as any).getItemById?.(id);
+      const stateStr = ((item?.state) || '').toString();
+      if (stateStr === 'committed') {
+        const res = await DocumentViewerAPI.convertSelectionToStaged(id);
+        if (!res.ok) return false;
+      } else {
+        // For staged_deletion or other staged states, flip to staged_edition via update
+        const res = await DocumentViewerAPI.updateSelection(id, { state: 'staged_edition' } as any);
+        if (!res.ok) return false;
+      }
+      // Update local state regardless
+      dispatch('UPDATE_ITEM', { id, updates: { state: 'staged_edition' } as any });
+      return true;
+    } catch {
+      return false;
+    }
+  }, [dispatch, manager]);
   
   const updateDraw = useCallback((selection: SelectionCreateDraft) => {
     // Convert SelectionCreateType to Selection by adding temporary ID
@@ -436,6 +457,7 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
     deleteSelection,
     deleteSelectedSelection,
     convertCommittedSelectionToStaged,
+    convertSelectionToStagedEdition,
     
     // History of changes
     undo,
