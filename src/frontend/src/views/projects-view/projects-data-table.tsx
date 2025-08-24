@@ -6,7 +6,7 @@ import { columns, adaptColumns } from '@/components/features/data-table/columns'
 import { EmptyState } from '@/components/shared/EmptyState';
 import { CreateProjectDialog, EditProjectDialog } from './dialogs';
 import { ProjectAiSettingsDialog } from './dialogs/project-ai-settings-dialog';
-import { ConfirmationDialog } from '@/components/shared/ConfirmationDialog';
+import { TypedConfirmationDialog } from '@/components/shared/typed-confirmation-dialog';
 import { useProjectsView } from './use-projects-view';
 import type { ProjectShallowType } from '@/types';
 import type { ColumnConfig } from '@/components/features/data-table/columns';
@@ -311,27 +311,35 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
       />
 
       {/* Project Deletion Confirmation Dialog */}
-      <ConfirmationDialog
+      <TypedConfirmationDialog
         isOpen={dialogState.delete.isOpen}
         onClose={dialogState.delete.onClose}
         onConfirm={dialogState.delete.onConfirm}
         title="Delete Project"
-        description={`Are you sure you want to delete the project "${dialogState.delete.selectedProject?.name}"? This action cannot be undone and will permanently delete all associated documents and files.`}
+        description={`Are you sure you want to delete the project "${dialogState.delete.selectedProject?.name}"?`}
         confirmationText="delete"
         confirmButtonText="Delete Project"
         variant="destructive"
+        messages={[
+          { variant: 'warning', title: 'Irreversible', description: 'This action cannot be undone.' },
+          { variant: 'error', title: 'Data loss', description: 'All associated documents and files will be permanently deleted.' },
+        ]}
       />
 
       {/* Bulk Deletion Confirmation Dialog */}
-      <ConfirmationDialog
+      <TypedConfirmationDialog
         isOpen={dialogState.bulkDelete.isOpen}
         onClose={dialogState.bulkDelete.onClose}
         onConfirm={dialogState.bulkDelete.onConfirm}
         title={`Delete ${selectedProjects.length} Project${selectedProjects.length === 1 ? '' : 's'}`}
-        description={`Are you sure you want to delete ${selectedProjects.length} selected project${selectedProjects.length === 1 ? '' : 's'}? This action cannot be undone and will permanently delete all associated documents and files.`}
-        confirmationText="delete all"
+        description={`Are you sure you want to delete ${selectedProjects.length} selected project${selectedProjects.length === 1 ? '' : 's'}?`}
+        confirmationText="delete"
         confirmButtonText={`Delete ${selectedProjects.length} Project${selectedProjects.length === 1 ? '' : 's'}`}
         variant="destructive"
+        messages={[
+          { variant: 'warning', title: 'Irreversible', description: 'This action cannot be undone.' },
+          { variant: 'error', title: 'Data loss', description: 'All associated documents and files will be permanently deleted.' },
+        ]}
       />
     </>
   );
