@@ -42,7 +42,6 @@ interface SelectionContextValue {
   deleteSelectedSelection: () => boolean;
   
   // *** STATE TRANSITIONS ***
-  convertCommittedSelectionToStaged: (id: string) => Promise<boolean>;
   convertSelectionToStagedEdition: (id: string) => Promise<boolean>;
   
   // *** HISTORY OF CHANGES ***
@@ -250,17 +249,6 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
   // STATE TRANSITIONS
   // ========================================
   
-  const convertCommittedSelectionToStaged = useCallback(async (id: string) => {
-    try {
-      const res = await DocumentViewerAPI.convertSelectionToStaged(id);
-      if (!res.ok) return false;
-      // Update local state to reflect new staged state
-      dispatch('UPDATE_ITEM', { id, updates: { state: 'staged_edition' } as any });
-      return true;
-    } catch {
-      return false;
-    }
-  }, [dispatch]);
   
   // ========================================
   // HISTORY OF CHANGES
@@ -456,7 +444,6 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
     // Delete new/saved selections
     deleteSelection,
     deleteSelectedSelection,
-    convertCommittedSelectionToStaged,
     convertSelectionToStagedEdition,
     
     // History of changes

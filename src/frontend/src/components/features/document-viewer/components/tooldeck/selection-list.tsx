@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { PageSelectionDialog } from "../dialogs";
 import { SimpleConfirmationDialog } from "@/components/shared/simple-confirmation-dialog";
 import type { Selection } from "../../types/viewer";
+import { getNormalizedState, getStatusLabel } from "../../utils/selection-styles";
 
 
 export default function SelectionList() {
@@ -110,9 +111,9 @@ export default function SelectionList() {
     
     // Only non-committed selections can change page/global
     const selection = selectionsWithTypeInfo.find(sel => sel.id === selectionId);
-    const stateStr = ((selection as any)?.state || '').toString();
-    const isCommitted = stateStr === 'committed';
-    const isStagedDeletion = stateStr === 'staged_deletion';
+    const norm = getNormalizedState((selection as any)?.state);
+    const isCommitted = norm === 'committed';
+    const isStagedDeletion = norm === 'staged_deletion';
     if (isCommitted || isStagedDeletion) return;
 
     // Always open dialog for better UX - prevents accidental changes
@@ -134,9 +135,9 @@ export default function SelectionList() {
   const [convertDialog, setConvertDialog] = useState<{ open: boolean; selectionId: string | null }>({ open: false, selectionId: null });
 
   const handleSelectionDoubleClick = useCallback((selection: Selection) => {
-    const stateStr = ((selection as any).state || '').toString();
-    const isCommitted = stateStr === 'committed';
-    const isStagedDeletion = stateStr === 'staged_deletion';
+    const norm = getNormalizedState((selection as any).state);
+    const isCommitted = norm === 'committed';
+    const isStagedDeletion = norm === 'staged_deletion';
     if (isCommitted || isStagedDeletion) {
       setConvertDialog({ open: true, selectionId: selection.id });
       return;
@@ -167,14 +168,15 @@ export default function SelectionList() {
     
     // Determine status indicator
     const getStatusIndicator = () => {
-      const stateStr = ((sel as any).state || '').toString();
-      if (stateStr === 'committed') return { color: 'bg-zinc-500', title: 'Committed', label: 'Committed' };
-      if (stateStr === 'staged_deletion') return { color: 'bg-red-500', title: 'Staged deletion', label: 'Deletion' };
-      if (stateStr === 'staged_edition') return { color: 'bg-amber-500', title: 'Staged edition', label: 'Edition' };
-      if (stateStr === 'staged_creation') return { color: 'bg-blue-500', title: 'Staged creation', label: 'Creation' };
-      if (isNew) return { color: 'bg-emerald-500', title: 'Unstaged (local)', label: 'Unstaged' };
-      if (isModified) return { color: 'bg-amber-500', title: 'Modified', label: 'Modified' };
-      return { color: 'bg-gray-400', title: 'Saved', label: 'Saved' };
+      const norm = getNormalizedState((sel as any).state);
+      if (norm === 'draft') {
+        // Distinguish drafts vs saved but unmodified items visually
+        if (isNew) return { color: 'bg-emerald-500', title: 'Unstaged (local)', label: 'Unstaged' };
+        if (isModified) return { color: 'bg-amber-500', title: 'Modified', label: 'Modified' };
+        return { color: 'bg-gray-400', title: 'Saved', label: 'Saved' };
+      }
+      const lab = getStatusLabel(norm);
+      return { color: lab.colorClass, title: lab.title, label: lab.label };
     };
     
     const statusIndicator = getStatusIndicator();

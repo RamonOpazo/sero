@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, fireEvent } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import SelectionsLayer from '../selections-layer';
 import { SelectionProvider, useSelections } from '../../../providers/selection-provider';
@@ -72,5 +72,34 @@ describe('SelectionsLayer', () => {
     // The selection box position should remain unchanged
     expect(box.style.left).toBe('100px');
     expect(box.style.top).toBe('100px');
+  });
+
+  it('prevents resizing staged_deletion selection on drag', async () => {
+    const deletion = sel('d1', 'staged_deletion');
+
+    render(
+      <Providers initial={{ saved: [deletion] }}>
+        <Harness initial={null} />
+      </Providers>
+    );
+
+    const box = document.querySelector('#__selection_layer__ [data-testid="selection-box"][data-selection-id="d1"]') as HTMLElement;
+    expect(box).toBeTruthy();
+
+    // Ensure selection is selected so handles render
+    fireEvent.mouseDown(box, { button: 0 });
+    fireEvent.mouseUp(box);
+
+    const handle = document.querySelector('#__selection_layer__ [data-testid="resize-se"]') as HTMLElement | null;
+
+    if (handle) {
+      fireEvent.mouseDown(handle, { button: 0, clientX: 300, clientY: 300 });
+      fireEvent.mouseMove(document, { clientX: 400, clientY: 400 });
+      fireEvent.mouseUp(document);
+    }
+
+    // The selection box size should remain unchanged from initial (0.2 * 1000 = 200)
+    expect(box.style.width).toBe('200px');
+    expect(box.style.height).toBe('200px');
   });
 });

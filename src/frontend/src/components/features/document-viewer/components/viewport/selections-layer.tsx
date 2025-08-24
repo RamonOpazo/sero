@@ -10,6 +10,9 @@ import { cn } from "@/lib/utils";
 import { useSelections } from '../../providers/selection-provider';
 import { useViewportState } from '../../providers/viewport-provider';
 import type { Selection, SelectionCreateDraft } from '../../types/viewer';
+import { getNormalizedState, getBoxColorClasses } from '../../utils/selection-styles';
+
+type Corner = 'nw' | 'ne' | 'sw' | 'se';
 
 type Props = { 
   documentSize: { width: number; height: number };
@@ -49,7 +52,7 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
   // Interaction state for resize, move, and create operations
   const [dragState, setDragState] = useState<{
     type: 'move' | 'resize' | 'create';
-    corner?: string;
+    corner?: Corner;
     startMousePos: { x: number; y: number };
     startPoint?: { x: number; y: number };
     initialSelection?: Selection;
@@ -257,8 +260,8 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     e.preventDefault();
     
     // Prevent editing for committed or staged_deletion selections
-    const stateStr = ((selection as any).state || '').toString();
-    if (stateStr === 'committed' || stateStr === 'staged_deletion') {
+    const norm = getNormalizedState((selection as any).state);
+    if (norm === 'committed' || norm === 'staged_deletion') {
       return;
     }
 
@@ -275,15 +278,15 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
   }, [beginBatchOperation]);
   
   // Handle resize start
-  const handleResizeStart = useCallback((corner: string, e: React.MouseEvent, selection: Selection) => {
+  const handleResizeStart = useCallback((corner: Corner, e: React.MouseEvent, selection: Selection) => {
     if (e.button !== 0) return; // Only left click
     
     e.stopPropagation();
     e.preventDefault();
     
     // Prevent editing for committed or staged_deletion selections
-    const stateStr = ((selection as any).state || '').toString();
-    if (stateStr === 'committed' || stateStr === 'staged_deletion') {
+    const norm = getNormalizedState((selection as any).state);
+    if (norm === 'committed' || norm === 'staged_deletion') {
       return;
     }
 
@@ -313,13 +316,14 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     return positions.map(({ name, style }) => (
       <div
         key={name}
+        data-testid={`resize-${name}`}
         className="absolute bg-blue-600 border border-white shadow-md hover:bg-blue-700 transition-colors z-10"
         style={{
           width: handleSize,
           height: handleSize,
           ...style,
         }}
-        onMouseDown={(e) => handleResizeStart(name, e, selection)}
+        onMouseDown={(e) => handleResizeStart(name as Corner, e, selection)}
       />
     ));
   }, [handleResizeStart]);
@@ -338,31 +342,15 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     const isGlobal = selection.page_number === null;
 
     // Determine staged status: persisted but not committed (new semantics)
-    const stateStr = ((selection as any).state || '').toString();
-    const isCommitted = stateStr === 'committed';
-    const isStagedCreation = stateStr === 'staged_creation';
-    const isStagedEdition = stateStr === 'staged_edition';
-    const isStagedDeletion = stateStr === 'staged_deletion';
-
-    // Choose color by state (committed gray; staged_deletion red; staged_edition amber; staged_creation blue; local draft green)
-    const colorClasses = isCommitted
-      ? { border: 'border-zinc-500/80 hover:border-zinc-600/95', text: 'text-zinc-600' }
-      : isStagedDeletion
-        ? { border: 'border-red-500/80 hover:border-red-600/95', text: 'text-red-600' }
-        : isStagedEdition
-          ? { border: 'border-amber-500/80 hover:border-amber-600/95', text: 'text-amber-600' }
-          : isStagedCreation
-            ? { border: 'border-blue-500/80 hover:border-blue-600/95', text: 'text-blue-600' }
-            : isNew
-              ? { border: 'border-emerald-500/80 hover:border-emerald-600/95', text: 'text-emerald-600' }
-              : { border: 'border-slate-500/80 hover:border-slate-600/95', text: 'text-slate-600' };
+    const norm = getNormalizedState((selection as any).state);
+    const colors = getBoxColorClasses(norm === 'draft' && isNew ? 'draft' : norm);
 
     const selectionElement = (
       <div
         key={selection.id}
         data-testid="selection-box"
         data-selection-id={selection.id}
-        data-state={stateStr}
+        data-state={norm}
         className={cn(
           "absolute pointer-events-auto group overflow-hidden",
           // Disable transitions during drag operations
@@ -370,10 +358,9 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
             ? ""
             : "transition-all duration-200",
           'border',
-          // Border style: local drafts (no state) => dashed; staged => solid; committed => double-like
-          stateStr === '' ? 'border-dashed' : (isCommitted ? 'border-2' : 'border-solid'),
-          colorClasses.border,
-          colorClasses.text,
+          colors.borderStyle === 'dashed' ? 'border-dashed' : (colors.borderStyle === 'double' ? 'border-2' : 'border-solid'),
+          colors.border,
+          colors.text,
         )}
         style={{
           left: `${left}px`,

@@ -1,6 +1,5 @@
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { FileText, ArrowLeft, Lock, KeyRound } from 'lucide-react';
+import { ArrowLeft, KeyRound } from 'lucide-react';
 import { useEditorView } from './use-editor-view';
 import { DocumentPasswordDialog } from './dialogs';
 import DocumentViewer from '@/components/features/document-viewer';
@@ -16,7 +15,6 @@ export function EditorView({ fileType }: EditorViewProps) {
     fileData,
     isLoading,
     error,
-    userCancelledPassword,
     documentForViewer,
     passwordDialogState,
     actionHandlers,
@@ -44,12 +42,10 @@ export function EditorView({ fileType }: EditorViewProps) {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground mb-2">Loading document...</p>
-        </div>
-      </div>
+      <EmptyState
+        variant="await"
+        message="Loading document..."
+      />
     );
   }
 
@@ -75,18 +71,14 @@ export function EditorView({ fileType }: EditorViewProps) {
       )}
 
       {fileData && !documentForViewer && (
-        <div className="flex-1 flex items-center justify-center bg-muted/10 rounded-lg">
-          <div className="text-center">
-            <FileText className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-            <p className="text-lg font-medium text-muted-foreground">PDF Preview</p>
-            <p className="text-sm text-muted-foreground">
-              File loaded successfully ({formatFileSize(fileData.blob.size)})
-            </p>
-            <p className="text-xs text-muted-foreground mt-2">
-              Unable to initialize document viewer
-            </p>
-          </div>
-        </div>
+        <EmptyState
+          message={
+            <>
+              <p>{`File loaded successfully (${formatFileSize(fileData.blob.size)})`}</p>
+              <p>{"Unable to initialize document viewer"}</p>
+            </>
+          }
+        />
       )}
 
       {/* Password Dialog */}
