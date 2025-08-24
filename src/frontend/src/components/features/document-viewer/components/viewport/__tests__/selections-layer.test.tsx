@@ -42,7 +42,7 @@ describe('SelectionsLayer', () => {
     );
 
     // Two selection boxes present; check classes
-    const boxes = document.querySelectorAll('#__selection_layer__ .border');
+    const boxes = document.querySelectorAll('#__selection_layer__ [data-testid="selection-box"]');
     expect(boxes.length).toBeGreaterThanOrEqual(2);
 
     const hasRed = Array.from(boxes).some(b => b.className.includes('border-red-500/80'));
@@ -60,9 +60,8 @@ describe('SelectionsLayer', () => {
       </Providers>
     );
 
-    const { allSelections } = (await import('../../../providers/selection-provider')).useSelections();
-    // Query the first selection box
-    const box = document.querySelector('#__selection_layer__ .border') as HTMLElement;
+    // Query the staged_deletion selection box
+    const box = document.querySelector('#__selection_layer__ [data-testid="selection-box"][data-selection-id="d1"]') as HTMLElement;
     expect(box).toBeTruthy();
 
     // Try to start moving (mouse down and move)
@@ -70,9 +69,8 @@ describe('SelectionsLayer', () => {
     fireEvent.mouseMove(document, { clientX: 200, clientY: 200 });
     fireEvent.mouseUp(document);
 
-    // The selection coordinates should remain unchanged
-    const after = allSelections.find(s => s.id === 'd1');
-    expect(after?.x).toBeCloseTo(0.1);
-    expect(after?.y).toBeCloseTo(0.1);
+    // The selection box position should remain unchanged
+    expect(box.style.left).toBe('100px');
+    expect(box.style.top).toBe('100px');
   });
 });

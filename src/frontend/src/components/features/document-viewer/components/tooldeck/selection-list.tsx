@@ -207,6 +207,7 @@ export default function SelectionList() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <button
+              data-testid={`selection-toggle-${sel.id}`}
               className={cn(
                 "flex items-center gap-1 font-medium px-2 py-0.5 rounded text-xs transition-colors hover:opacity-80 cursor-pointer",
                 isGlobal ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" :

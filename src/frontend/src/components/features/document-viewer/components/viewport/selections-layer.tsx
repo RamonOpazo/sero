@@ -360,6 +360,9 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     const selectionElement = (
       <div
         key={selection.id}
+        data-testid="selection-box"
+        data-selection-id={selection.id}
+        data-state={stateStr}
         className={cn(
           "absolute pointer-events-auto group overflow-hidden",
           // Disable transitions during drag operations

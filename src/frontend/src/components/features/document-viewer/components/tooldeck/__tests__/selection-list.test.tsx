@@ -6,7 +6,7 @@ import { SelectionProvider, useSelections } from '../../../providers/selection-p
 import { ViewportProvider } from '../../../providers/viewport-provider';
 import type { Selection } from '../../../types/viewer';
 
-vi.mock('../dialogs', () => ({
+vi.mock('@/components/features/document-viewer/components/dialogs', () => ({
   PageSelectionDialog: (props: any) => props.isOpen ? <div data-testid="page-dialog-open">Page dialog open</div> : null,
 }));
 
@@ -82,15 +82,17 @@ describe('SelectionList', () => {
       </Providers>
     );
 
-    const buttons = screen.getAllByRole('button');
-    // First occurrence corresponds to first item page/global button
-    fireEvent.click(buttons[0]); // click on committed page/global
+    const committedToggle = screen.getByTestId('selection-toggle-c2');
+    fireEvent.click(committedToggle);
     expect(screen.queryByTestId('page-dialog-open')).not.toBeInTheDocument();
 
-    // Find the third item's page/global button (order: new then saved; all saved here)
-    const editableButton = buttons.find(btn => btn.textContent?.includes('Page')) || buttons[1];
-    fireEvent.click(editableButton);
-    expect(screen.getByTestId('page-dialog-open')).toBeInTheDocument();
+    const deletionToggle = screen.getByTestId('selection-toggle-d2');
+    fireEvent.click(deletionToggle);
+    expect(screen.queryByTestId('page-dialog-open')).not.toBeInTheDocument();
+
+    const editableToggle = screen.getByTestId('selection-toggle-e2');
+    fireEvent.click(editableToggle);
+    expect(await screen.findByTestId('page-dialog-open')).toBeInTheDocument();
   });
 
   it('shows Deletion status label for staged_deletion', async () => {

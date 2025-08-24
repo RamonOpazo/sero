@@ -1,9 +1,10 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { FileText, ArrowLeft, Lock } from 'lucide-react';
+import { FileText, ArrowLeft, Lock, KeyRound } from 'lucide-react';
 import { useEditorView } from './use-editor-view';
 import { DocumentPasswordDialog } from './dialogs';
 import DocumentViewer from '@/components/features/document-viewer';
+import { EmptyState } from '@/components';
 
 interface EditorViewProps {
   fileType: 'original' | 'redacted';
@@ -55,49 +56,13 @@ export function EditorView({ fileType }: EditorViewProps) {
   return (
     <div className="flex flex-col h-full">
       {/* File Content */}
-      {!fileData && !userCancelledPassword && (
-        <div className="flex-1 flex items-center justify-center">
-          <Card>
-            <CardContent className="p-16 text-center">
-              <Lock className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-              <p className="text-lg font-medium text-muted-foreground mb-4">
-                File Encrypted
-              </p>
-              <p className="text-sm text-muted-foreground mb-6">
-                This document requires a password to decrypt the {fileType} file
-              </p>
-              <Button
-                onClick={actionHandlers.onOpenPasswordDialog}
-                className="px-6 py-2"
-              >
-                Enter Password
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {!fileData && userCancelledPassword && (
-        <div className="flex-1 flex items-center justify-center">
-          <Card>
-            <CardContent className="p-16 text-center">
-              <FileText className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-              <p className="text-lg font-medium text-muted-foreground mb-4">
-                File Not Loaded
-              </p>
-              <p className="text-sm text-muted-foreground mb-6">
-                You cancelled the password entry. Click below to try again.
-              </p>
-              <Button
-                onClick={actionHandlers.onRetryPassword}
-                variant="outline"
-                className="px-6 py-2"
-              >
-                Retry Password
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
+      {!fileData && (
+        <EmptyState
+          message='File Not Loaded'
+          buttonText='Retry Password'
+          buttonIcon={<KeyRound />}
+          onButtonClick={actionHandlers.onRetryPassword}
+        />
       )}
 
       {fileData && documentForViewer && (
