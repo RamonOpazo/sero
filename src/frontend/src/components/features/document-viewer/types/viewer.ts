@@ -8,8 +8,11 @@ import { type SelectionCreateType, type SelectionType } from '@/types';
 // Re-export SelectionCreateType for internal use
 export type { SelectionCreateType };
 
+// Local draft type (frontend-only) where state can be omitted until staged
+export type SelectionCreateDraft = Omit<SelectionCreateType, 'state'> & { state?: SelectionType['state'] };
+
 // Selection type alias for the new selection manager (supports both saved and new selections)
-export type Selection = SelectionType | (SelectionCreateType & { id: string });
+export type Selection = SelectionType | (SelectionCreateDraft & { id: string });
 
 // Viewer modes
 export type ViewerMode = 'pan' | 'select';

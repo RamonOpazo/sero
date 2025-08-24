@@ -9,7 +9,7 @@ import React, { useState, useCallback, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { useSelections } from '../../providers/selection-provider';
 import { useViewportState } from '../../providers/viewport-provider';
-import type { Selection, SelectionCreateType } from '../../types/viewer';
+import type { Selection, SelectionCreateDraft } from '../../types/viewer';
 
 type Props = { 
   documentSize: { width: number; height: number };
@@ -105,7 +105,7 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     });
     
     // Start drawing in the new selection system
-    const initialSelection: SelectionCreateType = {
+    const initialSelection: SelectionCreateDraft = {
       scope: 'document',
       x,
       y,
@@ -136,7 +136,7 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
       const currentY = startPoint.y + deltaY;
       
       // Create selection from start point to current point
-      const newSelection: SelectionCreateType = {
+      const newSelection: SelectionCreateDraft = {
         scope: 'document',
         x: Math.min(startPoint.x, currentX),
         y: Math.min(startPoint.y, currentY),

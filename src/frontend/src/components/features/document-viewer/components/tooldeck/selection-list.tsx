@@ -6,6 +6,7 @@ import { useViewportState } from "../../providers/viewport-provider";
 import { useMemo, useRef, useEffect, useState, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { PageSelectionDialog } from "../dialogs";
+import { SimpleConfirmationDialog } from "@/components/shared/simple-confirmation-dialog";
 import type { Selection } from "../../types/viewer";
 
 
@@ -106,6 +107,12 @@ export default function SelectionList() {
   const handleToggleGlobal = (selectionId: string, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent selection when clicking the badge
     
+    // Only non-committed selections can change page/global
+    const selection = selectionsWithTypeInfo.find(sel => sel.id === selectionId);
+    const stateStr = ((selection as any)?.state || '').toString();
+    const isCommitted = stateStr === 'committed';
+    if (isCommitted) return;
+
     // Always open dialog for better UX - prevents accidental changes
     setDialogState({ isOpen: true, selectionId });
   };
@@ -122,7 +129,15 @@ export default function SelectionList() {
   };
 
   // Handle double-click from SelectionsLayer
+  const [convertDialog, setConvertDialog] = useState<{ open: boolean; selectionId: string | null }>({ open: false, selectionId: null });
+
   const handleSelectionDoubleClick = useCallback((selection: Selection) => {
+    const stateStr = ((selection as any).state || '').toString();
+    const isCommitted = stateStr === 'committed';
+    if (isCommitted) {
+      setConvertDialog({ open: true, selectionId: selection.id });
+      return;
+    }
     setDialogState({ isOpen: true, selectionId: selection.id });
   }, []);
 
@@ -149,25 +164,14 @@ export default function SelectionList() {
     
     // Determine status indicator
     const getStatusIndicator = () => {
-      if (isNew) {
-        return {
-          color: "bg-green-500",
-          title: "New selection",
-          label: "New"
-        };
-      } else if (isModified) {
-        return {
-          color: "bg-amber-500",
-          title: "Modified selection",
-          label: "Modified"
-        };
-      } else {
-        return {
-          color: "bg-gray-400",
-          title: "Saved selection",
-          label: "Saved"
-        };
-      }
+      const stateStr = ((sel as any).state || '').toString();
+      if (stateStr === 'committed') return { color: 'bg-zinc-500', title: 'Committed', label: 'Committed' };
+      if (stateStr === 'staged_deletion') return { color: 'bg-red-500', title: 'Staged deletion', label: 'Deletion' };
+      if (stateStr === 'staged_edition') return { color: 'bg-amber-500', title: 'Staged edition', label: 'Edition' };
+      if (stateStr === 'staged_creation') return { color: 'bg-blue-500', title: 'Staged creation', label: 'Creation' };
+      if (isNew) return { color: 'bg-emerald-500', title: 'Unstaged (local)', label: 'Unstaged' };
+      if (isModified) return { color: 'bg-amber-500', title: 'Modified', label: 'Modified' };
+      return { color: 'bg-gray-400', title: 'Saved', label: 'Saved' };
     };
     
     const statusIndicator = getStatusIndicator();
@@ -269,6 +273,27 @@ export default function SelectionList() {
         currentPage={currentPage}
         totalPages={numPages}
         selectionId={dialogState.selectionId ?? undefined}
+      />
+      {/* Convert committed to staged dialog */}
+      <SimpleConfirmationDialog
+        isOpen={convertDialog.open}
+        onClose={() => setConvertDialog({ open: false, selectionId: null })}
+        onConfirm={async () => {
+          if (convertDialog.selectionId) {
+            await (useSelections() as any).convertCommittedSelectionToStaged(convertDialog.selectionId);
+            // Close regardless; UI will reflect updated state via provider
+            setConvertDialog({ open: false, selectionId: null });
+          }
+        }}
+        title="Convert to staged edition"
+        description="This will convert the committed selection to a staged edition so you can edit it."
+        confirmButtonText="Convert"
+        cancelButtonText="Cancel"
+        variant="default"
+        messages={[
+          { variant: 'warning', title: 'Careful', description: 'You are about to edit a committed selection.' },
+          { variant: 'info', title: 'What happens', description: 'The selection will be marked as staged edition and become editable.' },
+        ]}
       />
     </>
   );

@@ -7,8 +7,10 @@
 
 import React, { createContext, useContext, useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { createSelectionManager, type SelectionDomainManager, type Selection, type SelectionCreateType } from '../core/selection-manager';
+import type { SelectionCreateDraft } from '../types/viewer';
 import type { Result } from '@/lib/result';
 import type { PendingChanges } from '@/lib/domain-manager';
+import { DocumentViewerAPI } from '@/lib/document-viewer-api';
 
 // =============================================================================
 // CONTEXT INTERFACE - All expected selection functionality
@@ -24,8 +26,8 @@ interface SelectionContextValue {
   // Convenience methods for all required operations
   
   // *** CREATE NEW SELECTIONS ***
-  startDraw: (selection: SelectionCreateType) => void;
-  updateDraw: (selection: SelectionCreateType) => void;
+  startDraw: (selection: SelectionCreateDraft) => void;
+  updateDraw: (selection: SelectionCreateDraft) => void;
   finishDraw: () => void;
   cancelDraw: () => void;
   
@@ -38,6 +40,9 @@ interface SelectionContextValue {
   // *** DELETE NEW/SAVED SELECTIONS ***
   deleteSelection: (id: string) => void;
   deleteSelectedSelection: () => boolean;
+  
+  // *** STATE TRANSITIONS ***
+  convertCommittedSelectionToStaged: (id: string) => Promise<boolean>;
   
   // *** HISTORY OF CHANGES ***
   undo: () => void;
@@ -144,7 +149,7 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
   // CREATE NEW SELECTIONS
   // ========================================
   
-  const startDraw = useCallback((selection: SelectionCreateType) => {
+  const startDraw = useCallback((selection: SelectionCreateDraft) => {
     // Convert SelectionCreateType to Selection by adding temporary ID
     const selectionWithId: Selection = {
       ...selection,
@@ -153,7 +158,7 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
     dispatch('START_DRAW', selectionWithId);
   }, [dispatch]);
   
-  const updateDraw = useCallback((selection: SelectionCreateType) => {
+  const updateDraw = useCallback((selection: SelectionCreateDraft) => {
     // Convert SelectionCreateType to Selection by adding temporary ID
     const selectionWithId: Selection = {
       ...selection,
@@ -219,6 +224,22 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
     }
     return false;
   }, [dispatch, state]);
+  
+  // ========================================
+  // STATE TRANSITIONS
+  // ========================================
+  
+  const convertCommittedSelectionToStaged = useCallback(async (id: string) => {
+    try {
+      const res = await DocumentViewerAPI.convertSelectionToStaged(id);
+      if (!res.ok) return false;
+      // Update local state to reflect new staged state
+      dispatch('UPDATE_ITEM', { id, updates: { state: 'staged_edition' } as any });
+      return true;
+    } catch {
+      return false;
+    }
+  }, [dispatch]);
   
   // ========================================
   // HISTORY OF CHANGES
@@ -414,6 +435,7 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
     // Delete new/saved selections
     deleteSelection,
     deleteSelectedSelection,
+    convertCommittedSelectionToStaged,
     
     // History of changes
     undo,
