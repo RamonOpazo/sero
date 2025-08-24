@@ -1,4 +1,5 @@
 export * from './EmptyState';
+export * from './information-dialog';
 export * from './simple-confirmation-dialog';
 export * from './typed-confirmation-dialog';
 export * from './ThemeToggle';
