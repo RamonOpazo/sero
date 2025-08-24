@@ -1,7 +1,66 @@
 # CHANGELOG
 
 
+## v1.4.0 (2025-08-24)
+
+### Documentation
+
+- Add DB refactor migration plan (project-scoped settings, scoped prompts/selections, templates)
+  ([`2d57b23`](https://github.com/RamonOpazo/sero/commit/2d57b23257a7685512a8d159cb84ca9c11ea7cf8))
+
+- Update migration plan for document-only prompts/selections and finalized settings
+  ([`20e13b4`](https://github.com/RamonOpazo/sero/commit/20e13b45177a4ecccd34ae2c2f7f3742a45936c1))
+
+### Features
+
+- **db**: Add scope/state enums and default FileType.ORIGINAL; prep for scoped settings refactor
+  ([`ede2ce0`](https://github.com/RamonOpazo/sero/commit/ede2ce072b379adb116df313a228287017f8ac4b))
+
+- **schema**: Align Pydantic schemas with DB constraints; update migration plan
+  ([`b91708d`](https://github.com/RamonOpazo/sero/commit/b91708d7242cf5a26dc83334de83a199a9362912))
+
+- **schemas**: Remove tags; add scope/state to prompts and selections with back-compat computed
+  fields
+  ([`18ce56b`](https://github.com/RamonOpazo/sero/commit/18ce56b77c8db67366761432392e27ff01c8650f))
+
+### Refactoring
+
+- **ai-settings**: Move to project-scoped CRUD and support; fix tests and bulk envelope; update
+  selections tests for state enum
+  ([`6545d41`](https://github.com/RamonOpazo/sero/commit/6545d412c25bc10a138466b4a7a89f5e5489faa0))
+
+- **api**: Move AI settings endpoints from documents to projects; project-scope settings; update
+  tests and routers
+  ([`9107010`](https://github.com/RamonOpazo/sero/commit/9107010c862b3758c7f095d69deed214870fea8a))
+
+- **controllers**: Validate document existence for prompts/selections; default state without legacy
+  flags
+  ([`33410e8`](https://github.com/RamonOpazo/sero/commit/33410e869129fafa8944bb19a9066cce6cd84629))
+
+- **crud**: Align files crud with DB; add tags stub; enrich shallow/summary; minor schema defaults
+  ([`08c92ee`](https://github.com/RamonOpazo/sero/commit/08c92ee468c1e69cc5bb7b0674dd9f0875dec5a6))
+
+- **crud**: Validate order/join fields, guard immutable updates, and default to created_at desc
+  safely
+  ([`6dff9bf`](https://github.com/RamonOpazo/sero/commit/6dff9bf1f6a9a9a3832bcef510f9670ef58cf246))
+
+### Testing
+
+- Patch monkeypatch targets to controller call sites; schema: add selection counts to
+  DocumentSummary; support: shallow builder populates has_template\n\nAll tests passing (114/114).
+  ([`f1d8bbd`](https://github.com/RamonOpazo/sero/commit/f1d8bbded3160435c27345445d48eb64d9b547d5))
+
+- **fixes**: Align tests with controller/schema changes (state enums, file hash length, ephemeral
+  decrypt monkeypatches)
+  ([`661af5e`](https://github.com/RamonOpazo/sero/commit/661af5ee01ddfda93da2586a23c1ae8e72ef301e))
+
+
 ## v1.3.0 (2025-08-22)
+
+### Chores
+
+- **release**: V1.3.0 [skip ci]
+  ([`f0b72de`](https://github.com/RamonOpazo/sero/commit/f0b72dea81fa464b553d339b71fe4c1e7314bb02))
 
 ### Documentation
 
