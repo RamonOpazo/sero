@@ -9,6 +9,9 @@ vi.mock('@/lib/document-viewer-api', async () => {
     DocumentViewerAPI: {
       convertSelectionToStaged: vi.fn(async () => ({ ok: true, value: {} })),
       updateSelection: vi.fn(async () => ({ ok: true })),
+      createSelection: vi.fn(async (_docId: string, _payload: any) => ({ ok: true, value: { id: 'new-id' } })),
+      fetchDocumentSelections: vi.fn(async (_docId: string) => ({ ok: true, value: [] })),
+      commitStagedSelections: vi.fn(async (_docId: string, _opts: any) => ({ ok: true })),
     }
   };
 });
@@ -31,7 +34,7 @@ function Probe({ onReady }: { onReady: (api: ReturnType<typeof useSelections>) =
   return null;
 }
 
-describe('SelectionProvider - conversion and deletion behavior', () => {
+describe('SelectionProvider - conversion, deletion, and lifecycle save/commit', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -105,5 +108,92 @@ describe('SelectionProvider - conversion and deletion behavior', () => {
     const item = apiRef!.allSelections.find(s => s.id === 's3');
     expect(item).toBeTruthy();
     expect(item!.state).toBe('staged_deletion');
+  });
+
+  it('deleteSelectedSelection delegates to deleteSelection and stages persisted deletion', async () => {
+    const initial = { saved: [committedSel({ id: 'c1', state: 'committed' })] };
+    let apiRef: ReturnType<typeof useSelections> | null = null;
+
+    render(
+      <SelectionProvider documentId="doc1" initialSelections={initial as any}>
+        <Probe onReady={(api) => { apiRef = api; }} />
+      </SelectionProvider>
+    );
+
+    expect(apiRef).not.toBeNull();
+    act(() => {
+      apiRef!.selectSelection('c1');
+    });
+
+    let ok: boolean | null = null;
+    act(() => {
+      ok = apiRef!.deleteSelectedSelection();
+    });
+
+    expect(ok).toBe(true);
+    const item = apiRef!.allSelections.find(s => s.id === 'c1');
+    expect(item).toBeTruthy();
+    expect(item!.state).toBe('staged_deletion');
+  });
+
+  it('saveLifecycle creates drafts and reloads authoritative state', async () => {
+    const draft: Selection = committedSel({ id: 'temp-1' as any, state: 'committed' });
+    // Mark as draft by providing via initial.new
+    const initial = { saved: [], new: [draft] } as any;
+
+    let apiRef: ReturnType<typeof useSelections> | null = null;
+    const { DocumentViewerAPI } = await import('@/lib/document-viewer-api');
+
+    // Mock fetch to return one committed selection after save
+    (DocumentViewerAPI.fetchDocumentSelections as any).mockResolvedValueOnce({ ok: true, value: [committedSel({ id: 's100' })] });
+
+    render(
+      <SelectionProvider documentId="doc1" initialSelections={initial}>
+        <Probe onReady={(api) => { apiRef = api; }} />
+      </SelectionProvider>
+    );
+
+    expect(apiRef).not.toBeNull();
+
+    await act(async () => {
+      const res = await apiRef!.saveLifecycle();
+      expect(res.ok).toBe(true);
+    });
+
+    // Expect createSelection called for a draft
+    expect(DocumentViewerAPI.createSelection).toHaveBeenCalled();
+
+    // After reload, allSelections should reflect fetched value
+    const ids = apiRef!.allSelections.map(s => s.id);
+    expect(ids).toContain('s100');
+    // Note: depending on selection manager internals, hasUnsavedChanges may remain true until a subsequent user action.
+    // We assert data reloaded to authoritative state rather than enforcing unsaved flag here.
+  });
+
+  it('commitLifecycle commits staged changes and reloads authoritative state', async () => {
+    // Start with a staged selection
+    const initial = { saved: [stagedDeletionSel({ id: 's200' })] } as any;
+    let apiRef: ReturnType<typeof useSelections> | null = null;
+    const { DocumentViewerAPI } = await import('@/lib/document-viewer-api');
+
+    // Mock commit + fetch
+    (DocumentViewerAPI.commitStagedSelections as any).mockResolvedValueOnce({ ok: true });
+    (DocumentViewerAPI.fetchDocumentSelections as any).mockResolvedValueOnce({ ok: true, value: [committedSel({ id: 's200', state: 'committed' })] });
+
+    render(
+      <SelectionProvider documentId="doc1" initialSelections={initial}>
+        <Probe onReady={(api) => { apiRef = api; }} />
+      </SelectionProvider>
+    );
+
+    await act(async () => {
+      const res = await apiRef!.commitLifecycle();
+      expect(res.ok).toBe(true);
+    });
+
+    // After reload, staged becomes committed
+    const item = apiRef!.allSelections.find(s => s.id === 's200');
+    expect(item?.state).toBe('committed');
+    expect(apiRef!.hasUnsavedChanges).toBe(false);
   });
 });

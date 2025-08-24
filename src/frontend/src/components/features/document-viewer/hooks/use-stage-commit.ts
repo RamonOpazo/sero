@@ -101,7 +101,10 @@ export function useStageCommit(documentId: string | number): UseStageCommitResul
     return { committed, stagedPersisted, created, updated, deleted, pending };
   }, [promptState, allPrompts, promptPending]);
 
-  const canStage = selectionStats.pending > 0 || promptStats.pending > 0;
+  const canStage = selectionStats.pending > 0
+                 || selectionStats.stagedPersisted > 0
+                 || promptStats.pending > 0
+                 || promptStats.stagedPersisted > 0;
   const canCommit = (selectionStats.stagedPersisted + selectionStats.created + selectionStats.updated) > 0
                  || (promptStats.stagedPersisted + promptStats.created + promptStats.updated) > 0;
 
@@ -113,8 +116,8 @@ export function useStageCommit(documentId: string | number): UseStageCommitResul
     setIsStaging(true);
     try {
       const results = await Promise.allSettled([
-        selectionStats.pending > 0 ? saveLifecycle() : Promise.resolve({ ok: true }) as any,
-        promptStats.pending > 0 ? savePrompts() : Promise.resolve({ ok: true }) as any,
+        (selectionStats.pending > 0 || selectionStats.stagedPersisted > 0) ? saveLifecycle() : Promise.resolve({ ok: true }) as any,
+        (promptStats.pending > 0 || promptStats.stagedPersisted > 0) ? savePrompts() : Promise.resolve({ ok: true }) as any,
       ]);
       const ok = results.every(r => r.status === 'fulfilled' && (r as PromiseFulfilledResult<any>).value?.ok !== false);
       if (!ok) {
@@ -139,7 +142,7 @@ export function useStageCommit(documentId: string | number): UseStageCommitResul
     setIsCommitting(true);
     try {
       // Ensure latest staged items are persisted first
-      if (selectionStats.pending > 0) {
+      if (selectionStats.pending > 0 || selectionStats.stagedPersisted > 0) {
         const resSel = await saveLifecycle();
         if (!resSel.ok) {
           toast.error('Failed to stage selection changes before commit');
@@ -183,11 +186,12 @@ export function useStageCommit(documentId: string | number): UseStageCommitResul
 
   const stageMessages = useMemo<TypedMessage[]>(() => {
     const msgs: TypedMessage[] = [];
-    if (selectionStats.pending > 0) {
+    if (selectionStats.pending > 0 || selectionStats.stagedPersisted > 0) {
+      const total = selectionStats.pending + selectionStats.stagedPersisted;
       msgs.push({
         variant: "info",
         title: "Selections will be staged",
-        description: `${selectionStats.pending} pending selection change(s) will be saved as staged`,
+        description: `${total} selection change(s) will be saved as staged`,
       });
     }
     if (promptStats.pending > 0) {
@@ -205,7 +209,7 @@ export function useStageCommit(documentId: string | number): UseStageCommitResul
       });
     }
     return msgs;
-  }, [selectionStats.pending, promptStats.pending]);
+  }, [selectionStats.pending, selectionStats.stagedPersisted, promptStats.pending]);
 
   const commitMessages = useMemo<TypedMessage[]>(() => {
     const totalToCommit = (selectionStats.stagedPersisted + selectionStats.created + selectionStats.updated)

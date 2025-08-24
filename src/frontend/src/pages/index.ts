@@ -1,6 +1,4 @@
-export { HomePage } from './HomePage'
-export { SettingsPage } from './SettingsPage'
-// export { DeveloperPage } from './DeveloperPage'  // Uncomment when created
-
-// Documentation is now provided via markdown files in docs/ directory
-// Rendered through DocumentationRenderer component
+export { HomePage } from './home-page'
+export { DocsPage } from './docs-page'
+export { SettingsPage } from './settings-page'
+// export { DevPage } from './dev-page'
