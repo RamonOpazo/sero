@@ -7,6 +7,8 @@ import { useSelections } from "../../providers/selection-provider";
 import { usePrompts } from "../../providers/prompt-provider";
 import type { MinimalDocumentType, PromptType } from "@/types";
 import { toast } from "sonner";
+import { TypedConfirmationDialog } from "@/components/shared/typed-confirmation-dialog";
+import type { TypedMessage } from "@/components/shared/typed-confirmation-dialog";
 
 interface StageCommitCommanderProps {
   document: MinimalDocumentType;
@@ -33,6 +35,8 @@ export default function StageCommitCommander({ document }: StageCommitCommanderP
 
   const [isStaging, setIsStaging] = useState(false);
   const [isCommitting, setIsCommitting] = useState(false);
+  const [showStageDialog, setShowStageDialog] = useState(false);
+  const [showCommitDialog, setShowCommitDialog] = useState(false);
 
   // Selection stats
   const selectionStats = useMemo(() => {
@@ -143,6 +147,75 @@ const committed = allPrompts.filter((p: any) => p && p.state === 'committed').le
     }
   }, [canCommit, selectionStats.pending, promptStats.pending, saveSelections, savePrompts, document.id, allPrompts, updatePrompt, selectionState, loadPrompts]);
 
+  const stageMessages = useMemo<TypedMessage[]>(() => {
+    const msgs: TypedMessage[] = [];
+    if (selectionStats.pending > 0) {
+      msgs.push({
+        variant: "info",
+        title: "Selections will be staged",
+        description: `${selectionStats.pending} pending selection change(s) will be saved as staged`,
+      });
+    }
+    if (promptStats.pending > 0) {
+      msgs.push({
+        variant: "info",
+        title: "Prompts will be staged",
+        description: `${promptStats.pending} pending prompt change(s) will be saved as staged`,
+      });
+    }
+    if (msgs.length === 0) {
+      msgs.push({
+        variant: "warning",
+        title: "No pending changes",
+        description: "There are no changes to stage.",
+      });
+    }
+    return msgs;
+  }, [selectionStats.pending, promptStats.pending]);
+
+  const commitMessages = useMemo<TypedMessage[]>(() => {
+    const totalToCommit = (selectionStats.stagedPersisted + selectionStats.created + selectionStats.updated)
+      + (promptStats.stagedPersisted + promptStats.created + promptStats.updated);
+    const msgs: TypedMessage[] = [];
+    if (totalToCommit === 0) {
+      msgs.push({
+        variant: "warning",
+        title: "Nothing to commit",
+        description: "There are no staged changes to commit.",
+      });
+    } else {
+      // Irreversibility warning first for emphasis
+      msgs.push({
+        variant: "warning",
+        title: "Irreversible operation",
+        description: "Once committed, changes cannot be undone from here.",
+      });
+
+      const selectionToCommit = selectionStats.stagedPersisted + selectionStats.created + selectionStats.updated;
+      const promptToCommit = promptStats.stagedPersisted + promptStats.created + promptStats.updated;
+      if (selectionToCommit > 0) {
+        msgs.push({
+          variant: "info",
+          title: "Selections to commit",
+          description: `${selectionToCommit} selection change(s) will be committed`,
+        });
+      }
+      if (promptToCommit > 0) {
+        msgs.push({
+          variant: "info",
+          title: "Prompts to commit",
+          description: `${promptToCommit} prompt change(s) will be committed`,
+        });
+      }
+      msgs.push({
+        variant: "success",
+        title: "Commit scope",
+        description: "All staged selections and prompts will be marked as committed.",
+      });
+    }
+    return msgs;
+  }, [selectionStats.stagedPersisted, selectionStats.created, selectionStats.updated, promptStats.stagedPersisted, promptStats.created, promptStats.updated]);
+
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-4">
@@ -177,17 +250,17 @@ const committed = allPrompts.filter((p: any) => p && p.state === 'committed').le
         <Button
           variant="default"
           size="sm"
-          onClick={handleCommitAll}
+          onClick={() => setShowCommitDialog(true)}
           disabled={!canCommit || isCommitting}
           className="w-full justify-start h-9 text-xs"
         >
           {isCommitting ? <RotateCcw className="mr-2 h-3 w-3 animate-spin" /> : <CheckCheck className="mr-2 h-3 w-3" />}
-          {isCommitting ? 'Committing...' : 'Commit all'}
+          {isCommitting ? 'Committing...' : 'Commit all staged'}
         </Button>
         <Button
           variant="outline"
           size="sm"
-          onClick={handleStageAll}
+          onClick={() => setShowStageDialog(true)}
           disabled={!canStage || isStaging}
           className="w-full justify-start h-9 text-xs"
         >
@@ -195,6 +268,39 @@ const committed = allPrompts.filter((p: any) => p && p.state === 'committed').le
           {isStaging ? 'Staging...' : 'Stage all changes'}
         </Button>
       </div>
+
+      {/* Confirmation dialogs */}
+      <TypedConfirmationDialog
+        isOpen={showStageDialog}
+        onClose={() => setShowStageDialog(false)}
+        onConfirm={async () => {
+          setShowStageDialog(false);
+          await handleStageAll();
+        }}
+        title="Stage all changes"
+        description="This will stage all pending selections and prompt changes for this document."
+        confirmationText="stage"
+        confirmButtonText="Stage all"
+        cancelButtonText="Cancel"
+        variant="default"
+        messages={stageMessages}
+      />
+
+      <TypedConfirmationDialog
+        isOpen={showCommitDialog}
+        onClose={() => setShowCommitDialog(false)}
+        onConfirm={async () => {
+          setShowCommitDialog(false);
+          await handleCommitAll();
+        }}
+        title="Commit all staged"
+        description="This will commit all staged selections and prompts. This action is irreversible."
+        confirmationText="commit"
+        confirmButtonText="Commit all staged"
+        cancelButtonText="Cancel"
+        variant="default"
+        messages={commitMessages}
+      />
     </div>
   );
 }
