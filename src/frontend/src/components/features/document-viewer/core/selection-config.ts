@@ -67,13 +67,14 @@ const selectionApiAdapter: ApiAdapter<Selection, Omit<SelectionCreateType, 'docu
   
   update: async (id: string, data: Partial<Selection>) => {
     const updateData = {
+      state: (data as any).state,
       x: data.x,
       y: data.y,
       width: data.width,
       height: data.height,
       page_number: data.page_number,
       confidence: data.confidence
-    };
+    } as any;
     
     const result = await DocumentViewerAPI.updateSelection(id, updateData);
     if (result.ok) {
@@ -108,6 +109,8 @@ const selectionTransforms: ApiTransforms<Selection, Omit<SelectionCreateType, 'd
   }),
   
   forUpdate: (selection: Selection): Partial<Selection> => ({
+    // Stage on update per new workflow: any edit moves selection to staged
+    state: 'staged',
     x: selection.x,
     y: selection.y,
     width: selection.width,
