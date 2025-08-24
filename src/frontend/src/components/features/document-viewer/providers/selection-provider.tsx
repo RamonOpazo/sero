@@ -60,6 +60,10 @@ interface SelectionContextValue {
   save: () => Promise<Result<void, unknown>>;
   commitChanges: () => void;
   discardAllChanges: () => void;
+
+  // Lifecycle-based operations (new)
+  saveLifecycle: () => Promise<Result<void, unknown>>;
+  commitLifecycle: () => Promise<Result<void, unknown>>;
   
   // Selection tracking
   selectSelection: (id: string | null) => void;
@@ -322,10 +326,87 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
   const save = useCallback(() => {
     return manager.save();
   }, [manager]);
+
+  // Lifecycle-based SAVE: stage all changes reflected in uiSelections
+  const saveLifecycle = useCallback(async (): Promise<Result<void, unknown>> => {
+    try {
+      const currentState = state as any;
+      const docId = currentState?.contextId as string;
+      // Derive UI selections lifecycle view from current state (avoid TDZ on uiSelections)
+      const persisted: UISelection[] = ((state as any).persistedItems || []).map((s: any) => fromApiSelection(s));
+      const drafts: UISelection[] = ((state as any).draftItems || []).map((s: any) => ({
+        ...(s as any),
+        stage: UISelectionStage.Unstaged,
+        isPersisted: false,
+        dirty: true,
+      } as UISelection));
+      const ui = [...persisted, ...drafts];
+
+      // Create new selections (not persisted)
+      const creates = ui.filter(s => !s.isPersisted);
+      for (const sel of creates) {
+        const createData = (sel as any);
+        const { id: _id, dirty: _dirty, dirtyFields: _df, isPersisted: _p, stage: _st, ...rest } = createData;
+        const res = await DocumentViewerAPI.createSelection(docId, rest);
+        if (!res.ok) {
+          return { ok: false, error: (res as any).error } as Result<void, unknown>;
+        }
+      }
+
+      // Update persisted selections with staged state transitions
+      const updates = ui.filter(s => s.isPersisted && (s.dirty || s.stage === UISelectionStage.StagedEdition || s.stage === UISelectionStage.StagedDeletion || s.stage === UISelectionStage.StagedCreation));
+      for (const sel of updates) {
+        const updateState = sel.stage === UISelectionStage.StagedEdition
+          ? 'staged_edition'
+          : sel.stage === UISelectionStage.StagedDeletion
+          ? 'staged_deletion'
+          : sel.stage === UISelectionStage.StagedCreation
+          ? 'staged_creation'
+          : undefined;
+        const payload: any = {};
+        if (updateState) payload.state = updateState;
+        const res = await DocumentViewerAPI.updateSelection((sel as any).id, payload);
+        if (!res.ok) {
+          return { ok: false, error: (res as any).error } as Result<void, unknown>;
+        }
+      }
+
+      // Reload from server to sync authoritative state
+      const fetched = await DocumentViewerAPI.fetchDocumentSelections(docId);
+      if (fetched.ok) {
+        dispatch('LOAD_ITEMS', fetched.value as any);
+        dispatch('CAPTURE_BASELINE' as any, undefined as any);
+      }
+
+      return { ok: true, value: undefined } as Result<void, unknown>;
+    } catch (e) {
+      return { ok: false, error: e } as Result<void, unknown>;
+    }
+  }, [state, dispatch]);
   
   const commitChanges = useCallback(() => {
     dispatch('COMMIT_CHANGES');
   }, [dispatch]);
+
+  // Lifecycle-based COMMIT: commit all staged on backend and reload
+  const commitLifecycle = useCallback(async (): Promise<Result<void, unknown>> => {
+    try {
+      const currentState = state as any;
+      const docId = currentState?.contextId as string;
+      const res = await DocumentViewerAPI.commitStagedSelections(docId, { commit_all: true });
+      if (!res.ok) {
+        return { ok: false, error: (res as any).error } as Result<void, unknown>;
+      }
+      const fetched = await DocumentViewerAPI.fetchDocumentSelections(docId);
+      if (fetched.ok) {
+        dispatch('LOAD_ITEMS', fetched.value as any);
+        dispatch('CAPTURE_BASELINE' as any, undefined as any);
+      }
+      return { ok: true, value: undefined } as Result<void, unknown>;
+    } catch (e) {
+      return { ok: false, error: e } as Result<void, unknown>;
+    }
+  }, [state, dispatch]);
   
   const discardAllChanges = useCallback(() => {
     dispatch('DISCARD_CHANGES');
@@ -479,6 +560,8 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
     save,
     commitChanges,
     discardAllChanges,
+    saveLifecycle,
+    commitLifecycle,
     
     // Selection tracking
     selectSelection,
