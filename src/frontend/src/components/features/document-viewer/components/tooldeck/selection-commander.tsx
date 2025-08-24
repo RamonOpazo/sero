@@ -41,7 +41,7 @@ export default function SelectionManagement({ document }: SelectionControlsProps
   const [isCommitting, setIsCommitting] = useState(false);
   
   // Count staged (persisted but not committed) selections
-  const stagedPersistedCount = ((selectionState as any).persistedItems || []).filter((s: any) => s && s.state === 'staged').length;
+const stagedPersistedCount = ((selectionState as any).persistedItems || []).filter((s: any) => s && (s.is_staged === true || (s.state && s.state !== 'committed'))).length;
 
   // Calculate selection statistics using the clean PendingChanges API
   const selectionStats = useMemo(() => {

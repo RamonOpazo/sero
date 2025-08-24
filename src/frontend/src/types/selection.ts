@@ -9,6 +9,7 @@ export const SelectionSchema = z.object({
   updated_at: ISO8601DateTimeSchema.nullable(),
   scope: ScopeTypeEnumSchema,
   state: CommitStateEnumSchema,
+  is_staged: z.boolean(),
   page_number: z.number().int().nullable(),
   x: z.number(),
   y: z.number(),
@@ -23,7 +24,7 @@ export const SelectionSchema = z.object({
 export const SelectionCreateSchema = z.object({
   id: UUIDSchema.optional(),
   scope: ScopeTypeEnumSchema.default('document'),
-  state: CommitStateEnumSchema.default('staged'),
+  state: CommitStateEnumSchema.default('staged_creation'),
   page_number: z.number().int().nullable().optional(),
   x: z.number().min(0).max(1),
   y: z.number().min(0).max(1),

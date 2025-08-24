@@ -9,6 +9,7 @@ export const PromptSchema = z.object({
   updated_at: ISO8601DateTimeSchema.nullable(),
   scope: ScopeTypeEnumSchema,
   state: CommitStateEnumSchema,
+  is_staged: z.boolean(),
   title: z.string(),
   prompt: z.string(),
   directive: z.string(),
@@ -18,7 +19,7 @@ export const PromptSchema = z.object({
 export const PromptCreateSchema = z.object({
   id: UUIDSchema.optional(),
   scope: ScopeTypeEnumSchema.default('document'),
-  state: CommitStateEnumSchema.default('staged'),
+  state: CommitStateEnumSchema.default('staged_creation'),
   title: z.string(),
   prompt: z.string(),
   directive: z.string(),

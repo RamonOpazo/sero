@@ -45,14 +45,14 @@ const promptApiAdapter: ApiAdapter<PromptType, Omit<PromptCreateType, 'document_
 const promptTransforms: ApiTransforms<PromptType, Omit<PromptCreateType, 'document_id'>> = {
   forCreate: (prompt: PromptType): Omit<PromptCreateType, 'document_id'> => ({
     scope: prompt.scope ?? 'document',
-    state: prompt.state ?? 'staged',
+    state: prompt.state ?? 'staged_creation',
     title: prompt.title,
     prompt: prompt.prompt,
     directive: prompt.directive,
   }),
   forUpdate: (prompt: PromptType): Partial<PromptType> => ({
     scope: prompt.scope,
-    state: prompt.state,
+    state: prompt.state ?? 'staged_edition',
     title: prompt.title,
     prompt: prompt.prompt,
     directive: prompt.directive,

@@ -191,8 +191,8 @@ export default function DocumentControls({ document }: DocumentControlsProps) {
         </Button>
         {/* Commit state summary */}
         {(() => {
-          const stagedCount = (allSelections || []).filter((s: any) => s && s.state === 'staged').length;
-          const committedCount = (allSelections || []).filter((s: any) => s && s.state === 'committed').length;
+const stagedCount = (allSelections || []).filter((s: any) => s && (s.is_staged === true || (s.state && s.state !== 'committed'))).length;
+const committedCount = (allSelections || []).filter((s: any) => s && s.state === 'committed').length;
           return (
             <div className="flex items-center gap-2 mt-1 text-xs">
               <Badge variant="secondary" className="px-1.5 py-0.5">Committed: {committedCount}</Badge>
