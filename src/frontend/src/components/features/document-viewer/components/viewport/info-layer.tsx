@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { type MinimalDocumentType } from "@/types";
 import { useViewportState } from '../../providers/viewport-provider';
 import { useSelections } from '../../providers/selection-provider';
@@ -6,6 +6,7 @@ import { usePrompts } from '../../providers/prompt-provider';
 import { X, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { UISelectionStage } from '../../types/selection-lifecycle';
 
 type Props = {
   document: MinimalDocumentType;
@@ -39,13 +40,13 @@ export default function InfoLayer({ document, documentSize, isVisible, onToggleV
   const { selectionCount, getGlobalSelections, getPageSelections, uiSelections, hasUnsavedChanges: selUnsaved } = useSelections() as any;
   const { allPrompts, pendingChanges: promptPending, pendingChangesCount: promptPendingCount } = usePrompts();
 
-  const selLifecycle = React.useMemo(() => {
+  const selLifecycle = useMemo(() => {
     const ui = (uiSelections || []) as any[];
     const unstaged = ui.filter(s => s.dirty === true).length;
-    const stagedCreation = ui.filter(s => s.stage === 'staged_creation').length;
-    const stagedEdition = ui.filter(s => s.stage === 'staged_edition').length;
-    const stagedDeletion = ui.filter(s => s.stage === 'staged_deletion').length;
-    const committed = ui.filter(s => s.stage === 'committed').length;
+    const stagedCreation = ui.filter(s => s.stage === UISelectionStage.StagedCreation).length;
+    const stagedEdition = ui.filter(s => s.stage === UISelectionStage.StagedEdition).length;
+    const stagedDeletion = ui.filter(s => s.stage === UISelectionStage.StagedDeletion).length;
+    const committed = ui.filter(s => s.stage === UISelectionStage.Committed).length;
     return { unstaged, stagedCreation, stagedEdition, stagedDeletion, committed };
   }, [uiSelections]);
 

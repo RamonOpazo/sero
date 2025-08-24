@@ -5,6 +5,7 @@ import { Separator } from "@/components/ui/separator";
 import { Play, Download, Trash2, FileText, Eye, Calendar, Clock } from "lucide-react";
 import { useViewportState } from "../../providers/viewport-provider";
 import { useSelections } from "../../providers/selection-provider";
+import { UISelectionStage } from "../../types/selection-lifecycle";
 import type { MinimalDocumentType } from "@/types";
 import { DocumentsAPI } from "@/lib/documents-api";
 import { EditorAPI } from "@/lib/editor-api";
@@ -21,7 +22,7 @@ interface DocumentControlsProps {
  */
 export default function DocumentControls({ document }: DocumentControlsProps) {
   const { isViewingProcessedDocument, dispatch } = useViewportState();
-  const { selectionCount, hasUnsavedChanges, save, allSelections } = useSelections();
+  const { selectionCount, hasUnsavedChanges, saveLifecycle, uiSelections } = useSelections() as any;
   const [isPasswordDialogOpen, setPasswordDialogOpen] = React.useState(false);
   const [isProcessing, setIsProcessing] = React.useState(false);
   const [processError, setProcessError] = React.useState<string | null>(null);
@@ -191,8 +192,9 @@ export default function DocumentControls({ document }: DocumentControlsProps) {
         </Button>
         {/* Commit state summary */}
         {(() => {
-const stagedCount = (allSelections || []).filter((s: any) => s && (s.is_staged === true || (s.state && s.state !== 'committed'))).length;
-const committedCount = (allSelections || []).filter((s: any) => s && s.state === 'committed').length;
+          const ui = (uiSelections || []) as any[];
+          const stagedCount = ui.filter((s: any) => [UISelectionStage.StagedCreation, UISelectionStage.StagedEdition, UISelectionStage.StagedDeletion].includes(s.stage)).length;
+          const committedCount = ui.filter((s: any) => s.stage === UISelectionStage.Committed).length;
           return (
             <div className="flex items-center gap-2 mt-1 text-xs">
               <Badge variant="secondary" className="px-1.5 py-0.5">Committed: {committedCount}</Badge>
@@ -205,7 +207,8 @@ const committedCount = (allSelections || []).filter((s: any) => s && s.state ===
           isOpen={isPasswordDialogOpen}
           onClose={() => { setPasswordDialogOpen(false); setProcessError(null); }}
           notice={(() => {
-            const stagedCount = (allSelections || []).filter((s: any) => s && s.state === 'staged').length;
+            const ui = (uiSelections || []) as any[];
+            const stagedCount = ui.filter((s: any) => [UISelectionStage.StagedCreation, UISelectionStage.StagedEdition, UISelectionStage.StagedDeletion].includes(s.stage)).length;
             const parts: string[] = [];
             if (hasUnsavedChanges) parts.push('pending changes will be staged');
             if (stagedCount > 0) parts.push(`${stagedCount} staged selection${stagedCount === 1 ? '' : 's'} present`);
@@ -223,13 +226,13 @@ const committedCount = (allSelections || []).filter((s: any) => s && s.state ===
                 return;
               }
 
-              // If there are unsaved changes, save them first
+              // If there are unsaved changes, stage them first via lifecycle save
               if (hasUnsavedChanges) {
-                const saveResult = await save();
+                const saveResult = await saveLifecycle();
                 if (!saveResult.ok) {
                   setIsProcessing(false);
-                  setProcessError('Failed to save selections before processing');
-                  toast.error('Failed to save selections');
+                  setProcessError('Failed to stage selections before processing');
+                  toast.error('Failed to stage selections');
                   return;
                 }
               }

@@ -8,6 +8,7 @@ import { useState, useCallback, useMemo, useEffect } from "react";
 import type { MinimalDocumentType } from "@/types";
 import { TypedConfirmationDialog } from "@/components/shared/typed-confirmation-dialog";
 import { useStageCommit } from "../../hooks/use-stage-commit";
+import { UISelectionStage } from "../../types/selection-lifecycle";
 import SelectionsList from "./selection-list";
 
 interface SelectionControlsProps {
@@ -42,7 +43,7 @@ export default function SelectionManagement({ document }: SelectionControlsProps
     const existingCount = ui.filter(s => s.isPersisted === true).length;
     const totalCount = ui.length;
     const modifiedSavedCount = ui.filter(s => s.isPersisted === true && s.dirty === true).length;
-    const pendingDeletionsCount = ui.filter(s => s.stage === 'staged_deletion').length;
+    const pendingDeletionsCount = ui.filter(s => s.stage === UISelectionStage.StagedDeletion).length;
     const totalUnsavedChanges = ui.filter(s => s.dirty === true).length;
     const hasUnsavedChanges = totalUnsavedChanges > 0;
 
