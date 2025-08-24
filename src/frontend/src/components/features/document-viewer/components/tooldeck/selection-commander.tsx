@@ -1,12 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Save, RotateCcw, AlertCircle, Trash2, FileX, Undo2, Brain, CheckCheck } from "lucide-react";
+import { RotateCcw, AlertCircle, Trash2, FileX, Undo2, Brain, Save, CheckCheck } from "lucide-react";
 import { useViewportState } from "../../providers/viewport-provider";
 import { useSelections } from "../../providers/selection-provider";
 import { toast } from "sonner";
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import type { MinimalDocumentType } from "@/types";
-import { SaveConfirmationDialog } from "../dialogs";
+import { TypedConfirmationDialog } from "@/components/shared/typed-confirmation-dialog";
+import { useStageCommit } from "../../hooks/use-stage-commit";
 import SelectionsList from "./selection-list";
 
 interface SelectionControlsProps {
@@ -18,8 +19,6 @@ interface SelectionControlsProps {
  * Manages selection visibility, saving, and clearing operations
  */
 export default function SelectionManagement({ document }: SelectionControlsProps) {
-  // Access to avoid TS6133 unused parameter error during builds
-  void document;
   const { isViewingProcessedDocument, currentPage } = useViewportState();
 
   const {
@@ -30,18 +29,12 @@ export default function SelectionManagement({ document }: SelectionControlsProps
     clearAll,
     clearPage,
     discardAllChanges,
-    save,
   } = useSelections();
 
   const [isApplyingAI, setIsApplyingAI] = useState(false);
-
-  const [isSaving, setIsSaving] = useState(false);
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const { selectionStats: scSel, canStage, canCommit, isStaging, isCommitting, stageAll, commitAll, stageMessages, commitMessages } = useStageCommit(document.id);
+  const [showStageDialog, setShowStageDialog] = useState(false);
   const [showCommitDialog, setShowCommitDialog] = useState(false);
-  const [isCommitting, setIsCommitting] = useState(false);
-  
-  // Count staged (persisted but not committed) selections
-const stagedPersistedCount = ((selectionState as any).persistedItems || []).filter((s: any) => s && (s.is_staged === true || (s.state && s.state !== 'committed'))).length;
 
   // Calculate selection statistics using the clean PendingChanges API
   const selectionStats = useMemo(() => {
@@ -85,98 +78,6 @@ const stagedPersistedCount = ((selectionState as any).persistedItems || []).filt
     }
   }, [selectionState]);
 
-  // Add explicit Commit All control separate from staging workflow
-
-  // Save all pending changes using SelectionManager
-  const performStageAllChanges = useCallback(async () => {
-    const hasLocalChanges = pendingChangesCount > 0;
-    if (!hasLocalChanges) {
-      toast.info('No pending changes to stage');
-      return;
-    }
-
-    setIsSaving(true);
-    try {
-      const result = await save();
-      if (!result.ok) {
-        console.error('Failed to stage changes:', result.error);
-        toast.error('Failed to stage changes');
-        setIsSaving(false);
-        return;
-      }
-      const creates = pendingChanges.creates.length;
-      const updates = pendingChanges.updates.length;
-      const deletes = pendingChanges.deletes.length;
-      const parts = [] as string[];
-      if (creates > 0) parts.push(`${creates} created`);
-      if (updates > 0) parts.push(`${updates} updated`);
-      if (deletes > 0) parts.push(`${deletes} deleted`);
-      toast.success(`Staged changes${parts.length ? ': ' + parts.join(', ') : ''}`);
-      // Reload from server
-      if (typeof (selectionState as any).reload === 'function') {
-        await (selectionState as any).reload();
-      }
-    } catch (error) {
-      console.error('Error staging changes:', error);
-      toast.error('Failed to stage changes');
-    } finally {
-      setIsSaving(false);
-    }
-  }, [pendingChanges, pendingChangesCount, save, selectionState]);
-
-  // Handler to show confirmation dialog
-  const handleStageAllChanges = useCallback(() => {
-    if (pendingChangesCount === 0) {
-      toast.info('No pending changes to stage');
-      return;
-    }
-    setShowConfirmDialog(true);
-  }, [pendingChangesCount]);
-
-  // Handler to close confirmation dialog
-  const handleCloseConfirmDialog = useCallback(() => {
-    setShowConfirmDialog(false);
-  }, []);
-
-  // Handler for confirmed save action
-  const handleConfirmedStage = useCallback(async () => {
-    await performStageAllChanges();
-    setShowConfirmDialog(false);
-  }, [performStageAllChanges]);
-
-  // Commit all (with optional pre-stage)
-  const performCommitAll = useCallback(async () => {
-    try {
-      setIsCommitting(true);
-      if (pendingChangesCount > 0) {
-        const res = await save();
-        if (!res.ok) {
-          toast.error('Failed to stage changes before commit');
-          setIsCommitting(false);
-          return;
-        }
-      }
-      const api = (await import('@/lib/document-viewer-api')).DocumentViewerAPI;
-      const docId = (selectionState as any).contextId as string;
-      const commitRes = await api.commitStagedSelections(docId, { commit_all: true });
-      if (!commitRes.ok) {
-        toast.error('Failed to commit staged selections');
-        setIsCommitting(false);
-        return;
-      }
-      const committedCount = commitRes.value.length;
-      toast.success(`Committed ${committedCount} selection${committedCount === 1 ? '' : 's'}`);
-      if (typeof (selectionState as any).reload === 'function') {
-        await (selectionState as any).reload();
-      }
-    } catch (e) {
-      toast.error('Failed to commit staged selections');
-    } finally {
-      setIsCommitting(false);
-      setShowCommitDialog(false);
-    }
-  }, [pendingChangesCount, save, selectionState]);
-
   // Clear all selections
   const handleClearAll = useCallback(() => {
     if (allSelections.length === 0) {
@@ -211,6 +112,23 @@ const stagedPersistedCount = ((selectionState as any).persistedItems || []).filt
     toast.success(`Cleared ${pageSelections.length} selections from page ${currentPage + 1}`);
   }, [clearPage, currentPage, allSelections]);
 
+  // Single consolidated debug log for selections only
+  useEffect(() => {
+    const committed = scSel.committed;
+    const creates = scSel.created;
+    const updates = scSel.updated;
+    const deletes = scSel.deleted;
+    const unstaged = scSel.pending; // creates + updates + deletes
+
+    // eslint-disable-next-line no-console
+    console.log(`Selections:
+      \tUNSTAGED: ${unstaged}
+      \tSTAGED_CREATION: ${creates}
+      \tSTAGED_EDITION: ${updates}
+      \tSTAGED_DELETION: ${deletes}
+      \tCOMMITTED: ${committed}`
+    )});
+
   return (
     <div className="flex flex-col gap-4">
       {/* Selection Statistics */}
@@ -243,6 +161,30 @@ const stagedPersistedCount = ((selectionState as any).persistedItems || []).filt
 
       <Separator />
 
+      {/* Stage & Commit Controls */}
+      <div className="flex flex-col gap-2">
+        <Button
+          variant="default"
+          size="sm"
+          onClick={() => setShowCommitDialog(true)}
+          disabled={!canCommit || isCommitting || isViewingProcessedDocument}
+          className="w-full justify-start h-9 text-xs"
+        >
+          {isCommitting ? <RotateCcw className="mr-2 h-3 w-3 animate-spin" /> : <CheckCheck className="mr-2 h-3 w-3" />}
+          {isCommitting ? 'Committing...' : 'Commit all staged'}
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowStageDialog(true)}
+          disabled={!canStage || isStaging || isViewingProcessedDocument}
+          className="w-full justify-start h-9 text-xs"
+        >
+          {isStaging ? <RotateCcw className="mr-2 h-3 w-3 animate-spin" /> : <Save className="mr-2 h-3 w-3" />}
+          {isStaging ? 'Staging...' : 'Stage all changes'}
+        </Button>
+      </div>
+
       {/* AI & Lifecycle Controls */}
       <div className="flex flex-col gap-2">
         <Button
@@ -260,31 +202,6 @@ const stagedPersistedCount = ((selectionState as any).persistedItems || []).filt
           {isApplyingAI ? 'Applying AI...' : 'Apply AI'}
         </Button>
 
-        <Button
-          variant="default"
-          size="sm"
-          onClick={handleStageAllChanges}
-          disabled={isSaving || selectionStats.totalUnsavedChanges === 0 || isViewingProcessedDocument}
-          className="w-full justify-start h-9 text-xs"
-        >
-          {isSaving ? (
-            <RotateCcw className="mr-2 h-3 w-3 animate-spin" />
-          ) : (
-            <Save className="mr-2 h-3 w-3" />
-          )}
-          Stage all changes
-        </Button>
-
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={() => setShowCommitDialog(true)}
-          disabled={isViewingProcessedDocument || (stagedPersistedCount === 0 && pendingChangesCount === 0) || isCommitting}
-          className="w-full justify-start h-9 text-xs"
-        >
-          <CheckCheck className="mr-2 h-3 w-3" />
-          Commit all
-        </Button>
 
         <Button
           variant="outline"
@@ -326,23 +243,39 @@ const stagedPersistedCount = ((selectionState as any).persistedItems || []).filt
         <SelectionsList />
       </div>
 
-      {/* Save Confirmation Dialog (Stage all) */}
-      <SaveConfirmationDialog
-        isOpen={showConfirmDialog}
-        onClose={handleCloseConfirmDialog}
-        onConfirm={handleConfirmedStage}
-        changesCount={selectionStats.totalUnsavedChanges}
-        isSaving={isSaving}
+      {/* Confirmation dialogs for staging and committing */}
+      <TypedConfirmationDialog
+        isOpen={showStageDialog}
+        onClose={() => setShowStageDialog(false)}
+        onConfirm={async () => {
+          setShowStageDialog(false);
+          await stageAll();
+        }}
+        title="Stage all changes"
+        description="This will stage all pending selections and prompt changes for this document."
+        confirmationText="stage"
+        confirmButtonText="Stage all"
+        cancelButtonText="Cancel"
+        variant="default"
+        messages={stageMessages}
       />
 
-      {/* Commit Confirmation Dialog (reuse Save dialog; type "proceed") */}
-      <SaveConfirmationDialog
+      <TypedConfirmationDialog
         isOpen={showCommitDialog}
         onClose={() => setShowCommitDialog(false)}
-        onConfirm={performCommitAll}
-        changesCount={stagedPersistedCount + pendingChanges.creates.length + pendingChanges.updates.length}
-        isSaving={isCommitting}
+        onConfirm={async () => {
+          setShowCommitDialog(false);
+          await commitAll();
+        }}
+        title="Commit all staged"
+        description="This will commit all staged selections and prompts. This action is irreversible."
+        confirmationText="commit"
+        confirmButtonText="Commit all staged"
+        cancelButtonText="Cancel"
+        variant="default"
+        messages={commitMessages}
       />
+
     </div>
   );
 }

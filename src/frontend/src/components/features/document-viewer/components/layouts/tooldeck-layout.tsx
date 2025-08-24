@@ -7,7 +7,6 @@ import {
   DocumentControls,
   SelectionCommander,
   PromptCommander,
-  StageCommitCommander,
 } from "../tooldeck";
 
 interface ControlsLayoutProps {
@@ -41,15 +40,6 @@ export default function ControlsLayout({ document, className, ...props }: Contro
       className={cn(className)} 
       {...props}
     >
-      {/* Stage & Commit (centralized) */}
-      <Widget
-        value="stage-commit"
-        title="Stage & Commit"
-      >
-        {/* New centralized commander */}
-        <StageCommitCommander document={document} />
-      </Widget>
-
       {/* Document Controls */}
       <Widget
         value="document-controls"

@@ -1,20 +1,33 @@
 import { useCallback, useMemo, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-// import { Badge } from "@/components/ui/badge";
-import { Save, CheckCheck, RotateCcw } from "lucide-react";
-import { useSelections } from "../../providers/selection-provider";
-import { usePrompts } from "../../providers/prompt-provider";
-import type { MinimalDocumentType, PromptType } from "@/types";
 import { toast } from "sonner";
-import { TypedConfirmationDialog } from "@/components/shared/typed-confirmation-dialog";
 import type { TypedMessage } from "@/components/shared/typed-confirmation-dialog";
+import type { PromptType } from "@/types";
+import { useSelections } from "../providers/selection-provider";
+import { usePrompts } from "../providers/prompt-provider";
 
-interface StageCommitCommanderProps {
-  document: MinimalDocumentType;
+export interface StageCommitStats {
+  committed: number;
+  stagedPersisted: number;
+  created: number;
+  updated: number;
+  deleted: number;
+  pending: number;
 }
 
-export default function StageCommitCommander({ document }: StageCommitCommanderProps) {
+export interface UseStageCommitResult {
+  selectionStats: StageCommitStats;
+  promptStats: StageCommitStats;
+  canStage: boolean;
+  canCommit: boolean;
+  isStaging: boolean;
+  isCommitting: boolean;
+  stageAll: () => Promise<void>;
+  commitAll: () => Promise<void>;
+  stageMessages: TypedMessage[];
+  commitMessages: TypedMessage[];
+}
+
+export function useStageCommit(documentId: string | number): UseStageCommitResult {
   const {
     state: selectionState,
     allSelections,
@@ -35,36 +48,92 @@ export default function StageCommitCommander({ document }: StageCommitCommanderP
 
   const [isStaging, setIsStaging] = useState(false);
   const [isCommitting, setIsCommitting] = useState(false);
-  const [showStageDialog, setShowStageDialog] = useState(false);
-  const [showCommitDialog, setShowCommitDialog] = useState(false);
 
   // Selection stats
-  const selectionStats = useMemo(() => {
+  const selectionStats = useMemo<StageCommitStats>(() => {
     const persistedItems: any[] = (selectionState as any).persistedItems || [];
-const committed = allSelections.filter((s: any) => s && s.state === 'committed').length;
-    const stagedPersisted = persistedItems.filter((s: any) => s && (s.is_staged === true || (s.state && s.state !== 'committed'))).length;
-    const created = selectionPending.creates.length;
-    const updated = selectionPending.updates.length;
-    const deleted = selectionPending.deletes.length;
-    return { committed, stagedPersisted, created, updated, deleted, pending: selectionPendingCount };
-  }, [selectionState, allSelections, selectionPending, selectionPendingCount]);
+    const committed = allSelections.filter((s: any) => s && (s as any).state === 'committed').length;
+
+    const pendingUpdateIds = new Set<string>((selectionPending.updates || []).map((u: any) => u?.id).filter(Boolean));
+
+    // Determine which persisted items are effectively staged on the backend (or already persisted as staged)
+    const persistedStagedIds = new Set<string>(
+      persistedItems
+        .filter((s: any) => s && (((s as any).is_staged === true) || (((s as any).state && (s as any).state !== 'committed') && !pendingUpdateIds.has((s as any).id))))
+        .map((s: any) => (s as any).id)
+        .filter(Boolean)
+    );
+
+    const stagedPersisted = persistedStagedIds.size;
+
+    // Filter pending changes so we don't double-count items whose local pending change is a state flip to a staged_* and
+    // the item is already considered stagedPersisted (because the UI shows it as staged)
+    const filteredCreates = (selectionPending.creates || []); // new items are genuinely unstaged until saved
+
+    const filteredUpdates = (selectionPending.updates || []).filter((u: any) => {
+      const id = u?.id;
+      const stateStr = u?.state;
+      // If this update is merely setting a staged state and the item is already counted as stagedPersisted, exclude
+      if (id && persistedStagedIds.has(id) && stateStr && stateStr !== 'committed') return false;
+      return true;
+    });
+
+    const filteredDeletes = (selectionPending.deletes || []).filter((d: any) => {
+      const id = d?.id;
+      // If the item is already considered stagedPersisted (e.g., staged_deletion), exclude it from unstaged deletes
+      if (id && persistedStagedIds.has(id)) return false;
+      return true;
+    });
+
+    const created = filteredCreates.length;
+    const updated = filteredUpdates.length;
+    const deleted = filteredDeletes.length;
+    const pending = created + updated + deleted;
+
+    return { committed, stagedPersisted, created, updated, deleted, pending };
+  }, [selectionState, allSelections, selectionPending]);
 
   // Prompt stats
-  const promptStats = useMemo(() => {
+  const promptStats = useMemo<StageCommitStats>(() => {
     const persistedItems: any[] = (promptState as any).persistedItems || [];
-const committed = allPrompts.filter((p: any) => p && p.state === 'committed').length;
-    const stagedPersisted = persistedItems.filter((p: any) => p && (p.is_staged === true || (p.state && p.state !== 'committed'))).length;
-    const created = promptPending.creates.length;
-    const updated = promptPending.updates.length;
-    const deleted = promptPending.deletes.length;
-    return { committed, stagedPersisted, created, updated, deleted, pending: promptPendingCount };
-  }, [promptState, allPrompts, promptPending, promptPendingCount]);
+    const committed = allPrompts.filter((p: any) => p && (p as any).state === 'committed').length;
+    const pendingUpdateIds = new Set<string>((promptPending.updates || []).map((u: any) => u?.id).filter(Boolean));
+
+    const persistedStagedIds = new Set<string>(
+      persistedItems
+        .filter((p: any) => p && (((p as any).is_staged === true) || (((p as any).state && (p as any).state !== 'committed') && !pendingUpdateIds.has((p as any).id))))
+        .map((p: any) => (p as any).id)
+        .filter(Boolean)
+    );
+
+    const stagedPersisted = persistedStagedIds.size;
+
+    const filteredCreates = (promptPending.creates || []);
+    const filteredUpdates = (promptPending.updates || []).filter((u: any) => {
+      const id = u?.id;
+      const stateStr = u?.state;
+      if (id && persistedStagedIds.has(id) && stateStr && stateStr !== 'committed') return false;
+      return true;
+    });
+    const filteredDeletes = (promptPending.deletes || []).filter((d: any) => {
+      const id = d?.id;
+      if (id && persistedStagedIds.has(id)) return false;
+      return true;
+    });
+
+    const created = filteredCreates.length;
+    const updated = filteredUpdates.length;
+    const deleted = filteredDeletes.length;
+    const pending = created + updated + deleted;
+
+    return { committed, stagedPersisted, created, updated, deleted, pending };
+  }, [promptState, allPrompts, promptPending]);
 
   const canStage = selectionStats.pending > 0 || promptStats.pending > 0;
   const canCommit = (selectionStats.stagedPersisted + selectionStats.created + selectionStats.updated) > 0
                  || (promptStats.stagedPersisted + promptStats.created + promptStats.updated) > 0;
 
-  const handleStageAll = useCallback(async () => {
+  const stageAll = useCallback(async () => {
     if (!canStage) {
       toast.info('No pending changes to stage');
       return;
@@ -93,7 +162,7 @@ const committed = allPrompts.filter((p: any) => p && p.state === 'committed').le
     }
   }, [canStage, selectionStats.pending, promptStats.pending, saveSelections, savePrompts, selectionState, loadPrompts]);
 
-  const handleCommitAll = useCallback(async () => {
+  const commitAll = useCallback(async () => {
     if (!canCommit) {
       toast.info('Nothing to commit');
       return;
@@ -120,7 +189,7 @@ const committed = allPrompts.filter((p: any) => p && p.state === 'committed').le
 
       // 1) Commit selections via API endpoint (commits creations/editions and deletes staged deletions)
       const { DocumentViewerAPI } = await import('@/lib/document-viewer-api');
-      const commitSel = await DocumentViewerAPI.commitStagedSelections(document.id, { commit_all: true });
+      const commitSel = await DocumentViewerAPI.commitStagedSelections(documentId as any, { commit_all: true });
       if (!commitSel.ok) {
         toast.error('Failed to commit selections');
         setIsCommitting(false);
@@ -128,7 +197,7 @@ const committed = allPrompts.filter((p: any) => p && p.state === 'committed').le
       }
 
       // 2) Commit prompts by flipping staged prompts to committed via update calls
-      const stagedPrompts: PromptType[] = allPrompts.filter(p => (p as any).is_staged === true || (p.state && p.state !== 'committed')) as any;
+      const stagedPrompts: PromptType[] = allPrompts.filter(p => (p as any).is_staged === true || ((p as any).state && (p as any).state !== 'committed')) as any;
       if (stagedPrompts.length > 0) {
         await Promise.allSettled(stagedPrompts.map(p => updatePrompt(p.id, { state: 'committed' } as any)));
       }
@@ -145,7 +214,7 @@ const committed = allPrompts.filter((p: any) => p && p.state === 'committed').le
     } finally {
       setIsCommitting(false);
     }
-  }, [canCommit, selectionStats.pending, promptStats.pending, saveSelections, savePrompts, document.id, allPrompts, updatePrompt, selectionState, loadPrompts]);
+  }, [canCommit, selectionStats.pending, promptStats.pending, saveSelections, savePrompts, documentId, allPrompts, updatePrompt, selectionState, loadPrompts]);
 
   const stageMessages = useMemo<TypedMessage[]>(() => {
     const msgs: TypedMessage[] = [];
@@ -216,92 +285,17 @@ const committed = allPrompts.filter((p: any) => p && p.state === 'committed').le
     return msgs;
   }, [selectionStats.stagedPersisted, selectionStats.created, selectionStats.updated, promptStats.stagedPersisted, promptStats.created, promptStats.updated]);
 
-  return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col gap-2">
-          <span className="text-xs text-muted-foreground">Selections</span>
-          <div className="flex items-center justify-between ml-4">
-            <span className="text-xs text-muted-foreground">Staged</span>
-            <span className="text-xs font-mono">{selectionStats.stagedPersisted}</span>
-          </div>
-          <div className="flex items-center justify-between ml-4">
-            <span className="text-xs text-muted-foreground">Committed</span>
-            <span className="text-xs font-mono">{selectionStats.committed}</span>
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <span className="text-xs text-muted-foreground">Prompts</span>
-          <div className="flex items-center justify-between ml-4">
-            <span className="text-xs text-muted-foreground">Staged</span>
-            <span className="text-xs font-mono">{promptStats.stagedPersisted}</span>
-          </div>
-          <div className="flex items-center justify-between ml-4">
-            <span className="text-xs text-muted-foreground">Committed</span>
-            <span className="text-xs font-mono">{promptStats.committed}</span>
-          </div>
-        </div>
-      </div>
-
-      <Separator />
-
-      <div className="flex flex-col gap-2">
-        <Button
-          variant="default"
-          size="sm"
-          onClick={() => setShowCommitDialog(true)}
-          disabled={!canCommit || isCommitting}
-          className="w-full justify-start h-9 text-xs"
-        >
-          {isCommitting ? <RotateCcw className="mr-2 h-3 w-3 animate-spin" /> : <CheckCheck className="mr-2 h-3 w-3" />}
-          {isCommitting ? 'Committing...' : 'Commit all staged'}
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setShowStageDialog(true)}
-          disabled={!canStage || isStaging}
-          className="w-full justify-start h-9 text-xs"
-        >
-          {isStaging ? <RotateCcw className="mr-2 h-3 w-3 animate-spin" /> : <Save className="mr-2 h-3 w-3" />}
-          {isStaging ? 'Staging...' : 'Stage all changes'}
-        </Button>
-      </div>
-
-      {/* Confirmation dialogs */}
-      <TypedConfirmationDialog
-        isOpen={showStageDialog}
-        onClose={() => setShowStageDialog(false)}
-        onConfirm={async () => {
-          setShowStageDialog(false);
-          await handleStageAll();
-        }}
-        title="Stage all changes"
-        description="This will stage all pending selections and prompt changes for this document."
-        confirmationText="stage"
-        confirmButtonText="Stage all"
-        cancelButtonText="Cancel"
-        variant="default"
-        messages={stageMessages}
-      />
-
-      <TypedConfirmationDialog
-        isOpen={showCommitDialog}
-        onClose={() => setShowCommitDialog(false)}
-        onConfirm={async () => {
-          setShowCommitDialog(false);
-          await handleCommitAll();
-        }}
-        title="Commit all staged"
-        description="This will commit all staged selections and prompts. This action is irreversible."
-        confirmationText="commit"
-        confirmButtonText="Commit all staged"
-        cancelButtonText="Cancel"
-        variant="default"
-        messages={commitMessages}
-      />
-    </div>
-  );
+  return {
+    selectionStats,
+    promptStats,
+    canStage,
+    canCommit,
+    isStaging,
+    isCommitting,
+    stageAll,
+    commitAll,
+    stageMessages,
+    commitMessages,
+  };
 }
 
