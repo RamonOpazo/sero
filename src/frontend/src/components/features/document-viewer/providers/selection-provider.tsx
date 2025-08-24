@@ -11,6 +11,8 @@ import type { SelectionCreateDraft } from '../types/viewer';
 import type { Result } from '@/lib/result';
 import type { PendingChanges } from '@/lib/domain-manager';
 import { DocumentViewerAPI } from '@/lib/document-viewer-api';
+import { fromApiSelection } from '../core/selection-lifecycle-mapper';
+import { UISelectionStage, type UISelection } from '../types/selection-lifecycle';
 
 // =============================================================================
 // CONTEXT INTERFACE - All expected selection functionality
@@ -79,6 +81,7 @@ interface SelectionContextValue {
   
   // Computed values
   allSelections: readonly Selection[];
+  uiSelections: readonly UISelection[];
   hasUnsavedChanges: boolean;
   pendingChanges: PendingChanges<Selection>;
   pendingChangesCount: number;
@@ -383,6 +386,22 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
   
   const allSelections = useMemo(() => manager.getAllItems(), [manager, state]);
   
+  // Lifecycle-based UI selections (compat-preserving for now)
+  const uiSelections = useMemo(() => {
+    try {
+      const persisted: UISelection[] = ((state as any).persistedItems || []).map((s: any) => fromApiSelection(s));
+      const drafts: UISelection[] = ((state as any).draftItems || []).map((s: any) => ({
+        ...(s as any),
+        stage: UISelectionStage.Unstaged,
+        isPersisted: false,
+        dirty: true,
+      } as UISelection));
+      return [...persisted, ...drafts];
+    } catch {
+      return [] as UISelection[];
+    }
+  }, [state]);
+  
   const selectedSelection = useMemo(() => {
     const selectedId = (state as any).selectedItemId;
     return (selectedId && typeof selectedId === 'string') ? manager.getItemById(selectedId) || null : null;
@@ -498,7 +517,7 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
     clearPage, clearAll, save, commitChanges, discardAllChanges,
     selectSelection, selectedSelection, toggleSelectionGlobal, setSelectionPage,
     loadSavedSelections, onSelectionDoubleClick, setOnSelectionDoubleClick,
-    allSelections, hasUnsavedChanges, pendingChanges, pendingChangesCount,
+    allSelections, uiSelections, hasUnsavedChanges, pendingChanges, pendingChangesCount,
     hasSelections, selectionCount, getCurrentDraw, isCurrentlyDrawing,
     getSelectionsForPage, getGlobalSelections, getPageSelections
   ]);

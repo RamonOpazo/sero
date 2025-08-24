@@ -12,10 +12,9 @@ import {
 export function HomePage() {
 
   return (
-    <div className="relative min-h-screen">
+    <div className="relative pt-16 px-22">
       {/* Hero Section */}
-      <main className="mx-auto max-w-7xl px-6 pt-24 sm:pt-32 lg:px-8">
-        <div className="flex flex-col gap-4 w-[50%]">
+      <div className="max-w-[65ch] flex flex-col gap-4">
           {/* Left: Messaging */}
           <div className="text-center lg:text-left max-w-2xl mx-auto">
             <h1 className="text-5xl font-bold tracking-tight sm:text-6xl">
@@ -83,8 +82,7 @@ export function HomePage() {
               <Link to="/documentation/integration">Integration Guide</Link>
             </li>
           </ul>
-        </div>
-      </main>
+      </div>
     </div>
   );
 }
