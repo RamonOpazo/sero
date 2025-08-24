@@ -87,8 +87,6 @@ interface SelectionContextValue {
   allSelections: readonly Selection[];
   uiSelections: readonly UISelection[];
   hasUnsavedChanges: boolean;
-  pendingChanges: PendingChanges<Selection>;
-  pendingChangesCount: number;
   
   // Utility methods
   hasSelections: boolean;
@@ -491,8 +489,6 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
   const canUndo = useMemo(() => (state as any).canUndo?.() || false, [state]);
   const canRedo = useMemo(() => (state as any).canRedo?.() || false, [state]);
   const hasUnsavedChanges = useMemo(() => manager.hasUnsavedChanges(), [manager, state]);
-  const pendingChanges = useMemo(() => manager.getPendingChanges(), [manager, state]);
-  const pendingChangesCount = useMemo(() => manager.getPendingChangesCount(), [manager, state]);
   
   // Utility computed values
   const hasSelections = useMemo(() => allSelections.length > 0, [allSelections]);
@@ -583,8 +579,6 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
     allSelections,
     uiSelections,
     hasUnsavedChanges,
-    pendingChanges,
-    pendingChangesCount,
     
     // Utility methods
     hasSelections,
@@ -601,7 +595,7 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
     clearPage, clearAll, save, commitChanges, discardAllChanges,
     selectSelection, selectedSelection, toggleSelectionGlobal, setSelectionPage,
     loadSavedSelections, onSelectionDoubleClick, setOnSelectionDoubleClick,
-    allSelections, uiSelections, hasUnsavedChanges, pendingChanges, pendingChangesCount,
+    allSelections, uiSelections, hasUnsavedChanges,
     hasSelections, selectionCount, getCurrentDraw, isCurrentlyDrawing,
     getSelectionsForPage, getGlobalSelections, getPageSelections
   ]);

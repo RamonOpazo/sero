@@ -63,18 +63,20 @@ export function HomePage() {
           </p>
 
           <h2 className="mt-4">Do you want to learn more?</h2>
-          <ul className="text-muted-foreground list-disc ml-6">
+          <p className="text-muted-foreground">
+            Explore the documentation to understand how to securely protect sensitive
+            information and integrate the SERO workflow to your own:
+          </p>
+
+          <ul className="list-disc ml-6 space-y-2 text-muted-foreground">
             <li>
-              <Link to="/documentation/getting-started">Getting Started</Link>
+              Start with <Link to="/documentation/getting-started" className="text-primary hover:underline">Getting Started</Link> to set up your first redaction project.
             </li>
             <li>
-              <Link to="/documentation/security-model">Security Model</Link>
+              Read about the <Link to="/documentation/security-model" className="text-primary hover:underline">Security Model</Link>, SERO's cryptographic backbone.
             </li>
             <li>
-              <Link to="/documentation/redaction-pipeline">The Redaction Pipeline</Link>
-            </li>
-            <li>
-              <Link to="/documentation/integration">Integration Guide</Link>
+              Dive into the <Link to="/documentation/redaction-pipeline" className="text-primary hover:underline">Redaction Pipeline</Link> for an overview on how documents are processed step by step.
             </li>
           </ul>
         </div>

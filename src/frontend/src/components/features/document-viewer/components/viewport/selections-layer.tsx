@@ -338,7 +338,8 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     const height = Math.abs(selection.height) * documentSize.height;
 
     const isSelected = selectedSelection?.id === selection.id;
-    const isNew = pendingChanges.creates.some((create: Selection) => create.id === selection.id);
+    // Determine if this is a new unsaved selection (draft)
+    const isNew = (selection as any).state !== 'committed' && (selection as any).state !== 'staged_deletion' && (selection as any).state !== 'staged_edition' && (selection as any).state !== 'staged_creation';
     const isGlobal = selection.page_number === null;
 
     // Determine staged status: persisted but not committed (new semantics)
@@ -418,7 +419,7 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     );
 
     return selectionElement;
-  }, [documentSize, selectedSelection, handleSelectionClick, dragState, renderResizeHandles, handleMoveStart, pendingChanges]);
+  }, [documentSize, selectedSelection, handleSelectionClick, dragState, renderResizeHandles, handleMoveStart]);
 
   // Filter selections for current page
   const pageSelections = allSelections.filter(
