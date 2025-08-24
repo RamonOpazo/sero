@@ -43,7 +43,6 @@ export function useStageCommit(documentId: string | number): UseStageCommitResul
     state: promptState,
     allPrompts,
     pendingChanges: promptPending,
-    pendingChangesCount: promptPendingCount,
     save: savePrompts,
     updatePrompt,
     load: loadPrompts,
@@ -130,7 +129,7 @@ export function useStageCommit(documentId: string | number): UseStageCommitResul
     } finally {
       setIsStaging(false);
     }
-  }, [canStage, selectionStats.pending, promptStats.pending, saveSelections, savePrompts, selectionState, loadPrompts]);
+  }, [canStage, selectionStats.pending, promptStats.pending, saveLifecycle, savePrompts, selectionState, loadPrompts]);
 
   const commitAll = useCallback(async () => {
     if (!canCommit) {
@@ -180,7 +179,7 @@ export function useStageCommit(documentId: string | number): UseStageCommitResul
     } finally {
       setIsCommitting(false);
     }
-  }, [canCommit, selectionStats.pending, promptStats.pending, saveSelections, savePrompts, documentId, allPrompts, updatePrompt, selectionState, loadPrompts]);
+  }, [canCommit, selectionStats.pending, promptStats.pending, saveLifecycle, savePrompts, documentId, allPrompts, updatePrompt, selectionState, loadPrompts]);
 
   const stageMessages = useMemo<TypedMessage[]>(() => {
     const msgs: TypedMessage[] = [];

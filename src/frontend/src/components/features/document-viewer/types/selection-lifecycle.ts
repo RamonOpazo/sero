@@ -3,13 +3,15 @@
 import type { Selection } from "../types/viewer";
 
 // Explicit lifecycle stages that drive all UI and behavior
-export enum UISelectionStage {
-  Unstaged = "unstaged",
-  StagedCreation = "staged_creation",
-  StagedEdition = "staged_edition",
-  StagedDeletion = "staged_deletion",
-  Committed = "committed",
-}
+export const UISelectionStage = {
+  Unstaged: "unstaged",
+  StagedCreation: "staged_creation",
+  StagedEdition: "staged_edition",
+  StagedDeletion: "staged_deletion",
+  Committed: "committed",
+} as const;
+
+export type UISelectionStage = typeof UISelectionStage[keyof typeof UISelectionStage];
 
 // Unified UI selection with lifecycle metadata
 export type UISelection = Selection & {

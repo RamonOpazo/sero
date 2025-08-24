@@ -102,7 +102,7 @@ export default function SelectionManagement({ document }: SelectionControlsProps
 
   // Clear current page selections
   const handleClearPage = useCallback(() => {
-    const pageSelections = allSelections.filter(sel => sel.page_number === currentPage);
+    const pageSelections = allSelections.filter((sel: any) => sel.page_number === currentPage);
     if (pageSelections.length === 0) {
       toast.info(`No selections on page ${currentPage + 1}`);
       return;
@@ -218,7 +218,7 @@ export default function SelectionManagement({ document }: SelectionControlsProps
           variant="outline"
           size="sm"
           onClick={handleClearPage}
-          disabled={isViewingProcessedDocument || allSelections.filter(s => s.page_number === currentPage).length === 0}
+          disabled={isViewingProcessedDocument || allSelections.filter((s: any) => s.page_number === currentPage).length === 0}
           className="w-full justify-start h-9 text-xs"
         >
           <FileX className="mr-2 h-3 w-3" />

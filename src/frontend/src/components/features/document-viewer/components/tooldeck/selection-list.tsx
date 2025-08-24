@@ -20,7 +20,6 @@ export default function SelectionList() {
     deleteSelection,
     setSelectionPage,
     setOnSelectionDoubleClick,
-    pendingChanges,
     convertSelectionToStagedEdition,
   } = useSelections();
   
