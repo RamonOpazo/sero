@@ -1,4 +1,3 @@
-import { Button } from '@/components/ui/button';
 import { ArrowLeft, KeyRound } from 'lucide-react';
 import { useEditorView } from './use-editor-view';
 import { DocumentPasswordDialog } from './dialogs';
@@ -21,67 +20,64 @@ export function EditorView({ fileType }: EditorViewProps) {
     formatFileSize,
   } = useEditorView(fileType);
 
-  if (error) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <div className="text-center">
-          <p className="text-destructive mb-2">Failed to load document</p>
-          <p className="text-sm text-muted-foreground">{error}</p>
-          <Button
-            variant="outline"
-            onClick={actionHandlers.onBackToDocuments}
-            className="mt-4"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Documents
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  if (isLoading) {
-    return (
-      <EmptyState
-        variant="await"
-        message="Loading document..."
-      />
-    );
-  }
-
-  return (
-    <div className="flex flex-col h-full">
-      {/* File Content */}
-      {!fileData && (
+  const content = (() => {
+    if (error) {
+      return (
         <EmptyState
-          message='File Not Loaded'
-          buttonText='Retry Password'
+          message="Failed to load document"
+          buttonText="Back to Documents"
+          buttonIcon={<ArrowLeft />}
+          onButtonClick={actionHandlers.onBackToDocuments}
+        />
+      );
+    }
+
+    if (isLoading) {
+      return (
+        <EmptyState
+          variant="await"
+          message="Loading document..."
+        />
+      );
+    }
+
+    if (!fileData) {
+      return (
+        <EmptyState
+          message="File Not Loaded"
+          buttonText="Retry Password"
           buttonIcon={<KeyRound />}
           onButtonClick={actionHandlers.onRetryPassword}
         />
-      )}
+      );
+    }
 
-      {fileData && documentForViewer && (
-        <div className="flex-1 min-h-0">
-          <DocumentViewer
-            key={`${documentMetadata?.id}-${fileData?.file?.id}`}
-            document={documentForViewer}
-          />
-        </div>
-      )}
-
-      {fileData && !documentForViewer && (
-        <EmptyState
-          message={
-            <>
-              <p>{`File loaded successfully (${formatFileSize(fileData.blob.size)})`}</p>
-              <p>{"Unable to initialize document viewer"}</p>
-            </>
-          }
+    if (fileData && documentForViewer) {
+      return (
+        <DocumentViewer
+          key={`${documentMetadata?.id}-${fileData?.file?.id}`}
+          document={documentForViewer}
         />
-      )}
+      );
+    }
 
-      {/* Password Dialog */}
+    // Fallback: fileData present but viewer could not be initialized
+    return (
+      <EmptyState
+        message={
+          <>
+            <p>{`File loaded successfully (${formatFileSize(fileData.blob.size)})`}</p>
+            <p>{"Unable to initialize document viewer"}</p>
+          </>
+        }
+      />
+    );
+  })();
+
+  return (
+    <>
+      {content}
+      {/* Dialogs */}
       <DocumentPasswordDialog
         isOpen={passwordDialogState.isOpen}
         onClose={passwordDialogState.onClose}
@@ -89,6 +85,6 @@ export function EditorView({ fileType }: EditorViewProps) {
         error={passwordDialogState.error}
         isLoading={passwordDialogState.isLoading}
       />
-    </div>
+    </>
   );
 }

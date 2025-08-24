@@ -7,6 +7,7 @@ import { useMemo, useRef, useEffect, useState, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { PageSelectionDialog } from "../dialogs";
 import { SimpleConfirmationDialog } from "@/components/shared/simple-confirmation-dialog";
+import { CONVERT_TO_STAGED_DIALOG } from "./dialog-text";
 import type { Selection } from "../../types/viewer";
 import { getNormalizedState, getStatusLabel } from "../../utils/selection-styles";
 
@@ -291,15 +292,7 @@ export default function SelectionList() {
             setConvertDialog({ open: false, selectionId: null });
           }
         }}
-        title="Convert to staged edition"
-        description="This will convert the committed selection to a staged edition so you can edit it."
-        confirmButtonText="Convert"
-        cancelButtonText="Cancel"
-        variant="default"
-        messages={[
-          { variant: 'warning', title: 'Careful', description: 'You are about to edit a committed selection.' },
-          { variant: 'info', title: 'What happens', description: 'The selection will be marked as staged edition and become editable.' },
-        ]}
+        {...CONVERT_TO_STAGED_DIALOG}
       />
     </>
   );
