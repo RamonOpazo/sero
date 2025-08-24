@@ -7,4 +7,5 @@ export * from './file';
 export * from './prompt';
 export * from './selection';
 export * from './api';
+export * from './settings';
 

@@ -9,7 +9,7 @@ from backend.core.pdf_redactor import AreaSelection
 from backend.service.redactor_service import get_redactor_service
 from backend.crud import support_crud, documents_crud, prompts_crud, selections_crud, files_crud
 from backend.api.schemas import documents_schema, generics_schema, files_schema, prompts_schema, selections_schema
-from backend.api.enums import FileType
+from backend.api.enums import FileType, CommitState
 
 
 def get(db: Session, document_id: UUID) -> documents_schema.Document:
@@ -74,23 +74,8 @@ def search_list(db: Session, skip: int, limit: int, name: str | None, project_id
     return [ documents_schema.Document.model_validate(i) for i in documents ]
 
 
-def get_tags(db: Session, document_id: UUID) -> list[str]:
-    document = support_crud.apply_or_404(documents_crud.read, db=db, id=document_id)
-    return list(set(document.tags))
-
-
 def create(db: Session, document_data: documents_schema.DocumentCreate) -> documents_schema.Document:
     document = documents_crud.create(db=db, data=document_data)
-
-    # Initialize AI settings for this document using defaults
-    from backend.crud import ai_settings_crud
-    from backend.core.config import settings as app_settings
-    ai_settings_crud.create_default_for_document(db=db, document_id=document.id, defaults={
-        "provider": app_settings.ai.__dict__.get("provider", "ollama") if hasattr(app_settings.ai, "provider") else "ollama",
-        "model_name": app_settings.ai.model,
-        "temperature": 0.2,
-    })
-
     return documents_schema.Document.model_validate(document)
 
 
@@ -207,38 +192,6 @@ def bulk_create_with_files(db: Session, uploads_data: list[files_schema.FileUplo
     )
 
 
-def get_ai_settings(db: Session, document_id: UUID) -> documents_schema.DocumentAiSettings:
-    # Verify document exists
-    document = support_crud.apply_or_404(documents_crud.read, db=db, id=document_id, join_with=["ai_settings"])
-    from backend.crud import ai_settings_crud
-    if document.ai_settings is None:
-        from backend.core.config import settings as app_settings
-        ai_settings_crud.create_default_for_document(db=db, document_id=document_id, defaults={
-            "provider": app_settings.ai.__dict__.get("provider", "ollama") if hasattr(app_settings.ai, "provider") else "ollama",
-            "model_name": app_settings.ai.model,
-            "temperature": 0.2,
-        })
-        # reload
-        document = support_crud.apply_or_404(documents_crud.read, db=db, id=document_id, join_with=["ai_settings"])
-    return documents_schema.DocumentAiSettings.model_validate(document.ai_settings)
-
-
-def update_ai_settings(db: Session, document_id: UUID, data: documents_schema.DocumentAiSettingsUpdate) -> documents_schema.DocumentAiSettings:
-    # Ensure document exists
-    document = support_crud.apply_or_404(documents_crud.read, db=db, id=document_id, join_with=["ai_settings"])
-    from backend.crud import ai_settings_crud
-    if document.ai_settings is None:
-        from backend.core.config import settings as app_settings
-        ai_settings = ai_settings_crud.create_default_for_document(db=db, document_id=document_id, defaults={
-            "provider": app_settings.ai.__dict__.get("provider", "ollama") if hasattr(app_settings.ai, "provider") else "ollama",
-            "model_name": app_settings.ai.model,
-            "temperature": 0.2,
-        })
-    else:
-        ai_settings = ai_settings_crud.update_by_document(db=db, document_id=document_id, data=data)
-    return documents_schema.DocumentAiSettings.model_validate(ai_settings)
-
-
 def get_prompts(db: Session, document_id: UUID, skip: int = 0, limit: int = 100) -> list[prompts_schema.Prompt]:
     # Verify document exists
     support_crud.apply_or_404(documents_crud.read, db=db, id=document_id)
@@ -316,15 +269,15 @@ def apply_ai_and_stage(db: Session, document_id: UUID) -> list[selections_schema
         documents_crud.read,
         db=db,
         id=document_id,
-        join_with=["prompts", "ai_settings"],
+        join_with=["prompts", "project.ai_settings"],
     )
 
-    enabled_prompts = [p for p in document.prompts if getattr(p, "enabled", False)]
-    if not enabled_prompts:
+    committed_prompts = [p for p in document.prompts if getattr(p, "state", None) == CommitState.COMMITTED]
+    if not committed_prompts:
         return []
 
     composed_prompts: list[str] = []
-    for p in enabled_prompts:
+    for p in committed_prompts:
         composed_prompts.append(f"Directive: {p.directive}\nTitle: {p.title}\n\nInstructions:\n{p.prompt}")
 
     from backend.service.ai_service import get_ai_service, GenerateSelectionsRequest
@@ -334,7 +287,7 @@ def apply_ai_and_stage(db: Session, document_id: UUID) -> list[selections_schema
         svc = get_ai_service()
         req = GenerateSelectionsRequest(
             document_id=str(document_id),
-            system_prompt=(document.ai_settings.system_prompt if getattr(document, "ai_settings", None) else None),
+            system_prompt=(document.project.ai_settings.system_prompt if getattr(document, "project", None) and getattr(document.project, "ai_settings", None) else None),
             prompts=composed_prompts,
         )
         return await svc.generate_selections(req)
@@ -344,7 +297,7 @@ def apply_ai_and_stage(db: Session, document_id: UUID) -> list[selections_schema
     created_models = []
     for sel in res.selections:
         sel.document_id = document_id
-        sel.committed = False
+        sel.state = CommitState.STAGED
         created_models.append(selections_crud.create(db=db, data=sel))
 
     return [selections_schema.Selection.model_validate(i) for i in created_models]
@@ -365,7 +318,7 @@ def summarize(db: Session, document_id: UUID) -> documents_schema.DocumentSummar
         documents_crud.read, 
         db=db, 
         id=document_id, 
-        join_with=["files", "prompts", "selections", "project", "ai_settings"]
+        join_with=["files", "prompts", "selections", "project"]
     )
 
     return support_crud.build_summary(
@@ -381,13 +334,11 @@ def summarize(db: Session, document_id: UUID) -> documents_schema.DocumentSummar
             "total_file_size": lambda ctx: ((ctx["model"].original_file.file_size if ctx["model"].original_file else 0) + (ctx["model"].redacted_file.file_size if ctx["model"].redacted_file else 0)),
             "prompt_count": lambda ctx: len(ctx["model"].prompts),
             "selection_count": lambda ctx: len(ctx["model"].selections),
-            "tag_count": lambda ctx: len(list(set(ctx["model"].tags))),
-            "tags": lambda ctx: list(set(ctx["model"].tags)),
             "is_processed": lambda ctx: (ctx["model"].redacted_file is not None),
+            "is_template": lambda ctx: bool(getattr(ctx["model"], "template", None)),
             "ai_selections_count": lambda ctx: sum(1 for s in ctx["model"].selections if s.is_ai_generated),
             "manual_selections_count": lambda ctx: sum(1 for s in ctx["model"].selections if not s.is_ai_generated),
             "prompt_languages": lambda ctx: [],
-            "average_temperature": lambda ctx: (ctx["model"].ai_settings.temperature if getattr(ctx["model"], "ai_settings", None) else None),
         },
     )
 
@@ -406,7 +357,7 @@ def process(
     )
 
     # Check committed selections first (fail fast before any heavy work)
-    committed_selections = [s for s in document.selections if getattr(s, "committed", False)]
+    committed_selections = [s for s in document.selections if getattr(s, "state", None) == CommitState.COMMITTED]
     if not committed_selections:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -452,7 +403,6 @@ def process(
         mime_type=original_file.mime_type,
         data=redacted_pdf_data,
         document_id=document_id,
-        file_size=len(redacted_pdf_data)
     )
 
     try:

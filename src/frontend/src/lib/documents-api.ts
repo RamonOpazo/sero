@@ -24,10 +24,10 @@ function toShallow(doc: DocumentType): DocumentShallowType {
     name: doc.name,
     description: doc.description,
     project_id: doc.project_id,
-    tags: doc.tags,
     prompt_count,
     selection_count,
     is_processed,
+    is_template: (doc as any).is_template ?? false,
   };
 }
 
@@ -150,7 +150,6 @@ export const DocumentsAPI = {
       .from(api.safe.put(`/documents/id/${documentId}`, {
         name: documentData.name?.trim(),
         description: documentData.description?.trim(),
-        tags: documentData.tags,
       }) as Promise<Result<DocumentType, unknown>>)
       .map((doc: DocumentType) => toShallow(doc))
       .tap(() => {

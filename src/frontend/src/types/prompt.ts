@@ -1,32 +1,36 @@
 import { z } from 'zod';
 import { UUIDSchema, ISO8601DateTimeSchema } from './base';
+import { ScopeTypeEnumSchema, CommitStateEnumSchema } from './enums';
 
 // Prompt schemas (aligned with backend)
 export const PromptSchema = z.object({
   id: UUIDSchema,
   created_at: ISO8601DateTimeSchema,
   updated_at: ISO8601DateTimeSchema.nullable(),
+  scope: ScopeTypeEnumSchema,
+  state: CommitStateEnumSchema,
   title: z.string(),
   prompt: z.string(),
   directive: z.string(),
-  enabled: z.boolean(),
   document_id: UUIDSchema,
 });
 
 export const PromptCreateSchema = z.object({
   id: UUIDSchema.optional(),
+  scope: ScopeTypeEnumSchema.default('document'),
+  state: CommitStateEnumSchema.default('staged'),
   title: z.string(),
   prompt: z.string(),
   directive: z.string(),
-  enabled: z.boolean().default(true),
   document_id: UUIDSchema,
 });
 
 export const PromptUpdateSchema = z.object({
+  scope: ScopeTypeEnumSchema.optional(),
+  state: CommitStateEnumSchema.optional(),
   title: z.string().optional(),
   prompt: z.string().optional(),
   directive: z.string().optional(),
-  enabled: z.boolean().optional(),
 });
 
 // Types

@@ -3,14 +3,14 @@ from sqlalchemy.orm import Session
 from typing import Any
 
 from backend.db.models import AiSettings
-from backend.api.schemas.documents_schema import DocumentAiSettingsUpdate
+from backend.api.schemas.settings_schema import AiSettingsCreate, AiSettingsUpdate
 from backend.crud.base import BaseCrud
 
 
-class AiSettingsCrud(BaseCrud[AiSettings, DocumentAiSettingsUpdate, DocumentAiSettingsUpdate]):
-    def create_default_for_document(self, db: Session, document_id: UUID, defaults: dict[str, Any]) -> AiSettings:
+class AiSettingsCrud(BaseCrud[AiSettings, AiSettingsCreate, AiSettingsUpdate]):
+    def create_default_for_project(self, db: Session, project_id: UUID, defaults: dict[str, Any]) -> AiSettings:
         payload = {
-            "document_id": document_id,
+            "project_id": project_id,
             **defaults,
         }
         this = self.model(**payload)
@@ -19,18 +19,18 @@ class AiSettingsCrud(BaseCrud[AiSettings, DocumentAiSettingsUpdate, DocumentAiSe
         db.refresh(this)
         return this
 
-    def read_by_document(self, db: Session, document_id: UUID) -> AiSettings | None:
+    def read_by_project(self, db: Session, project_id: UUID) -> AiSettings | None:
         return (
             db.query(self.model)
-            .filter(self.model.document_id == document_id)
+            .filter(self.model.project_id == project_id)
             .first()
         )
 
-    def update_by_document(self, db: Session, document_id: UUID, data: DocumentAiSettingsUpdate) -> AiSettings:
-        this = self.read_by_document(db=db, document_id=document_id)
+    def update_by_project(self, db: Session, project_id: UUID, data: AiSettingsUpdate) -> AiSettings:
+        this = self.read_by_project(db=db, project_id=project_id)
         if this is None:
-            # Should not happen if we initialize during document create, but handle gracefully
-            return self.create_default_for_document(db=db, document_id=document_id, defaults=data.model_dump(exclude_unset=True))
+            # Should not happen if we initialize during project create, but handle gracefully
+            return self.create_default_for_project(db=db, project_id=project_id, defaults=data.model_dump(exclude_unset=True))
         update_data = data.model_dump(exclude_unset=True)
         for k, v in update_data.items():
             setattr(this, k, v)

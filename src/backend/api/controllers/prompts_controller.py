@@ -1,12 +1,18 @@
 from uuid import UUID
 from sqlalchemy.orm import Session
 
-from backend.crud import prompts_crud, support_crud
+from backend.crud import prompts_crud, support_crud, documents_crud
 from backend.api.schemas import prompts_schema, generics_schema
+from backend.api.enums import CommitState
 
 
 def create(db: Session, prompt_data: prompts_schema.PromptCreate) -> prompts_schema.Prompt:
     """Create a new prompt."""
+    # Ensure document exists
+    support_crud.apply_or_404(documents_crud.read, db=db, id=prompt_data.document_id)
+    # Default to staged if not provided
+    if getattr(prompt_data, "state", None) is None:
+        prompt_data.state = CommitState.STAGED
     prompt = prompts_crud.create(db=db, data=prompt_data)
     return prompts_schema.Prompt.model_validate(prompt)
 

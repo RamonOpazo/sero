@@ -10,7 +10,7 @@ from backend.db.models import Selection as SelectionModel, Project as ProjectMod
 from backend.api.schemas import documents_schema, files_schema
 from backend.service.crypto_service import get_security_service
 from backend.core.security import security_manager
-from backend.api.enums import FileType
+from backend.api.enums import FileType, CommitState
 from backend.crud.projects import ProjectCrud
 from backend.crud.documents import DocumentCrud
 from backend.crud.selections import SelectionCrud
@@ -174,6 +174,11 @@ class SupportCrud:
             for field in schema_fields - set((transforms or {}).keys()):
                 if hasattr(model, field):
                     data[field] = getattr(model, field)
+            # Heuristic fields
+            if "is_template" in schema_fields and "is_template" not in data and hasattr(model, "template"):
+                data["is_template"] = bool(getattr(model, "template", None))
+            if "has_template" in schema_fields and "has_template" not in data and hasattr(model, "template"):
+                data["has_template"] = bool(getattr(model, "template", None))
             items.append(schema_cls.model_validate(data))
         return items
 
@@ -202,12 +207,12 @@ class SupportCrud:
             )
 
 
-    def ensure_document_ai_settings(self, db: Session, document_id: UUID):
-        existing = self.ai_settings_crud.read_by_document(db=db, document_id=document_id)
+    def ensure_project_ai_settings(self, db: Session, project_id: UUID):
+        existing = self.ai_settings_crud.read_by_project(db=db, project_id=project_id)
         if existing is not None:
             return existing
         # Initialize with sensible defaults from settings
-        created = self.ai_settings_crud.create_default_for_document(db=db, document_id=document_id, defaults={
+        created = self.ai_settings_crud.create_default_for_project(db=db, project_id=project_id, defaults={
             "provider": getattr(getattr(app_settings, "ai", object()), "provider", "ollama"),
             "model_name": app_settings.ai.model,
             "temperature": 0.2,
@@ -216,10 +221,10 @@ class SupportCrud:
     
 
     def bulk_create_documents_with_files_and_init(self, db: Session, bulk_data) -> list:
-        """Wrap bulk doc creation: create docs+files and ensure AiSettings for each."""
+        """Wrap bulk doc creation: create docs+files and ensure AiSettings for each project."""
         created_documents = self.documents_crud.bulk_create_with_files(db=db, bulk_data=bulk_data)
         for doc in created_documents:
-            self.ensure_document_ai_settings(db=db, document_id=doc.id)
+            self.ensure_project_ai_settings(db=db, project_id=doc.project_id)
         return created_documents
 
 
@@ -251,8 +256,8 @@ class SupportCrud:
         if commit_all:
             db.query(SelectionModel).filter(
                 SelectionModel.document_id == document_id,
-                SelectionModel.committed.is_(False),
-            ).update({"committed": True}, synchronize_session=False)
+                SelectionModel.state == CommitState.STAGED,
+            ).update({"state": CommitState.COMMITTED}, synchronize_session=False)
             db.commit()
         else:
             if not selection_ids:
@@ -260,10 +265,10 @@ class SupportCrud:
             db.query(SelectionModel).filter(
                 SelectionModel.document_id == document_id,
                 SelectionModel.id.in_(selection_ids),
-            ).update({"committed": True}, synchronize_session=False)
+            ).update({"state": CommitState.COMMITTED}, synchronize_session=False)
             db.commit()
         # Return committed
-        committed = [s for s in self.selections_crud.read_list_by_document(db=db, document_id=document_id) if getattr(s, "committed", False)]
+        committed = [s for s in self.selections_crud.read_list_by_document(db=db, document_id=document_id) if getattr(s, "state", None) == CommitState.COMMITTED]
         return committed
 
 
@@ -271,7 +276,7 @@ class SupportCrud:
         if clear_all:
             deleted = db.query(SelectionModel).filter(
                 SelectionModel.document_id == document_id,
-                SelectionModel.committed.is_(False),
+                SelectionModel.state == CommitState.STAGED,
             ).delete(synchronize_session=False)
             db.commit()
             return int(deleted)
@@ -279,7 +284,7 @@ class SupportCrud:
             return 0
         deleted = db.query(SelectionModel).filter(
             SelectionModel.document_id == document_id,
-            SelectionModel.committed.is_(False),
+            SelectionModel.state == CommitState.STAGED,
             SelectionModel.id.in_(selection_ids),
         ).delete(synchronize_session=False)
         db.commit()
@@ -290,8 +295,8 @@ class SupportCrud:
         if uncommit_all:
             db.query(SelectionModel).filter(
                 SelectionModel.document_id == document_id,
-                SelectionModel.committed.is_(True),
-            ).update({"committed": False}, synchronize_session=False)
+                SelectionModel.state == CommitState.COMMITTED,
+            ).update({"state": CommitState.STAGED}, synchronize_session=False)
             db.commit()
         else:
             if not selection_ids:
@@ -299,7 +304,7 @@ class SupportCrud:
             db.query(SelectionModel).filter(
                 SelectionModel.document_id == document_id,
                 SelectionModel.id.in_(selection_ids),
-            ).update({"committed": False}, synchronize_session=False)
+            ).update({"state": CommitState.STAGED}, synchronize_session=False)
             db.commit()
-        staged = [s for s in self.selections_crud.read_list_by_document(db=db, document_id=document_id) if not getattr(s, "committed", False)]
+        staged = [s for s in self.selections_crud.read_list_by_document(db=db, document_id=document_id) if s.state == CommitState.STAGED]
         return staged

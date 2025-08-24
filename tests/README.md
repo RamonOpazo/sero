@@ -1,219 +1,272 @@
-# Sero API Tests
+# Sero Backend Testing
 
-This directory contains comprehensive test suites for the Sero FastAPI project.
+This directory contains all backend tests for the Sero project. Tests are written using `pytest`.
 
-## Test Structure
+## How to Run Tests
 
-- `conftest.py` - Test configuration and shared fixtures
-- `test_projects_api.py` - Tests for Projects API endpoints (22 tests)
-- `test_documents_api.py` - Tests for Documents API endpoints (27 tests)
-- `test_files_api.py` - Tests for Files API endpoints (33 tests)
-- `test_api_errors.py` - Error handling and edge case tests (18 tests)
-- `test_integration.py` - Integration tests for complete workflows (8 tests)
+You can run the full test suite using the custom script defined in `pyproject.toml`:
 
-**Total: 108 tests** - All passing ✅  
-**Code Coverage: 85%** - Excellent test coverage across the entire codebase
+```sh
+uv run sero-test
+```
 
-## Running Tests
+To run tests with coverage, use:
 
-### Run all tests
-```bash
-# Basic run
-uv run pytest
+```sh
+uv run sero-test-cov
+```
 
-# With quiet output
-uv run pytest -q
+### Advanced Test Execution
 
-# With verbose output
+You can pass additional arguments to `pytest` by adding `--` after the `uv run` command. This allows you to use `pytest`'s powerful features for test selection and execution.
+
+#### Running Specific Files or Tests
+```sh
+# Run all tests in a specific file
+uv run pytest tests/test_projects_controller.py
+
+# Run a specific test by its full node ID
+uv run pytest tests/test_projects_controller.py::TestProjectsController::test_create_and_get_project_success
+
+# Run all tests with "create" in their name
+uv run pytest -k "create"
+```
+
+#### Running Tests by Marker
+The project defines several custom markers (`slow`, `integration`, `unit`, `api`). You can use these to run specific subsets of tests.
+
+```sh
+# Run only the integration tests
+uv run pytest -m "integration"
+
+# Run all tests that are NOT marked as slow
+uv run pytest -m "not slow"
+```
+
+#### Controlling Test Output and Execution
+```sh
+# Run tests with verbose output to see each test name
 uv run pytest -v
 
-# With coverage report (HTML)
-uv run pytest --cov=src/sero --cov-report=html
-
-# With coverage report (terminal)
-uv run pytest --cov=src/sero --cov-report=term-missing
-```
-
-### Run specific test files
-```bash
-uv run pytest tests/test_projects_api.py
-uv run pytest tests/test_integration.py
-uv run pytest tests/test_files_api.py
-```
-
-### Run specific test classes
-```bash
-uv run pytest tests/test_projects_api.py::TestProjectsAPI
-uv run pytest tests/test_api_errors.py::TestAPIErrorHandling
-```
-
-### Run specific test methods
-```bash
-uv run pytest tests/test_projects_api.py::TestProjectsAPI::test_create_project_success
-uv run pytest tests/test_files_api.py::TestFilesAPI::test_download_file_success
-```
-
-### Useful pytest options
-```bash
-# Verbose output with test names
-uv run pytest -v
-
-# Stop on first failure
+# Stop the test run immediately on the first failure
 uv run pytest -x
 
-# Stop after N failures
-uv run pytest --maxfail=5
-
-# Show local variables on failure
-uv run pytest -l
-
-# Disable warnings
-uv run pytest --disable-warnings
-
-# Run with timing information
-uv run pytest --durations=10
-
-# Generate JUnit XML report
-uv run pytest --junit-xml=test-results.xml
+# Show any `print()` statements in the test output
+uv run pytest -s
 ```
 
-## Test Coverage
+## Test Architecture and Directives
 
-The comprehensive test suite covers all major functionality:
+This section provides guidelines, patterns, and examples so all current and future tests remain consistent, focused, and maintainable.
 
-### Projects API (22 tests)
-- ✅ **CRUD Operations**: Create, read, update, delete projects
-- ✅ **Authentication**: Strong password validation and security
-- ✅ **Search & Filtering**: By name, version with pagination
-- ✅ **File Management**: Bulk file upload with validation
-- ✅ **Summarization**: Project summary endpoints (mocked)
-- ✅ **Error Handling**: Invalid inputs, missing fields, not found scenarios
-- ✅ **Data Validation**: Email format, UUID validation
+### Purpose
+- Establish a unified testing approach, with controllers as the primary target for unit tests.
+- Provide guidelines, patterns, and examples so all current and future tests remain consistent, focused, and maintainable.
 
-### Documents API (27 tests)
-- ✅ **CRUD Operations**: Full lifecycle management within projects
-- ✅ **Status Management**: Workflow status updates and transitions
-- ✅ **Search Functionality**: By project ID, status, and other filters
-- ✅ **Processing**: Document processing workflows (mocked)
-- ✅ **Summarization**: Document summary generation (mocked)
-- ✅ **Pagination**: Consistent pagination across all endpoints
-- ✅ **Relationship Integrity**: Proper project-document relationships
+### Scope of this pass
+- Focus: CONTROLLERS ONLY.
+- We will test controller functions directly (not through the FastAPI router) to validate business rules, workflows, and edge cases.
+- CRUD and Router layers are covered differently (see below) and are out of scope for this pass except as helpers/fixtures to set up state.
 
-### Files API (33 tests)
-- ✅ **File Operations**: Create, read, delete with binary data handling
-- ✅ **Advanced Search**: Multiple filters (project, document, filename)
-- ✅ **Security**: Password-protected file downloads
-- ✅ **Content Management**: Prompts and selections CRUD operations
-- ✅ **Data Handling**: Base64 encoding for binary data, proper serialization
-- ✅ **File Filtering**: Original vs obfuscated file distinctions
-- ✅ **Streaming**: File download with proper HTTP streaming responses
+### Layer priorities
+1) Controller layer (primary)
+   - What: Business rules, workflows, data integrity checks, validation and HTTPException behavior.
+   - How: Call controller functions directly with a test Session and input schemas. Assert return values and DB side-effects.
+   - Example goal: “When creating a user, ensure email is unique, hash the password, then save.”
 
-### Error Handling & Edge Cases (18 tests)
-- ✅ **Database Resilience**: Connection failures, constraint violations
-- ✅ **Input Validation**: Malformed JSON, invalid UUIDs, boundary values
-- ✅ **Security Testing**: SQL injection prevention, CORS configuration
-- ✅ **Performance**: Concurrent request handling, timeout management
-- ✅ **Internationalization**: Unicode character support
-- ✅ **Data Integrity**: Duplicate handling, referential integrity
-- ✅ **HTTP Compliance**: Proper status codes, headers, content types
+2) CRUD layer (lighter)
+   - What: Thin DB wrappers. Keep these simple and thoroughly integration-tested with the test DB.
+   - How: Limited direct tests to ensure queries and basic operations work as expected (we already have tests for BaseCrud and DB types). Most controller tests will indirectly exercise CRUD in realistic flows.
+   - Example: verify get_by_... returns the right record, unique constraints enforced via DB.
 
-### Integration Tests (8 tests)
-- ✅ **End-to-End Workflows**: Complete entity lifecycles
-- ✅ **Hierarchical Relationships**: Project → Document → File chains
-- ✅ **Cross-Entity Operations**: Search and filtering across all entities
-- ✅ **Data Consistency**: Multi-operation transaction integrity
-- ✅ **Cascade Operations**: Proper deletion cascading
-- ✅ **Pagination Consistency**: Uniform behavior across all endpoints
-- ✅ **Error Propagation**: Proper error handling through relationships
+3) Router layer (minimal)
+   - What: Just enough integration tests with FastAPI TestClient to verify request/response flow, path params and serialization.
+   - How: Don’t duplicate controller logic at the router level. The framework machinery is robust; keep these tests lean.
 
-## Test Configuration
+### Test design for controllers
+- Call the controller function directly.
+- Use the test_session fixture for a real SQLite DB in tests.
+- Seed DB state using CRUD or simple ORM models as needed.
+- If the controller depends on external services (crypto, AI, etc.), monkeypatch them to stable, deterministic fakes.
+- Assert:
+  - Return values (schemas)
+  - Database side effects (created/updated/deleted rows)
+  - Exceptions (HTTPException) with correct status_code and detail where applicable
 
-Tests are configured for complete isolation and reliability:
+### Examples
 
-### Database Management
-- **Isolated Instances**: Each test uses a fresh temporary DuckDB database
-- **Automatic Cleanup**: Database files are automatically removed after tests
-- **Transaction Isolation**: No test data leaks between test cases
-- **Schema Management**: Database schema is initialized for each test session
+#### 1) Create a Project
+This example shows how to test the creation of a new project.
 
-### FastAPI Integration
-- **Dependency Override**: All external dependencies are mocked for testing
-- **Test Client**: Uses FastAPI's TestClient for realistic HTTP testing
-- **Async Support**: Full support for async endpoints and operations
-- **Middleware Testing**: CORS, error handling, and other middleware tested
+```python
+from backend.api.controllers import projects_controller
+from backend.api.schemas.projects_schema import ProjectCreate
 
-### Mock Management
-- **Security Manager**: Authentication and password validation mocked
-- **External Services**: File processing and summarization services mocked
-- **Streaming Responses**: File downloads properly mocked with streaming
-- **Time-based Operations**: Consistent timestamps for reproducible tests
+# Given
+project_data = ProjectCreate(
+    name="Clinical Trial Alpha",
+    description="A project for the Alpha clinical trial.",
+    contact_name="Dr. Smith",
+    contact_email="dr.smith@example.com",
+    password="a-very-secure-password"
+)
 
-### Fixtures Available
-- `client`: FastAPI test client with all dependencies mocked
-- `db`: Database session for direct database operations
-- `created_project`: Pre-created project for testing dependent resources
-- `created_document`: Pre-created document within a project
-- `created_file`: Pre-created file within a document
-- `sample_*_data`: Template data for creating resources
-- `mock_security_manager`: Mocked security operations
+# When
+new_project = projects_controller.create(db=test_session, project_data=project_data)
 
-## Development Workflow
-
-### Running tests during development
-```bash
-# Run tests with file watching (requires pytest-watch)
-uv add --dev pytest-watch
-uv run ptw
-
-# Run only failed tests from last run
-uv run pytest --lf
-
-# Run tests modified since last commit
-uv run pytest --git-since=HEAD~1
+# Then
+assert new_project.name == "Clinical Trial Alpha"
+assert new_project.contact_name == "Dr. Smith"
 ```
 
-### Debugging failing tests
-```bash
-# Run with detailed output and stop on first failure
-uv run pytest -vvs -x
+#### 2) Upload a Document
+This example demonstrates testing the upload of a new document to a project. Note that file data would typically be handled as a stream or byte payload.
 
-# Run specific failing test with full traceback
-uv run pytest tests/test_files_api.py::TestFilesAPI::test_create_file_success -vvs
+```python
+from backend.api.controllers import documents_controller
+from backend.api.schemas.documents_schema import DocumentCreate, FileCreate
 
-# Show local variables in traceback
-uv run pytest -l --tb=long
+# Given
+# (assuming 'project' is a previously created project fixture)
+document_data = DocumentCreate(name="patient-records.pdf", project_id=project.id)
+file_data = FileCreate(file_name="patient-records.pdf", content_type="application/pdf", file_data=b"...") # file_data would be the PDF content
+
+# When
+new_document = documents_controller.create_with_file(
+    db=test_session,
+    document_data=document_data,
+    file_data=file_data,
+    password=project_password # The password is required for encryption
+)
+
+# Then
+assert new_document.name == "patient-records.pdf"
+assert new_document.original_file_id is not None
 ```
 
-## Contributing Guidelines
+#### 3) Define a Template
+This example shows how to create a reusable template from an existing document.
 
-### Adding New Tests
-1. **Naming Convention**: Use descriptive names like `test_operation_scenario`
-2. **Test Organization**: Group related tests in classes (e.g., `TestProjectsAPI`)
-3. **Use Fixtures**: Leverage existing fixtures from `conftest.py`
-4. **Documentation**: Add clear docstrings explaining test purpose
-5. **Independence**: Ensure tests can run in any order without dependencies
-6. **Error Scenarios**: Test both success and failure paths
-7. **Data Cleanup**: Use fixtures for setup/teardown, avoid manual cleanup
+```python
+from backend.api.controllers import templates_controller
+from backend.api.schemas.templates_schema import TemplateCreate
 
-### Test Quality Standards
-- **Single Responsibility**: Each test should verify one specific behavior
-- **Descriptive Assertions**: Use clear assertion messages
-- **Proper Mocking**: Mock external dependencies, test real business logic
-- **Edge Cases**: Include boundary conditions and error scenarios
-- **Performance**: Avoid unnecessary delays, use mocking for slow operations
+# Given
+# (assuming 'project' and 'document' are existing fixtures)
+template_data = TemplateCreate(project_id=project.id, document_id=document.id)
 
-### Before Submitting
-```bash
-# Run all tests to ensure nothing is broken
-uv run pytest
+# When
+new_template = templates_controller.create(db=test_session, template_data=template_data)
 
-# Check test coverage
-uv run pytest --cov=src/sero --cov-report=term-missing
-
-# Generate HTML coverage report for detailed analysis
-uv run pytest --cov=src/sero --cov-report=html
-# Open .coverage_html/index.html in your browser to view the detailed coverage report
-
-# Ensure tests pass with different pytest options
-uv run pytest -x --disable-warnings
+# Then
+assert new_template.project_id == project.id
+assert new_template.document_id == document.id
 ```
+
+#### 4) Process & Obfuscate a Document
+This example shows how to kick off the redaction process for a document.
+
+```python
+from backend.api.controllers import documents_controller
+
+# Given
+# (assuming 'document' is an existing fixture with committed selections)
+
+# When
+processed_document = documents_controller.process_document(db=test_session, document_id=document.id)
+
+# Then
+assert processed_document.redacted_file_id is not None
+```
+
+#### 5) Download a Secure Document
+This example demonstrates how to test the secure download of a file, which requires the project password for decryption.
+
+```python
+from backend.api.controllers import files_controller
+
+# Given
+# (assuming 'redacted_file' is an existing file fixture)
+# (monkeypatching the security manager to avoid actual decryption in test)
+monkeypatch.setattr(security_manager, "decrypt_data", lambda data, password: b"decrypted_pdf_content")
+
+
+# When
+file_stream = files_controller.download_file(
+    db=test_session,
+    file_id=redacted_file.id,
+    project_password="a-very-secure-password"
+)
+
+# Then
+# The controller would return a StreamingResponse, which you can test
+# by reading the content.
+content = b"".join(file_stream.body_iterator)
+assert content == b"decrypted_pdf_content"
+```
+
+#### 6) Asserting HTTPException for Error Paths
+```python
+import pytest
+from fastapi import HTTPException, status
+from backend.api.controllers import projects_controller
+from backend.api.schemas.projects_schema import ProjectUpdate
+
+with pytest.raises(HTTPException) as exc:
+    projects_controller.update(db=test_session, project_id=nonexistent_id, project_data=ProjectUpdate(name="x"))
+
+assert exc.value.status_code == status.HTTP_404_NOT_FOUND
+assert "not found" in exc.value.detail.lower()
+```
+
+### Fixtures and setup
+- Use existing fixtures from tests/conftest.py:
+  - test_session: SQLAlchemy session bound to a temporary SQLite DB.
+  - client / async_client: ONLY for router-level integration tests (not needed for controller unit tests in this pass).
+  - sample_* fixtures: reuse where appropriate.
+- When you need to seed data, prefer:
+  - Creating ORM instances (Project, Document, etc.) and committing with test_session
+  - Or using CRUD helpers if that keeps setup concise and realistic
+
+### Naming and structure
+- File naming: test_<component>_controller.py for controller-focused tests (e.g., test_documents_controller.py) if you split by controller. Alternatively, keep grouped by API domain (current structure) but ensure tests target controllers directly.
+- Test naming: test_<behavior>_<expected_result>
+  - Example: test_create_document_success, test_update_project_not_found
+- Arrange tests by controller function, group success and error paths close together.
+
+### What to cover for controllers
+- Happy paths (full workflow succeeds)
+- Error branches per business rule:
+  - Resource not found => HTTP 404
+  - Invalid credentials / password => HTTP 401
+  - Conflicts (duplicates) => HTTP 409
+  - Bad requests / validation => HTTP 400 / 422 when appropriate
+  - Internal processing failures (decrypt/integrity) => HTTP 500
+- Side effects and invariants
+  - Deleting/replacing related entities (e.g., redacted files on reprocess)
+  - Relationship cache invalidation where relevant (e.g. use db.expire(model, ["rel"]))
+
+### Router tests (minimal, outside this pass)
+- A small set of integration tests using TestClient to verify endpoints are wired, status codes, and serialization.
+- Do not duplicate controller logic here.
+
+### CRUD tests (lightweight, outside this pass)
+- Keep CRUD thin; verify basic behavior using the DB session. Avoid deep business logic in CRUD.
+
+### Do’s and Don’ts
+- DO: Test controllers as pure functions with a real test DB session.
+- DO: Monkeypatch external services/APIs to deterministic behavior.
+- DO: Assert database state changes for workflows.
+- DON’T: Re-test the router extensively for controller behavior.
+- DON’T: Put business logic into CRUD; keep CRUD thin and straightforward.
+
+### Coverage goals (for controllers in this pass)
+- Aim to cover all branches in controller workflows, including error paths.
+- Use pytest-cov to measure coverage per controller module; iterate until key workflows and branches are covered.
+
+### Adoption plan
+- Update failing or flaky controller tests first (e.g., prompts, projects delete, documents shallow lists) to follow this directive.
+- Convert integration-heavy tests to direct controller calls where appropriate.
+- Keep a small set of router tests for route wiring.
+
+This directive is the single source of truth for controller tests going forward. Please keep it updated when architecture or patterns evolve.

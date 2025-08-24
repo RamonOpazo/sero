@@ -1,12 +1,18 @@
 from uuid import UUID
 from sqlalchemy.orm import Session
 
-from backend.crud import selections_crud, support_crud
+from backend.crud import selections_crud, support_crud, documents_crud
 from backend.api.schemas import selections_schema, generics_schema
+from backend.api.enums import CommitState
 
 
 def create(db: Session, selection_data: selections_schema.SelectionCreate) -> selections_schema.Selection:
     """Create a new selection."""
+    # Ensure document exists
+    support_crud.apply_or_404(documents_crud.read, db=db, id=selection_data.document_id)
+    # Force staged by default
+    if getattr(selection_data, "state", None) is None:
+        selection_data.state = CommitState.STAGED
     selection = selections_crud.create(db=db, data=selection_data)
     return selections_schema.Selection.model_validate(selection)
 

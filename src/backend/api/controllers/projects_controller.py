@@ -1,11 +1,29 @@
 from uuid import UUID
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
-
-from backend.crud import projects_crud, support_crud
-from backend.api.schemas import projects_schema, generics_schema
+from backend.crud import projects_crud, support_crud, ai_settings_crud
+from backend.api.schemas import projects_schema, generics_schema, settings_schema
 from backend.api.enums import ProjectStatus
-from collections import Counter
+
+
+def get_ai_settings(db: Session, project_id: UUID) -> settings_schema.AiSettings:
+    project = support_crud.apply_or_404(projects_crud.read, db=db, id=project_id, join_with=["ai_settings"])
+    if getattr(project, "ai_settings", None) is None:
+        from backend.core.config import settings as app_settings
+        created = ai_settings_crud.create_default_for_project(db=db, project_id=project_id, defaults={
+            "provider": getattr(getattr(app_settings, "ai", object()), "provider", "ollama"),
+            "model_name": app_settings.ai.model,
+            "temperature": 0.2,
+        })
+        return settings_schema.AiSettings.model_validate(created)
+    return settings_schema.AiSettings.model_validate(project.ai_settings)
+
+
+def update_ai_settings(db: Session, project_id: UUID, data: settings_schema.AiSettingsUpdate) -> settings_schema.AiSettings:
+    # Ensure project exists
+    _ = support_crud.apply_or_404(projects_crud.read, db=db, id=project_id)
+    updated = ai_settings_crud.update_by_project(db=db, project_id=project_id, data=data)
+    return settings_schema.AiSettings.model_validate(updated)
 
 
 def get(db: Session, project_id: UUID) -> projects_schema.Project:
@@ -13,7 +31,7 @@ def get(db: Session, project_id: UUID) -> projects_schema.Project:
         projects_crud.read,
         db=db,
         id=project_id,
-        join_with=["documents"]
+        join_with=["documents", "ai_settings", "watermark_settings", "annotation_settings"]
     )
     return projects_schema.Project.model_validate(project)
 
@@ -92,7 +110,7 @@ def summarize(db: Session, project_id: UUID) -> projects_schema.ProjectSummary:
         projects_crud.read,
         db=db,
         id=project_id,
-        join_with=[ "documents.files", "documents.prompts", "documents.selections", "documents.ai_settings" ]
+        join_with=[ "documents.files", "documents.prompts", "documents.selections", "ai_settings", "watermark_settings", "annotation_settings" ]
     )
 
     def doc_iter(ctx):
@@ -108,6 +126,7 @@ def summarize(db: Session, project_id: UUID) -> projects_schema.ProjectSummary:
                     ProjectStatus.COMPLETED if sum(1 for d in doc_iter(ctx) if d.redacted_file is not None) == len(doc_iter(ctx)) else ProjectStatus.IN_PROGRESS
                 )
             ),
+            "has_template": lambda ctx: bool(getattr(ctx["model"], "template", None)),
             "document_count": lambda ctx: len(doc_iter(ctx)),
             "documents_with_original_files": lambda ctx: sum(1 for d in doc_iter(ctx) if d.original_file is not None),
             "documents_with_redacted_files": lambda ctx: sum(1 for d in doc_iter(ctx) if d.redacted_file is not None),
@@ -120,13 +139,9 @@ def summarize(db: Session, project_id: UUID) -> projects_schema.ProjectSummary:
             ),
             "total_prompts": lambda ctx: sum(len(d.prompts) for d in doc_iter(ctx)),
             "total_selections": lambda ctx: sum(len(d.selections) for d in doc_iter(ctx)),
-            "total_tags": lambda ctx: sum(len(d.tags) for d in doc_iter(ctx)),
             "total_ai_selections": lambda ctx: sum(1 for d in doc_iter(ctx) for s in d.selections if s.is_ai_generated),
             "total_manual_selections": lambda ctx: sum(1 for d in doc_iter(ctx) for s in d.selections if not s.is_ai_generated),
             "oldest_document_date": lambda ctx: (min((d.created_at for d in doc_iter(ctx)), default=None)),
             "newest_document_date": lambda ctx: (max((d.created_at for d in doc_iter(ctx)), default=None)),
-            "most_common_tags": lambda ctx, Counter=Counter: (
-                sorted(Counter(tag for d in doc_iter(ctx) for tag in d.tags).items(), key=lambda x: x[1], reverse=True)[:10]
-            ),
         },
     )

@@ -77,7 +77,8 @@ export default function PromptManagement({ document }: PromptControlsProps) {
         title: ruleData.title,
         prompt: promptText,
         directive: 'process',
-        enabled: true,
+        state: 'committed',
+        scope: 'document',
       } as any;
       
       createPrompt(promptData);
@@ -184,7 +185,8 @@ export default function PromptManagement({ document }: PromptControlsProps) {
         title: ruleData.title,
         prompt: promptText,
         directive: 'process',
-        enabled: true,
+        state: 'committed',
+        scope: 'document',
       } as any);
       
       toast.success(`${ruleData.title} rule updated (not yet saved)`);

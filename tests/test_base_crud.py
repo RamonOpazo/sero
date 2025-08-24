@@ -259,7 +259,6 @@ class TestBaseCrud:
             name="D1.pdf",
             description=None,
             project_id=proj.id,
-            tags=[],
         )
         test_session.add(dc)
         test_session.commit()

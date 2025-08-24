@@ -104,21 +104,6 @@ export default function DocumentControls({ document }: DocumentControlsProps) {
               {document.description}
             </div>
           )}
-
-        {document.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {document.tags.slice(0, 4).map((tag, index) => (
-              <Badge key={index} variant="outline" className="text-xs px-1.5 py-0.5">
-                {tag}
-              </Badge>
-            ))}
-            {document.tags.length > 4 && (
-              <Badge variant="outline" className="text-xs px-1.5 py-0.5">
-                +{document.tags.length - 4}
-              </Badge>
-            )}
-          </div>
-        )}
         <Button
           variant="outline"
           size="sm"
@@ -204,13 +189,27 @@ export default function DocumentControls({ document }: DocumentControlsProps) {
           )}
           {isProcessing ? 'Processing...' : 'Process Document'}
         </Button>
+        {/* Commit state summary */}
+        {(() => {
+          const stagedCount = (allSelections || []).filter((s: any) => s && s.state === 'staged').length;
+          const committedCount = (allSelections || []).filter((s: any) => s && s.state === 'committed').length;
+          return (
+            <div className="flex items-center gap-2 mt-1 text-xs">
+              <Badge variant="secondary" className="px-1.5 py-0.5">Committed: {committedCount}</Badge>
+              <Badge variant="outline" className="px-1.5 py-0.5">Staged: {stagedCount}</Badge>
+            </div>
+          );
+        })()}
 
         <DocumentPasswordDialog
           isOpen={isPasswordDialogOpen}
           onClose={() => { setPasswordDialogOpen(false); setProcessError(null); }}
           notice={(() => {
-            const stagedCount = (allSelections || []).filter((s: any) => !s.committed).length;
-            return stagedCount > 0 ? `Note: ${stagedCount} staged selection${stagedCount === 1 ? '' : 's'} will be committed before processing.` : undefined;
+            const stagedCount = (allSelections || []).filter((s: any) => s && s.state === 'staged').length;
+            const parts: string[] = [];
+            if (hasUnsavedChanges) parts.push('pending changes will be staged');
+            if (stagedCount > 0) parts.push(`${stagedCount} staged selection${stagedCount === 1 ? '' : 's'} present`);
+            return parts.length ? `Note: ${parts.join(' • ')}. Only committed selections are used for processing.` : 'Only committed selections are used for processing.';
           })()}
           onConfirm={async (password) => {
             try {
@@ -233,23 +232,6 @@ export default function DocumentControls({ document }: DocumentControlsProps) {
                   toast.error('Failed to save selections');
                   return;
                 }
-              }
-
-              // Commit all staged selections before processing (backend requires committed selections)
-              try {
-                const api = (await import('@/lib/document-viewer-api')).DocumentViewerAPI;
-                const commitRes = await api.commitStagedSelections(document.id, { commit_all: true });
-                if (!commitRes.ok) {
-                  setIsProcessing(false);
-                  setProcessError('Failed to commit staged selections');
-                  toast.error('Failed to commit selections');
-                  return;
-                }
-              } catch (e) {
-                setIsProcessing(false);
-                setProcessError('Failed to commit staged selections');
-                toast.error('Failed to commit selections');
-                return;
               }
 
               // Process on backend

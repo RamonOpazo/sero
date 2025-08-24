@@ -1,5 +1,5 @@
 import { toast } from 'sonner';
-import type { ApiResponse, ProjectType, ProjectShallowType, ProjectCreateType, ProjectUpdateType, ProjectSummaryType } from '@/types';
+import type { ApiResponse, ProjectType, ProjectShallowType, ProjectCreateType, ProjectUpdateType, ProjectSummaryType, ProjectAiSettingsType, ProjectAiSettingsUpdateType } from '@/types';
 import { AsyncResultWrapper, type Result } from '@/lib/result';
 import { api } from '@/lib/axios';
 
@@ -96,6 +96,32 @@ export const ProjectsAPI = {
           "Failed to search projects",
           { description: "Please refine your search and try again." }
         );
+        throw error;
+      })
+      .toResult();
+  },
+
+  /**
+   * Get AI settings for a project
+   */
+  async getProjectAiSettings(projectId: string): Promise<Result<ProjectAiSettingsType, unknown>> {
+    return AsyncResultWrapper
+      .from(api.safe.get(`/projects/id/${projectId}/ai-settings`) as Promise<Result<ProjectAiSettingsType, unknown>>)
+      .catch((error: unknown) => {
+        toast.error("Failed to load AI settings", { description: "Please try again." });
+        throw error;
+      })
+      .toResult();
+  },
+
+  /**
+   * Update AI settings for a project
+   */
+  async updateProjectAiSettings(projectId: string, data: ProjectAiSettingsUpdateType): Promise<Result<ProjectAiSettingsType, unknown>> {
+    return AsyncResultWrapper
+      .from(api.safe.put(`/projects/id/${projectId}/ai-settings`, data) as Promise<Result<ProjectAiSettingsType, unknown>>)
+      .catch((error: unknown) => {
+        toast.error("Failed to update AI settings", { description: "Please try again." });
         throw error;
       })
       .toResult();

@@ -27,7 +27,6 @@ class TestPromptsController:
                 name=f"doc-{uuid.uuid4().hex[:6]}.pdf",
                 description=None,
                 project_id=proj.id,
-                tags=[],
             ),
         )
         return proj, doc
@@ -39,7 +38,6 @@ class TestPromptsController:
                 title="Test Title",
                 prompt="Test prompt content",
                 directive="general",
-                enabled=True,
                 document_id=document_id,
             ),
         )
@@ -53,7 +51,6 @@ class TestPromptsController:
                 title="Hello",
                 prompt="World",
                 directive="general",
-                enabled=True,
                 document_id=doc.id,
             ),
         )
@@ -80,10 +77,9 @@ class TestPromptsController:
         updated = prompts_controller.update(
             db=test_session,
             prompt_id=pid,
-            prompt_data=PromptUpdate(title="New Title", enabled=False),
+            prompt_data=PromptUpdate(title="New Title"),
         )
         assert updated.title == "New Title"
-        assert updated.enabled is False
 
         # partial update
         updated2 = prompts_controller.update(
@@ -124,7 +120,6 @@ class TestPromptsController:
                     title="Oops",
                     prompt="No doc",
                     directive="general",
-                    enabled=True,
                     document_id=uuid.uuid4(),
                 ),
             )

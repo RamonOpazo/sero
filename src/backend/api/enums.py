@@ -22,3 +22,21 @@ class PromptLanguage(StrEnum):
 class FileType(StrEnum):
     ORIGINAL = auto()
     REDACTED = auto()
+
+
+class ScopeType(StrEnum):
+    PROJECT = auto()
+    DOCUMENT = auto()
+
+
+class CommitState(StrEnum):
+    STAGED = auto()
+    COMMITTED = auto()
+
+
+class AnchorOption(StrEnum):
+    NW = auto()
+    NE = auto()
+    SE = auto()
+    SW = auto()
+    ZH = auto()

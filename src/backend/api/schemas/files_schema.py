@@ -9,10 +9,10 @@ class File(BaseModel):
     id: UUID4
     created_at: AwareDatetime
     updated_at: AwareDatetime | None
-    file_hash: str
+    file_hash: str = Field(min_length=64, max_length=64,)
     file_type: FileType
     file_size: int
-    mime_type: str
+    mime_type: str = Field(min_length=1, max_length=100,)
     data: bytes
     salt: bytes | None
     document_id: UUID4
@@ -23,24 +23,24 @@ class File(BaseModel):
 
     @field_serializer("salt")
     def serialize_salt(self, value: bytes | None, _info):
-        return base64.b64encode(value) if value is not None else None
+        return base64.b64encode(value).decode("utf-8") if value is not None else None
     
     model_config = ConfigDict(from_attributes=True)
 
 
 class FileCreate(BaseModel):
-    file_hash: str = Field(..., max_length=64)
-    file_type: FileType
-    mime_type: str = Field(..., max_length=100)
+    file_hash: str = Field(..., min_length=64, max_length=64,)
+    file_type: FileType = Field(default=FileType.ORIGINAL,)
+    mime_type: str = Field(..., min_length=1, max_length=100,)
     data: bytes
     salt: bytes | None = Field(None)
     document_id: UUID4 | None = Field(None)
 
 
 class FileUpdate(BaseModel):
-    file_hash: str | None = Field(None, max_length=64)
+    file_hash: str | None = Field(None, min_length=64, max_length=64,)
     file_type: FileType | None = Field(None)
-    mime_type: str | None = Field(None, max_length=100)
+    mime_type: str | None = Field(None, min_length=1, max_length=100,)
     data: bytes | None = Field(None)
     salt: bytes | None = Field(None)
     document_id: UUID4 | None = Field(None)

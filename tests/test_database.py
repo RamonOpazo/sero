@@ -30,7 +30,6 @@ def test_sqlite_database_models_and_relations(test_session):
     document = Document(
         name="Test Document",
         description="Document description",
-        tags=["test", "sqlite"],
         project=project,
     )
     file = File(
@@ -39,14 +38,13 @@ def test_sqlite_database_models_and_relations(test_session):
         mime_type="application/pdf",
         data=b"%PDF-1.4 minimal",
         salt=b"salty",
-        file_hash="examplehash",
+        file_hash="0" * 64,
     )
     prompt = Prompt(
         document=document,
         title="Translate",
         prompt="Translate the content",
         directive="general",
-        enabled=True,
     )
     selection = Selection(
         document=document,
@@ -56,7 +54,6 @@ def test_sqlite_database_models_and_relations(test_session):
         width=0.3,
         height=0.4,
         confidence=0.95,
-        committed=False,
     )
 
     # Persist
@@ -75,7 +72,7 @@ def test_sqlite_database_models_and_relations(test_session):
     # Relations integrity and fields
     assert len(fetched_project.documents) == 1
     fetched_doc = fetched_project.documents[0]
-    assert fetched_doc.name == document.name and set(fetched_doc.tags) == {"test", "sqlite"}
+    assert fetched_doc.name == document.name
 
     assert len(fetched_doc.files) == 1
     fetched_file = fetched_doc.files[0]
@@ -83,7 +80,7 @@ def test_sqlite_database_models_and_relations(test_session):
 
     assert len(fetched_doc.prompts) == 1
     fetched_prompt = fetched_doc.prompts[0]
-    assert fetched_prompt.title == "Translate" and fetched_prompt.enabled is True
+    assert fetched_prompt.title == "Translate"
 
     assert len(fetched_doc.selections) == 1
     fetched_sel = fetched_doc.selections[0]

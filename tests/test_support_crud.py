@@ -35,7 +35,6 @@ class TestSupportCrud:
             name=f"doc-{uuid.uuid4().hex[:8]}.pdf",
             description="test doc",
             project_id=project_id,
-            tags=[],
         )
         db.add(doc)
         db.commit()
@@ -91,7 +90,11 @@ class TestSupportCrud:
         self._attach_original_file(test_session, doc, payload, password)
 
         # Monkeypatch ephemeral decryptor to return the correct password regardless of inputs
-        monkeypatch.setattr(security_manager, "decrypt_with_ephemeral_key", lambda key_id, encrypted_data: password)
+        class FakeSec:
+            def decrypt_with_ephemeral_key(self, key_id, encrypted_data):
+                return password
+        import backend.crud.support as support_mod
+        monkeypatch.setattr(support_mod, "get_security_service", lambda: FakeSec())
 
         enc_b64 = base64.b64encode(b"ignored").decode("ascii")
         got_doc, got_file, got_data = support.get_original_file_data_or_400_401_404_500(
@@ -111,7 +114,11 @@ class TestSupportCrud:
         self._attach_original_file(test_session, doc, b"contents", password="CorrectPW")
 
         # Return a wrong password
-        monkeypatch.setattr(security_manager, "decrypt_with_ephemeral_key", lambda key_id, encrypted_data: "WrongPW")
+        class FakeSec:
+            def decrypt_with_ephemeral_key(self, key_id, encrypted_data):
+                return "WrongPW"
+        import backend.crud.support as support_mod
+        monkeypatch.setattr(support_mod, "get_security_service", lambda: FakeSec())
 
         enc_b64 = base64.b64encode(b"ignored").decode("ascii")
         with pytest.raises(HTTPException) as exc:
@@ -164,22 +171,25 @@ class TestSupportCrud:
         proj = self._create_project(test_session)
         doc = self._create_document(test_session, proj.id)
         # Create staged selections
-        s1 = SelectionModel(document_id=doc.id, x=0.1, y=0.1, width=0.2, height=0.2, page_number=1, committed=False)
-        s2 = SelectionModel(document_id=doc.id, x=0.2, y=0.2, width=0.3, height=0.3, page_number=1, committed=False)
+        from backend.api.enums import CommitState, ScopeType
+        s1 = SelectionModel(document_id=doc.id, x=0.1, y=0.1, width=0.2, height=0.2, page_number=1, scope=ScopeType.DOCUMENT, state=CommitState.STAGED)
+        s2 = SelectionModel(document_id=doc.id, x=0.2, y=0.2, width=0.3, height=0.3, page_number=1, scope=ScopeType.DOCUMENT, state=CommitState.STAGED)
         test_session.add_all([s1, s2])
         test_session.commit()
 
         committed = support.commit_staged_selections(test_session, document_id=doc.id, selection_ids=None, commit_all=True)
         assert len(committed) >= 2
         # They should now be committed in DB
+        from backend.api.enums import CommitState
         refreshed = support.selections_crud.read_list_by_document(test_session, document_id=doc.id)
-        assert all(getattr(s, "committed", False) for s in refreshed)
+        assert all(getattr(s, "state", None) == CommitState.COMMITTED for s in refreshed)
 
         # Uncommit all
         staged = support.uncommit_selections(test_session, document_id=doc.id, selection_ids=None, uncommit_all=True)
         assert len(staged) >= 2
+        from backend.api.enums import CommitState
         refreshed2 = support.selections_crud.read_list_by_document(test_session, document_id=doc.id)
-        assert all(not getattr(s, "committed", False) for s in refreshed2)
+        assert all(getattr(s, "state", None) == CommitState.STAGED for s in refreshed2)
 
         # Clear staged (all)
         deleted_count = support.clear_staged_selections(test_session, document_id=doc.id, selection_ids=None, clear_all=True)
@@ -262,14 +272,13 @@ class TestSupportCrud:
             support.verify_project_password_or_401(test_session, project_id=proj.id, password="wrong")
         assert exc.value.status_code == status.HTTP_401_UNAUTHORIZED
 
-    def test_ensure_document_ai_settings(self, test_session: Session, support: SupportCrud):
+    def test_ensure_project_ai_settings(self, test_session: Session, support: SupportCrud):
         proj = self._create_project(test_session)
-        doc = self._create_document(test_session, proj.id)
         # first call creates
-        created = support.ensure_document_ai_settings(test_session, document_id=doc.id)
-        assert created.document_id == doc.id
+        created = support.ensure_project_ai_settings(test_session, project_id=proj.id)
+        assert created.project_id == proj.id
         # second returns existing
-        existing = support.ensure_document_ai_settings(test_session, document_id=doc.id)
+        existing = support.ensure_project_ai_settings(test_session, project_id=proj.id)
         assert existing.id == created.id
 
     def test_build_shallow_list_tuple_and_row(self, test_session: Session, support: SupportCrud):
@@ -304,7 +313,7 @@ class TestSupportCrud:
         from backend.api.schemas.files_schema import FileCreate
         bulk = [
             DocumentBulkUpload(
-                document_data=DocumentCreate(name=f"b-{uuid.uuid4().hex[:4]}.pdf", description=None, project_id=proj.id, tags=[]),
+                document_data=DocumentCreate(name=f"b-{uuid.uuid4().hex[:4]}.pdf", description=None, project_id=proj.id),
                 file_data=FileCreate(
                     file_hash="0"*64,
                     file_type=FileType.ORIGINAL,
@@ -317,7 +326,7 @@ class TestSupportCrud:
         ]
         created_docs = support.bulk_create_documents_with_files_and_init(test_session, bulk)
         assert len(created_docs) == 1
-        # ai_settings created
+        # ai_settings created (project-scoped)
         from backend.db.models import AiSettings
-        settings = test_session.query(AiSettings).filter(AiSettings.document_id == created_docs[0].id).first()
+        settings = test_session.query(AiSettings).filter(AiSettings.project_id == created_docs[0].project_id).first()
         assert settings is not None

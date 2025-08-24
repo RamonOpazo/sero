@@ -4,6 +4,8 @@ from pydantic import BaseModel, Field, field_validator, field_serializer, UUID4,
 
 from backend.core.security import security_manager
 from backend.api.schemas.documents_schema import Document
+from backend.api.schemas.templates_schema import Template
+from backend.api.schemas.settings_schema import AiSettings, WatermarkSettings, AnnotationSettings
 from backend.api.enums import ProjectStatus
 
 
@@ -11,12 +13,16 @@ class Project(BaseModel):
     id: UUID4
     created_at: AwareDatetime
     updated_at: AwareDatetime | None
-    name: str
+    name: str = Field(max_length=100,)
     description: str | None
-    contact_name: str
-    contact_email: str
+    contact_name: str = Field(max_length=100,)
+    contact_email: str = Field(max_length=100,)
     password_hash: bytes
     documents: Annotated[list[Document], BeforeValidator(lambda x: [] if x is None else x)]
+    ai_settings: AiSettings | None = Field(None)
+    watermark_settings: WatermarkSettings | None = Field(None)
+    annotation_settings: AnnotationSettings | None = Field(None)
+    template: Template | None = Field(None)
 
     @computed_field
     @property
@@ -63,14 +69,15 @@ class ProjectShallow(BaseModel):
     id: UUID4
     created_at: AwareDatetime
     updated_at: AwareDatetime | None
-    name: str
+    name: str = Field(max_length=100,)
     description: str | None
-    contact_name: str
-    contact_email: str
+    contact_name: str = Field(max_length=100,)
+    contact_email: str = Field(max_length=100,)
     
     # Metadata about next level without loading full data
     document_count: int
     has_documents: bool
+    has_template: bool
     
     model_config = ConfigDict(from_attributes=True)
 
@@ -78,15 +85,21 @@ class ProjectShallow(BaseModel):
 class ProjectSummary(BaseModel):
     """Comprehensive summary of a project including all documents and processing analytics."""
     project_id: UUID4
-    name: str
+    name: str = Field(max_length=100,)
     description: str | None
-    contact_name: str
-    contact_email: str
+    contact_name: str = Field(max_length=100,)
+    contact_email: str = Field(max_length=100,)
     created_at: AwareDatetime
     updated_at: AwareDatetime | None
     status: ProjectStatus
+
+    # Settings
+    ai_settings: AiSettings | None = Field(None)
+    watermark_settings: WatermarkSettings | None = Field(None)
+    annotation_settings: AnnotationSettings | None = Field(None)
     
     # Document statistics
+    has_template: bool
     document_count: int
     documents_with_original_files: int
     documents_with_redacted_files: int
@@ -100,15 +113,9 @@ class ProjectSummary(BaseModel):
     # Processing components statistics
     total_prompts: int
     total_selections: int
-    total_tags: int
-    total_ai_selections: int
-    total_manual_selections: int
     
     # Document processing timeline
     oldest_document_date: AwareDatetime | None
     newest_document_date: AwareDatetime | None
-    
-    # Top tags
-    most_common_tags: list[tuple[str, int]]  # (tag_label, count)
     
     model_config = ConfigDict(from_attributes=True)

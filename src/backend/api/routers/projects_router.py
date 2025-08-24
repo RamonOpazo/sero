@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from backend.core.database import get_db_session
-from backend.api.schemas import projects_schema, generics_schema
+from backend.api.schemas import projects_schema, generics_schema, settings_schema
 from backend.api.controllers import projects_controller
 
 
@@ -57,6 +57,25 @@ async def get_project(
 ):
     """Get a single project by ID."""
     return projects_controller.get(db=db, project_id=project_id)
+
+
+@router.get("/id/{project_id}/ai-settings", response_model=settings_schema.AiSettings)
+async def get_project_ai_settings(
+    project_id: UUID,
+    db: Session = Depends(get_db_session),
+):
+    """Get AI settings for a project."""
+    return projects_controller.get_ai_settings(db=db, project_id=project_id)
+
+
+@router.put("/id/{project_id}/ai-settings", response_model=settings_schema.AiSettings)
+async def update_project_ai_settings(
+    project_id: UUID,
+    data: settings_schema.AiSettingsUpdate,
+    db: Session = Depends(get_db_session),
+):
+    """Update AI settings for a project."""
+    return projects_controller.update_ai_settings(db=db, project_id=project_id, data=data)
 
 
 @router.put("/id/{project_id}", response_model=projects_schema.Project)
