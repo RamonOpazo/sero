@@ -75,13 +75,18 @@ class TestSelectionsController:
         ids = {str(i.id) for i in lst}
         assert str(created.id) in ids
 
-        # Update
+        # Update (commit)
         su = SelectionUpdate(page_number=2, x=0.2, y=0.3, width=0.4, height=0.5, confidence=0.9, state=CommitState.COMMITTED)
         updated = selections_controller.update(db=test_session, selection_id=created.id, selection_data=su)
         assert updated.page_number == 2
         assert updated.state == CommitState.COMMITTED
 
-        # Delete
+        # Convert committed -> staged_edition via dedicated endpoint, then mark deletion
+        converted = selections_controller.convert_committed_to_staged(db=test_session, selection_id=created.id)
+        assert converted.state == CommitState.STAGED_EDITION
+
+        # Delete requires staged_deletion now
+        _ = selections_controller.update(db=test_session, selection_id=created.id, selection_data=SelectionUpdate(state=CommitState.STAGED_DELETION))
         out = selections_controller.delete(db=test_session, selection_id=created.id)
         assert "deleted successfully" in out.message
         with pytest.raises(HTTPException) as exc:

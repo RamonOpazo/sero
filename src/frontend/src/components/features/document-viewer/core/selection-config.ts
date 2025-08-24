@@ -109,14 +109,14 @@ const selectionTransforms: ApiTransforms<Selection, Omit<SelectionCreateType, 'd
   }),
   
   forUpdate: (selection: Selection): Partial<Selection> => ({
-    // Stage on update per new workflow: any edit moves selection to STAGED_EDITION
-    state: 'staged_edition',
+    // Preserve staged_deletion; otherwise, edits move to STAGED_EDITION
+    state: (selection as any).state === 'staged_deletion' ? 'staged_deletion' : 'staged_edition',
     x: selection.x,
     y: selection.y,
     width: selection.width,
     height: selection.height,
     page_number: selection.page_number,
-    confidence: selection.confidence
+    confidence: selection.confidence,
   }),
   
   fromApi: (apiItem: unknown): Selection => {

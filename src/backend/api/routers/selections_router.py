@@ -55,3 +55,12 @@ async def delete_selection(
 ):
     """Delete a selection."""
     return selections_controller.delete(db=db, selection_id=selection_id)
+
+
+@router.patch("/id/{selection_id}/convert-to-staged", response_model=selections_schema.Selection)
+async def convert_committed_to_staged(
+    selection_id: UUID,
+    db: Session = Depends(get_db_session),
+):
+    """Convert a COMMITTED selection to STAGED_EDITION (explicit transition)."""
+    return selections_controller.convert_committed_to_staged(db=db, selection_id=selection_id)

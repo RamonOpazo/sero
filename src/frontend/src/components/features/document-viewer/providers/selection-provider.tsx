@@ -197,8 +197,19 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
   // ========================================
   
   const deleteSelection = useCallback((id: string) => {
-    dispatch('DELETE_ITEM', id);
-  }, [dispatch]);
+    // If item is persisted, mark as staged_deletion; if draft, remove
+    const persistedItems: any[] = (state as any).persistedItems || [];
+    const draftItems: any[] = (state as any).draftItems || [];
+    const isPersisted = persistedItems.some((i: any) => i && i.id === id);
+    if (isPersisted) {
+      dispatch('UPDATE_ITEM', { id, updates: { state: 'staged_deletion' } });
+    } else {
+      const isDraft = draftItems.some((i: any) => i && i.id === id);
+      if (isDraft) {
+        dispatch('DELETE_ITEM', id);
+      }
+    }
+  }, [dispatch, state]);
   
   const deleteSelectedSelection = useCallback(() => {
     const selectedId = (state as any).selectedItemId;

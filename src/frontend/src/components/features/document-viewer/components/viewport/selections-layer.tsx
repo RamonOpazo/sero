@@ -107,7 +107,6 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     // Start drawing in the new selection system
     const initialSelection: SelectionCreateType = {
       scope: 'document',
-      state: 'staged_creation',
       x,
       y,
       width: 0,
@@ -139,7 +138,6 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
       // Create selection from start point to current point
       const newSelection: SelectionCreateType = {
         scope: 'document',
-        state: 'staged_creation',
         x: Math.min(startPoint.x, currentX),
         y: Math.min(startPoint.y, currentY),
         width: Math.abs(currentX - startPoint.x),
@@ -328,21 +326,24 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     const isGlobal = selection.page_number === null;
 
     // Determine staged status: persisted but not committed (new semantics)
-    const isStaged = (selection as any).is_staged === true || ((selection as any).state && (selection as any).state !== 'committed');
+    const stateStr = ((selection as any).state || '').toString();
+    const isCommitted = stateStr === 'committed';
+    const isStagedCreation = stateStr === 'staged_creation';
+    const isStagedEdition = stateStr === 'staged_edition';
+    const isStagedDeletion = stateStr === 'staged_deletion';
 
-    // Check if this saved selection has been modified from its initial state
-    const isModified = !isNew && pendingChanges.updates.some((update: Selection) => update.id === selection.id);
-
-    // Choose a color family for border and pattern; also set matching text-* so currentColor can be used in CSS
-    const colorClasses = isSelected
-      ? { border: "border-blue-600", text: "text-blue-600" }
-      : isGlobal
-        ? { border: "border-yellow-500/80 hover:border-yellow-600/95", text: "text-yellow-600" }
-        : isNew
-          ? { border: "border-green-500/80 hover:border-green-600/95", text: "text-green-600" }
-          : isModified
-            ? { border: "border-purple-600/85 hover:border-purple-700/95", text: "text-purple-700" }
-            : { border: "border-slate-500/80 hover:border-slate-600/95", text: "text-slate-600" };
+    // Choose color by state (committed gray; staged_deletion red; staged_edition amber; staged_creation blue; local draft green)
+    const colorClasses = isCommitted
+      ? { border: 'border-zinc-500/80 hover:border-zinc-600/95', text: 'text-zinc-600' }
+      : isStagedDeletion
+        ? { border: 'border-red-500/80 hover:border-red-600/95', text: 'text-red-600' }
+        : isStagedEdition
+          ? { border: 'border-amber-500/80 hover:border-amber-600/95', text: 'text-amber-600' }
+          : isStagedCreation
+            ? { border: 'border-blue-500/80 hover:border-blue-600/95', text: 'text-blue-600' }
+            : isNew
+              ? { border: 'border-emerald-500/80 hover:border-emerald-600/95', text: 'text-emerald-600' }
+              : { border: 'border-slate-500/80 hover:border-slate-600/95', text: 'text-slate-600' };
 
     const selectionElement = (
       <div
@@ -353,8 +354,9 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
           dragState?.type === 'move' || dragState?.type === 'resize'
             ? ""
             : "transition-all duration-200",
-          "border",
-          isStaged ? "border-dashed" : "border-solid",
+          'border',
+          // Border style: local drafts (no state) => dashed; staged => solid; committed => double-like
+          stateStr === '' ? 'border-dashed' : (isCommitted ? 'border-2' : 'border-solid'),
           colorClasses.border,
           colorClasses.text,
         )}
@@ -389,7 +391,7 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
         />
         {/* Subtle solid tint using currentColor */}
         <div className="absolute inset-0 pointer-events-none opacity-10" style={{ backgroundColor: 'currentColor' }} />
-        {/* Diagonal stripe overlay */}
+        {/* Diagonal stripe overlay (all) */}
         <div
           className="absolute inset-0 pointer-events-none opacity-30"
           style={{
@@ -397,6 +399,16 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
             backgroundSize: '20px 20px',
           }}
         />
+        {/* Crossed stripes for global selections */}
+        {isGlobal && (
+          <div
+            className="absolute inset-0 pointer-events-none opacity-25"
+            style={{
+              backgroundImage: `linear-gradient(45deg, currentColor 2.25%, transparent 2.25%, transparent 50%, currentColor 50%, currentColor 52.25%, transparent 52.25%, transparent 100%)`,
+              backgroundSize: '20px 20px',
+            }}
+          />
+        )}
 
         {/* Resize handles for selected selection */}
         {isSelected && renderResizeHandles(selection)}
