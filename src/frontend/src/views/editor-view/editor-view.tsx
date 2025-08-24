@@ -77,7 +77,8 @@ export function EditorView({ fileType }: EditorViewProps) {
   return (
     <>
       {content}
-      {/* Dialogs */}
+
+      {/* Password Dialog */}
       <DocumentPasswordDialog
         isOpen={passwordDialogState.isOpen}
         onClose={passwordDialogState.onClose}

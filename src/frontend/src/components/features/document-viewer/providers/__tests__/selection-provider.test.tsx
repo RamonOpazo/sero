@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, act } from '@testing-library/react';
+import { render, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SelectionProvider, useSelections } from '../selection-provider';
 import type { Selection } from '../../types/viewer';

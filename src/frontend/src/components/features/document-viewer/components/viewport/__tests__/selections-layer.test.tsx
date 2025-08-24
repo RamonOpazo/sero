@@ -12,7 +12,7 @@ const sel = (id: string, state: Selection['state']): Selection => ({
   scope: 'document', state, is_global_page: false,
 });
 
-function Harness({ initial }: { initial: any }) {
+function Harness(_: { initial: any }) {
   const { setIsRendered } = useViewportState();
   React.useEffect(() => { setIsRendered(true); }, [setIsRendered]);
   const { selectSelection } = useSelections();

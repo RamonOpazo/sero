@@ -1,5 +1,5 @@
 import { useMemo, useCallback, useState } from 'react';
-import { Eye, Plus, Copy, Edit, Trash2, Settings2 } from 'lucide-react';
+import { Eye, Plus, Copy, Edit, Trash2, Settings2, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { DataTable } from '@/components/features/data-table';
 import { columns, adaptColumns } from '@/components/features/data-table/columns';
@@ -20,13 +20,13 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
   // Pagination state
   const [pageIndex, setPageIndex] = useState(0)
   const [pageSize, setPageSize] = useState(10)
-  
+
   // Search state
   const [searchValue, setSearchValue] = useState('')
-  
+
   // Column visibility state - exclude pinned columns from state management
   const [visibleColumns, setVisibleColumns] = useState<string[]>([
-    'description', 'document_count', 'updated_at', 
+    'description', 'document_count', 'updated_at',
     'contact_name', 'contact_email', 'created_at'
   ])
 
@@ -67,7 +67,7 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
         render: (_value, row) => nameRenderer(row)
       }
     ),
-    
+
     // Description - truncated for readability
     columns.text<ProjectShallowType>('description', {
       header: 'Description',
@@ -75,28 +75,28 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
       width: '200px',
       placeholder: 'No description'
     }),
-    
+
     // Document count - displayed as badge
     columns.number<ProjectShallowType>('document_count', {
       header: '# Documents',
       width: '150px',
       sortable: true
     }),
-    
+
     // Contact person - truncated
     columns.text<ProjectShallowType>('contact_name', {
       header: 'Contact Person',
       maxLength: 20,
       width: '200px'
     }),
-        
+
     // Contact email - truncated with monospace font
     columns.text<ProjectShallowType>('contact_email', {
       header: 'Contact Email',
       maxLength: 25,
       width: '200px'
     }),
-    
+
     // Created date - relative formatting
     columns.date<ProjectShallowType>('created_at', {
       header: 'Created',
@@ -104,7 +104,7 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
       sortable: true,
       format: { style: 'relative' }
     }),
-    
+
     // Last updated - relative date formatting
     columns.date<ProjectShallowType>('updated_at', {
       header: 'Last Updated',
@@ -112,7 +112,7 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
       sortable: true,
       format: { style: 'relative' }
     }),
-    
+
     // Actions column - modern action definitions
     columns.actions<ProjectShallowType>('actions', {
       header: 'Actions',
@@ -163,8 +163,8 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
       ]
     })
   ], [nameRenderer, actionHandlers]);
-  
-  
+
+
   // Column options for visibility toggle - exclude pinned columns
   const tableColumns: ColumnOption[] = useMemo(() => [
     { key: 'description', header: 'Description' },
@@ -174,7 +174,7 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
     { key: 'contact_email', header: 'Email Address' },
     { key: 'created_at', header: 'Created' }
   ], []);
-  
+
   // Custom buttons for the toolbar - delete button always visible
   const customButtons: CustomButtonOption[] = useMemo(() => [
     {
@@ -185,14 +185,14 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
       onClick: () => actionHandlers.onBulkDelete()
     }
   ], [selectedProjects, actionHandlers]);
-  
+
   // Filter projects based on search - always search all columns
   const filteredProjects = useMemo(() => {
     if (!searchValue.trim()) return projects;
-    
+
     return projects.filter(project => {
       const searchTerm = searchValue.toLowerCase();
-      
+
       return (
         project.name.toLowerCase().includes(searchTerm) ||
         (project.description?.toLowerCase().includes(searchTerm)) ||
@@ -201,7 +201,7 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
       );
     });
   }, [projects, searchValue]);
-  
+
   // Filter columns based on visibility - always include pinned and actions columns
   const visibleProjectColumns = useMemo(() => {
     return projectColumns.filter(col => {
@@ -213,75 +213,93 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
       return visibleColumns.includes(col.id);
     });
   }, [projectColumns, visibleColumns]);
-  
+
   // Convert new column configs to legacy format for DataTable compatibility
   const legacyColumns = useMemo(() => adaptColumns(visibleProjectColumns), [visibleProjectColumns]);
 
   // Handle column visibility changes
   const handleColumnVisibilityChange = useCallback((columnKey: string, visible: boolean) => {
-    setVisibleColumns(prev => 
-      visible 
+    setVisibleColumns(prev =>
+      visible
         ? [...prev, columnKey]
         : prev.filter(key => key !== columnKey)
     );
   }, []);
-  
+
   // Paginate filtered data
   const startIndex = pageIndex * pageSize
   const endIndex = startIndex + pageSize
   const paginatedProjects = filteredProjects.slice(startIndex, endIndex)
 
-  const content = isLoading ? (
-    <div className="flex items-center justify-center py-8">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-        <p className="text-muted-foreground">Loading projects...</p>
-      </div>
-    </div>
-  ) : error ? (
-    <div className="flex items-center justify-center py-8">
-      <div className="text-center">
-        <p className="text-destructive mb-2">Failed to load projects</p>
-        <p className="text-sm text-muted-foreground">{error}</p>
-      </div>
-    </div>
-  ) : projects.length === 0 ? (
-    <EmptyState
-      message="No projects found"
-      buttonText="Create your first project"
-      buttonIcon={<Plus className="h-4 w-4" />}
-      onButtonClick={actionHandlers.onCreateProject}
-    />
-  ) : (
-    <DataTable
-        columns={legacyColumns}
-        data={paginatedProjects}
-        selectedRows={selectedProjects}
-        onRowSelect={actionHandlers.onRowSelectionChange}
-        searchPlaceholder="Search projects..."
-        searchValue={searchValue}
-        onSearch={setSearchValue}
-        onAddNew={actionHandlers.onCreateProject}
-        addNewLabel="Add Project"
-        showCheckboxes={true}
-        showActions={true}
-        // Column visibility features
-        tableColumns={tableColumns}
-        visibleColumns={visibleColumns}
-        onColumnVisibilityChange={handleColumnVisibilityChange}
-        // Custom buttons
-        customButtons={customButtons}
-        pagination={{
-          pageIndex,
-          pageSize,
-          totalItems: filteredProjects.length,
-          onPageChange: setPageIndex,
-          onPageSizeChange: setPageSize,
-          showPagination: true,
-          pageSizeOptions: [5, 10, 20, 50]
-        }}
+  const content = (() => {
+    if (error) {
+      return (
+        <EmptyState
+          message={
+            <>
+              <p>{"Failed to load projects"}</p>
+              <p>{error}</p>
+            </>
+          }
+          buttonText="Back to Projects"
+          buttonIcon={<ArrowLeft />}
+          onButtonClick={actionHandlers.onBackHome}
+        />
+      );
+    }
+
+    if (isLoading) {
+      return (
+        <EmptyState
+          variant="await"
+          message="Loading projects..."
+        />
+      );
+    }
+
+    if (projects.length > 0) {
+      return (
+        <DataTable
+          columns={legacyColumns}
+          data={paginatedProjects}
+          selectedRows={selectedProjects}
+          onRowSelect={actionHandlers.onRowSelectionChange}
+          searchPlaceholder="Search projects..."
+          searchValue={searchValue}
+          onSearch={setSearchValue}
+          onAddNew={actionHandlers.onCreateProject}
+          addNewLabel="Add Project"
+          showCheckboxes={true}
+          showActions={true}
+          // Column visibility features
+          tableColumns={tableColumns}
+          visibleColumns={visibleColumns}
+          onColumnVisibilityChange={handleColumnVisibilityChange}
+          // Custom buttons
+          customButtons={customButtons}
+          pagination={{
+            pageIndex,
+            pageSize,
+            totalItems: filteredProjects.length,
+            onPageChange: setPageIndex,
+            onPageSizeChange: setPageSize,
+            showPagination: true,
+            pageSizeOptions: [5, 10, 20, 50]
+          }}
+        />
+      );
+    }
+
+    // Fallback: projects loading did not error but no data was fetched (no projects)
+    return (
+      <EmptyState
+        message="No projects found"
+        buttonText="Create your first project"
+        buttonIcon={<Plus />}
+        onButtonClick={actionHandlers.onCreateProject}
       />
-  );
+    );
+  })();
 
   return (
     <>

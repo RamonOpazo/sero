@@ -1,7 +1,7 @@
 /**
  * Basic test to verify Jest setup is working correctly
  */
-describe('Jest Setup', () => {
+describe('Setup', () => {
   it('should be able to run tests', () => {
     expect(true).toBe(true);
   });
@@ -11,8 +11,9 @@ describe('Jest Setup', () => {
     element.textContent = 'Hello World';
     document.body.appendChild(element);
     
-    expect(element).toBeInTheDocument();
-    expect(element).toHaveTextContent('Hello World');
+    // Basic DOM expectation without jest-dom matchers during tsc build
+    expect(document.body.contains(element)).toBe(true);
+    expect(element.textContent).toBe('Hello World');
     
     document.body.removeChild(element);
   });
