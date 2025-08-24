@@ -189,6 +189,17 @@ export default function DocumentControls({ document }: DocumentControlsProps) {
           )}
           {isProcessing ? 'Processing...' : 'Process Document'}
         </Button>
+        {/* Commit state summary */}
+        {(() => {
+          const stagedCount = (allSelections || []).filter((s: any) => s && s.state === 'staged').length;
+          const committedCount = (allSelections || []).filter((s: any) => s && s.state === 'committed').length;
+          return (
+            <div className="flex items-center gap-2 mt-1 text-xs">
+              <Badge variant="secondary" className="px-1.5 py-0.5">Committed: {committedCount}</Badge>
+              <Badge variant="outline" className="px-1.5 py-0.5">Staged: {stagedCount}</Badge>
+            </div>
+          );
+        })()}
 
         <DocumentPasswordDialog
           isOpen={isPasswordDialogOpen}
