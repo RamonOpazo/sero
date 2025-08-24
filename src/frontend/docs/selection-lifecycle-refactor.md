@@ -61,7 +61,7 @@ Edge cases
 - After commit, ensure removed items are excluded if server deletes them
 
 Phased rollout (PRs)
-- PR1: Types and mappers; no behavior change
+- PR1: Types and mappers; no behavior change ✅
 - PR2: Provider lifecycle store; derive UI stats from lifecycle
 - PR3: Save/commit using lifecycle; keep legacy APIs unused
 - PR4: Switch hooks/UI fully to lifecycle

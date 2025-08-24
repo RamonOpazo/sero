@@ -2,17 +2,12 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Link } from 'react-router-dom'
 import {
-  CircleSlash2, Edit3,
-  
-  Shield,
-  Zap,
   Lock,
   ArrowRight,
   BookOpen,
   Bot,
   FileCheck2
 } from 'lucide-react'
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
 export function HomePage() {
 
@@ -29,23 +24,19 @@ export function HomePage() {
 
 
             <p className="mt-6 text-lg leading-8 text-muted-foreground">
-              SERO provides both <strong>manual</strong> and <strong>AI-powered</strong> redaction of sensitive information from medical records.
-              Maintain compliance, protect privacy, and keep your documents usable with enterprise-grade security.
+              <strong className="text-purple-600">SERO</strong> <em className="text-foreground">Evelishly Redacts and Obfuscates</em> sensitive data from medical records, allowing users to maintain compliance to data protection laws, protect privacy of patients and providers, and keep documents usable with enterprise-grade security.
             </p>
 
 
             <div className="mt-8 flex flex-wrap justify-center lg:justify-start gap-4">
               <Badge variant="outline" className="text-sm">
-                <Edit3 className="mr-1 h-4 w-4" /> Manual Redaction
+                <FileCheck2 className="mr-1 h-4 w-4" /> Document Manager
               </Badge>
               <Badge variant="outline" className="text-sm">
                 <Bot className="mr-1 h-4 w-4" /> AI-Powered Redaction
               </Badge>
               <Badge variant="outline" className="text-sm">
                 <Lock className="mr-1 h-4 w-4" /> RSA-2048 Encryption
-              </Badge>
-              <Badge variant="outline" className="text-sm">
-                <FileCheck2 className="mr-1 h-4 w-4" /> Document Management
               </Badge>
             </div>
 
@@ -76,35 +67,23 @@ export function HomePage() {
             SERO ensures data remains private and compliant while still useful
             for research and operations.
           </p>
+
+          <h3>Learn More</h3>
+          <ul>
+            <li>
+              <Link to="/documentation/getting-started">Getting Started</Link>
+            </li>
+            <li>
+              <Link to="/documentation/security-model">Security Model</Link>
+            </li>
+            <li>
+              <Link to="/documentation/redaction-pipeline">The Redaction Pipeline</Link>
+            </li>
+            <li>
+              <Link to="/documentation/integration">Integration Guide</Link>
+            </li>
+          </ul>
         </div>
-
-
-
-
-        <h3>What to Expect</h3>
-        <ul>
-          <li>Upload and process documents in seconds.</li>
-          <li>Manual redaction tools for full control.</li>
-          <li>Automatic AI-powered redaction of sensitive data.</li>
-          <li>Export redacted records in multiple formats.</li>
-        </ul>
-
-
-        <h3>Learn More</h3>
-        <ul>
-          <li>
-            <Link to="/documentation/getting-started">Getting Started</Link>
-          </li>
-          <li>
-            <Link to="/documentation/security-model">Security Model</Link>
-          </li>
-          <li>
-            <Link to="/documentation/redaction-pipeline">The Redaction Pipeline</Link>
-          </li>
-          <li>
-            <Link to="/documentation/integration">Integration Guide</Link>
-          </li>
-        </ul>
       </main>
     </div>
   );
