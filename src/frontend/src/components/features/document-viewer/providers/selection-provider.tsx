@@ -477,7 +477,10 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
 
       const persisted: UISelection[] = ((state as any).persistedItems || []).map((s: any) => {
         const ui = fromApiSelection(s);
-        return { ...ui, dirty: dirtyIds.has((s as any).id) } as UISelection;
+        const isDirty = dirtyIds.has((s as any).id);
+        // If a persisted selection is edited locally and not staged for deletion, reflect it as staged_edition in UI
+        const stage = (isDirty && ui.stage !== UISelectionStage.StagedDeletion) ? UISelectionStage.StagedEdition : ui.stage;
+        return { ...ui, dirty: isDirty, stage } as UISelection;
       });
       const drafts: UISelection[] = ((state as any).draftItems || []).map((s: any) => ({
         ...(s as any),
