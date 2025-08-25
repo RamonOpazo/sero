@@ -1,6 +1,6 @@
 from __future__ import annotations
 from fastapi import APIRouter
-from backend.service.ai_service import get_ai_service
+from backend.service.ai_service import get_ai_service, GenerateSelectionsRequest, GenerateSelectionsResponse
 
 router = APIRouter()
 
@@ -24,4 +24,14 @@ async def ai_catalog() -> dict:
     except Exception:
         # Fallback to empty catalog
         return {"providers": []}
+
+@router.post("/introspect")
+async def ai_introspect(payload: GenerateSelectionsRequest) -> list[dict]:
+    """Generate AI-driven selections for a document.
+    Returns a plain list of selections to match current frontend expectations.
+    """
+    svc = get_ai_service()
+    result: GenerateSelectionsResponse = await svc.generate_selections(payload)
+    # Return a raw list for frontend convenience
+    return [s.model_dump() for s in result.selections]
 
