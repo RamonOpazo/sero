@@ -43,6 +43,10 @@ describe('SelectionProvider - conversion, deletion, and lifecycle save/commit', 
     const initial = { saved: [committedSel()] };
     let apiRef: ReturnType<typeof useSelections> | null = null;
 
+    const apiMod1 = await import('@/lib/document-viewer-api');
+    // After conversion we reload; return staged_edition in fetch so item remains present
+    (apiMod1.DocumentViewerAPI.fetchDocumentSelections as any).mockResolvedValueOnce({ ok: true, value: [committedSel({ id: 's1', state: 'staged_edition' })] });
+
     render(
       <SelectionProvider documentId="doc1" initialSelections={initial as any}>
         <Probe onReady={(api) => { apiRef = api; }} />
@@ -61,13 +65,16 @@ describe('SelectionProvider - conversion, deletion, and lifecycle save/commit', 
     const after = apiRef!.allSelections.find(s => s.id === 's1');
     expect(after?.state).toBe('staged_edition');
 
-    const { DocumentViewerAPI } = await import('@/lib/document-viewer-api');
-    expect(DocumentViewerAPI.convertSelectionToStaged).toHaveBeenCalledWith('s1');
+    const apiMod2 = await import('@/lib/document-viewer-api');
+    expect(apiMod2.DocumentViewerAPI.convertSelectionToStaged).toHaveBeenCalledWith('s1');
   });
 
   it('converts staged_deletion to staged_edition via updateSelection', async () => {
     const initial = { saved: [stagedDeletionSel()] };
     let apiRef: ReturnType<typeof useSelections> | null = null;
+
+    const apiMod3 = await import('@/lib/document-viewer-api');
+    (apiMod3.DocumentViewerAPI.fetchDocumentSelections as any).mockResolvedValueOnce({ ok: true, value: [committedSel({ id: 's2', state: 'staged_edition' })] });
 
     render(
       <SelectionProvider documentId="doc1" initialSelections={initial as any}>
@@ -87,8 +94,8 @@ describe('SelectionProvider - conversion, deletion, and lifecycle save/commit', 
     const after = apiRef!.allSelections.find(s => s.id === 's2');
     expect(after?.state).toBe('staged_edition');
 
-    const { DocumentViewerAPI } = await import('@/lib/document-viewer-api');
-    expect(DocumentViewerAPI.updateSelection).toHaveBeenCalledWith('s2', { state: 'staged_edition' });
+    const apiMod4 = await import('@/lib/document-viewer-api');
+    expect(apiMod4.DocumentViewerAPI.updateSelection).toHaveBeenCalledWith('s2', { state: 'staged_edition' });
   });
 
   it('deleteSelection marks persisted item as staged_deletion (still visible)', async () => {
@@ -195,5 +202,64 @@ describe('SelectionProvider - conversion, deletion, and lifecycle save/commit', 
     const item = apiRef!.allSelections.find(s => s.id === 's200');
     expect(item?.state).toBe('committed');
     expect(apiRef!.hasUnsavedChanges).toBe(false);
+  });
+  it('saveLifecycle promotes staged_edition to staged_creation and includes geometry on update', async () => {
+    const stagedEdition: Selection = committedSel({ id: 's10', state: 'staged_edition', x: 0.2, y: 0.2, width: 0.3, height: 0.3 });
+    const initial = { saved: [stagedEdition] } as any;
+
+    let apiRef: ReturnType<typeof useSelections> | null = null;
+    const { DocumentViewerAPI } = await import('@/lib/document-viewer-api');
+
+    // Spy to capture payloads
+    const updateSpy = DocumentViewerAPI.updateSelection as any;
+    // Mock fetch to return staged_creation to reflect promotion
+    (DocumentViewerAPI.fetchDocumentSelections as any).mockResolvedValueOnce({ ok: true, value: [committedSel({ id: 's10', state: 'staged_creation', x: 0.2, y: 0.2, width: 0.3, height: 0.3 })] });
+
+    render(
+      <SelectionProvider documentId="doc1" initialSelections={initial}>
+        <Probe onReady={(api) => { apiRef = api; }} />
+      </SelectionProvider>
+    );
+
+    await act(async () => {
+      const res = await apiRef!.saveLifecycle();
+      expect(res.ok).toBe(true);
+    });
+
+    // Should have sent geometry and staged_creation
+    expect(updateSpy).toHaveBeenCalled();
+    const callArgs = updateSpy.mock.calls.find((c: any[]) => c[0] === 's10');
+    expect(callArgs).toBeTruthy();
+    const payload = callArgs[1];
+    expect(payload.state).toBe('staged_creation');
+    expect(payload).toMatchObject({ x: 0.2, y: 0.2, width: 0.3, height: 0.3 });
+  });
+
+  it('saveLifecycle clears local drafts to avoid duplication after creation staging', async () => {
+    const draft: Selection = committedSel({ id: 'temp-dup' as any, state: 'committed', x: 0.11 });
+    const initial = { saved: [], new: [draft] } as any;
+
+    let apiRef: ReturnType<typeof useSelections> | null = null;
+    const { DocumentViewerAPI } = await import('@/lib/document-viewer-api');
+
+    // Mock create + fetch returning only server item
+    (DocumentViewerAPI.createSelection as any).mockResolvedValueOnce({ ok: true, value: { id: 's300' } });
+    (DocumentViewerAPI.fetchDocumentSelections as any).mockResolvedValueOnce({ ok: true, value: [committedSel({ id: 's300', state: 'staged_creation', x: 0.11 })] });
+
+    render(
+      <SelectionProvider documentId="doc1" initialSelections={initial}>
+        <Probe onReady={(api) => { apiRef = api; }} />
+      </SelectionProvider>
+    );
+
+    await act(async () => {
+      const res = await apiRef!.saveLifecycle();
+      expect(res.ok).toBe(true);
+    });
+
+    const allIds = apiRef!.allSelections.map(s => s.id);
+    // Only server ID should remain
+    expect(allIds).toContain('s300');
+    expect(allIds).not.toContain('temp-dup');
   });
 });

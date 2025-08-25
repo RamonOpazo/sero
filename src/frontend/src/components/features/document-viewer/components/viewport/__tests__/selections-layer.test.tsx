@@ -102,4 +102,22 @@ describe('SelectionsLayer', () => {
     expect(box.style.width).toBe('200px');
     expect(box.style.height).toBe('200px');
   });
+  it('renders violet for staged_edition and double border for committed', async () => {
+    const stagedEd = sel('u1', 'staged_edition');
+    const committed = sel('c1', 'committed');
+
+    render(
+      <Providers initial={{ saved: [stagedEd, committed] }}>
+        <Harness initial={null} />
+      </Providers>
+    );
+
+    const boxes = document.querySelectorAll('#__selection_layer__ [data-testid="selection-box"]');
+    expect(boxes.length).toBeGreaterThanOrEqual(2);
+
+    const hasViolet = Array.from(boxes).some(b => b.className.includes('border-violet-500/80'));
+    const hasDouble = Array.from(boxes).some(b => b.className.includes('border-double') && b.className.includes('border-4'));
+    expect(hasViolet).toBe(true);
+    expect(hasDouble).toBe(true);
+  });
 });
