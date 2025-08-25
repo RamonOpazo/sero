@@ -376,7 +376,7 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
             ? ""
             : "transition-all duration-200",
           'border',
-          colors.borderStyle === 'dashed' ? 'border-dashed' : (colors.borderStyle === 'double' ? 'border-2' : 'border-solid'),
+          colors.borderStyle === 'dashed' ? 'border-dashed' : (colors.borderStyle === 'double' ? 'border-double border-4' : 'border-solid'),
           colors.border,
           colors.text,
         )}

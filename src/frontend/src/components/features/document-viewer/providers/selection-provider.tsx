@@ -175,13 +175,22 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
         const res = await DocumentViewerAPI.updateSelection(id, { state: 'staged_edition' } as any);
         if (!res.ok) return false;
       }
-      // Update local state regardless
+      // Optimistically update local state
       dispatch('UPDATE_ITEM', { id, updates: { state: 'staged_edition' } as any });
+      // Reload authoritative selections to avoid any duplication artifacts
+      const docId = (state as any)?.contextId as string | undefined;
+      if (docId) {
+        const fetched = await DocumentViewerAPI.fetchDocumentSelections(docId);
+        if (fetched.ok) {
+          dispatch('LOAD_ITEMS', fetched.value as any);
+          dispatch('CAPTURE_BASELINE' as any, undefined as any);
+        }
+      }
       return true;
     } catch {
       return false;
     }
-  }, [dispatch, manager]);
+  }, [dispatch, manager, state]);
   
   const updateDraw = useCallback((selection: SelectionCreateDraft) => {
     // Convert SelectionCreateType to Selection by adding temporary ID
@@ -354,15 +363,28 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
       // Update persisted selections with staged state transitions
       const updates = ui.filter(s => s.isPersisted && (s.dirty || s.stage === UISelectionStage.StagedEdition || s.stage === UISelectionStage.StagedDeletion || s.stage === UISelectionStage.StagedCreation));
       for (const sel of updates) {
-        const updateState = sel.stage === UISelectionStage.StagedEdition
-          ? 'staged_edition'
-          : sel.stage === UISelectionStage.StagedDeletion
-          ? 'staged_deletion'
-          : sel.stage === UISelectionStage.StagedCreation
-          ? 'staged_creation'
-          : undefined;
+        // If locally edited (dirty), stage as edition; otherwise preserve explicit staged_* state
+        let updateState: 'staged_edition' | 'staged_deletion' | 'staged_creation' | undefined = undefined;
+        if (sel.stage === UISelectionStage.StagedDeletion) updateState = 'staged_deletion';
+        else if (sel.stage === UISelectionStage.StagedCreation) updateState = 'staged_creation';
+        else if (sel.stage === UISelectionStage.StagedEdition) updateState = 'staged_creation';
+        else if (sel.dirty) updateState = 'staged_edition';
+
         const payload: any = {};
         if (updateState) payload.state = updateState;
+
+        // Include latest geometry values when staging editions so server persists the edits
+        const srcList: any[] = ((state as any).persistedItems || []) as any[];
+        const src = srcList.find((s2: any) => s2 && s2.id === (sel as any).id);
+        if (src) {
+          payload.x = src.x;
+          payload.y = src.y;
+          payload.width = src.width;
+          payload.height = src.height;
+          payload.page_number = src.page_number;
+          payload.confidence = src.confidence;
+        }
+
         const res = await DocumentViewerAPI.updateSelection((sel as any).id, payload);
         if (!res.ok) {
           return { ok: false, error: (res as any).error } as Result<void, unknown>;
@@ -372,7 +394,14 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
       // Reload from server to sync authoritative state
       const fetched = await DocumentViewerAPI.fetchDocumentSelections(docId);
       if (fetched.ok) {
+        // Replace persisted items with authoritative list
         dispatch('LOAD_ITEMS', fetched.value as any);
+        // Remove any remaining local drafts to avoid duplication after staging creations
+        const draftIds: string[] = (((state as any).draftItems || []) as any[]).map((d: any) => d && d.id).filter(Boolean);
+        if (draftIds.length > 0) {
+          dispatch('DELETE_ITEMS', draftIds as any);
+        }
+        // Capture baseline after syncing
         dispatch('CAPTURE_BASELINE' as any, undefined as any);
       }
 
