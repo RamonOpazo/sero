@@ -26,6 +26,7 @@ export default function ActionsLayer({ isInfoVisible = false, onToggleInfo }: Ac
     toggleSelections,
     resetView,
     toggleSelectionsPanel,
+    togglePromptPanel,
     toggleHelpOverlay,
   } = useViewportActions();
   
@@ -308,6 +309,16 @@ export default function ActionsLayer({ isInfoVisible = false, onToggleInfo }: Ac
             size="icon"
             onClick={toggleSelectionsPanel}
             title="Toggle selections panel"
+          >
+            <ListTree />
+          </Button>
+
+          {/* Prompts panel toggle (R) */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={togglePromptPanel}
+            title="Toggle rules panel (R)"
           >
             <ListTree />
           </Button>

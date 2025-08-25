@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Save, Trash2, Plus, Undo2, RotateCcw, AlertCircle, Bot } from "lucide-react";
+import { Trash2, Plus, Hourglass, AlertCircle, Bot } from "lucide-react";
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { toast } from "sonner";
 import type { MinimalDocumentType } from "@/types";
@@ -263,38 +263,12 @@ export default function PromptManagement({ document }: PromptControlsProps) {
         <Button
           variant="default"
           size="sm"
-          onClick={handleOpenAddDialog}
-          disabled={isAnyOperationInProgress}
-          className="w-full justify-start h-9 text-xs"
-        >
-          <Plus className="mr-2 h-3 w-3" />
-          Add Rule
-        </Button>
-        
-        <Button
-          variant="default"
-          size="sm"
-          onClick={handleSaveAllPrompts}
-          disabled={isAnyOperationInProgress || promptStats.totalUnsavedChanges === 0}
-          className="w-full justify-start h-9 text-xs"
-        >
-          {isSaving ? (
-            <RotateCcw className="mr-2 h-3 w-3 animate-spin" />
-          ) : (
-            <Save className="mr-2 h-3 w-3" />
-          )}
-          Save all changes
-        </Button>
-
-        <Button
-          variant="default"
-          size="sm"
           onClick={handleRunAIDetection}
           disabled={isAnyOperationInProgress || isApplyingAI}
           className="w-full justify-start h-9 text-xs"
         >
           {isApplyingAI ? (
-            <RotateCcw className="mr-2 h-3 w-3 animate-spin" />
+            <Hourglass className="mr-2 h-3 w-3 animate-spin" />
           ) : (
             <Bot className="mr-2 h-3 w-3" />
           )}
@@ -304,12 +278,12 @@ export default function PromptManagement({ document }: PromptControlsProps) {
         <Button
           variant="outline"
           size="sm"
-          onClick={handleDiscardAllChanges}
-          disabled={promptStats.totalUnsavedChanges === 0}
+          onClick={handleOpenAddDialog}
+          disabled={isAnyOperationInProgress}
           className="w-full justify-start h-9 text-xs"
         >
-          <Undo2 className="mr-2 h-3 w-3" />
-          Discard all changes
+          <Plus className="mr-2 h-3 w-3" />
+          Add Rule
         </Button>
         
         <Button
@@ -320,7 +294,7 @@ export default function PromptManagement({ document }: PromptControlsProps) {
           className="w-full justify-start h-9 text-xs"
         >
           <Trash2 className="mr-2 h-3 w-3" />
-          Clear all
+          Clear all rules
         </Button>
       </div>
 
@@ -402,22 +376,6 @@ export default function PromptManagement({ document }: PromptControlsProps) {
       ) : null}
       
       {/* Save Confirmation Dialog (inline) */}
-      <TypedConfirmationDialog
-        isOpen={showSaveConfirmDialog}
-        onClose={handleCloseSaveConfirmDialog}
-        onConfirm={handleConfirmedSave}
-        title={"Save All Changes"}
-        description={undefined}
-        confirmationText="proceed"
-        confirmButtonText={isSaving ? "Saving..." : "Save Changes"}
-        cancelButtonText="Cancel"
-        variant="default"
-        messages={([
-          { variant: 'info', title: 'Summary', description: `You are about to save ${promptStats.totalUnsavedChanges} change${promptStats.totalUnsavedChanges === 1 ? '' : 's'} to the server.` },
-          { variant: 'info', description: 'All new prompts will be created; modified prompts updated; deleted prompts removed. This cannot be undone.' },
-        ] as TypedMessage[])}
-        showConfirmationInput={true}
-      />
     </div>
   );
 }

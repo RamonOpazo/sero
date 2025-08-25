@@ -1,24 +1,24 @@
-# What is Sero?
+# What is SERO?
 
-Sero is a service for **secure redaction and obfuscation of clinical documents**, with a strong focus on **privacy, automation, and reproducibility**. It provides an opinionated yet flexible framework for handling sensitive data, making it easier to comply with privacy regulations such as HIPAA and GDPR while still enabling collaboration and research.
+SERO is a service for **secure redaction and obfuscation of clinical documents**, with a strong focus on **privacy, automation, and reproducibility**. It provides an opinionated yet flexible framework for handling sensitive data, making it easier to comply with privacy regulations such as HIPAA and GDPR while still enabling collaboration and research.
 
-At its core, Sero is not “just another redaction tool.” It is a **project-based system** built around encryption, isolation, and templates. This design allows you to safely manage large collections of documents and apply consistent redaction strategies across them. Whether you are a hospital preparing patient records for research, a university anonymizing medical datasets, or a compliance team processing sensitive files, Sero helps you do so with confidence.
+At its core, SERO is not “just another redaction tool.” It is a **project-based system** built around encryption, isolation, and templates. This design allows you to safely manage large collections of documents and apply consistent redaction strategies across them. Whether you are a hospital preparing patient records for research, a university anonymizing medical datasets, or a compliance team processing sensitive files, SERO helps you do so with confidence.
 
-## Why Sero?
+## Why SERO?
 
 In healthcare and research, the need to share documents often collides with the obligation to protect personal information. Manual redaction is error-prone, inconsistent, and extremely time-consuming. Even small mistakes can lead to privacy breaches with serious consequences.
 
-Sero solves this by automating the process. It encrypts every document by default, isolates work into password-protected projects, and provides a system of reusable templates that guarantee consistent results. This approach reduces human error, accelerates processing, and ensures that sensitive information is never exposed unnecessarily.
+SERO solves this by automating the process. It encrypts every document by default, isolates work into password-protected projects, and provides a system of reusable templates that guarantee consistent results. This approach reduces human error, accelerates processing, and ensures that sensitive information is never exposed unnecessarily.
 
 ## Core Concepts
 
-Understanding Sero starts with a few central ideas:
+Understanding SERO starts with a few central ideas:
 
 ### Projects
-A project is the basic unit of organization in Sero. Each project is protected by a password that never leaves the client and is used to derive encryption keys. Documents, templates, and results stored within a project are completely isolated from other projects. This separation means that datasets for different studies or departments can coexist without any risk of cross-contamination.
+A project is the basic unit of organization in SERO. Each project is protected by a password that never leaves the client and is used to derive encryption keys. Documents, templates, and results stored within a project are completely isolated from other projects. This separation means that datasets for different studies or departments can coexist without any risk of cross-contamination.
 
 ### Documents
-Documents are the primary assets you process with Sero. When a PDF is uploaded, it is immediately encrypted and stored securely. Decryption only happens at the moment of access, and only if the correct password is provided. Documents can then be processed using templates to redact or obfuscate sensitive information.
+Documents are the primary assets you process with SERO. When a PDF is uploaded, it is immediately encrypted and stored securely. Decryption only happens at the moment of access, and only if the correct password is provided. Documents can then be processed using templates to redact or obfuscate sensitive information.
 
 ### Templates
 Templates define how documents should be processed. They come in two forms:
@@ -28,7 +28,7 @@ Templates define how documents should be processed. They come in two forms:
 Templates are reusable within a project, ensuring consistent and repeatable redaction across entire datasets.
 
 ### Redaction vs Obfuscation
-Redaction permanently removes sensitive information (e.g., black boxes over names). Obfuscation replaces sensitive values with neutral or pseudonymized alternatives (e.g., replacing “John Smith” with “Patient A”). Sero supports both, allowing you to choose depending on the context.
+Redaction permanently removes sensitive information (e.g., black boxes over names). Obfuscation replaces sensitive values with neutral or pseudonymized alternatives (e.g., replacing “John Smith” with “Patient A”). SERO supports both, allowing you to choose depending on the context.
 
 ## Features at a Glance
 
@@ -41,7 +41,7 @@ Redaction permanently removes sensitive information (e.g., black boxes over name
 
 ## How It Works
 
-A typical workflow with Sero looks like this:
+A typical workflow with SERO looks like this:
 
 1. You create a project and set a password, which becomes the encryption key for all its contents.
 2. You upload documents, which are encrypted immediately on arrival.
@@ -53,7 +53,7 @@ This workflow can be scaled from a handful of documents to large batches, and it
 
 ## Technical Foundation
 
-Sero is built on a security-first, developer-friendly stack:
+SERO is built on a security-first, developer-friendly stack:
 
 - **Python 3.13+** as the core language.  
 - **FastAPI** for high-performance HTTP services.  
@@ -62,7 +62,7 @@ Sero is built on a security-first, developer-friendly stack:
 - **Cryptography (Fernet)** for symmetric encryption.  
 - **Passlib** for secure password hashing.  
 
-This combination makes Sero lightweight enough to run locally, but robust enough for production deployments.
+This combination makes SERO lightweight enough to run locally, but robust enough for production deployments.
 
 ## A Practical Example
 
@@ -70,10 +70,10 @@ Imagine a hospital research team preparing to share discharge summaries with a u
 
 ## Roadmap and Vision
 
-Sero is designed to grow. Planned features include support for more document formats, role-based access control, integration with cloud storage systems, and advanced obfuscation strategies such as pseudonymization and synthetic replacements. A web-based user interface is also envisioned to make Sero accessible to non-technical users.
+SERO is designed to grow. Planned features include support for more document formats, role-based access control, integration with cloud storage systems, and advanced obfuscation strategies such as pseudonymization and synthetic replacements. A web-based user interface is also envisioned to make SERO accessible to non-technical users.
 
 The long-term vision is to provide a secure, repeatable, and developer-friendly platform for document anonymization, suitable for both research labs and enterprise compliance teams.
 
 ---
 
-In short, Sero brings automation and security to a process that has traditionally been manual and risky. It is both approachable for newcomers and extensible for advanced users, giving you the tools to protect sensitive information without slowing down your work.
+In short, SERO brings automation and security to a process that has traditionally been manual and risky. It is both approachable for newcomers and extensible for advanced users, giving you the tools to protect sensitive information without slowing down your work.

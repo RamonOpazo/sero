@@ -5,6 +5,7 @@ import RenderLayer from "../viewport/render-layer";
 import SelectionsLayer from "../viewport/selections-layer"; // Note: Will be renamed from SelectionsLayerNew
 import InfoLayer from "../viewport/info-layer";
 import SelectionsPanelLayer from "../viewport/selections-panel-layer";
+import PromptPanelLayer from "../viewport/prompt-panel-layer";
 import ActionsLayer from "../viewport/actions-layer";
 import { KeyboardShortcutsDialog } from "../dialogs";
 import { useViewportState, useViewportActions } from '../../providers/viewport-provider';
@@ -22,8 +23,8 @@ interface RendererLayoutProps {
  */
 export default function ViewportLayout({ document, className, ...props }: RendererLayoutProps & React.ComponentProps<"div">) {
   const [documentSize, setDocumentSize] = useState({ width: 800, height: 600 });
-  const { showInfoPanel, showSelectionsPanel, showHelpOverlay } = useViewportState();
-  const { toggleInfoPanel, toggleSelectionsPanel, toggleHelpOverlay } = useViewportActions();
+  const { showInfoPanel, showSelectionsPanel, showPromptPanel, showHelpOverlay } = useViewportState();
+  const { toggleInfoPanel, toggleSelectionsPanel, togglePromptPanel, toggleHelpOverlay } = useViewportActions();
 
   const handleDocumentSizeChange = useCallback((size: { width: number; height: number }) => {
     setDocumentSize(size);
@@ -63,11 +64,18 @@ export default function ViewportLayout({ document, className, ...props }: Render
         onToggleVisibility={toggleInfoPanel}
       />
 
-      {/* Selections panel layer on the right side */}
+      {/* Selections panel layer on the left side */}
       <SelectionsPanelLayer 
         document={document}
         isVisible={showSelectionsPanel}
         onToggleVisibility={toggleSelectionsPanel}
+      />
+
+      {/* Prompt panel layer on the left side (mutually exclusive) */}
+      <PromptPanelLayer 
+        document={document}
+        isVisible={showPromptPanel}
+        onToggleVisibility={togglePromptPanel}
       />
       
       {/* Keyboard shortcuts dialog */}

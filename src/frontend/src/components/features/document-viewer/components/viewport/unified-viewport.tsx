@@ -67,6 +67,7 @@ export function UnifiedViewport({
   const {
     toggleInfoPanel,
     toggleSelectionsPanel,
+    togglePromptPanel,
     toggleHelpOverlay,
   } = useViewportActions();
   
@@ -359,6 +360,15 @@ export function UnifiedViewport({
       case 'L':
         if (!isModifierPressed) {
           toggleSelectionsPanel();
+          event.preventDefault();
+        }
+        break;
+
+      // Prompts panel toggle (R)
+      case 'r':
+      case 'R':
+        if (!isModifierPressed) {
+          togglePromptPanel();
           event.preventDefault();
         }
         break;
