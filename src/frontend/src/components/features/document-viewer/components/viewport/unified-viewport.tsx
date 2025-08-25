@@ -471,7 +471,7 @@ export function UnifiedViewport({
         }
         break;
     }
-  }, [mode, isPanning, zoom, isViewingProcessedDocument, setIsPanning, cancelDraw, dispatch, currentPage, numPages, setCurrentPage, setMode, toggleInfoPanel, toggleSelectionsPanel, showHelpOverlay, showInfoPanel, showSelectionsPanel, toggleHelpOverlay, deleteSelectedSelection, undo, redo]);
+  }, [mode, isPanning, zoom, isViewingProcessedDocument, setIsPanning, cancelDraw, dispatch, currentPage, numPages, setCurrentPage, setMode, toggleInfoPanel, toggleSelectionsPanel, togglePromptPanel, showHelpOverlay, showInfoPanel, showSelectionsPanel, showPromptPanel, toggleHelpOverlay, deleteSelectedSelection, undo, redo]);
 
   // Wire navigation callback so undo/redo move to the relevant page
   useEffect(() => {
