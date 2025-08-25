@@ -302,7 +302,21 @@ export default function PromptManagement({ document }: PromptControlsProps) {
         initialValues={{ title: '', directive: 'process', prompt: '' }}
         fields={[
           { type: 'text', name: 'title', label: 'Title', placeholder: 'Short descriptive title', required: true },
-          { type: 'text', name: 'directive', label: 'Directive', placeholder: 'process', required: true },
+          {
+            type: 'select',
+            name: 'directive',
+            label: 'Directive',
+            placeholder: 'Select directive',
+            tooltip: 'Choose what the AI should do with this rule',
+            required: true,
+            options: [
+              { value: 'process', label: 'Process (general processing)' },
+              { value: 'identify', label: 'Identify (mark content for review)' },
+              { value: 'redact', label: 'Redact (remove or obfuscate sensitive content)' },
+              { value: 'preserve', label: 'Preserve (explicitly keep content)' },
+              { value: 'exclude', label: 'Exclude (ignore specific content)' },
+            ],
+          },
           { type: 'textarea', name: 'prompt', label: 'Prompt', placeholder: 'Detailed instructions for the AI', required: true },
         ]}
         onSubmit={handleCreatePromptSubmit}
@@ -325,7 +339,21 @@ export default function PromptManagement({ document }: PromptControlsProps) {
           }}
           fields={[
             { type: 'text', name: 'title', label: 'Title', placeholder: 'Short descriptive title', required: true },
-            { type: 'text', name: 'directive', label: 'Directive', placeholder: 'process', required: true },
+            {
+              type: 'select',
+              name: 'directive',
+              label: 'Directive',
+              placeholder: 'Select directive',
+              tooltip: 'Choose what the AI should do with this rule',
+              required: true,
+              options: [
+                { value: 'process', label: 'Process (general processing)' },
+                { value: 'identify', label: 'Identify (mark content for review)' },
+                { value: 'redact', label: 'Redact (remove or obfuscate sensitive content)' },
+                { value: 'preserve', label: 'Preserve (explicitly keep content)' },
+                { value: 'exclude', label: 'Exclude (ignore specific content)' },
+              ],
+            },
             { type: 'textarea', name: 'prompt', label: 'Prompt', placeholder: 'Detailed instructions for the AI', required: true },
           ]}
           onSubmit={handleEditPromptSubmit}
