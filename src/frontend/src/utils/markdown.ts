@@ -20,7 +20,7 @@ export async function loadMarkdownDoc(docName: string): Promise<string> {
 
   try {
     // Import the markdown file dynamically
-    const response = await fetch(`/docs/${docName}.md`)
+    const response = await fetch(`/app-docs/${docName}.md`)
     if (!response.ok) {
       throw new Error(`Failed to load documentation: ${response.statusText}`)
     }
@@ -28,7 +28,7 @@ export async function loadMarkdownDoc(docName: string): Promise<string> {
   } catch (error) {
     // Fallback: try to import as a module (for Vite)
     try {
-      const module = await import(`/docs/${docName}.md?raw`)
+      const module = await import(`/app-docs/${docName}.md?raw`)
       return module.default
     } catch (importError) {
       throw new Error(`Failed to load documentation page: ${docName}`)

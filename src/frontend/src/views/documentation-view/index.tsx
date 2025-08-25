@@ -91,14 +91,23 @@ export function DocumentationView({ docName }: DocumentationViewProps) {
             a: ({ href, children, ...props }) => {
               const h = typeof href === 'string' ? href : ''
               const isInternal = h.startsWith('/') || h.startsWith('#')
-              const isDocsInternal = h.startsWith('./')
+              const isDocsLike = h.startsWith('./') || h.startsWith('/documentation/')
 
-              if (isDocsInternal) {
-                // Convert ./page-name to /documentation/page-name
-                const docPath = h.replace('./', '/documentation/')
+              // Normalize docs links like ./page.md or /documentation/page.md -> /documentation/page
+              if (isDocsLike) {
+                // Remove leading './' or '/documentation/'
+                const withoutPrefix = h.startsWith('./')
+                  ? h.slice(2)
+                  : h.replace(/^\/documentation\//, '')
+
+                // Preserve hash fragments if present
+                const [base, hash = ''] = withoutPrefix.split('#')
+                const slug = base.replace(/\.md$/i, '')
+                const to = `/documentation/${slug}${hash ? `#${hash}` : ''}`
+
                 return (
                   <Link
-                    to={docPath}
+                    to={to}
                     className="docs-internal-link"
                     {...props}
                   >
