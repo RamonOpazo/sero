@@ -294,8 +294,14 @@ def apply_ai_and_stage(db: Session, document_id: UUID) -> list[selections_schema
 
     res = asyncio.run(_run())
 
+    # Filter by minimum confidence threshold from defaults
+    from backend.core import defaults as core_defaults
+    min_conf = float(getattr(core_defaults, 'AI_MIN_CONFIDENCE', 0.0))
+
+    filtered = [s for s in res.selections if (float(s.confidence) if s.confidence is not None else 0.0) >= min_conf]
+
     created_models = []
-    for sel in res.selections:
+    for sel in filtered:
         sel.document_id = document_id
         sel.state = CommitState.STAGED_CREATION
         created_models.append(selections_crud.create(db=db, data=sel))
