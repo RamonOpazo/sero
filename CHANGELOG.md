@@ -1,7 +1,139 @@
 # CHANGELOG
 
 
+## v1.5.0 (2025-08-25)
+
+### Bug Fixes
+
+- **frontend**: Use staged_creation initial state and robust staged detection in selections layer
+  ([`ce52ad7`](https://github.com/RamonOpazo/sero/commit/ce52ad72ca516f2139343736d78b5ce518a94d8b))
+
+### Build System
+
+- Fix TS build issues (test setup guards, typings, unused imports); feat(projects): add onBackHome;
+  chore: extract dialog copy; refactor: selection visuals util
+  ([`0e7fd53`](https://github.com/RamonOpazo/sero/commit/0e7fd537488de19c41e70aa82557f95b7d6e6023))
+
+- **frontend**: Fix TS issues and enum compatibility; lifecycle hook deps; minor typing fixes
+  ([`432756e`](https://github.com/RamonOpazo/sero/commit/432756ee5e5362e30383a570bfa0ac5afca5b725))
+
+### Chores
+
+- **docs**: Note removal of legacy pending changes adapter for selections
+  ([`7b44e5e`](https://github.com/RamonOpazo/sero/commit/7b44e5efbfddfd9435ef1b31d67d5cfeadfb21fb))
+
+- **test**: Remove remaining @types/jest devDependency after Vitest migration
+  ([`692e6fc`](https://github.com/RamonOpazo/sero/commit/692e6fc764923c9f7b5ba6c21d1923be9ed5f70a))
+
+### Code Style
+
+- **ui**: Center EmptyState and let it fill available space; simplify visuals using primary color
+  ([`8657ce4`](https://github.com/RamonOpazo/sero/commit/8657ce434576075c7c5f5b2d393404728bdc80ba))
+
+- **ui**: Enhance EmptyState visuals with gradient decorations and card-like container
+  ([`cf5db65`](https://github.com/RamonOpazo/sero/commit/cf5db65d161affeca01386b71ad9186cc93ac753))
+
+### Documentation
+
+- Selection staging and commit workflow plan (frontend/backend, visuals, acceptance criteria)
+  ([`7fed29b`](https://github.com/RamonOpazo/sero/commit/7fed29b554e622bc704acca90af93a6edd1a2119))
+
+- **frontend**: Add selection lifecycle refactor plan and roadmap
+  ([`36ad68f`](https://github.com/RamonOpazo/sero/commit/36ad68fab27c0c7d77267be9b297b97acb0e5625))
+
+- **viewer**: Apply Tailwind Typography (prose) and dark variant; wrap markdown in prose container
+  ([`fd31a7d`](https://github.com/RamonOpazo/sero/commit/fd31a7d453348c5c8fb29a8e75ab59d37d41f941))
+
+- **viewer**: Normalize internal links: map ./page.md and /documentation/page.md to
+  /documentation/page, preserve hashes; fix navigation between docs
+  ([`56c4f9e`](https://github.com/RamonOpazo/sero/commit/56c4f9eec631ab7155fa95e9790878430c47b2e3))
+
+### Features
+
+- **backend**: Introduce granular commit states and hybrid flags; update selection workflows and
+  tests
+  ([`c52adff`](https://github.com/RamonOpazo/sero/commit/c52adff28d7f939f3cf1adb67f5a11ed5466430f))
+
+- **document-viewer**: Migrate InfoLayer selection stats to lifecycle (unstaged/staged/committed)
+  ([`2037c71`](https://github.com/RamonOpazo/sero/commit/2037c71aaf79b3a3777d20a123217cdd033336b9))
+
+- **document-viewer**: Pr1 — introduce lifecycle types and mappers
+  ([`e5d6e42`](https://github.com/RamonOpazo/sero/commit/e5d6e42ba0a656283688b4540f1e1651c33e166f))
+
+- Add UISelectionStage enum and UISelection type for lifecycle model - Add
+  selection-lifecycle-mapper utilities (api<->ui, merge) - Export lifecycle types; add unit tests
+  for mapper - Mark PR1 as completed in the refactor plan doc
+
+- **document-viewer**: Pr2 — add lifecycle-based uiSelections in provider (compat only)\n\n-
+  Introduce uiSelections (UISelection[]) derived from persisted/draft for now\n- Expose in context
+  while keeping existing API stable\n- Update refactor plan doc to mark PR2 complete\n
+  ([`0810535`](https://github.com/RamonOpazo/sero/commit/0810535b4881b88037205cff45ccf2abc8cd3f33))
+
+- **document-viewer**: Pr3 — lifecycle-based save/commit pathways
+  ([`8bbd96a`](https://github.com/RamonOpazo/sero/commit/8bbd96a11b1753b726f8a28d61ca290767fa7aba))
+
+- Add saveLifecycle and commitLifecycle in selection provider, translating UISelection lifecycle to
+  API ops - Avoid TDZ by deriving ui view from state within the saver - Mark PR3 done in plan; tests
+  pass
+
+- **document-viewer**: Pr4 — switch hook to lifecycle model\n\n- use-stage-commit now reads
+  uiSelections lifecycle and uses saveLifecycle/commitLifecycle\n- Plan doc updated to mark PR4
+  complete; tests pass\n
+  ([`2e91bdd`](https://github.com/RamonOpazo/sero/commit/2e91bdd07003163757ad7e085d8cecac34ec5761))
+
+- **editor-view**: Simplify state rendering with compact conditional blocks; keep EmptyState-based
+  UX and password dialog
+  ([`19206fa`](https://github.com/RamonOpazo/sero/commit/19206faf725082861cd581aeda4299a44f78292d))
+
+- **selections**: Add committed→staged conversion flow (dialog + provider), disable page/global on
+  committed, and finalize state-driven visuals
+  ([`9feef7c`](https://github.com/RamonOpazo/sero/commit/9feef7c15decfc6d231b8366e4587dfcd3f47dc9))
+
+- **selections**: Enforce staged workflow backend and frontend; local drafts undefined,
+  staged-deletion marking, conversion endpoint, and state-driven visuals
+  ([`8840092`](https://github.com/RamonOpazo/sero/commit/8840092e6556bd25aa4ab976a456aadb204121fd))
+
+- **ui**: Add SimpleConfirmationDialog wrapper (no input) and align file structure with typed dialog
+  ([`69f92b3`](https://github.com/RamonOpazo/sero/commit/69f92b3053274d17a3085d495d568546a1df58f5))
+
+- **ui**: Add TypedConfirmationDialog and integrate confirmations for Stage & Commit commander
+  (colored alerts, one-word prompts)
+  ([`eceb1ec`](https://github.com/RamonOpazo/sero/commit/eceb1ecbcf7f1af47306a7750e48d2e0de5c48d6))
+
+### Refactoring
+
+- **document-viewer**: Pr5 — switch selection stats to lifecycle and expose uiSelections\n\n- Expose
+  uiSelections on context; convert selection-commander stats to lifecycle-based\n- Mark PR5 complete
+  in the refactor plan; tests pass\n
+  ([`00b63d8`](https://github.com/RamonOpazo/sero/commit/00b63d8531ad5612820a96b494d73f03ed9937cd))
+
+- **selections**: Remove legacy committed->staged wrapper, centralize state->visual mapping, tighten
+  typing; test: add resize-blocked test
+  ([`c929a1d`](https://github.com/RamonOpazo/sero/commit/c929a1d47197ac4f59f45dd0faa4965b30655b24))
+
+- **ui**: Replace legacy ConfirmationDialog with TypedConfirmationDialog in projects data table
+  (warnings, one-word prompt)
+  ([`8927f68`](https://github.com/RamonOpazo/sero/commit/8927f684ceaa213612af7a6e197765ecddf32034))
+
+### Testing
+
+- **frontend**: Fix PageSelectionDialog mock path in SelectionList test
+  ([`07c01a5`](https://github.com/RamonOpazo/sero/commit/07c01a59bc1063a93f6f252012f84f12a4c033ae))
+
+- **frontend**: Fix selections-layer to avoid legacy pendingChanges; all tests green
+  ([`e0732f8`](https://github.com/RamonOpazo/sero/commit/e0732f8861fe40df4e0bb6c7d5d44443a426b5fa))
+
+- **frontend**: Migrate to Vitest, add vitest.config, remove Jest config, add unit tests for
+  selection provider/list/layer, update setup to Vitest
+  ([`d46d803`](https://github.com/RamonOpazo/sero/commit/d46d8038a3f3d932699bca9e15f16b4b319c4c0a))
+
+
 ## v1.4.0 (2025-08-24)
+
+### Chores
+
+- **release**: V1.4.0 [skip ci]
+  ([`0ac0a4e`](https://github.com/RamonOpazo/sero/commit/0ac0a4eddec83fa77b26c905ad8378b360e4cc15))
 
 ### Documentation
 
