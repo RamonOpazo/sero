@@ -48,6 +48,18 @@ export default function ViewportLayout({ document, className, ...props }: Render
           documentSize={documentSize}
         />
       </UnifiedViewport>
+
+      {/* Backdrop overlay for panels */}
+      {(showInfoPanel || showSelectionsPanel) && (
+        <div
+          className="absolute inset-0 z-[2050] bg-black/0"
+          aria-hidden="true"
+          onClick={() => {
+            if (showInfoPanel) toggleInfoPanel();
+            else if (showSelectionsPanel) toggleSelectionsPanel();
+          }}
+        />
+      )}
       
       {/* Actions layer stays outside unified transform for fixed positioning */}
       <ActionsLayer 

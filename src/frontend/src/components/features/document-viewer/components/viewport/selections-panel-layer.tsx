@@ -39,7 +39,6 @@ export default function SelectionsPanelLayer({ isVisible, onToggleVisibility }: 
         "text-xs transition-all duration-200 ease-out",
         `${visibilityClasses}`
       )}
-      onClick={onToggleVisibility}
       aria-hidden={!isVisible}
     >
       <Button

@@ -83,7 +83,6 @@ export default function InfoLayer({ document, documentSize, isVisible, onToggleV
         "text-xs transition-all duration-200 ease-out",
         `${visibilityClasses}`
       )}
-      onClick={onToggleVisibility}
       aria-hidden={!isVisible}
     >
       {/* Full-area content container */}
