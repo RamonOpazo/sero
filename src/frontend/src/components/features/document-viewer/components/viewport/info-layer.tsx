@@ -37,7 +37,7 @@ function FileDetails({ file, formatFileSize, formatDate }: FileDetailsProps) {
 
 export default function InfoLayer({ document, documentSize, isVisible, onToggleVisibility }: Props) {
   const { currentPage, numPages, zoom } = useViewportState();
-  const { selectionCount, getGlobalSelections, getPageSelections, uiSelections, hasUnsavedChanges: selUnsaved } = useSelections() as any;
+  const { selectionCount, allSelections, getGlobalSelections, getPageSelections, uiSelections, hasUnsavedChanges: selUnsaved } = useSelections() as any;
   const { allPrompts, pendingChanges: promptPending, pendingChangesCount: promptPendingCount } = usePrompts();
 
   const selLifecycle = useMemo(() => {
@@ -133,7 +133,7 @@ export default function InfoLayer({ document, documentSize, isVisible, onToggleV
         <h2 className="uppercase tracking-wider text-muted-foreground mb-2">Selections</h2>
         <div className="ml-4 space-y-1">
           <div><span className="text-muted-foreground">Total:</span> <span className="font-medium">{selectionCount}</span></div>
-          <div><span className="text-muted-foreground">Global:</span> <span>{getGlobalSelections().length}</span></div>
+          <div><span className="text-muted-foreground">Global:</span> <span>{(allSelections || []).filter((s: any) => s.page_number == null).length}</span></div>
           <div><span className="text-muted-foreground">On page:</span> <span>{getPageSelections(currentPage).length}</span></div>
           <div><span className="text-muted-foreground">Unstaged:</span> <span className="font-medium">{selLifecycle.unstaged}</span></div>
           <div><span className="text-muted-foreground">Staged:</span> <span>c:{selLifecycle.stagedCreation}, u:{selLifecycle.stagedEdition}, d:{selLifecycle.stagedDeletion}</span></div>
