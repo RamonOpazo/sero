@@ -58,12 +58,15 @@ export function UnifiedViewport({
     setCurrentPage,
     setMode,
     showHelpOverlay,
+    showInfoPanel,
+    showSelectionsPanel,
     isViewingProcessedDocument,
   } = useViewportState();
   
   // Get viewport actions
   const {
     toggleInfoPanel,
+    toggleSelectionsPanel,
     toggleHelpOverlay,
   } = useViewportActions();
   
@@ -225,9 +228,21 @@ export function UnifiedViewport({
         }
         // Cancel any current selection drawing - handled by SelectionsLayerNew
         cancelDraw();
-        // Close help overlay if open
+        // Close overlays/panels if open
         if (showHelpOverlay) {
           toggleHelpOverlay();
+          event.preventDefault();
+          break;
+        }
+        if (showInfoPanel) {
+          toggleInfoPanel();
+          event.preventDefault();
+          break;
+        }
+        if (showSelectionsPanel) {
+          toggleSelectionsPanel();
+          event.preventDefault();
+          break;
         }
         event.preventDefault();
         break;
@@ -335,6 +350,15 @@ export function UnifiedViewport({
       case 'I':
         if (!isModifierPressed) {
           toggleInfoPanel();
+          event.preventDefault();
+        }
+        break;
+
+      // Selections panel toggle (L)
+      case 'l':
+      case 'L':
+        if (!isModifierPressed) {
+          toggleSelectionsPanel();
           event.preventDefault();
         }
         break;
