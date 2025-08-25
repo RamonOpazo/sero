@@ -24,25 +24,33 @@ export default function ControlsLayout({ document, className, ...props }: Contro
   const { selectedSelection } = useSelections();
   const [activePanel, setActivePanel] = useState<string>("document-controls");
 
-  // Auto-expand selection panel when a selection is made
-  useEffect(() => {
-    if (selectedSelection) {
-      setActivePanel("selections");
-    }
-  }, [selectedSelection]);
+  // Viewport panel state setters
+  const { setShowInfoPanel, setShowSelections, setShowSelectionsPanel, setShowPromptPanel } = (useViewportState() as any);
 
-  // Auto-open panels based on active tooldeck widget
-  const { setShowInfoPanel, setShowSelections, setShowSelectionsPanel } = (useViewportState() as any);
-  useEffect(() => {
-    // Open info panel when Document Controls is active; close it when not
-    setShowInfoPanel(activePanel === 'document-controls');
-    // Open selections panel when Selection Manager is active; close it otherwise
-    setShowSelectionsPanel(activePanel === 'selections');
-    if (activePanel === 'selections') {
+  // Handle panel changes explicitly to avoid fighting user toggles (ESC)
+  const handleActivePanelChange = (value: string) => {
+    setActivePanel(value);
+    setShowInfoPanel(value === 'document-controls');
+    setShowSelectionsPanel(value === 'selections');
+    setShowPromptPanel(value === 'prompts');
+    if (value === 'selections') {
       // Ensure visual selections on the canvas when managing them
       setShowSelections((prev: boolean) => prev || true);
     }
-  }, [activePanel, setShowInfoPanel, setShowSelectionsPanel, setShowSelections]);
+  };
+
+  // Auto-switch to selections tool when a selection is made (one-shot)
+  useEffect(() => {
+    if (selectedSelection && activePanel !== 'selections') {
+      handleActivePanelChange('selections');
+    }
+  }, [selectedSelection]);
+  
+  // Initialize default panel state on mount
+  useEffect(() => {
+    handleActivePanelChange(activePanel);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   
   return (
     <WidgetContainer
@@ -50,7 +58,7 @@ export default function ControlsLayout({ document, className, ...props }: Contro
       expanded
       accordion
       value={activePanel}
-      onValueChange={setActivePanel}
+      onValueChange={handleActivePanelChange}
       className={cn(className)} 
       {...props}
     >

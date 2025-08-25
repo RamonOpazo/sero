@@ -1,11 +1,12 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, MousePointer2, Globe, Hash, Settings, Telescope } from "lucide-react";
+import { Trash2, MousePointer2, Globe, Hash, Settings, Telescope, Bot } from "lucide-react";
 import { useSelections } from "../../providers/selection-provider";
 import { useViewportState } from "../../providers/viewport-provider";
 import { useMemo, useRef, useEffect, useState, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { FormConfirmationDialog } from "@/components/shared";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import type { TypedMessage } from "@/components/shared/typed-confirmation-dialog";
 import { SimpleConfirmationDialog } from "@/components/shared/simple-confirmation-dialog";
 import { CONVERT_TO_STAGED_DIALOG } from "./dialog-text";
@@ -56,16 +57,33 @@ export default function SelectionList() {
       const stateNorm = getNormalizedState((sel as any).state);
       const type = stateNorm === 'draft' ? 'new' : 'saved';
       const isModified = stateNorm !== 'draft' && stateNorm !== 'committed';
-      return { ...sel, type, isModified, displayId: sel.id } as any;
+      const isAi = !!(sel as any).is_ai_generated;
+      const confidence = (sel as any).confidence as number | null | undefined;
+      return { ...sel, type, isModified, is_ai_generated: isAi, confidence, displayId: sel.id } as any;
     });
   }, [selectionState]);
 
   // Group selections by type for better organization
+  // Filter: optionally hide AI-generated selections
+  type FilterMode = 'all' | 'ai' | 'manual';
+  const [filterMode, setFilterMode] = useState<FilterMode>('all');
+
+  const filteredSelections = useMemo(() => {
+    switch (filterMode) {
+      case 'ai':
+        return selectionsWithTypeInfo.filter(sel => !!sel.is_ai_generated);
+      case 'manual':
+        return selectionsWithTypeInfo.filter(sel => !sel.is_ai_generated);
+      default:
+        return selectionsWithTypeInfo;
+    }
+  }, [selectionsWithTypeInfo, filterMode]);
+
   const groupedSelections = useMemo(() => {
-    const saved = selectionsWithTypeInfo.filter(sel => sel.type === 'saved');
-    const newOnes = selectionsWithTypeInfo.filter(sel => sel.type === 'new');
+    const saved = filteredSelections.filter(sel => sel.type === 'saved');
+    const newOnes = filteredSelections.filter(sel => sel.type === 'new');
     return { saved, new: newOnes };
-  }, [selectionsWithTypeInfo]);
+  }, [filteredSelections]);
 
   const handleRemoveSelection = (selectionId: string) => {
     // Use new system's deleteSelection method
@@ -192,9 +210,17 @@ export default function SelectionList() {
         {/* Bottom row: Page badge, status, and delete button */}
         <div className="flex items-center justify-between">
           <div className="flex justify-between gap-2">
-            <div className="flex items-center gap-1">
-              <span className="text-muted-foreground text-sm">{statusIndicator.label}</span>
-              <div className={cn("w-1.5 h-1.5 rounded-full", statusIndicator.color)} title={statusIndicator.title} />
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
+                <span className="text-muted-foreground text-sm">{statusIndicator.label}</span>
+                <div className={cn("w-1.5 h-1.5 rounded-full", statusIndicator.color)} title={statusIndicator.title} />
+              </div>
+              {sel.is_ai_generated && (
+                <Badge variant="secondary" title={`AI${sel.confidence != null ? ` (${Math.round(sel.confidence * 100)}%)` : ''}`}>
+                  <Bot className="h-3 w-3 mr-1" />
+                  AI{sel.confidence != null ? ` ${Math.round(sel.confidence * 100)}%` : ''}
+                </Badge>
+              )}
             </div>
 
             <Badge
@@ -271,6 +297,26 @@ export default function SelectionList() {
 
   return (
     <>
+      {/* Filter controls */}
+      <div className="flex items-center justify-between mb-2 px-1">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Select value={filterMode} onValueChange={(v) => setFilterMode(v as any)}>
+            <SelectTrigger className="h-7 w-[12rem] text-xs">
+              <SelectValue placeholder="All selections" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All selections</SelectItem>
+              <SelectItem value="ai">AI-generated</SelectItem>
+              <SelectItem value="global">Document-spannig</SelectItem>
+              <SelectItem value="project">Project-scoped</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="text-xs text-muted-foreground">
+          <span className="font-mono">{filteredSelections.length}</span> / <span className="font-mono">{selectionsWithTypeInfo.length}</span>
+        </div>
+      </div>
+
       <div className="h-full overflow-auto">
         <div className="space-y-1">
           {/* Show all selections in order: new first, then saved */}

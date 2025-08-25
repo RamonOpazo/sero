@@ -60,6 +60,7 @@ export function UnifiedViewport({
     showHelpOverlay,
     showInfoPanel,
     showSelectionsPanel,
+    showPromptPanel,
     isViewingProcessedDocument,
   } = useViewportState();
   
@@ -242,6 +243,11 @@ export function UnifiedViewport({
         }
         if (showSelectionsPanel) {
           toggleSelectionsPanel();
+          event.preventDefault();
+          break;
+        }
+        if (showPromptPanel) {
+          togglePromptPanel();
           event.preventDefault();
           break;
         }

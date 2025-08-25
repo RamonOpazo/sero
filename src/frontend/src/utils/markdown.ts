@@ -7,6 +7,7 @@ const availableDocs = [
   'whats-sero',
   'getting-started',
   'project-management',
+  'redaction-workflow',
   'security',
   'api-reference'
 ]
