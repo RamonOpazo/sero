@@ -11,7 +11,6 @@ import type { TypedMessage } from "@/components/shared/typed-confirmation-dialog
 import { Switch } from "@/components/ui/switch";
 import { useStageCommit } from "../../hooks/use-stage-commit";
 import { UISelectionStage } from "../../types/selection-lifecycle";
-import SelectionsList from "./selection-list";
 
 interface SelectionControlsProps {
   document: MinimalDocumentType;
@@ -275,12 +274,6 @@ export default function SelectionManagement({ document }: SelectionControlsProps
           <Trash2 className="mr-2 h-3 w-3" />
           Clear all
         </Button>
-      </div>
-
-      <Separator />
-
-      <div className="flex flex-col gap-2">
-        <SelectionsList />
       </div>
 
       {/* Confirmation dialogs for staging and committing */}
