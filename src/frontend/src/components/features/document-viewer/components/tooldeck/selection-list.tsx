@@ -5,6 +5,8 @@ import { useSelections } from "../../providers/selection-provider";
 import { useViewportState } from "../../providers/viewport-provider";
 import { useMemo, useRef, useEffect, useState, useCallback } from "react";
 import { cn } from "@/lib/utils";
+import { Switch } from "@/components/ui/switch";
+import { toast } from "sonner";
 import { FormConfirmationDialog } from "@/components/shared";
 import type { TypedMessage } from "@/components/shared/typed-confirmation-dialog";
 import { SimpleConfirmationDialog } from "@/components/shared/simple-confirmation-dialog";
@@ -141,6 +143,9 @@ export default function SelectionList({ panelMode = false }: { panelMode?: boole
     };
   }, [setOnSelectionDoubleClick, handleSelectionDoubleClick]);
 
+  const [busyById, setBusyById] = useState<Record<string, boolean>>({});
+  const setBusy = (id: string, busy: boolean) => setBusyById(prev => ({ ...prev, [id]: busy }));
+
   const formatValue = (value: number): string => {
     return value.toFixed(2);
   };
@@ -148,6 +153,9 @@ export default function SelectionList({ panelMode = false }: { panelMode?: boole
 
   const renderSelectionItem = (sel: typeof selectionsWithTypeInfo[0]) => {
     const isGlobal = sel.page_number === null;
+    const norm = getNormalizedState((sel as any).state);
+    const canStageSwitch = panelMode && norm === 'committed';
+    const canGlobalSwitch = panelMode && norm !== 'committed' && norm !== 'staged_deletion';
     const pageDisplay = isGlobal ? 'Global' : `Page ${(sel.page_number ?? 0) + 1}`;
     const isSelected = selectedSelection?.id === sel.id;
     const isNew = sel.type === 'new';
@@ -213,6 +221,62 @@ export default function SelectionList({ panelMode = false }: { panelMode?: boole
             </div>
           </div>
           
+          {/* Inline quick switches in panel mode */}
+          <div className="flex items-center gap-3 mr-1">
+            {canStageSwitch ? (
+              <div className="flex items-center gap-1" title="Convert committed to staged for editing">
+                <span className="text-[11px] text-muted-foreground">Stage</span>
+                <Switch
+                  checked={false}
+                  disabled={!!busyById[sel.id]}
+                  onCheckedChange={async (checked) => {
+                    if (!checked) return;
+                    try {
+                      setBusy(sel.id, true);
+                      const ok = await convertSelectionToStagedEdition(sel.id);
+                      if (ok) {
+                        toast.success('Converted to staged');
+                      } else {
+                        toast.error('Failed to convert to staged');
+                      }
+                    } catch (e) {
+                      toast.error('Failed to convert to staged');
+                    } finally {
+                      setBusy(sel.id, false);
+                    }
+                  }}
+                  aria-label="Stage committed selection"
+                />
+              </div>
+            ) : null}
+            {canGlobalSwitch ? (
+              <div className="flex items-center gap-1" title="Toggle global (show on all pages)">
+                <span className="text-[11px] text-muted-foreground">Global</span>
+                <Switch
+                  checked={isGlobal}
+                  disabled={!!busyById[sel.id]}
+                  onCheckedChange={(checked) => {
+                    try {
+                      setBusy(sel.id, true);
+                      if (checked) {
+                        setSelectionPage(sel.id, null);
+                        toast.success('Set selection to global');
+                      } else {
+                        setSelectionPage(sel.id, currentPage);
+                        toast.success(`Limited to page ${currentPage + 1}`);
+                      }
+                    } catch (e) {
+                      toast.error('Failed to update selection scope');
+                    } finally {
+                      setBusy(sel.id, false);
+                    }
+                  }}
+                  aria-label="Toggle global selection"
+                />
+              </div>
+            ) : null}
+          </div>
+
           {/* Delete button */}
           <Button
             size="sm"
