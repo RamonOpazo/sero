@@ -3,6 +3,7 @@ import { WidgetContainer, Widget } from "@/components/shared/Widget";
 import { useState, useEffect } from "react";
 import type { MinimalDocumentType } from "@/types";
 import { useSelections } from "../../providers/selection-provider";
+import { useViewportState } from "../../providers/viewport-provider";
 import {
   DocumentControls,
   SelectionCommander,
@@ -22,13 +23,25 @@ interface ControlsLayoutProps {
 export default function ControlsLayout({ document, className, ...props }: ControlsLayoutProps & React.ComponentProps<"div">) {
   const { selectedSelection } = useSelections();
   const [activePanel, setActivePanel] = useState<string>("document-controls");
-  
+
   // Auto-expand selection panel when a selection is made
   useEffect(() => {
     if (selectedSelection) {
       setActivePanel("selections");
     }
   }, [selectedSelection]);
+
+  // Auto-open panels based on active tooldeck widget
+  const { setShowInfoPanel, setShowSelections } = (useViewportState() as any);
+  useEffect(() => {
+    if (activePanel === 'document-controls') {
+      setShowInfoPanel(true);
+    }
+    if (activePanel === 'selections') {
+      // Show visual selections on the canvas when managing them
+      setShowSelections((prev: boolean) => prev || true);
+    }
+  }, [activePanel, setShowInfoPanel, setShowSelections]);
   
   return (
     <WidgetContainer
