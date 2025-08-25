@@ -13,7 +13,7 @@ export function getStatusLabel(state: SelectionStateNorm): { colorClass: string;
     case 'staged_deletion':
       return { colorClass: 'bg-red-500', title: 'Staged deletion', label: 'Deletion' };
     case 'staged_edition':
-      return { colorClass: 'bg-amber-500', title: 'Staged edition', label: 'Edition' };
+      return { colorClass: 'bg-violet-500', title: 'Staged edition', label: 'Edition' };
     case 'staged_creation':
       return { colorClass: 'bg-blue-500', title: 'Staged creation', label: 'Creation' };
     case 'draft':
@@ -29,7 +29,7 @@ export function getBoxColorClasses(state: SelectionStateNorm): { border: string;
     case 'staged_deletion':
       return { border: 'border-red-500/80 hover:border-red-600/95', text: 'text-red-600', borderStyle: 'solid' };
     case 'staged_edition':
-      return { border: 'border-amber-500/80 hover:border-amber-600/95', text: 'text-amber-600', borderStyle: 'solid' };
+      return { border: 'border-violet-500/80 hover:border-violet-600/95', text: 'text-violet-600', borderStyle: 'solid' };
     case 'staged_creation':
       return { border: 'border-blue-500/80 hover:border-blue-600/95', text: 'text-blue-600', borderStyle: 'solid' };
     case 'draft':
