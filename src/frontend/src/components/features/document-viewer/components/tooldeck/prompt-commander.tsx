@@ -62,18 +62,14 @@ export default function PromptManagement({ document }: PromptControlsProps) {
   }, [allPrompts.length, (state as any).persistedItems?.length, (state as any).draftItems?.length, hasUnsavedChanges, pendingChangesCount]);
 
   // Add new rule locally (not saved to server until saveAllChanges is called)
-  // Form-managed state for prompt creation
-  const [formTitle, setFormTitle] = useState('');
-  const [formDirective, setFormDirective] = useState('process');
-  const [formPrompt, setFormPrompt] = useState('');
-
-  const handleCreatePromptConfirmed = useCallback(async () => {
-    const title = formTitle.trim();
-    const directive = formDirective.trim();
-    const promptBody = formPrompt.trim();
+  // Declarative create handler
+  const handleCreatePromptSubmit = useCallback(async (values: Record<string, any>) => {
+    const title = String(values.title ?? '').trim();
+    const directive = String(values.directive ?? '').trim();
+    const promptBody = String(values.prompt ?? '').trim();
     if (!title || !promptBody || !directive) {
       toast.error('Please fill in title, directive, and prompt');
-      return;
+      throw new Error('validation');
     }
 
     const promptData = {
@@ -88,15 +84,12 @@ export default function PromptManagement({ document }: PromptControlsProps) {
     const res = await save();
     if (!res.ok) {
       toast.error('Failed to create prompt');
-      return;
+      throw new Error('api');
     }
 
     toast.success(`${title} rule created and committed`);
     setShowAddDialog(false);
-    setFormTitle('');
-    setFormDirective('process');
-    setFormPrompt('');
-  }, [formTitle, formDirective, formPrompt, createPrompt, save]);
+  }, [createPrompt, save]);
 
   // Save all pending changes with confirmation
   const handleSaveAllPrompts = useCallback(() => {
@@ -171,50 +164,33 @@ export default function PromptManagement({ document }: PromptControlsProps) {
     setEditingPromptId(null);
   }, []);
 
-  // Pre-fill edit form when opening the edit dialog
-  useEffect(() => {
-    if (showEditDialog && editingPromptId) {
-      const editing = allPrompts.find(p => p.id === editingPromptId) as any;
-      if (editing) {
-        setFormTitle(editing.title ?? '');
-        setFormDirective(editing.directive ?? 'process');
-        setFormPrompt(editing.prompt ?? '');
-      }
-    }
-  }, [showEditDialog, editingPromptId, allPrompts]);
-
-  // Confirm handler for editing an existing prompt
-  const handleEditPromptConfirmed = useCallback(async () => {
-    if (!editingPromptId) return;
-    const title = formTitle.trim();
-    const directive = formDirective.trim();
-    const promptBody = formPrompt.trim();
+  // Declarative edit handler
+  const handleEditPromptSubmit = useCallback(async (values: Record<string, any>) => {
+    if (!editingPromptId) throw new Error('no-id');
+    const title = String(values.title ?? '').trim();
+    const directive = String(values.directive ?? '').trim();
+    const promptBody = String(values.prompt ?? '').trim();
     if (!title || !promptBody || !directive) {
       toast.error('Please fill in title, directive, and prompt');
-      return;
+      throw new Error('validation');
     }
 
-    try {
-      updatePrompt(editingPromptId, {
-        title,
-        prompt: promptBody,
-        directive,
-        state: 'committed',
-        scope: 'document',
-      } as any);
-      const res = await save();
-      if (!res.ok) {
-        toast.error('Failed to update prompt');
-        return;
-      }
-      toast.success('Rule updated and committed');
-      setShowEditDialog(false);
-      setEditingPromptId(null);
-    } catch (error) {
-      console.error('Error updating rule:', error);
-      toast.error('Failed to update AI rule');
+    updatePrompt(editingPromptId, {
+      title,
+      prompt: promptBody,
+      directive,
+      state: 'committed',
+      scope: 'document',
+    } as any);
+    const res = await save();
+    if (!res.ok) {
+      toast.error('Failed to update prompt');
+      throw new Error('api');
     }
-  }, [editingPromptId, formTitle, formDirective, formPrompt, updatePrompt, save]);
+    toast.success('Rule updated and committed');
+    setShowEditDialog(false);
+    setEditingPromptId(null);
+  }, [editingPromptId, updatePrompt, save]);
 
   if (error) {
     return (
@@ -317,48 +293,19 @@ export default function PromptManagement({ document }: PromptControlsProps) {
       <FormConfirmationDialog
         isOpen={showAddDialog}
         onClose={handleCloseAddDialog}
-        onConfirm={handleCreatePromptConfirmed}
         title="Create AI Rule"
         description="Fill in the prompt details. The rule will be created and immediately committed."
         confirmButtonText="Create rule"
         cancelButtonText="Cancel"
         variant="default"
         messages={[]}
-        formFields={[
-          (
-            <div key="title" className="space-y-1">
-              <label className="text-xs font-medium">Title</label>
-              <input
-                className="w-full h-9 px-3 rounded border border-input bg-background text-sm"
-                value={formTitle}
-                onChange={(e) => setFormTitle(e.target.value)}
-                placeholder="Short descriptive title"
-              />
-            </div>
-          ),
-          (
-            <div key="directive" className="space-y-1">
-              <label className="text-xs font-medium">Directive</label>
-              <input
-                className="w-full h-9 px-3 rounded border border-input bg-background text-sm"
-                value={formDirective}
-                onChange={(e) => setFormDirective(e.target.value)}
-                placeholder="process"
-              />
-            </div>
-          ),
-          (
-            <div key="prompt" className="space-y-1">
-              <label className="text-xs font-medium">Prompt</label>
-              <textarea
-                className="w-full min-h-32 px-3 py-2 rounded border border-input bg-background text-sm"
-                value={formPrompt}
-                onChange={(e) => setFormPrompt(e.target.value)}
-                placeholder="Detailed instructions for the AI"
-              />
-            </div>
-          ),
+        initialValues={{ title: '', directive: 'process', prompt: '' }}
+        fields={[
+          { type: 'text', name: 'title', label: 'Title', placeholder: 'Short descriptive title', required: true },
+          { type: 'text', name: 'directive', label: 'Directive', placeholder: 'process', required: true },
+          { type: 'textarea', name: 'prompt', label: 'Prompt', placeholder: 'Detailed instructions for the AI', required: true },
         ]}
+        onSubmit={handleCreatePromptSubmit}
       />
       
       {/* Edit Rule Dialog using FormConfirmationDialog */}
@@ -366,48 +313,22 @@ export default function PromptManagement({ document }: PromptControlsProps) {
         <FormConfirmationDialog
           isOpen={showEditDialog}
           onClose={handleCloseEditDialog}
-          onConfirm={handleEditPromptConfirmed}
           title="Edit AI Rule"
           description="Modify the rule. Changes will be saved and committed."
           confirmButtonText="Save changes"
           cancelButtonText="Cancel"
           variant="default"
           messages={[]}
-          formFields={[
-            (
-              <div key="title" className="space-y-1">
-                <label className="text-xs font-medium">Title</label>
-                <input
-                  className="w-full h-9 px-3 rounded border border-input bg-background text-sm"
-                  value={formTitle}
-                  onChange={(e) => setFormTitle(e.target.value)}
-                  placeholder="Short descriptive title"
-                />
-              </div>
-            ),
-            (
-              <div key="directive" className="space-y-1">
-                <label className="text-xs font-medium">Directive</label>
-                <input
-                  className="w-full h-9 px-3 rounded border border-input bg-background text-sm"
-                  value={formDirective}
-                  onChange={(e) => setFormDirective(e.target.value)}
-                  placeholder="process"
-                />
-              </div>
-            ),
-            (
-              <div key="prompt" className="space-y-1">
-                <label className="text-xs font-medium">Prompt</label>
-                <textarea
-                  className="w-full min-h-32 px-3 py-2 rounded border border-input bg-background text-sm"
-                  value={formPrompt}
-                  onChange={(e) => setFormPrompt(e.target.value)}
-                  placeholder="Detailed instructions for the AI"
-                />
-              </div>
-            ),
+          initialValues={() => {
+            const editing = allPrompts.find(p => p.id === editingPromptId) as any;
+            return editing ? { title: editing.title ?? '', directive: editing.directive ?? 'process', prompt: editing.prompt ?? '' } : { title: '', directive: 'process', prompt: '' };
+          }}
+          fields={[
+            { type: 'text', name: 'title', label: 'Title', placeholder: 'Short descriptive title', required: true },
+            { type: 'text', name: 'directive', label: 'Directive', placeholder: 'process', required: true },
+            { type: 'textarea', name: 'prompt', label: 'Prompt', placeholder: 'Detailed instructions for the AI', required: true },
           ]}
+          onSubmit={handleEditPromptSubmit}
         />
       ) : null}
       
