@@ -17,6 +17,7 @@ export type FieldDescriptor =
   | ({ type: 'checkbox' } & BaseField)
   | ({ type: 'switch' } & BaseField)
   | ({ type: 'file'; accept?: string; multiple?: boolean } & BaseField)
+  | ({ type: 'number'; min?: number; max?: number; step?: number } & BaseField)
 
 interface BaseField {
   name: string,
@@ -123,6 +124,19 @@ export function FormConfirmationDialog(props: FormConfirmationDialogProps) {
                 onChange={(e) => {
                   const files = e.target.files;
                   (field as any).onChange(files && files.length > 0 ? (fd as any).multiple ? Array.from(files) : files[0] : null);
+                }}
+              />
+            ) : fd.type === 'number' ? (
+              <Input
+                type="number"
+                placeholder={fd.placeholder}
+                min={(fd as any).min}
+                max={(fd as any).max}
+                step={(fd as any).step}
+                value={field.value}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  (field as any).onChange(raw);
                 }}
               />
             ) : null}
