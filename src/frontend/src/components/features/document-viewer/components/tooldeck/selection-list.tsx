@@ -178,12 +178,12 @@ export default function SelectionList({ panelMode = false }: { panelMode?: boole
           itemRefs.current[sel.id] = el;
         }}
         className={cn(
-          panelMode ? "group pr-2 py-2 text-xs cursor-pointer focus:outline-none focus:ring-0" : "group pr-4 py-3 text-xs cursor-pointer focus:outline-none focus:ring-0",
+          panelMode ? "group pr-2 py-3 text-xs cursor-pointer focus:outline-none focus:ring-0" : "group pr-4 py-3 text-xs cursor-pointer focus:outline-none focus:ring-0",
           // Selection-specific classes
           isSelected ? [
-            panelMode ? "border-l-2 border-l-primary pl-3 bg-primary/5" : "border-l-2 border-l-primary bg-primary/3 shadow-sm pl-4"
+            panelMode ? "border-l-2 border-l-primary pl-3 bg-primary/5 rounded-sm" : "border-l-2 border-l-primary bg-primary/3 shadow-sm pl-4"
           ] : [
-            panelMode ? "border-l-2 border-transparent pl-1" : "border-l-2 border-transparent pl-0 shadow-none",
+            panelMode ? "border-l-2 border-transparent pl-1 rounded-sm" : "border-l-2 border-transparent pl-0 shadow-none",
             "transition-all duration-200",
             panelMode ? "hover:border-l-muted-foreground/30 hover:pl-3 hover:bg-muted/10" : "hover:border-l-muted-foreground/30 hover:pl-4 hover:bg-muted/10",
             panelMode ? "focus:border-l-primary/50 focus:pl-3 focus:bg-muted/20" : "focus:border-l-primary/50 focus:pl-4 focus:bg-muted/20 focus:shadow-sm"
@@ -266,8 +266,11 @@ export default function SelectionList({ panelMode = false }: { panelMode?: boole
         </div>
         
         {/* Bottom row: Simple coordinates */}
-        <div className="text-xs text-muted-foreground/60 mt-1.5">
-          {formatValue(sel.x)}, {formatValue(sel.y)} • {formatValue(sel.width)} × {formatValue(sel.height)}
+        <div className={cn(
+          "text-[11px] text-muted-foreground/70",
+          panelMode ? "mt-2 pt-2 border-t border-muted/20" : "mt-1.5"
+        )}>
+          <span className="text-muted-foreground/60">Coords:</span> {formatValue(sel.x)}, {formatValue(sel.y)} • {formatValue(sel.width)} × {formatValue(sel.height)}
         </div>
       </div>
     );
@@ -286,7 +289,7 @@ export default function SelectionList({ panelMode = false }: { panelMode?: boole
   return (
     <>
       <ScrollArea className="h-80 hide-scrollbar">
-        <div>
+        <div className={cn(panelMode ? "space-y-2" : undefined)}>
           {/* Show all selections in order: new first, then saved */}
           {[...groupedSelections.new, ...groupedSelections.saved].map((sel) => (
             renderSelectionItem(sel)
