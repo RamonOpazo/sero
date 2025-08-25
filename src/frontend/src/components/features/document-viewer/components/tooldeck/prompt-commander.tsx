@@ -171,40 +171,50 @@ export default function PromptManagement({ document }: PromptControlsProps) {
     setEditingPromptId(null);
   }, []);
 
-  // Handle edit rule submission
-  const handleEditRule = useCallback((ruleData: {
-    type: string;
-    title: string;
-    rule: string;
-    priority: 'high' | 'medium' | 'low';
-    enabled: boolean;
-  }) => {
+  // Pre-fill edit form when opening the edit dialog
+  useEffect(() => {
+    if (showEditDialog && editingPromptId) {
+      const editing = allPrompts.find(p => p.id === editingPromptId) as any;
+      if (editing) {
+        setFormTitle(editing.title ?? '');
+        setFormDirective(editing.directive ?? 'process');
+        setFormPrompt(editing.prompt ?? '');
+      }
+    }
+  }, [showEditDialog, editingPromptId, allPrompts]);
+
+  // Confirm handler for editing an existing prompt
+  const handleEditPromptConfirmed = useCallback(async () => {
     if (!editingPromptId) return;
-    
+    const title = formTitle.trim();
+    const directive = formDirective.trim();
+    const promptBody = formPrompt.trim();
+    if (!title || !promptBody || !directive) {
+      toast.error('Please fill in title, directive, and prompt');
+      return;
+    }
+
     try {
-      // Transform rule data to prompt format
-      const promptText = `Rule Type: ${ruleData.type}\n` +
-                        `Priority: ${ruleData.priority.toUpperCase()}\n` +
-                        `Title: ${ruleData.title}\n\n` +
-                        `Instructions:\n${ruleData.rule}`;
-      
       updatePrompt(editingPromptId, {
-        title: ruleData.title,
-        prompt: promptText,
-        directive: 'process',
+        title,
+        prompt: promptBody,
+        directive,
         state: 'committed',
         scope: 'document',
       } as any);
-      
-      toast.success(`${ruleData.title} rule updated (not yet saved)`);
+      const res = await save();
+      if (!res.ok) {
+        toast.error('Failed to update prompt');
+        return;
+      }
+      toast.success('Rule updated and committed');
       setShowEditDialog(false);
       setEditingPromptId(null);
-      
     } catch (error) {
       console.error('Error updating rule:', error);
       toast.error('Failed to update AI rule');
     }
-  }, [editingPromptId, updatePrompt]);
+  }, [editingPromptId, formTitle, formDirective, formPrompt, updatePrompt, save]);
 
   if (error) {
     return (
@@ -351,76 +361,55 @@ export default function PromptManagement({ document }: PromptControlsProps) {
         ]}
       />
       
-      {/* Edit Rule Dialog */}
-      {editingPromptId && (() => {
-        const editingPrompt = allPrompts.find(p => p.id === editingPromptId);
-        if (!editingPrompt) return null;
-        
-        // Parse the prompt text to extract form data
-        const parsePromptText = (text: string) => {
-          const lines = text.split('\n');
-          let ruleType: string = 'custom';
-          let priority: string = 'medium';
-          let title: string = 'AI Rule';
-          let instructions: string = text;
-          
-          lines.forEach((line, index) => {
-            if (line.startsWith('Rule Type: ')) {
-              ruleType = line.replace('Rule Type: ', '').trim();
-            } else if (line.startsWith('Priority: ')) {
-              priority = line.replace('Priority: ', '').toLowerCase().trim();
-            } else if (line.startsWith('Title: ')) {
-              title = line.replace('Title: ', '').trim();
-            } else if (line.startsWith('Instructions:')) {
-              instructions = lines.slice(index + 1).join('\n').trim();
-            }
-          });
-          
-          // Map rule type strings to enum values
-          const getRuleType = (typeStr: string) => {
-            const normalizedType = typeStr.toLowerCase();
-            if (normalizedType.includes('identify-and-mark') || normalizedType.includes('identify and mark')) return 'identify-and-mark';
-            if (normalizedType.includes('redact-content') || normalizedType.includes('redact content')) return 'redact-content';
-            if (normalizedType.includes('preserve-content') || normalizedType.includes('preserve content')) return 'preserve-content';
-            if (normalizedType.includes('exclude-content') || normalizedType.includes('exclude content')) return 'exclude-content';
-            return 'custom';
-          };
-          
-          // Map priority strings
-          const getPriority = (priorityStr: string) => {
-            const normalizedPriority = priorityStr.toLowerCase();
-            if (normalizedPriority === 'high') return 'high';
-            if (normalizedPriority === 'low') return 'low';
-            return 'medium';
-          };
-          
-          return {
-            type: getRuleType(ruleType),
-            title,
-            rule: instructions,
-            priority: getPriority(priority)
-          };
-        };
-        
-        const parsedData = parsePromptText(editingPrompt.prompt);
-        
-        return (
-          <AddPromptDialog
-            isOpen={showEditDialog}
-            onClose={handleCloseEditDialog}
-            onConfirm={handleEditRule}
-            isSubmitting={false}
-            mode="edit"
-            initialData={{
-              id: editingPrompt.id,
-              type: parsedData.type as any,
-              title: parsedData.title,
-              rule: parsedData.rule,
-              priority: parsedData.priority as any
-            }}
-          />
-        );
-      })()}
+      {/* Edit Rule Dialog using FormConfirmationDialog */}
+      {editingPromptId ? (
+        <FormConfirmationDialog
+          isOpen={showEditDialog}
+          onClose={handleCloseEditDialog}
+          onConfirm={handleEditPromptConfirmed}
+          title="Edit AI Rule"
+          description="Modify the rule. Changes will be saved and committed."
+          confirmButtonText="Save changes"
+          cancelButtonText="Cancel"
+          variant="default"
+          messages={[]}
+          formFields={[
+            (
+              <div key="title" className="space-y-1">
+                <label className="text-xs font-medium">Title</label>
+                <input
+                  className="w-full h-9 px-3 rounded border border-input bg-background text-sm"
+                  value={formTitle}
+                  onChange={(e) => setFormTitle(e.target.value)}
+                  placeholder="Short descriptive title"
+                />
+              </div>
+            ),
+            (
+              <div key="directive" className="space-y-1">
+                <label className="text-xs font-medium">Directive</label>
+                <input
+                  className="w-full h-9 px-3 rounded border border-input bg-background text-sm"
+                  value={formDirective}
+                  onChange={(e) => setFormDirective(e.target.value)}
+                  placeholder="process"
+                />
+              </div>
+            ),
+            (
+              <div key="prompt" className="space-y-1">
+                <label className="text-xs font-medium">Prompt</label>
+                <textarea
+                  className="w-full min-h-32 px-3 py-2 rounded border border-input bg-background text-sm"
+                  value={formPrompt}
+                  onChange={(e) => setFormPrompt(e.target.value)}
+                  placeholder="Detailed instructions for the AI"
+                />
+              </div>
+            ),
+          ]}
+        />
+      ) : null}
       
       {/* Save Confirmation Dialog */}
       <SavePromptChangesConfirmationDialog
