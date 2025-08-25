@@ -465,6 +465,7 @@ export function useViewportState() {
     }, [dispatch, state.ui.showSelections]),
     setIsViewingProcessedDocument: useCallback((value: boolean) => dispatch({ type: 'SET_VIEWING_PROCESSED', payload: value }), [dispatch]),
     setShowInfoPanel: useCallback((value: boolean) => dispatch({ type: 'SET_SHOW_INFO_PANEL', payload: value }), [dispatch]),
+    setShowSelectionsPanel: useCallback((value: boolean) => dispatch({ type: 'SET_SHOW_SELECTIONS_PANEL', payload: value }), [dispatch]),
     userPreferredShowSelections: state.ui.userPreferredShowSelections,
     resetView: useCallback(() => dispatch({ type: 'RESET_VIEW' }), [dispatch]),
     registerPage: useCallback((el: HTMLElement | null, index: number) => {

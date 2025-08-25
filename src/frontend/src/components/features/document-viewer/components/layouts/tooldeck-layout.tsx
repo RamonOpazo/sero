@@ -32,16 +32,17 @@ export default function ControlsLayout({ document, className, ...props }: Contro
   }, [selectedSelection]);
 
   // Auto-open panels based on active tooldeck widget
-  const { setShowInfoPanel, setShowSelections } = (useViewportState() as any);
+  const { setShowInfoPanel, setShowSelections, setShowSelectionsPanel } = (useViewportState() as any);
   useEffect(() => {
-    if (activePanel === 'document-controls') {
-      setShowInfoPanel(true);
-    }
+    // Open info panel when Document Controls is active; close it when not
+    setShowInfoPanel(activePanel === 'document-controls');
+    // Open selections panel when Selection Manager is active; close it otherwise
+    setShowSelectionsPanel(activePanel === 'selections');
     if (activePanel === 'selections') {
-      // Show visual selections on the canvas when managing them
+      // Ensure visual selections on the canvas when managing them
       setShowSelections((prev: boolean) => prev || true);
     }
-  }, [activePanel, setShowInfoPanel, setShowSelections]);
+  }, [activePanel, setShowInfoPanel, setShowSelectionsPanel, setShowSelections]);
   
   return (
     <WidgetContainer
