@@ -13,7 +13,7 @@ import type { Selection } from "../../types/viewer";
 import { getNormalizedState, getStatusLabel } from "../../utils/selection-styles";
 
 
-export default function SelectionList() {
+export default function SelectionList({ panelMode = false }: { panelMode?: boolean }) {
   const { 
     state: selectionState, 
     selectedSelection, 
@@ -176,18 +176,15 @@ export default function SelectionList() {
           itemRefs.current[sel.id] = el;
         }}
         className={cn(
-          // Base classes always applied
-          "group pr-4 py-3 text-xs cursor-pointer focus:outline-none focus:ring-0",
+          panelMode ? "group pr-2 py-2 text-xs cursor-pointer focus:outline-none focus:ring-0" : "group pr-4 py-3 text-xs cursor-pointer focus:outline-none focus:ring-0",
           // Selection-specific classes
           isSelected ? [
-            // Selected state (no hover effects)
-            "border-l-2 border-l-primary bg-primary/3 shadow-sm pl-4"
+            panelMode ? "border-l-2 border-l-primary pl-3 bg-primary/5" : "border-l-2 border-l-primary bg-primary/3 shadow-sm pl-4"
           ] : [
-            // Unselected state (with hover and focus effects)
-            "border-l-2 border-transparent pl-0 shadow-none",
+            panelMode ? "border-l-2 border-transparent pl-1" : "border-l-2 border-transparent pl-0 shadow-none",
             "transition-all duration-200",
-            "hover:border-l-muted-foreground/30 hover:pl-4 hover:bg-muted/10",
-            "focus:border-l-primary/50 focus:pl-4 focus:bg-muted/20 focus:shadow-sm"
+            panelMode ? "hover:border-l-muted-foreground/30 hover:pl-3 hover:bg-muted/10" : "hover:border-l-muted-foreground/30 hover:pl-4 hover:bg-muted/10",
+            panelMode ? "focus:border-l-primary/50 focus:pl-3 focus:bg-muted/20" : "focus:border-l-primary/50 focus:pl-4 focus:bg-muted/20 focus:shadow-sm"
           ]
         )}
         onClick={() => handleSelectSelection(sel.id)}

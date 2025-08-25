@@ -28,17 +28,18 @@ export default function SelectionsPanelLayer({ isVisible, onToggleVisibility }: 
 
   const visibilityClasses = isVisible
     ? 'opacity-100 translate-x-0 pointer-events-auto'
-    : 'opacity-0 translate-x-2 pointer-events-none';
+    : 'opacity-0 -translate-x-2 pointer-events-none';
 
   return (
     <div
       className={cn(
-        "absolute top-0 right-0 bottom-0 z-[2100]",
+        "absolute top-0 left-0 bottom-0 z-[2100]",
         "flex flex-col gap-4 w-[60ch] max-w-[60ch] p-4",
-        "rounded-r-md bg-black/90 backdrop-blur-xs backdrop-saturate-0",
+        "rounded-l-md bg-black/90 backdrop-blur-xs backdrop-saturate-0",
         "text-xs transition-all duration-200 ease-out",
         `${visibilityClasses}`
       )}
+      onClick={onToggleVisibility}
       aria-hidden={!isVisible}
     >
       <Button
@@ -56,18 +57,19 @@ export default function SelectionsPanelLayer({ isVisible, onToggleVisibility }: 
         <h1 className="text-lg font-semibold">Selections</h1>
       </div>
 
-      {/* Lifecycle summary header */}
-      <div className="grid grid-cols-2 gap-2 text-[11px]">
-        <div className="rounded border border-emerald-500/20 bg-emerald-500/5 px-2 py-1">Unstaged: <span className="font-medium">{stats.unstaged}</span></div>
-        <div className="rounded border border-blue-500/20 bg-blue-500/5 px-2 py-1">Staged C: <span className="font-medium">{stats.stagedCreation}</span></div>
-        <div className="rounded border border-amber-500/20 bg-amber-500/5 px-2 py-1">Staged U: <span className="font-medium">{stats.stagedEdition}</span></div>
-        <div className="rounded border border-red-500/20 bg-red-500/5 px-2 py-1">Staged D: <span className="font-medium">{stats.stagedDeletion}</span></div>
-        <div className="rounded border border-muted/30 bg-muted/10 px-2 py-1 col-span-2">Committed: <span className="font-medium">{stats.committed}</span></div>
+      {/* Lifecycle summary header (InfoLayer-like styling) */}
+      <div>
+        <h2 className="uppercase tracking-wider text-muted-foreground mb-2">Lifecycle</h2>
+        <div className="ml-4 space-y-1">
+          <div><span className="text-muted-foreground">Unstaged:</span> <span className="font-medium">{stats.unstaged}</span></div>
+          <div><span className="text-muted-foreground">Staged:</span> <span>c:{stats.stagedCreation}, u:{stats.stagedEdition}, d:{stats.stagedDeletion}</span></div>
+          <div><span className="text-muted-foreground">Committed:</span> <span>{stats.committed}</span></div>
+        </div>
       </div>
 
       {/* Redesigned list: reuse existing list, which respects lifecycle actions */}
       <div className="flex-1 min-h-0">
-        <SelectionList />
+        <SelectionList panelMode />
       </div>
     </div>
   );
