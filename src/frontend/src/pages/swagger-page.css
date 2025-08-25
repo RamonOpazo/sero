@@ -1,0 +1,145 @@
+/* Override swagger-ui styles */
+@reference '../index.css';
+
+@layer components {
+    .swagger-ui {
+        @apply max-w-[120ch];
+    }
+
+    .opblock-tag,
+    .models h4 {
+        padding-right: 6px !important;
+    }
+
+    /* .models .no-margin {
+        @apply flex flex-col gap-[6px];
+    } */
+
+    /* .json-schema-2020-12 {
+        margin: 0 6px !important;
+        padding: 1rem !important;
+        width: 100% !important;
+    } */
+}
+
+/*
+    .swagger-ui .information-container {
+        @apply: flex flex-col gap-8;
+    }
+
+    .swagger-ui .svg-assets {
+        display: none;
+    }
+
+    .swagger-ui a > span {
+        @apply text-primary hover:underline;
+    }
+
+    .swagger-ui .main {
+        @apply flex flex-col gap-2;
+    }
+
+    .swagger-ui .main .title {
+        @apply flex flex-row gap-2 text-5xl font-bold tracking-tight sm:text-6xl;
+    }
+
+    .swagger-ui .main .title span {
+        @apply flex flex-row gap-2;
+    }
+
+    .swagger-ui .version {
+        @apply inline-flex items-center justify-center rounded-md border px-2 py-0.5 text-xs font-medium w-fit whitespace-nowrap shrink-0 [&>svg]:size-3 gap-1 [&>svg]:pointer-events-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive transition-[color,box-shadow] overflow-hidden text-foreground [a&]:hover:bg-accent [a&]:hover:text-accent-foreground;
+    }
+
+    .swagger-ui .version-stamp .version {
+        @apply relative;
+    }
+
+    .swagger-ui .version-stamp .version::before {
+        content: "•";
+        color: greenyellow;
+        margin-right: 4px;
+    }
+
+    .swagger-ui p,
+    .swagger-ui a {
+        @apply text-muted-foreground;
+    }
+
+    .swagger-ui .topbar {
+        display: none;
+    }
+
+    .swagger-ui .btn {
+        @apply bg-primary text-white rounded-md px-3 py-1 shadow hover:bg-primary/80;
+    }
+    
+    .swagger-ui .description {
+        @apply mb-8;
+    }
+    
+    .swagger-ui .wrapper .block > div {
+        @apply flex flex-col gap-4;
+    }
+    
+    .swagger-ui .wrapper .opblock-tag-section {
+        @apply rounded-md bg-muted p-4;
+    }
+    
+    .opblock-tag {
+        @apply flex flex-row justify-between text-xl font-semibold text-primary mb-4 stroke-primary fill-primary;
+    }
+    
+    .operation-tag-content {
+        @apply flex flex-col gap-4;
+    }
+    
+    .opblock-summary,
+    .opblock-summary-path,
+    .opblock-summary-path-description-wrapper,
+    .opblock-summary-control {
+        @apply flex flex-row gap-4 items-center;
+    }
+
+    .copy-to-clipboard {
+        @apply ml-auto ;
+    }
+
+    .copy-to-clipboard,
+    .opblock-control-arrow {
+        @apply stroke-primary fill-primary;
+    }
+
+    .opblock {
+        @apply rounded-sm border p-2;
+    }
+    
+    .opblock-get {
+        @apply border-blue-600 bg-blue-600/20;
+    }
+
+    .opblock-post {
+        @apply border-green-600 bg-green-600/20;
+    }
+
+    .opblock-delete {
+        @apply border-red-600 bg-red-600/20;
+    }
+
+    .opblock-patch {
+        @apply border-violet-600 bg-violet-600/20;
+    }
+
+    .opblock-put {
+        @apply border-yellow-600 bg-yellow-600/20;
+    }
+
+    .opblock-summary-method {
+        @apply bg-white/10 py-1 min-w-[10ch];
+    }
+
+    .opblock-summary-description {
+        display: none;
+    }
+}
+*/

@@ -9,6 +9,7 @@ import { EditorView } from '@/views/editor-view';
 import { DocsPage } from '@/pages/docs-page';
 import { SettingsPage } from '@/pages/settings-page';
 import { CryptoTestView } from '@/views/crypto-test-view';
+import { SwaggerPage } from './pages/swagger-page';
 
 // Redirect component for /projects/:projectId -> /projects/:projectId/documents
 function ProjectRedirect() {
@@ -22,13 +23,13 @@ function DocumentRedirect() {
   return <Navigate to={`/projects/${projectId}/documents/${documentId}/original-file`} replace />;
 }
 
-// Redirect component for API docs
-function ApiDocsRedirect() {
-  React.useEffect(() => {
-    window.location.href = '/docs';
-  }, []);
-  return null;
-}
+// // Redirect component for API docs
+// function ApiDocsRedirect() {
+//   React.useEffect(() => {
+//     window.location.href = '/api/docs';
+//   }, []);
+//   return null;
+// }
 
 function App() {
   return (
@@ -47,7 +48,7 @@ function App() {
             <Route path="/documentation/:docName" element={<DocsPage />} />
 
             {/* Developer routes */}
-            <Route path="/dev/api-swagger" element={<ApiDocsRedirect />} />
+            <Route path="/dev/api-swagger" element={<SwaggerPage />}/>
             <Route path="/dev/crypto-test" element={<CryptoTestView />} />
 
             {/* Settings */}

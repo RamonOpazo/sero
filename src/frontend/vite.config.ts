@@ -22,11 +22,11 @@ export default defineConfig({
         target: 'http://localhost:8000',
         changeOrigin: true,
       },
-      '/docs': {
+      '/api/docs': {
         target: 'http://localhost:8000',
         changeOrigin: true,
       },
-      '/openapi.json': {
+      '/api/openapi.json': {
         target: 'http://localhost:8000',
         changeOrigin: true,
       },

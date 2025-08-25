@@ -4,7 +4,7 @@
 // Available documentation files
 const availableDocs = [
   'index',
-  'getting-started', 
+  'getting-started',
   'projects',
   'security',
   'api-reference'
@@ -18,22 +18,13 @@ export async function loadMarkdownDoc(docName: string): Promise<string> {
     throw new Error(`Documentation page not found: ${docName}`)
   }
 
-  try {
-    // Import the markdown file dynamically
-    const response = await fetch(`/app-docs/${docName}.md`)
-    if (!response.ok) {
-      throw new Error(`Failed to load documentation: ${response.statusText}`)
-    }
-    return await response.text()
-  } catch (error) {
-    // Fallback: try to import as a module (for Vite)
-    try {
-      const module = await import(`/app-docs/${docName}.md?raw`)
-      return module.default
-    } catch (importError) {
-      throw new Error(`Failed to load documentation page: ${docName}`)
-    }
+  const response = await fetch(`/docs/${docName}.md`)
+
+  if (!response.ok) {
+    throw new Error(`Failed to load documentation: ${response.statusText}`)
   }
+  
+  return await response.text()
 }
 
 /**
@@ -53,7 +44,7 @@ export function getDocTitle(docName: string): string {
     'troubleshooting': 'Troubleshooting',
     'faq': 'FAQ'
   }
-  
+
   return titles[docName] || 'Documentation'
 }
 
