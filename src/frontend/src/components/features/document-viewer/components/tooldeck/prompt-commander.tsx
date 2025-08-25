@@ -61,7 +61,7 @@ export default function PromptManagement({ document }: PromptControlsProps) {
   }, [allPrompts.length, (state as any).persistedItems?.length, (state as any).draftItems?.length, hasUnsavedChanges, pendingChangesCount]);
 
   // Add new rule locally (not saved to server until saveAllChanges is called)
-  const handleAddRule = useCallback((ruleData: {
+  const handleAddRule = useCallback(async (ruleData: {
     type: string;
     title: string;
     rule: string;
@@ -77,19 +77,26 @@ export default function PromptManagement({ document }: PromptControlsProps) {
         title: ruleData.title,
         prompt: promptText,
         directive: 'process',
+        // Create prompts as committed immediately to avoid data loss
         state: 'committed',
         scope: 'document',
       } as any;
       
+      // Add to manager and immediately persist to backend
       createPrompt(promptData);
-      toast.success(`${ruleData.title} rule added (not yet saved)`);
+      const res = await save();
+      if (!res.ok) {
+        toast.error('Failed to create prompt');
+        return;
+      }
+      toast.success(`${ruleData.title} rule created and committed`);
       setShowAddDialog(false);
       
     } catch (error) {
       console.error('Error adding rule:', error);
       toast.error('Failed to add AI rule');
     }
-  }, [createPrompt]);
+  }, [createPrompt, save]);
 
   // Save all pending changes with confirmation
   const handleSaveAllPrompts = useCallback(() => {
