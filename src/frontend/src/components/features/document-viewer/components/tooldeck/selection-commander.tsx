@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { useState, useCallback, useMemo, useEffect } from "react";
 import type { MinimalDocumentType } from "@/types";
 import { TypedConfirmationDialog } from "@/components/shared/typed-confirmation-dialog";
+import { Switch } from "@/components/ui/switch";
 import { useStageCommit } from "../../hooks/use-stage-commit";
 import { UISelectionStage } from "../../types/selection-lifecycle";
 import SelectionsList from "./selection-list";
@@ -35,6 +36,7 @@ export default function SelectionManagement({ document }: SelectionControlsProps
   const { selectionStats: scSel, canStage, canCommit, isStaging, isCommitting, stageAll, commitAll, stageMessages, commitMessages } = useStageCommit(document.id);
   const [showStageDialog, setShowStageDialog] = useState(false);
   const [showCommitDialog, setShowCommitDialog] = useState(false);
+  const [commitAutoStage, setCommitAutoStage] = useState(false);
 
   // Calculate selection statistics using lifecycle uiSelections
   const selectionStats = useMemo(() => {
@@ -266,15 +268,31 @@ export default function SelectionManagement({ document }: SelectionControlsProps
         onClose={() => setShowCommitDialog(false)}
         onConfirm={async () => {
           setShowCommitDialog(false);
-          await commitAll();
+          await commitAll(commitAutoStage);
+          setCommitAutoStage(false);
         }}
         title="Commit all staged"
-        description="This will commit all staged selections and prompts. This action is irreversible."
+        description={undefined}
         confirmationText="commit"
-        confirmButtonText="Commit all staged"
+        confirmButtonText="Commit"
         cancelButtonText="Cancel"
         variant="default"
-        messages={commitMessages}
+        messages={[
+          ...commitMessages,
+          { variant: 'warning', title: 'Optional: auto-stage before commit', description: 'If enabled, any unstaged changes will be staged first, then committed. This may hide which changes were staged vs pre-staged.' },
+          ...(commitAutoStage ? [{ variant: 'warning', title: 'Auto-stage is ON', description: 'Pending changes will be staged and committed in one step.' }] as any : []),
+        ]}
+        formFields={[
+          (
+            <div key="autostage" className="flex items-center justify-between text-xs p-2 border rounded">
+              <div className="flex flex-col">
+                <span className="font-medium">Auto-stage before commit</span>
+                <span className="text-muted-foreground">Stage pending changes first, then commit</span>
+              </div>
+              <Switch checked={commitAutoStage} onCheckedChange={setCommitAutoStage} />
+            </div>
+          )
+        ]}
       />
 
     </div>

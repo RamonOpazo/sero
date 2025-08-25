@@ -26,7 +26,7 @@ export interface UseStageCommitResult {
   isStaging: boolean;
   isCommitting: boolean;
   stageAll: () => Promise<void>;
-  commitAll: () => Promise<void>;
+  commitAll: (autoStage?: boolean) => Promise<void>;
   stageMessages: TypedMessage[];
   commitMessages: TypedMessage[];
 }
@@ -134,28 +134,30 @@ export function useStageCommit(documentId: string | number): UseStageCommitResul
     }
   }, [canStage, selectionStats.pending, promptStats.pending, saveLifecycle, savePrompts, selectionState, loadPrompts]);
 
-  const commitAll = useCallback(async () => {
+  const commitAll = useCallback(async (autoStage: boolean = false) => {
     if (!canCommit) {
       toast.info('Nothing to commit');
       return;
     }
     setIsCommitting(true);
     try {
-      // Ensure latest staged items are persisted first
-      if (selectionStats.pending > 0 || selectionStats.stagedPersisted > 0) {
-        const resSel = await saveLifecycle();
-        if (!resSel.ok) {
-          toast.error('Failed to stage selection changes before commit');
-          setIsCommitting(false);
-          return;
+      // Optionally stage latest pending items first
+      if (autoStage) {
+        if (selectionStats.pending > 0 || selectionStats.stagedPersisted > 0) {
+          const resSel = await saveLifecycle();
+          if (!resSel.ok) {
+            toast.error('Failed to stage selection changes before commit');
+            setIsCommitting(false);
+            return;
+          }
         }
-      }
-      if (promptStats.pending > 0) {
-        const resPr = await savePrompts();
-        if (!resPr.ok) {
-          toast.error('Failed to stage prompt changes before commit');
-          setIsCommitting(false);
-          return;
+        if (promptStats.pending > 0) {
+          const resPr = await savePrompts();
+          if (!resPr.ok) {
+            toast.error('Failed to stage prompt changes before commit');
+            setIsCommitting(false);
+            return;
+          }
         }
       }
 
@@ -182,7 +184,7 @@ export function useStageCommit(documentId: string | number): UseStageCommitResul
     } finally {
       setIsCommitting(false);
     }
-  }, [canCommit, selectionStats.pending, promptStats.pending, saveLifecycle, savePrompts, documentId, allPrompts, updatePrompt, selectionState, loadPrompts]);
+  }, [canCommit, selectionStats.pending, selectionStats.stagedPersisted, promptStats.pending, saveLifecycle, savePrompts, documentId, allPrompts, updatePrompt, selectionState, loadPrompts]);
 
   const stageMessages = useMemo<TypedMessage[]>(() => {
     const msgs: TypedMessage[] = [];
