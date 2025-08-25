@@ -37,7 +37,7 @@ function FileDetails({ file, formatFileSize, formatDate }: FileDetailsProps) {
 
 export default function InfoLayer({ document, documentSize, isVisible, onToggleVisibility }: Props) {
   const { currentPage, numPages, zoom } = useViewportState();
-  const { selectionCount, allSelections, getGlobalSelections, getPageSelections, uiSelections, hasUnsavedChanges: selUnsaved } = useSelections() as any;
+  const { selectionCount, allSelections, getPageSelections, uiSelections, hasUnsavedChanges: selUnsaved } = useSelections() as any;
   const { allPrompts, pendingChanges: promptPending, pendingChangesCount: promptPendingCount } = usePrompts();
 
   const selLifecycle = useMemo(() => {

@@ -440,7 +440,7 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
 
   // Filter selections for current page
   const pageSelections = allSelections.filter(
-    s => s.page_number === null || s.page_number === currentPage
+    (s: any) => s.page_number === null || s.page_number === currentPage,
   );
 
   // Show current drawing if any
