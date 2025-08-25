@@ -12,6 +12,7 @@ class Prompt(BaseModel):
     prompt: str
     directive: str = Field(max_length=50,)
     document_id: UUID4
+    is_staged: bool
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -19,7 +20,7 @@ class Prompt(BaseModel):
 class PromptCreate(BaseModel):
     id: UUID4 | None = Field(None)
     scope: ScopeType = Field(default=ScopeType.DOCUMENT)
-    state: CommitState = Field(default=CommitState.STAGED)
+    state: CommitState = Field(default=CommitState.STAGED_CREATION)
     title: str = Field(max_length=150,)
     prompt: str
     directive: str = Field(max_length=50,)

@@ -75,13 +75,18 @@ class TestSelectionsController:
         ids = {str(i.id) for i in lst}
         assert str(created.id) in ids
 
-        # Update
+        # Update (commit)
         su = SelectionUpdate(page_number=2, x=0.2, y=0.3, width=0.4, height=0.5, confidence=0.9, state=CommitState.COMMITTED)
         updated = selections_controller.update(db=test_session, selection_id=created.id, selection_data=su)
         assert updated.page_number == 2
         assert updated.state == CommitState.COMMITTED
 
-        # Delete
+        # Convert committed -> staged_edition via dedicated endpoint, then mark deletion
+        converted = selections_controller.convert_committed_to_staged(db=test_session, selection_id=created.id)
+        assert converted.state == CommitState.STAGED_EDITION
+
+        # Delete requires staged_deletion now
+        _ = selections_controller.update(db=test_session, selection_id=created.id, selection_data=SelectionUpdate(state=CommitState.STAGED_DELETION))
         out = selections_controller.delete(db=test_session, selection_id=created.id)
         assert "deleted successfully" in out.message
         with pytest.raises(HTTPException) as exc:
@@ -139,7 +144,7 @@ class TestSelectionsController:
         unreq_all = SelectionUncommitRequest(selection_ids=None, uncommit_all=True)
         staged_all = documents_controller.uncommit_selections(db=test_session, document_id=doc.id, request=unreq_all)
         assert len(staged_all) == 3
-        assert all(i.state == CommitState.STAGED for i in staged_all)
+        assert all(i.state == CommitState.STAGED_EDITION for i in staged_all)
 
         # Clear staged (delete uncommitted)
         clr_req = SelectionClearRequest(selection_ids=None, clear_all=True)

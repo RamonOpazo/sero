@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { type MinimalDocumentType } from "@/types";
 import { useViewportState } from '../../providers/viewport-provider';
 import { useSelections } from '../../providers/selection-provider';
@@ -6,6 +6,7 @@ import { usePrompts } from '../../providers/prompt-provider';
 import { X, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { UISelectionStage } from '../../types/selection-lifecycle';
 
 type Props = {
   document: MinimalDocumentType;
@@ -36,8 +37,18 @@ function FileDetails({ file, formatFileSize, formatDate }: FileDetailsProps) {
 
 export default function InfoLayer({ document, documentSize, isVisible, onToggleVisibility }: Props) {
   const { currentPage, numPages, zoom } = useViewportState();
-  const { selectionCount, getGlobalSelections, getPageSelections, pendingChanges: selPending, pendingChangesCount: selPendingCount, hasUnsavedChanges: selUnsaved } = useSelections();
+  const { selectionCount, allSelections, getGlobalSelections, getPageSelections, uiSelections, hasUnsavedChanges: selUnsaved } = useSelections() as any;
   const { allPrompts, pendingChanges: promptPending, pendingChangesCount: promptPendingCount } = usePrompts();
+
+  const selLifecycle = useMemo(() => {
+    const ui = (uiSelections || []) as any[];
+    const unstaged = ui.filter(s => s.dirty === true).length;
+    const stagedCreation = ui.filter(s => s.stage === UISelectionStage.StagedCreation).length;
+    const stagedEdition = ui.filter(s => s.stage === UISelectionStage.StagedEdition).length;
+    const stagedDeletion = ui.filter(s => s.stage === UISelectionStage.StagedDeletion).length;
+    const committed = ui.filter(s => s.stage === UISelectionStage.Committed).length;
+    return { unstaged, stagedCreation, stagedEdition, stagedDeletion, committed };
+  }, [uiSelections]);
 
   const formatFileSize = useCallback((bytes: number) => {
     if (bytes === 0) return '0 Bytes';
@@ -122,15 +133,11 @@ export default function InfoLayer({ document, documentSize, isVisible, onToggleV
         <h2 className="uppercase tracking-wider text-muted-foreground mb-2">Selections</h2>
         <div className="ml-4 space-y-1">
           <div><span className="text-muted-foreground">Total:</span> <span className="font-medium">{selectionCount}</span></div>
-          <div><span className="text-muted-foreground">Global:</span> <span>{getGlobalSelections().length}</span></div>
+          <div><span className="text-muted-foreground">Global:</span> <span>{(allSelections || []).filter((s: any) => s.page_number == null).length}</span></div>
           <div><span className="text-muted-foreground">On page:</span> <span>{getPageSelections(currentPage).length}</span></div>
-          <div>
-            <span className="text-muted-foreground">Pending:</span>{' '}
-            <span>{selPendingCount}</span>
-            {selPendingCount > 0 && (
-              <span className="text-muted-foreground"> (c:{selPending.creates.length}, u:{selPending.updates.length}, d:{selPending.deletes.length})</span>
-            )}
-          </div>
+          <div><span className="text-muted-foreground">Unstaged:</span> <span className="font-medium">{selLifecycle.unstaged}</span></div>
+          <div><span className="text-muted-foreground">Staged:</span> <span>c:{selLifecycle.stagedCreation}, u:{selLifecycle.stagedEdition}, d:{selLifecycle.stagedDeletion}</span></div>
+          <div><span className="text-muted-foreground">Committed:</span> <span>{selLifecycle.committed}</span></div>
           <div><span className="text-muted-foreground">Unsaved:</span> <span>{selUnsaved ? 'yes' : 'no'}</span></div>
         </div>
       </div>

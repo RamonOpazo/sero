@@ -253,19 +253,38 @@ class SupportCrud:
 
 
     def commit_staged_selections(self, db: Session, document_id: UUID, selection_ids: list[UUID] | None, commit_all: bool) -> list:
+        # Use hybrid is_staged to target all staged states
         if commit_all:
+            # Commit items that are staged but not deletions
             db.query(SelectionModel).filter(
                 SelectionModel.document_id == document_id,
-                SelectionModel.state == CommitState.STAGED,
+                SelectionModel.is_staged.is_(True),
+                SelectionModel.state != CommitState.STAGED_DELETION,
             ).update({"state": CommitState.COMMITTED}, synchronize_session=False)
+            # Remove staged deletions irreversibly
+            db.query(SelectionModel).filter(
+                SelectionModel.document_id == document_id,
+                SelectionModel.is_staged.is_(True),
+                SelectionModel.state == CommitState.STAGED_DELETION,
+            ).delete(synchronize_session=False)
             db.commit()
         else:
             if not selection_ids:
                 return []
+            # Commit provided creations/editions
             db.query(SelectionModel).filter(
                 SelectionModel.document_id == document_id,
                 SelectionModel.id.in_(selection_ids),
+                SelectionModel.is_staged.is_(True),
+                SelectionModel.state != CommitState.STAGED_DELETION,
             ).update({"state": CommitState.COMMITTED}, synchronize_session=False)
+            # Remove provided deletions
+            db.query(SelectionModel).filter(
+                SelectionModel.document_id == document_id,
+                SelectionModel.id.in_(selection_ids),
+                SelectionModel.is_staged.is_(True),
+                SelectionModel.state == CommitState.STAGED_DELETION,
+            ).delete(synchronize_session=False)
             db.commit()
         # Return committed
         committed = [s for s in self.selections_crud.read_list_by_document(db=db, document_id=document_id) if getattr(s, "state", None) == CommitState.COMMITTED]
@@ -273,10 +292,11 @@ class SupportCrud:
 
 
     def clear_staged_selections(self, db: Session, document_id: UUID, selection_ids: list[UUID] | None, clear_all: bool) -> int:
+        # Clear all staged items (creations, editions, deletions) — use is_staged property
         if clear_all:
             deleted = db.query(SelectionModel).filter(
                 SelectionModel.document_id == document_id,
-                SelectionModel.state == CommitState.STAGED,
+                SelectionModel.is_staged.is_(True),
             ).delete(synchronize_session=False)
             db.commit()
             return int(deleted)
@@ -284,19 +304,21 @@ class SupportCrud:
             return 0
         deleted = db.query(SelectionModel).filter(
             SelectionModel.document_id == document_id,
-            SelectionModel.state == CommitState.STAGED,
             SelectionModel.id.in_(selection_ids),
+            SelectionModel.is_staged.is_(True),
         ).delete(synchronize_session=False)
         db.commit()
         return int(deleted)
 
 
     def uncommit_selections(self, db: Session, document_id: UUID, selection_ids: list[UUID] | None, uncommit_all: bool) -> list:
+        # Move committed items back to staged-edition
+        target_state = CommitState.STAGED_EDITION
         if uncommit_all:
             db.query(SelectionModel).filter(
                 SelectionModel.document_id == document_id,
                 SelectionModel.state == CommitState.COMMITTED,
-            ).update({"state": CommitState.STAGED}, synchronize_session=False)
+            ).update({"state": target_state}, synchronize_session=False)
             db.commit()
         else:
             if not selection_ids:
@@ -304,7 +326,7 @@ class SupportCrud:
             db.query(SelectionModel).filter(
                 SelectionModel.document_id == document_id,
                 SelectionModel.id.in_(selection_ids),
-            ).update({"state": CommitState.STAGED}, synchronize_session=False)
+            ).update({"state": target_state}, synchronize_session=False)
             db.commit()
-        staged = [s for s in self.selections_crud.read_list_by_document(db=db, document_id=document_id) if s.state == CommitState.STAGED]
+        staged = [s for s in self.selections_crud.read_list_by_document(db=db, document_id=document_id) if getattr(s, "state", None) == target_state]
         return staged

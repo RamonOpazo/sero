@@ -6,7 +6,10 @@ import { useViewportState } from "../../providers/viewport-provider";
 import { useMemo, useRef, useEffect, useState, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { PageSelectionDialog } from "../dialogs";
+import { SimpleConfirmationDialog } from "@/components/shared/simple-confirmation-dialog";
+import { CONVERT_TO_STAGED_DIALOG } from "./dialog-text";
 import type { Selection } from "../../types/viewer";
+import { getNormalizedState, getStatusLabel } from "../../utils/selection-styles";
 
 
 export default function SelectionList() {
@@ -17,7 +20,7 @@ export default function SelectionList() {
     deleteSelection,
     setSelectionPage,
     setOnSelectionDoubleClick,
-    pendingChanges
+    convertSelectionToStagedEdition,
   } = useSelections();
   
   const { setCurrentPage, currentPage, numPages } = useViewportState();
@@ -47,27 +50,14 @@ export default function SelectionList() {
 
   // Use all selections from the manager with type information and modification status
   const selectionsWithTypeInfo = useMemo(() => {
-    const saved = ((selectionState as any).persistedItems || []).map((sel: Selection) => {
-      // Check if this persisted selection has pending updates
-      const isModified = pendingChanges.updates.some((update: Selection) => update.id === sel.id);
-      
-      return {
-        ...sel,
-        type: 'saved' as const,
-        isModified,
-        displayId: sel.id,
-      };
+    const ui = ((selectionState as any).persistedItems || []).concat((selectionState as any).draftItems || []) as Selection[];
+    return ui.map((sel: Selection) => {
+      const stateNorm = getNormalizedState((sel as any).state);
+      const type = stateNorm === 'draft' ? 'new' : 'saved';
+      const isModified = stateNorm !== 'draft' && stateNorm !== 'committed';
+      return { ...sel, type, isModified, displayId: sel.id } as any;
     });
-    
-    const newOnes = ((selectionState as any).draftItems || []).map((sel: Selection) => ({
-      ...sel,
-      type: 'new' as const,
-      isModified: false,
-      displayId: sel.id,
-    }));
-    
-    return [...saved, ...newOnes];
-  }, [selectionState, pendingChanges]);
+  }, [selectionState]);
 
   // Group selections by type for better organization
   const groupedSelections = useMemo(() => {
@@ -106,6 +96,13 @@ export default function SelectionList() {
   const handleToggleGlobal = (selectionId: string, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent selection when clicking the badge
     
+    // Only non-committed selections can change page/global
+    const selection = selectionsWithTypeInfo.find(sel => sel.id === selectionId);
+    const norm = getNormalizedState((selection as any)?.state);
+    const isCommitted = norm === 'committed';
+    const isStagedDeletion = norm === 'staged_deletion';
+    if (isCommitted || isStagedDeletion) return;
+
     // Always open dialog for better UX - prevents accidental changes
     setDialogState({ isOpen: true, selectionId });
   };
@@ -122,7 +119,16 @@ export default function SelectionList() {
   };
 
   // Handle double-click from SelectionsLayer
+  const [convertDialog, setConvertDialog] = useState<{ open: boolean; selectionId: string | null }>({ open: false, selectionId: null });
+
   const handleSelectionDoubleClick = useCallback((selection: Selection) => {
+    const norm = getNormalizedState((selection as any).state);
+    const isCommitted = norm === 'committed';
+    const isStagedDeletion = norm === 'staged_deletion';
+    if (isCommitted || isStagedDeletion) {
+      setConvertDialog({ open: true, selectionId: selection.id });
+      return;
+    }
     setDialogState({ isOpen: true, selectionId: selection.id });
   }, []);
 
@@ -149,25 +155,15 @@ export default function SelectionList() {
     
     // Determine status indicator
     const getStatusIndicator = () => {
-      if (isNew) {
-        return {
-          color: "bg-green-500",
-          title: "New selection",
-          label: "New"
-        };
-      } else if (isModified) {
-        return {
-          color: "bg-amber-500",
-          title: "Modified selection",
-          label: "Modified"
-        };
-      } else {
-        return {
-          color: "bg-gray-400",
-          title: "Saved selection",
-          label: "Saved"
-        };
+      const norm = getNormalizedState((sel as any).state);
+      if (norm === 'draft') {
+        // Distinguish drafts vs saved but unmodified items visually
+        if (isNew) return { color: 'bg-emerald-500', title: 'Unstaged (local)', label: 'Unstaged' };
+        if (isModified) return { color: 'bg-amber-500', title: 'Modified', label: 'Modified' };
+        return { color: 'bg-gray-400', title: 'Saved', label: 'Saved' };
       }
+      const lab = getStatusLabel(norm);
+      return { color: lab.colorClass, title: lab.title, label: lab.label };
     };
     
     const statusIndicator = getStatusIndicator();
@@ -200,6 +196,7 @@ export default function SelectionList() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <button
+              data-testid={`selection-toggle-${sel.id}`}
               className={cn(
                 "flex items-center gap-1 font-medium px-2 py-0.5 rounded text-xs transition-colors hover:opacity-80 cursor-pointer",
                 isGlobal ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" :
@@ -269,6 +266,19 @@ export default function SelectionList() {
         currentPage={currentPage}
         totalPages={numPages}
         selectionId={dialogState.selectionId ?? undefined}
+      />
+      {/* Convert committed to staged dialog */}
+      <SimpleConfirmationDialog
+        isOpen={convertDialog.open}
+        onClose={() => setConvertDialog({ open: false, selectionId: null })}
+        onConfirm={async () => {
+          if (convertDialog.selectionId) {
+            await convertSelectionToStagedEdition(convertDialog.selectionId);
+            // Close regardless; UI will reflect updated state via provider
+            setConvertDialog({ open: false, selectionId: null });
+          }
+        }}
+        {...CONVERT_TO_STAGED_DIALOG}
       />
     </>
   );

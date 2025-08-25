@@ -7,8 +7,12 @@
 
 import React, { createContext, useContext, useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { createSelectionManager, type SelectionDomainManager, type Selection, type SelectionCreateType } from '../core/selection-manager';
+import type { SelectionCreateDraft } from '../types/viewer';
 import type { Result } from '@/lib/result';
 import type { PendingChanges } from '@/lib/domain-manager';
+import { DocumentViewerAPI } from '@/lib/document-viewer-api';
+import { fromApiSelection } from '../core/selection-lifecycle-mapper';
+import { UISelectionStage, type UISelection } from '../types/selection-lifecycle';
 
 // =============================================================================
 // CONTEXT INTERFACE - All expected selection functionality
@@ -24,8 +28,8 @@ interface SelectionContextValue {
   // Convenience methods for all required operations
   
   // *** CREATE NEW SELECTIONS ***
-  startDraw: (selection: SelectionCreateType) => void;
-  updateDraw: (selection: SelectionCreateType) => void;
+  startDraw: (selection: SelectionCreateDraft) => void;
+  updateDraw: (selection: SelectionCreateDraft) => void;
   finishDraw: () => void;
   cancelDraw: () => void;
   
@@ -38,6 +42,9 @@ interface SelectionContextValue {
   // *** DELETE NEW/SAVED SELECTIONS ***
   deleteSelection: (id: string) => void;
   deleteSelectedSelection: () => boolean;
+  
+  // *** STATE TRANSITIONS ***
+  convertSelectionToStagedEdition: (id: string) => Promise<boolean>;
   
   // *** HISTORY OF CHANGES ***
   undo: () => void;
@@ -53,6 +60,10 @@ interface SelectionContextValue {
   save: () => Promise<Result<void, unknown>>;
   commitChanges: () => void;
   discardAllChanges: () => void;
+
+  // Lifecycle-based operations (new)
+  saveLifecycle: () => Promise<Result<void, unknown>>;
+  commitLifecycle: () => Promise<Result<void, unknown>>;
   
   // Selection tracking
   selectSelection: (id: string | null) => void;
@@ -74,9 +85,8 @@ interface SelectionContextValue {
   
   // Computed values
   allSelections: readonly Selection[];
+  uiSelections: readonly UISelection[];
   hasUnsavedChanges: boolean;
-  pendingChanges: PendingChanges<Selection>;
-  pendingChangesCount: number;
   
   // Utility methods
   hasSelections: boolean;
@@ -144,7 +154,7 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
   // CREATE NEW SELECTIONS
   // ========================================
   
-  const startDraw = useCallback((selection: SelectionCreateType) => {
+  const startDraw = useCallback((selection: SelectionCreateDraft) => {
     // Convert SelectionCreateType to Selection by adding temporary ID
     const selectionWithId: Selection = {
       ...selection,
@@ -152,8 +162,37 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
     };
     dispatch('START_DRAW', selectionWithId);
   }, [dispatch]);
+
+  const convertSelectionToStagedEdition = useCallback(async (id: string) => {
+    try {
+      const item = (manager as any).getItemById?.(id);
+      const stateStr = ((item?.state) || '').toString();
+      if (stateStr === 'committed') {
+        const res = await DocumentViewerAPI.convertSelectionToStaged(id);
+        if (!res.ok) return false;
+      } else {
+        // For staged_deletion or other staged states, flip to staged_edition via update
+        const res = await DocumentViewerAPI.updateSelection(id, { state: 'staged_edition' } as any);
+        if (!res.ok) return false;
+      }
+      // Optimistically update local state
+      dispatch('UPDATE_ITEM', { id, updates: { state: 'staged_edition' } as any });
+      // Reload authoritative selections to avoid any duplication artifacts
+      const docId = (state as any)?.contextId as string | undefined;
+      if (docId) {
+        const fetched = await DocumentViewerAPI.fetchDocumentSelections(docId);
+        if (fetched.ok) {
+          dispatch('LOAD_ITEMS', fetched.value as any);
+          dispatch('CAPTURE_BASELINE' as any, undefined as any);
+        }
+      }
+      return true;
+    } catch {
+      return false;
+    }
+  }, [dispatch, manager, state]);
   
-  const updateDraw = useCallback((selection: SelectionCreateType) => {
+  const updateDraw = useCallback((selection: SelectionCreateDraft) => {
     // Convert SelectionCreateType to Selection by adding temporary ID
     const selectionWithId: Selection = {
       ...selection,
@@ -197,17 +236,33 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
   // ========================================
   
   const deleteSelection = useCallback((id: string) => {
-    dispatch('DELETE_ITEM', id);
-  }, [dispatch]);
+    // If item is persisted, mark as staged_deletion; if draft, remove
+    const persistedItems: any[] = (state as any).persistedItems || [];
+    const draftItems: any[] = (state as any).draftItems || [];
+    const isPersisted = persistedItems.some((i: any) => i && i.id === id);
+    if (isPersisted) {
+      dispatch('UPDATE_ITEM', { id, updates: { state: 'staged_deletion' } });
+    } else {
+      const isDraft = draftItems.some((i: any) => i && i.id === id);
+      if (isDraft) {
+        dispatch('DELETE_ITEM', id);
+      }
+    }
+  }, [dispatch, state]);
   
   const deleteSelectedSelection = useCallback(() => {
     const selectedId = (state as any).selectedItemId;
     if (selectedId && typeof selectedId === 'string') {
-      dispatch('DELETE_ITEM', selectedId);
+      deleteSelection(selectedId);
       return true;
     }
     return false;
-  }, [dispatch, state]);
+  }, [deleteSelection, state]);
+  
+  // ========================================
+  // STATE TRANSITIONS
+  // ========================================
+  
   
   // ========================================
   // HISTORY OF CHANGES
@@ -278,10 +333,107 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
   const save = useCallback(() => {
     return manager.save();
   }, [manager]);
+
+  // Lifecycle-based SAVE: stage all changes reflected in uiSelections
+  const saveLifecycle = useCallback(async (): Promise<Result<void, unknown>> => {
+    try {
+      const currentState = state as any;
+      const docId = currentState?.contextId as string;
+      // Derive UI selections lifecycle view from current state (avoid TDZ on uiSelections)
+      const persisted: UISelection[] = ((state as any).persistedItems || []).map((s: any) => fromApiSelection(s));
+      const drafts: UISelection[] = ((state as any).draftItems || []).map((s: any) => ({
+        ...(s as any),
+        stage: UISelectionStage.Unstaged,
+        isPersisted: false,
+        dirty: true,
+      } as UISelection));
+      const ui = [...persisted, ...drafts];
+
+      // Create new selections (not persisted)
+      const creates = ui.filter(s => !s.isPersisted);
+      for (const sel of creates) {
+        const createData = (sel as any);
+        const { id: _id, dirty: _dirty, dirtyFields: _df, isPersisted: _p, stage: _st, ...rest } = createData;
+        const res = await DocumentViewerAPI.createSelection(docId, rest);
+        if (!res.ok) {
+          return { ok: false, error: (res as any).error } as Result<void, unknown>;
+        }
+      }
+
+      // Update persisted selections with staged state transitions
+      const updates = ui.filter(s => s.isPersisted && (s.dirty || s.stage === UISelectionStage.StagedEdition || s.stage === UISelectionStage.StagedDeletion || s.stage === UISelectionStage.StagedCreation));
+      for (const sel of updates) {
+        // If locally edited (dirty), stage as edition; otherwise preserve explicit staged_* state
+        let updateState: 'staged_edition' | 'staged_deletion' | 'staged_creation' | undefined = undefined;
+        if (sel.stage === UISelectionStage.StagedDeletion) updateState = 'staged_deletion';
+        else if (sel.stage === UISelectionStage.StagedCreation) updateState = 'staged_creation';
+        else if (sel.stage === UISelectionStage.StagedEdition) updateState = 'staged_creation';
+        else if (sel.dirty) updateState = 'staged_edition';
+
+        const payload: any = {};
+        if (updateState) payload.state = updateState;
+
+        // Include latest geometry values when staging editions so server persists the edits
+        const srcList: any[] = ((state as any).persistedItems || []) as any[];
+        const src = srcList.find((s2: any) => s2 && s2.id === (sel as any).id);
+        if (src) {
+          payload.x = src.x;
+          payload.y = src.y;
+          payload.width = src.width;
+          payload.height = src.height;
+          payload.page_number = src.page_number;
+          payload.confidence = src.confidence;
+        }
+
+        const res = await DocumentViewerAPI.updateSelection((sel as any).id, payload);
+        if (!res.ok) {
+          return { ok: false, error: (res as any).error } as Result<void, unknown>;
+        }
+      }
+
+      // Reload from server to sync authoritative state
+      const fetched = await DocumentViewerAPI.fetchDocumentSelections(docId);
+      if (fetched.ok) {
+        // Replace persisted items with authoritative list
+        dispatch('LOAD_ITEMS', fetched.value as any);
+        // Remove any remaining local drafts to avoid duplication after staging creations
+        const draftIds: string[] = (((state as any).draftItems || []) as any[]).map((d: any) => d && d.id).filter(Boolean);
+        if (draftIds.length > 0) {
+          dispatch('DELETE_ITEMS', draftIds as any);
+        }
+        // Capture baseline after syncing
+        dispatch('CAPTURE_BASELINE' as any, undefined as any);
+      }
+
+      return { ok: true, value: undefined } as Result<void, unknown>;
+    } catch (e) {
+      return { ok: false, error: e } as Result<void, unknown>;
+    }
+  }, [state, dispatch]);
   
   const commitChanges = useCallback(() => {
     dispatch('COMMIT_CHANGES');
   }, [dispatch]);
+
+  // Lifecycle-based COMMIT: commit all staged on backend and reload
+  const commitLifecycle = useCallback(async (): Promise<Result<void, unknown>> => {
+    try {
+      const currentState = state as any;
+      const docId = currentState?.contextId as string;
+      const res = await DocumentViewerAPI.commitStagedSelections(docId, { commit_all: true });
+      if (!res.ok) {
+        return { ok: false, error: (res as any).error } as Result<void, unknown>;
+      }
+      const fetched = await DocumentViewerAPI.fetchDocumentSelections(docId);
+      if (fetched.ok) {
+        dispatch('LOAD_ITEMS', fetched.value as any);
+        dispatch('CAPTURE_BASELINE' as any, undefined as any);
+      }
+      return { ok: true, value: undefined } as Result<void, unknown>;
+    } catch (e) {
+      return { ok: false, error: e } as Result<void, unknown>;
+    }
+  }, [state, dispatch]);
   
   const discardAllChanges = useCallback(() => {
     dispatch('DISCARD_CHANGES');
@@ -342,6 +494,35 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
   
   const allSelections = useMemo(() => manager.getAllItems(), [manager, state]);
   
+  // Lifecycle-based UI selections (compat-preserving for now)
+  const uiSelections = useMemo(() => {
+    try {
+      // Pull pending changes from manager to flag dirty persisted items
+      const pending = (manager as any).getPendingChanges?.() || { creates: [], updates: [], deletes: [] };
+      const dirtyIds = new Set<string>([
+        ...((pending.updates || []).map((u: any) => u?.id).filter(Boolean)),
+        ...((pending.deletes || []).map((d: any) => d?.id).filter(Boolean)),
+      ] as string[]);
+
+      const persisted: UISelection[] = ((state as any).persistedItems || []).map((s: any) => {
+        const ui = fromApiSelection(s);
+        const isDirty = dirtyIds.has((s as any).id);
+        // If a persisted selection is edited locally and not staged for deletion, reflect it as staged_edition in UI
+        const stage = (isDirty && ui.stage !== UISelectionStage.StagedDeletion) ? UISelectionStage.StagedEdition : ui.stage;
+        return { ...ui, dirty: isDirty, stage } as UISelection;
+      });
+      const drafts: UISelection[] = ((state as any).draftItems || []).map((s: any) => ({
+        ...(s as any),
+        stage: UISelectionStage.Unstaged,
+        isPersisted: false,
+        dirty: true,
+      } as UISelection));
+      return [...persisted, ...drafts];
+    } catch {
+      return [] as UISelection[];
+    }
+  }, [state, manager]);
+  
   const selectedSelection = useMemo(() => {
     const selectedId = (state as any).selectedItemId;
     return (selectedId && typeof selectedId === 'string') ? manager.getItemById(selectedId) || null : null;
@@ -350,8 +531,6 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
   const canUndo = useMemo(() => (state as any).canUndo?.() || false, [state]);
   const canRedo = useMemo(() => (state as any).canRedo?.() || false, [state]);
   const hasUnsavedChanges = useMemo(() => manager.hasUnsavedChanges(), [manager, state]);
-  const pendingChanges = useMemo(() => manager.getPendingChanges(), [manager, state]);
-  const pendingChangesCount = useMemo(() => manager.getPendingChangesCount(), [manager, state]);
   
   // Utility computed values
   const hasSelections = useMemo(() => allSelections.length > 0, [allSelections]);
@@ -403,6 +582,7 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
     // Delete new/saved selections
     deleteSelection,
     deleteSelectedSelection,
+    convertSelectionToStagedEdition,
     
     // History of changes
     undo,
@@ -418,6 +598,8 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
     save,
     commitChanges,
     discardAllChanges,
+    saveLifecycle,
+    commitLifecycle,
     
     // Selection tracking
     selectSelection,
@@ -437,9 +619,8 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
     
     // Computed values
     allSelections,
+    uiSelections,
     hasUnsavedChanges,
-    pendingChanges,
-    pendingChangesCount,
     
     // Utility methods
     hasSelections,
@@ -456,7 +637,7 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
     clearPage, clearAll, save, commitChanges, discardAllChanges,
     selectSelection, selectedSelection, toggleSelectionGlobal, setSelectionPage,
     loadSavedSelections, onSelectionDoubleClick, setOnSelectionDoubleClick,
-    allSelections, hasUnsavedChanges, pendingChanges, pendingChangesCount,
+    allSelections, uiSelections, hasUnsavedChanges,
     hasSelections, selectionCount, getCurrentDraw, isCurrentlyDrawing,
     getSelectionsForPage, getGlobalSelections, getPageSelections
   ]);

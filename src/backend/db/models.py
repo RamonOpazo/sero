@@ -1,7 +1,8 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import ForeignKey, Text, BLOB, String, Integer, Float, Enum, UniqueConstraint
+from sqlalchemy import ForeignKey, Text, BLOB, String, Integer, Float, Enum, UniqueConstraint, case, literal
 from sqlalchemy.orm import Mapped, declarative_base, mapped_column, relationship
+from sqlalchemy.ext.hybrid import hybrid_property
 
 from backend.db.types import UUIDBytes, JSONList, AwareDateTime
 from backend.api.enums import FileType, ScopeType, CommitState, AnchorOption
@@ -97,7 +98,7 @@ class Prompt(Base):
     updated_at: Mapped[datetime] = mapped_column(AwareDateTime, nullable=True,)
 
     scope: Mapped[ScopeType] = mapped_column(Enum(ScopeType), nullable=False, default=ScopeType.DOCUMENT,)
-    state: Mapped[CommitState] = mapped_column(Enum(CommitState), nullable=False, default=CommitState.STAGED,)
+    state: Mapped[CommitState] = mapped_column(Enum(CommitState), nullable=False, default=CommitState.STAGED_CREATION,)
     title: Mapped[str] = mapped_column(String(150), nullable=False,)
     prompt: Mapped[str] = mapped_column(Text, nullable=False,)
     directive: Mapped[str] = mapped_column(String(50), nullable=False,)
@@ -105,6 +106,26 @@ class Prompt(Base):
     document_id: Mapped[uuid.UUID] = mapped_column(UUIDBytes, ForeignKey("documents.id"), nullable=False,)
     
     document: Mapped["Document"] = relationship("Document", back_populates="prompts",)
+
+    @hybrid_property
+    def is_staged(self) -> bool:
+        return self.state in {CommitState.STAGED_CREATION, CommitState.STAGED_EDITION, CommitState.STAGED_DELETION}
+
+    @is_staged.expression
+    def is_staged(cls):
+        return case(
+            (
+                cls.state.in_(
+                    [
+                        CommitState.STAGED_CREATION,
+                        CommitState.STAGED_EDITION,
+                        CommitState.STAGED_DELETION,
+                    ]
+                ),
+                literal(True),
+            ),
+            else_=literal(False),
+        )
 
 
 class Selection(Base):
@@ -115,7 +136,7 @@ class Selection(Base):
     updated_at: Mapped[datetime] = mapped_column(AwareDateTime, nullable=True,)
     
     scope: Mapped[ScopeType] = mapped_column(Enum(ScopeType), nullable=False, default=ScopeType.DOCUMENT,)
-    state: Mapped[CommitState] = mapped_column(Enum(CommitState), nullable=False, default=CommitState.STAGED,)
+    state: Mapped[CommitState] = mapped_column(Enum(CommitState), nullable=False, default=CommitState.STAGED_CREATION,)
     page_number: Mapped[int | None] = mapped_column(Integer, nullable=True,)  # null for all pages
     x: Mapped[float] = mapped_column(Float, nullable=False)  # X coordinate (0-1 normalized)
     y: Mapped[float] = mapped_column(Float, nullable=False)  # Y coordinate (0-1 normalized)
@@ -127,13 +148,53 @@ class Selection(Base):
     
     document: Mapped["Document"] = relationship("Document", back_populates="selections",)
 
-    @property
+    @hybrid_property
+    def is_staged(self) -> bool:
+        return self.state in {CommitState.STAGED_CREATION, CommitState.STAGED_EDITION, CommitState.STAGED_DELETION}
+
+    @is_staged.expression
+    def is_staged(cls):
+        return case(
+            (
+                cls.state.in_(
+                    [
+                        CommitState.STAGED_CREATION,
+                        CommitState.STAGED_EDITION,
+                        CommitState.STAGED_DELETION,
+                    ]
+                ),
+                literal(True),
+            ),
+            else_=literal(False),
+        )
+
+    @hybrid_property
     def is_ai_generated(self) -> bool:
         return self.confidence is not None
+
+    @is_ai_generated.expression
+    def is_ai_generated(cls):
+        return case(
+            (
+                cls.confidence.isnot(None),
+                literal(True),
+            ),
+            else_=literal(False),
+        )
     
-    @property
+    @hybrid_property
     def is_global_page(self) -> bool:
         return self.page_number is None
+
+    @is_global_page.expression
+    def is_global_page(cls):
+        return case(
+            (
+                cls.page_number.is_(None),
+                literal(True),
+            ),
+            else_=literal(False),
+        )
 
 
 class AiSettings(Base):

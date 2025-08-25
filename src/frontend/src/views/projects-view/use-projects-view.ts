@@ -1,4 +1,5 @@
 import { useMemo, useCallback, useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useWorkspace } from '@/providers/workspace-provider';
 import { ProjectsAPI } from '@/lib/projects-api';
@@ -6,6 +7,7 @@ import type { ProjectShallowType, ProjectCreateType, ProjectUpdateType, ProjectA
 
 export function useProjectsView(onProjectSelect?: (project: ProjectShallowType) => void) {
   const { state, selectProject } = useWorkspace();
+  const navigate = useNavigate();
   
   // Own project state management
   const [projects, setProjects] = useState<ProjectShallowType[]>([]);
@@ -270,6 +272,7 @@ export function useProjectsView(onProjectSelect?: (project: ProjectShallowType) 
     onRowSelectionChange: handleRowSelectionChange,
     onBulkDelete: handleBulkDelete,
     onOpenAiSettings: openAiSettings,
+    onBackHome: () => navigate('/'),
   }), [
     handleSelectProject,
     handleCreateProject,
@@ -279,6 +282,7 @@ export function useProjectsView(onProjectSelect?: (project: ProjectShallowType) 
     handleRowSelectionChange,
     handleBulkDelete,
     openAiSettings,
+    navigate,
   ]);
 
   return {

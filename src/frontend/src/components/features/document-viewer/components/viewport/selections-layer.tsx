@@ -9,7 +9,10 @@ import React, { useState, useCallback, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { useSelections } from '../../providers/selection-provider';
 import { useViewportState } from '../../providers/viewport-provider';
-import type { Selection, SelectionCreateType } from '../../types/viewer';
+import type { Selection, SelectionCreateDraft } from '../../types/viewer';
+import { getNormalizedState, getBoxColorClasses } from '../../utils/selection-styles';
+
+type Corner = 'nw' | 'ne' | 'sw' | 'se';
 
 type Props = { 
   documentSize: { width: number; height: number };
@@ -30,6 +33,7 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
   const {
     state: selectionState,
     allSelections,
+    uiSelections,
     selectedSelection,
     selectSelection,
     updateSelectionBatch,
@@ -38,10 +42,9 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     updateDraw,
     finishDraw,
     onSelectionDoubleClick,
-    pendingChanges,
     getCurrentDraw,
     beginBatchOperation,
-  } = useSelections();
+  } = useSelections() as any;
   
   // Touch selectionState to avoid TS unused variable during builds
   void selectionState;
@@ -49,7 +52,7 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
   // Interaction state for resize, move, and create operations
   const [dragState, setDragState] = useState<{
     type: 'move' | 'resize' | 'create';
-    corner?: string;
+    corner?: Corner;
     startMousePos: { x: number; y: number };
     startPoint?: { x: number; y: number };
     initialSelection?: Selection;
@@ -105,9 +108,8 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     });
     
     // Start drawing in the new selection system
-    const initialSelection: SelectionCreateType = {
+    const initialSelection: SelectionCreateDraft = {
       scope: 'document',
-      state: 'staged',
       x,
       y,
       width: 0,
@@ -137,9 +139,8 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
       const currentY = startPoint.y + deltaY;
       
       // Create selection from start point to current point
-      const newSelection: SelectionCreateType = {
+      const newSelection: SelectionCreateDraft = {
         scope: 'document',
-        state: 'staged',
         x: Math.min(startPoint.x, currentX),
         y: Math.min(startPoint.y, currentY),
         width: Math.abs(currentX - startPoint.x),
@@ -258,6 +259,12 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     e.stopPropagation();
     e.preventDefault();
     
+    // Prevent editing for committed or staged_deletion selections
+    const norm = getNormalizedState((selection as any).state);
+    if (norm === 'committed' || norm === 'staged_deletion') {
+      return;
+    }
+
     // Begin a batch so drag updates coalesce into a single history entry
     beginBatchOperation();
 
@@ -271,12 +278,18 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
   }, [beginBatchOperation]);
   
   // Handle resize start
-  const handleResizeStart = useCallback((corner: string, e: React.MouseEvent, selection: Selection) => {
+  const handleResizeStart = useCallback((corner: Corner, e: React.MouseEvent, selection: Selection) => {
     if (e.button !== 0) return; // Only left click
     
     e.stopPropagation();
     e.preventDefault();
     
+    // Prevent editing for committed or staged_deletion selections
+    const norm = getNormalizedState((selection as any).state);
+    if (norm === 'committed' || norm === 'staged_deletion') {
+      return;
+    }
+
     // Begin a batch so drag updates coalesce into a single history entry
     beginBatchOperation();
 
@@ -303,17 +316,25 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     return positions.map(({ name, style }) => (
       <div
         key={name}
+        data-testid={`resize-${name}`}
         className="absolute bg-blue-600 border border-white shadow-md hover:bg-blue-700 transition-colors z-10"
         style={{
           width: handleSize,
           height: handleSize,
           ...style,
         }}
-        onMouseDown={(e) => handleResizeStart(name, e, selection)}
+        onMouseDown={(e) => handleResizeStart(name as Corner, e, selection)}
       />
     ));
   }, [handleResizeStart]);
 
+
+  // Build UI meta map for quick lookup
+  const uiMetaById = React.useMemo(() => {
+    const map = new Map<string, any>();
+    (uiSelections || []).forEach((u: any) => { if (u && u.id) map.set(u.id, u); });
+    return map;
+  }, [uiSelections]);
 
   // Render selection box
   const renderSelectionBox = useCallback((selection: Selection) => {
@@ -324,39 +345,40 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     const height = Math.abs(selection.height) * documentSize.height;
 
     const isSelected = selectedSelection?.id === selection.id;
-    const isNew = pendingChanges.creates.some((create: Selection) => create.id === selection.id);
     const isGlobal = selection.page_number === null;
 
-    // Determine staged status: persisted but not committed
-    const isStaged = selection.state === 'staged';
-
-    // Check if this saved selection has been modified from its initial state
-    const isModified = !isNew && pendingChanges.updates.some((update: Selection) => update.id === selection.id);
-
-    // Choose a color family for border and pattern; also set matching text-* so currentColor can be used in CSS
-    const colorClasses = isSelected
-      ? { border: "border-blue-600", text: "text-blue-600" }
-      : isGlobal
-        ? { border: "border-yellow-500/80 hover:border-yellow-600/95", text: "text-yellow-600" }
-        : isNew
-          ? { border: "border-green-500/80 hover:border-green-600/95", text: "text-green-600" }
-          : isModified
-            ? { border: "border-purple-600/85 hover:border-purple-700/95", text: "text-purple-700" }
-            : { border: "border-slate-500/80 hover:border-slate-600/95", text: "text-slate-600" };
+    // Determine visual state using UI lifecycle meta (dirty/stage) when available
+    const ui = uiMetaById.get(selection.id);
+    let visualNorm = getNormalizedState((selection as any).state);
+    if (ui && ui.stage) {
+      if (ui.stage === 'staged_creation') visualNorm = 'staged_creation';
+      else if (ui.stage === 'staged_edition') visualNorm = 'staged_edition';
+      else if (ui.stage === 'staged_deletion') visualNorm = 'staged_deletion';
+      else if (ui.dirty === true) visualNorm = 'draft';
+    } else {
+      // Fallback: if no UI meta, treat unknown states as drafts
+      if (visualNorm === 'draft') {
+        visualNorm = 'draft';
+      }
+    }
+    const colors = getBoxColorClasses(visualNorm);
 
     const selectionElement = (
       <div
         key={selection.id}
+        data-testid="selection-box"
+        data-selection-id={selection.id}
+        data-state={visualNorm}
         className={cn(
           "absolute pointer-events-auto group overflow-hidden",
           // Disable transitions during drag operations
           dragState?.type === 'move' || dragState?.type === 'resize'
             ? ""
             : "transition-all duration-200",
-          "border",
-          isStaged ? "border-dashed" : "border-solid",
-          colorClasses.border,
-          colorClasses.text,
+          'border',
+          colors.borderStyle === 'dashed' ? 'border-dashed' : (colors.borderStyle === 'double' ? 'border-double border-4' : 'border-solid'),
+          colors.border,
+          colors.text,
         )}
         style={{
           left: `${left}px`,
@@ -389,7 +411,7 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
         />
         {/* Subtle solid tint using currentColor */}
         <div className="absolute inset-0 pointer-events-none opacity-10" style={{ backgroundColor: 'currentColor' }} />
-        {/* Diagonal stripe overlay */}
+        {/* Diagonal stripe overlay (all) */}
         <div
           className="absolute inset-0 pointer-events-none opacity-30"
           style={{
@@ -397,6 +419,16 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
             backgroundSize: '20px 20px',
           }}
         />
+        {/* Crossed stripes for global selections */}
+        {isGlobal && (
+          <div
+            className="absolute inset-0 pointer-events-none opacity-25"
+            style={{
+              backgroundImage: `linear-gradient(45deg, currentColor 2.25%, transparent 2.25%, transparent 50%, currentColor 50%, currentColor 52.25%, transparent 52.25%, transparent 100%)`,
+              backgroundSize: '20px 20px',
+            }}
+          />
+        )}
 
         {/* Resize handles for selected selection */}
         {isSelected && renderResizeHandles(selection)}
@@ -404,7 +436,7 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     );
 
     return selectionElement;
-  }, [documentSize, selectedSelection, handleSelectionClick, dragState, renderResizeHandles, handleMoveStart, pendingChanges]);
+  }, [documentSize, selectedSelection, handleSelectionClick, dragState, renderResizeHandles, handleMoveStart, uiMetaById]);
 
   // Filter selections for current page
   const pageSelections = allSelections.filter(

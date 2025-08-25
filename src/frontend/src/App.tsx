@@ -2,12 +2,12 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { ThemeProvider } from '@/providers';
 import { MainLayout } from '@/components/layout';
-import { HomePage } from '@/pages/HomePage';
+import { HomePage } from '@/pages/home-page';
 import { ProjectsView } from '@/views/projects-view';
 import { DocumentsView } from '@/views/documents-view';
 import { EditorView } from '@/views/editor-view';
-import { DocumentationView } from '@/views/documentation-view';
-import { SettingsPage } from '@/pages/SettingsPage';
+import { DocsPage } from '@/pages/docs-page';
+import { SettingsPage } from '@/pages/settings-page';
 import { CryptoTestView } from '@/views/crypto-test-view';
 
 // Redirect component for /projects/:projectId -> /projects/:projectId/documents
@@ -43,8 +43,8 @@ function App() {
             <Route path="/projects" element={<ProjectsView />} />
 
             {/* Documentation routes */}
-            <Route path="/documentation" element={<DocumentationView docName="index" />} />
-            <Route path="/documentation/:docName" element={<DocumentationView />} />
+            <Route path="/documentation" element={<DocsPage docName="index" />} />
+            <Route path="/documentation/:docName" element={<DocsPage />} />
 
             {/* Developer routes */}
             <Route path="/dev/api-swagger" element={<ApiDocsRedirect />} />

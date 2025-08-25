@@ -2,7 +2,7 @@ import type { PropsWithChildren } from 'react';
 import type { MinimalDocumentType } from '@/types';
 import { ViewportProvider } from './viewport-provider';
 import { SelectionProvider } from './selection-provider';
-import PromptProvider from './prompt-provider';
+import { PromptProvider } from './prompt-provider';
 
 export type UnifiedDocumentViewerProviderProps = PropsWithChildren<{
   document: MinimalDocumentType;

@@ -32,7 +32,7 @@ const selectionApiAdapter: ApiAdapter<Selection, Omit<SelectionCreateType, 'docu
         updated_at: apiSelection.updated_at,
         is_ai_generated: apiSelection.is_ai_generated,
         scope: (apiSelection as any).scope ?? 'document',
-        state: (apiSelection as any).state ?? 'staged',
+        state: (apiSelection as any).state ?? 'staged_creation',
         is_global_page: (apiSelection as any).is_global_page ?? (apiSelection.page_number == null),
       }));
       return { ok: true, value: selections };
@@ -57,7 +57,7 @@ const selectionApiAdapter: ApiAdapter<Selection, Omit<SelectionCreateType, 'docu
         updated_at: result.value.updated_at,
         is_ai_generated: result.value.is_ai_generated,
         scope: (result.value as any).scope ?? 'document',
-        state: (result.value as any).state ?? 'staged',
+        state: (result.value as any).state ?? 'staged_creation',
         is_global_page: (result.value as any).is_global_page ?? (result.value.page_number == null),
       };
       return { ok: true, value: selection };
@@ -99,7 +99,7 @@ const selectionTransforms: ApiTransforms<Selection, Omit<SelectionCreateType, 'd
   forCreate: (selection: Selection): Omit<SelectionCreateType, 'document_id'> => ({
     // Ensure required fields for creation are present
     scope: selection.scope ?? 'document',
-    state: selection.state ?? 'staged',
+    state: selection.state ?? 'staged_creation',
     x: selection.x,
     y: selection.y,
     width: selection.width,
@@ -109,14 +109,14 @@ const selectionTransforms: ApiTransforms<Selection, Omit<SelectionCreateType, 'd
   }),
   
   forUpdate: (selection: Selection): Partial<Selection> => ({
-    // Stage on update per new workflow: any edit moves selection to staged
-    state: 'staged',
+    // Preserve staged_deletion; otherwise, edits move to STAGED_EDITION
+    state: (selection as any).state === 'staged_deletion' ? 'staged_deletion' : 'staged_edition',
     x: selection.x,
     y: selection.y,
     width: selection.width,
     height: selection.height,
     page_number: selection.page_number,
-    confidence: selection.confidence
+    confidence: selection.confidence,
   }),
   
   fromApi: (apiItem: unknown): Selection => {
@@ -134,7 +134,7 @@ const selectionTransforms: ApiTransforms<Selection, Omit<SelectionCreateType, 'd
       updated_at: apiSelection.updated_at,
       is_ai_generated: apiSelection.is_ai_generated,
       scope: (apiSelection as any).scope ?? 'document',
-      state: (apiSelection as any).state ?? 'staged',
+      state: (apiSelection as any).state ?? 'staged_creation',
       is_global_page: (apiSelection as any).is_global_page ?? (apiSelection.page_number == null),
     };
   }
@@ -331,7 +331,9 @@ const selectionExtensions = {
     
     // Page operations
     getSelectionsForPage: (state: any, page: number | null): Selection[] => {
-      return [...state.persistedItems, ...state.draftItems].filter((selection: Selection) => selection.page_number === page);
+      return [...state.persistedItems, ...state.draftItems].filter((selection: Selection) => (
+        page === null ? (selection.page_number == null) : (selection.page_number === page)
+      ));
     },
     
     getGlobalSelections: (state: any): Selection[] => {

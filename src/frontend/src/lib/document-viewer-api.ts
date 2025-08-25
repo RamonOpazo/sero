@@ -179,7 +179,7 @@ export const DocumentViewerAPI = {
   /**
    * Update an existing selection
    */
-  async updateSelection(selectionId: string, updates: Partial<Pick<SelectionType, 'x' | 'y' | 'width' | 'height' | 'page_number' | 'confidence'>>): Promise<Result<void, unknown>> {
+  async updateSelection(selectionId: string, updates: Partial<Pick<SelectionType, 'x' | 'y' | 'width' | 'height' | 'page_number' | 'confidence' | 'state'>>): Promise<Result<void, unknown>> {
     return AsyncResultWrapper
       .from(api.safe.put(`/selections/id/${selectionId}`, updates))
       .tap(() => void 0)
@@ -188,6 +188,19 @@ export const DocumentViewerAPI = {
         throw error;
       })
       .toResult() as Promise<Result<void, unknown>>;
+  },
+
+  /**
+   * Convert a committed selection to staged edition (explicit)
+   */
+  async convertSelectionToStaged(selectionId: string): Promise<Result<SelectionType, unknown>> {
+    return AsyncResultWrapper
+      .from(api.safe.patch<SelectionType>(`/selections/id/${selectionId}/convert-to-staged`))
+      .catch((error: unknown) => {
+        console.error('Failed to convert selection to staged:', error);
+        throw error;
+      })
+      .toResult();
   },
 
   /**

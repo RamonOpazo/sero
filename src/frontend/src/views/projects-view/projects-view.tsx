@@ -2,7 +2,6 @@ import { useNavigate } from 'react-router-dom';
 import { ProjectsDataTable } from './projects-data-table';
 import type { ProjectShallowType } from '@/types';
 
-// Main ProjectsView Component
 export function ProjectsView() {
   const navigate = useNavigate();
 
@@ -12,13 +11,6 @@ export function ProjectsView() {
   };
 
   return (
-    <div className="space-y-6">
-      <ProjectsDataTable onProjectSelect={handleSelectProject} />
-    </div>
+    <ProjectsDataTable onProjectSelect={handleSelectProject} />
   );
 }
-
-// Export other components and utilities
-export { ProjectsDataTable } from './projects-data-table'
-export { useProjectsView } from './use-projects-view'
-export * from './dialogs'

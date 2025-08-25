@@ -7,7 +7,7 @@ export const PromptLanguageEnumSchema = z.enum(['catalonian', 'castillian', 'eng
 export const FileTypeEnumSchema = z.enum(['original', 'redacted']);
 // New enums aligned to backend
 export const ScopeTypeEnumSchema = z.enum(['project', 'document']);
-export const CommitStateEnumSchema = z.enum(['staged', 'committed']);
+export const CommitStateEnumSchema = z.enum(['staged_creation', 'staged_edition', 'staged_deletion', 'committed']);
 
 // Types
 export type ProjectStatusEnum = z.infer<typeof ProjectStatusEnumSchema>;

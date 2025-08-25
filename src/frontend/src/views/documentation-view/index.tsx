@@ -1,11 +1,14 @@
-import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useEffect, useState, useCallback } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
 import rehypeSlug from 'rehype-slug'
 import rehypeAutolinkHeadings from 'rehype-autolink-headings'
 import { loadMarkdownDoc, docExists } from '@/utils/markdown'
+import { EmptyState } from '@/components'
+import { ArrowLeft } from 'lucide-react'
+import { Link } from 'react-router-dom'
 
 // Import highlight.js theme
 import 'highlight.js/styles/github-dark.css'
@@ -16,18 +19,24 @@ interface DocumentationViewProps {
 
 export function DocumentationView({ docName }: DocumentationViewProps) {
   const params = useParams()
-  const [content, setContent] = useState<string>('')
-  const [loading, setLoading] = useState(true)
+  const navigate = useNavigate();
+  const [docContent, setContent] = useState<string>('')
+  const [isLoading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   // Determine which doc to load
   const actualDocName = docName || params.docName || 'index'
 
+  // Business logic handlers
+  const handleBackToDocumentationIndex = useCallback(() => {
+    navigate("/documentation");
+  }, [navigate]);
+
   useEffect(() => {
     async function loadDoc() {
       setLoading(true)
       setError(null)
-      
+
       try {
         // Check if the doc exists
         if (!docExists(actualDocName)) {
@@ -48,41 +57,29 @@ export function DocumentationView({ docName }: DocumentationViewProps) {
     loadDoc()
   }, [actualDocName])
 
-  if (loading) {
-    return (
-      <div className="max-w-4xl mx-auto">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-muted rounded w-1/3"></div>
-          <div className="h-4 bg-muted rounded w-full"></div>
-          <div className="h-4 bg-muted rounded w-3/4"></div>
-          <div className="h-4 bg-muted rounded w-1/2"></div>
-        </div>
-      </div>
-    )
-  }
+  const content = (() => {
+    if (error) {
+      return (
+        <EmptyState
+          message="Documentation Error"
+          buttonText="Back to Documentation"
+          buttonIcon={<ArrowLeft />}
+          onButtonClick={handleBackToDocumentationIndex}
+        />
+      );
+    }
 
-  if (error) {
-    return (
-      <div className="max-w-4xl mx-auto">
-        <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-6">
-          <h1 className="text-2xl font-bold text-destructive mb-2">Documentation Error</h1>
-          <p className="text-destructive/80">{error}</p>
-          <div className="mt-4">
-            <a 
-              href="/documentation" 
-              className="text-blue-600 hover:text-blue-800 underline"
-            >
-              ← Back to Documentation
-            </a>
-          </div>
-        </div>
-      </div>
-    )
-  }
+    if (isLoading) {
+      return (
+        <EmptyState
+          variant="await"
+          message="Loading documentation..."
+        />
+      );
+    }
 
-  return (
-    <div className="max-w-4xl mx-auto">
-      <div className="documentation-content space-y-6">
+    return (
+      <div className="prose prose-slate dark:prose-invert max-w-none">
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}
           rehypePlugins={[
@@ -94,44 +91,53 @@ export function DocumentationView({ docName }: DocumentationViewProps) {
             a: ({ href, children, ...props }) => {
               const h = typeof href === 'string' ? href : ''
               const isInternal = h.startsWith('/') || h.startsWith('#')
-              const isDocsInternal = h.startsWith('./')
-              
-              if (isDocsInternal) {
-                // Convert ./page-name to /documentation/page-name
-                const docPath = h.replace('./', '/documentation/')
+              const isDocsLike = h.startsWith('./') || h.startsWith('/documentation/')
+
+              // Normalize docs links like ./page.md or /documentation/page.md -> /documentation/page
+              if (isDocsLike) {
+                // Remove leading './' or '/documentation/'
+                const withoutPrefix = h.startsWith('./')
+                  ? h.slice(2)
+                  : h.replace(/^\/documentation\//, '')
+
+                // Preserve hash fragments if present
+                const [base, hash = ''] = withoutPrefix.split('#')
+                const slug = base.replace(/\.md$/i, '')
+                const to = `/documentation/${slug}${hash ? `#${hash}` : ''}`
+
                 return (
-                  <a 
-                    href={docPath} 
-                    className="docs-internal-link" 
+                  <Link
+                    to={to}
+                    className="docs-internal-link"
                     {...props}
                   >
                     {children}
-                  </a>
+                  </Link>
                 )
               }
-              
+
               if (isInternal) {
                 return (
-                  <a 
-                    href={h} 
-                    className="docs-internal-link" 
+                  <Link
+                    to={h}
+                    className="docs-internal-link"
                     {...props}
                   >
                     {children}
-                  </a>
+                  </Link>
                 )
               }
-              
+
               return (
-                <a 
-                  href={h} 
-                  className="docs-external-link" 
-                  target="_blank" 
+                <Link
+                  to={h}
+                  className="docs-external-link"
+                  target="_blank"
                   rel="noopener noreferrer"
                   {...props}
                 >
                   {children}
-                </a>
+                </Link>
               )
             },
             table: ({ children, ...props }) => (
@@ -141,9 +147,11 @@ export function DocumentationView({ docName }: DocumentationViewProps) {
             )
           }}
         >
-          {content}
+          {docContent}
         </ReactMarkdown>
       </div>
-    </div>
-  )
+    )
+  })();
+
+  return content
 }

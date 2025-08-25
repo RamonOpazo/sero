@@ -32,6 +32,7 @@ class Selection(BaseModel):
     document_id: UUID4
     is_ai_generated: bool
     is_global_page: bool
+    is_staged: bool
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -39,7 +40,7 @@ class Selection(BaseModel):
 class SelectionCreate(BaseModel):
     id: UUID4 | None = Field(None)
     scope: ScopeType = Field(default=ScopeType.DOCUMENT)
-    state: CommitState = Field(default=CommitState.STAGED)
+    state: CommitState = Field(default=CommitState.STAGED_CREATION)
     page_number: int | None = Field(None)  # no page number applies selection to whole document
     x: float = Field(..., ge=0, le=1)
     y: float = Field(..., ge=0, le=1)
