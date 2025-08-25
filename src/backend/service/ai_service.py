@@ -7,6 +7,7 @@ from backend.api.schemas.selections_schema import SelectionCreate
 from backend.core.config import settings as app_settings
 from backend.core.ai_ollama import OllamaClient, OllamaOptions
 from backend.core.prompt_composer import compose_selection_instructions
+from backend.core.geometry import NormRect, merge_rects
 
 
 class GenerateSelectionsRequest(BaseModel):
@@ -89,29 +90,45 @@ class OllamaAiService(AiService):
             rules=request.prompts,
         )
         raw = await self.client.generate(model=app_settings.ai.model, prompt=final_prompt, options=OllamaOptions())
-        
-        # Parse JSON into SelectionCreate objects with clamping and defaults
-        selections: list[SelectionCreate] = []
+
+        # Parse JSON items and construct rects
         items = self._parse_model_raw(raw)
+        rects: list[NormRect] = []
         for item in items:
-            # Basic required fields for a valid selection
             if not isinstance(item, dict):
                 continue
             if any(k not in item for k in ("x", "y", "width", "height")):
                 continue
             try:
-                selections.append(SelectionCreate(
+                rects.append(NormRect(
                     page_number=item.get("page_number"),
                     x=self._clamp01(item.get("x"), 0.0),
                     y=self._clamp01(item.get("y"), 0.0),
                     width=self._clamp01(item.get("width"), 0.0),
                     height=self._clamp01(item.get("height"), 0.0),
                     confidence=(float(item.get("confidence")) if item.get("confidence") is not None else None),
-                    committed=False,
-                    document_id="00000000-0000-4000-8000-000000000000",
                 ))
             except Exception:
-                # Skip invalid items rather than failing the entire response
+                continue
+
+        # Coalesce overlapping/touching rects per page
+        merged = merge_rects(rects)
+
+        # Convert to SelectionCreate with request.document_id
+        selections: list[SelectionCreate] = []
+        for r in merged:
+            try:
+                selections.append(SelectionCreate(
+                    page_number=r.page_number,
+                    x=r.x,
+                    y=r.y,
+                    width=r.width,
+                    height=r.height,
+                    confidence=r.confidence,
+                    committed=False,
+                    document_id=request.document_id,
+                ))
+            except Exception:
                 continue
         return GenerateSelectionsResponse(selections=selections)
 

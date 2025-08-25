@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Save, Trash2, Plus, Undo2, RotateCcw, AlertCircle } from "lucide-react";
+import { Save, Trash2, Plus, Undo2, RotateCcw, AlertCircle, Bot } from "lucide-react";
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { toast } from "sonner";
 import type { MinimalDocumentType } from "@/types";
@@ -8,6 +8,7 @@ import { TypedConfirmationDialog, type TypedMessage } from "@/components/shared/
 import { FormConfirmationDialog } from "@/components/shared";
 import PromptsList from "./prompt-list";
 import { usePrompts } from "../../providers/prompt-provider";
+import { useSelections } from "../../providers/selection-provider";
 
 interface PromptControlsProps {
   document: MinimalDocumentType;
@@ -31,6 +32,8 @@ export default function PromptManagement({ document }: PromptControlsProps) {
     pendingChangesCount,
   } = usePrompts();
   
+  const { state: selectionStateDV } = useSelections() as any;
+  
   const isSaving = (state as any).isSaving || false;
   const isLoading = (state as any).isLoading || false;
   const isDeleting = (state as any).isDeleting || false;
@@ -41,6 +44,7 @@ export default function PromptManagement({ document }: PromptControlsProps) {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editingPromptId, setEditingPromptId] = useState<string | null>(null);
   const [showSaveConfirmDialog, setShowSaveConfirmDialog] = useState(false);
+  const [isApplyingAI, setIsApplyingAI] = useState(false);
   
   // Load prompts when component mounts
   useEffect(() => {
@@ -122,6 +126,28 @@ export default function PromptManagement({ document }: PromptControlsProps) {
     }
   }, [save, promptStats.totalUnsavedChanges]);
   
+  // Run AI detection to generate staged selections
+  const handleRunAIDetection = useCallback(async () => {
+    try {
+      setIsApplyingAI(true);
+      const result = await import('@/lib/document-viewer-api').then(m => m.DocumentViewerAPI.applyAi(document.id));
+      if (result.ok) {
+        const count = result.value.length;
+        const plural = count === 1 ? '' : 's';
+        toast.success(`AI generated ${count} selection${plural} (staged)`);
+        if (typeof (selectionStateDV as any).reload === 'function') {
+          await (selectionStateDV as any).reload();
+        }
+      } else {
+        toast.error('Failed to run AI detection');
+      }
+    } catch (err) {
+      toast.error('Failed to run AI detection');
+    } finally {
+      setIsApplyingAI(false);
+    }
+  }, [document.id, selectionStateDV]);
+
   // Discard all unsaved changes
   const handleDiscardAllChanges = useCallback(() => {
     if (promptStats.totalUnsavedChanges === 0) {
@@ -258,6 +284,21 @@ export default function PromptManagement({ document }: PromptControlsProps) {
             <Save className="mr-2 h-3 w-3" />
           )}
           Save all changes
+        </Button>
+
+        <Button
+          variant="default"
+          size="sm"
+          onClick={handleRunAIDetection}
+          disabled={isAnyOperationInProgress || isApplyingAI}
+          className="w-full justify-start h-9 text-xs"
+        >
+          {isApplyingAI ? (
+            <RotateCcw className="mr-2 h-3 w-3 animate-spin" />
+          ) : (
+            <Bot className="mr-2 h-3 w-3" />
+          )}
+          {isApplyingAI ? 'Running AI...' : 'Run AI Detection'}
         </Button>
         
         <Button

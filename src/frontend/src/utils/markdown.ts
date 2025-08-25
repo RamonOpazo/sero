@@ -4,6 +4,7 @@
 // Available documentation files
 const availableDocs = [
   'index',
+  'whats-sero',
   'getting-started',
   'projects',
   'security',

@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { RotateCcw, AlertCircle, Trash2, FileX, Undo2, Brain, Save, CheckCheck } from "lucide-react";
+import { RotateCcw, AlertCircle, Trash2, FileX, Undo2, Save, CheckCheck } from "lucide-react";
 import { useViewportState } from "../../providers/viewport-provider";
 import { useSelections } from "../../providers/selection-provider";
 import { toast } from "sonner";
@@ -24,7 +24,6 @@ export default function SelectionManagement({ document }: SelectionControlsProps
   const { isViewingProcessedDocument, currentPage } = useViewportState();
 
   const {
-    state: selectionState,
     uiSelections,
     allSelections,
     clearAll,
@@ -32,7 +31,6 @@ export default function SelectionManagement({ document }: SelectionControlsProps
     discardAllChanges,
   } = useSelections() as any;
 
-  const [isApplyingAI, setIsApplyingAI] = useState(false);
   const { selectionStats: scSel, promptStats: prSel, canStage, canCommit, isStaging, isCommitting, stageAll, commitAll, stageMessages } = useStageCommit(document.id) as any;
   const [showStageDialog, setShowStageDialog] = useState(false);
   const [showCommitDialog, setShowCommitDialog] = useState(false);
@@ -60,26 +58,6 @@ export default function SelectionManagement({ document }: SelectionControlsProps
     };
   }, [uiSelections]);
 
-  // Apply AI to generate staged selections
-  const handleApplyAI = useCallback(async () => {
-    try {
-      setIsApplyingAI(true);
-      const result = await import('@/lib/document-viewer-api').then(m => m.DocumentViewerAPI.applyAi((selectionState as any).contextId));
-      if (result.ok) {
-        toast.success(`AI generated ${result.value.length} selection${result.value.length === 1 ? '' : 's'} (staged)`);
-        // Reload selections from backend to reflect staged items
-        if (typeof (selectionState as any).reload === 'function') {
-          await (selectionState as any).reload();
-        }
-      } else {
-        toast.error('Failed to apply AI');
-      }
-    } catch (err) {
-      toast.error('Failed to apply AI');
-    } finally {
-      setIsApplyingAI(false);
-    }
-  }, [selectionState]);
 
   // Clear all selections
   const handleClearAll = useCallback(() => {
@@ -238,23 +216,8 @@ export default function SelectionManagement({ document }: SelectionControlsProps
 
       <Separator />
 
-      {/* AI & Lifecycle Controls */}
+      {/* Lifecycle Controls */}
       <div className="flex flex-col gap-2">
-        <Button
-          variant="default"
-          size="sm"
-          onClick={handleApplyAI}
-          disabled={isApplyingAI || isViewingProcessedDocument}
-          className="w-full justify-start h-9 text-xs"
-        >
-          {isApplyingAI ? (
-            <RotateCcw className="mr-2 h-3 w-3 animate-spin" />
-          ) : (
-            <Brain className="mr-2 h-3 w-3" />
-          )}
-          {isApplyingAI ? 'Applying AI...' : 'Apply AI'}
-        </Button>
-
         <Button
           variant="outline"
           size="sm"
