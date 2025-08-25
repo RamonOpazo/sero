@@ -6,11 +6,17 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Switch } from '@/components/ui/switch'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 export type FieldDescriptor =
   | ({ type: 'text' } & BaseField)
   | ({ type: 'textarea'; rows?: number } & BaseField)
   | ({ type: 'select'; options: { value: string; label: string }[] } & BaseField)
+  | ({ type: 'checkbox' } & BaseField)
+  | ({ type: 'switch' } & BaseField)
+  | ({ type: 'file'; accept?: string; multiple?: boolean } & BaseField)
 
 interface BaseField {
   name: string,
@@ -18,6 +24,7 @@ interface BaseField {
   placeholder?: string,
   description?: string,
   required?: boolean,
+  tooltip?: string,
 }
 
 export interface FormConfirmationDialogProps {
@@ -77,13 +84,23 @@ export function FormConfirmationDialog(props: FormConfirmationDialogProps) {
       rules={{ required: fd.required ? `${fd.label} is required` : false }}
       render={({ field }) => (
         <FormItem>
-          <FormLabel>{fd.label}</FormLabel>
+          <div className="flex items-center gap-1">
+            <FormLabel>{fd.label}</FormLabel>
+            {fd.tooltip ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="text-muted-foreground cursor-help text-xs">?</span>
+                </TooltipTrigger>
+                <TooltipContent sideOffset={4}>{fd.tooltip}</TooltipContent>
+              </Tooltip>
+            ) : null}
+          </div>
           <FormControl>
             {fd.type === 'text' ? (
               <Input placeholder={fd.placeholder} {...field} />
             ) : fd.type === 'textarea' ? (
               <Textarea placeholder={fd.placeholder} rows={(fd as any).rows ?? 8} {...field} />
-            ) : (
+            ) : fd.type === 'select' ? (
               <Select value={field.value} onValueChange={field.onChange}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder={fd.placeholder} />
@@ -94,7 +111,21 @@ export function FormConfirmationDialog(props: FormConfirmationDialogProps) {
                   ))}
                 </SelectContent>
               </Select>
-            )}
+            ) : fd.type === 'checkbox' ? (
+              <Checkbox checked={!!field.value} onCheckedChange={field.onChange as any} />
+            ) : fd.type === 'switch' ? (
+              <Switch checked={!!field.value} onCheckedChange={field.onChange as any} />
+            ) : fd.type === 'file' ? (
+              <Input
+                type="file"
+                accept={(fd as any).accept}
+                multiple={(fd as any).multiple}
+                onChange={(e) => {
+                  const files = e.target.files;
+                  (field as any).onChange(files && files.length > 0 ? (fd as any).multiple ? Array.from(files) : files[0] : null);
+                }}
+              />
+            ) : null}
           </FormControl>
           {fd.description ? <p className="text-xs text-muted-foreground">{fd.description}</p> : null}
           <FormMessage />
