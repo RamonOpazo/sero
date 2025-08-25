@@ -4,7 +4,7 @@ import { Save, Trash2, Plus, Undo2, RotateCcw, AlertCircle } from "lucide-react"
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { toast } from "sonner";
 import type { MinimalDocumentType } from "@/types";
-import { SavePromptChangesConfirmationDialog } from "../dialogs";
+import { TypedConfirmationDialog, type TypedMessage } from "@/components/shared/typed-confirmation-dialog";
 import { FormConfirmationDialog } from "@/components/shared";
 import PromptsList from "./prompt-list";
 import { usePrompts } from "../../providers/prompt-provider";
@@ -360,13 +360,22 @@ export default function PromptManagement({ document }: PromptControlsProps) {
         />
       ) : null}
       
-      {/* Save Confirmation Dialog */}
-      <SavePromptChangesConfirmationDialog
+      {/* Save Confirmation Dialog (inline) */}
+      <TypedConfirmationDialog
         isOpen={showSaveConfirmDialog}
         onClose={handleCloseSaveConfirmDialog}
         onConfirm={handleConfirmedSave}
-        changesCount={promptStats.totalUnsavedChanges}
-        isSaving={isSaving}
+        title={"Save All Changes"}
+        description={undefined}
+        confirmationText="proceed"
+        confirmButtonText={isSaving ? "Saving..." : "Save Changes"}
+        cancelButtonText="Cancel"
+        variant="default"
+        messages={([
+          { variant: 'info', title: 'Summary', description: `You are about to save ${promptStats.totalUnsavedChanges} change${promptStats.totalUnsavedChanges === 1 ? '' : 's'} to the server.` },
+          { variant: 'info', description: 'All new prompts will be created; modified prompts updated; deleted prompts removed. This cannot be undone.' },
+        ] as TypedMessage[])}
+        showConfirmationInput={true}
       />
     </div>
   );

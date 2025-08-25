@@ -5,7 +5,8 @@ import { useSelections } from "../../providers/selection-provider";
 import { useViewportState } from "../../providers/viewport-provider";
 import { useMemo, useRef, useEffect, useState, useCallback } from "react";
 import { cn } from "@/lib/utils";
-import { PageSelectionDialog } from "../dialogs";
+import { FormConfirmationDialog } from "@/components/shared";
+import type { TypedMessage } from "@/components/shared/typed-confirmation-dialog";
 import { SimpleConfirmationDialog } from "@/components/shared/simple-confirmation-dialog";
 import { CONVERT_TO_STAGED_DIALOG } from "./dialog-text";
 import type { Selection } from "../../types/viewer";
@@ -258,14 +259,35 @@ export default function SelectionList() {
         </div>
       </ScrollArea>
       
-      {/* Page Selection Dialog */}
-      <PageSelectionDialog
+      {/* Page Selection Dialog (inline) */}
+      <FormConfirmationDialog
         isOpen={dialogState.isOpen}
         onClose={handleDialogClose}
-        onConfirm={handleDialogConfirm}
-        currentPage={currentPage}
-        totalPages={numPages}
-        selectionId={dialogState.selectionId ?? undefined}
+        title="Choose Target Page"
+        description="Configure how this selection should be displayed across the document."
+        confirmButtonText="Apply"
+        cancelButtonText="Cancel"
+        variant="default"
+        messages={([
+          { variant: 'info', title: 'Usage', description: `Currently viewing page ${currentPage + 1} of ${numPages}. Toggle global to show on all pages, or pick a page number.` },
+        ] as TypedMessage[])}
+        initialValues={{ isGlobal: false, page: currentPage + 1 }}
+        fields={[
+          { type: 'switch', name: 'isGlobal', label: 'Global Selection', tooltip: 'Appear on all pages' },
+          { type: 'number', name: 'page', label: 'Target Page Number', placeholder: `Enter page number (1-${numPages})`, required: true, tooltip: `Range: 1 to ${numPages}`, min: 1, max: numPages, step: 1 },
+        ]}
+        onSubmit={async (values) => {
+          const isGlobal = !!values.isGlobal;
+          if (isGlobal) {
+            handleDialogConfirm(null);
+            return;
+          }
+          const pageNum = Number(values.page);
+          if (!Number.isFinite(pageNum) || pageNum < 1 || pageNum > numPages) {
+            throw new Error('Invalid page number');
+          }
+          handleDialogConfirm(pageNum - 1);
+        }}
       />
       {/* Convert committed to staged dialog */}
       <SimpleConfirmationDialog
