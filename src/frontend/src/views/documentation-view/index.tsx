@@ -79,7 +79,7 @@ export function DocumentationView({ docName }: DocumentationViewProps) {
     }
 
     return (
-      <div className="documentation-content space-y-6">
+      <div className="prose prose-slate dark:prose-invert max-w-none">
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}
           rehypePlugins={[

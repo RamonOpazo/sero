@@ -5,7 +5,7 @@ interface DocsPageProps {
   docName?: string
 }
 
-export function DocsPage({ docName = "index" }: DocsPageProps) {
+export function DocsPage({ docName }: DocsPageProps) {
 
   return (
     <div className="relative py-[2rem] px-[3rem]">
