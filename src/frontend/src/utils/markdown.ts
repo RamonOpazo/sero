@@ -33,6 +33,7 @@ export async function loadMarkdownDoc(docName: string): Promise<string> {
 export function getDocTitle(docName: string): string {
   const titles: Record<string, string> = {
     'index': 'Documentation',
+    'whats-sero': "What's SERO",
     'getting-started': 'Getting Started',
     'projects': 'Working with Projects',
     'documents': 'Document Management',
