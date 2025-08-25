@@ -4,7 +4,8 @@ import { Save, Trash2, Plus, Undo2, RotateCcw, AlertCircle } from "lucide-react"
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { toast } from "sonner";
 import type { MinimalDocumentType } from "@/types";
-import { AddPromptDialog, SavePromptChangesConfirmationDialog } from "../dialogs";
+import { SavePromptChangesConfirmationDialog } from "../dialogs";
+import { FormConfirmationDialog } from "@/components/shared";
 import PromptsList from "./prompt-list";
 import { usePrompts } from "../../providers/prompt-provider";
 
@@ -61,42 +62,41 @@ export default function PromptManagement({ document }: PromptControlsProps) {
   }, [allPrompts.length, (state as any).persistedItems?.length, (state as any).draftItems?.length, hasUnsavedChanges, pendingChangesCount]);
 
   // Add new rule locally (not saved to server until saveAllChanges is called)
-  const handleAddRule = useCallback(async (ruleData: {
-    type: string;
-    title: string;
-    rule: string;
-    priority: 'high' | 'medium' | 'low';
-    enabled: boolean;
-  }) => {
-    try {
-      const promptText = `Rule Type: ${ruleData.type}\n` +
-                        `Priority: ${ruleData.priority.toUpperCase()}\n` +
-                        `Title: ${ruleData.title}\n\n` +
-                        `Instructions:\n${ruleData.rule}`;
-      const promptData = {
-        title: ruleData.title,
-        prompt: promptText,
-        directive: 'process',
-        // Create prompts as committed immediately to avoid data loss
-        state: 'committed',
-        scope: 'document',
-      } as any;
-      
-      // Add to manager and immediately persist to backend
-      createPrompt(promptData);
-      const res = await save();
-      if (!res.ok) {
-        toast.error('Failed to create prompt');
-        return;
-      }
-      toast.success(`${ruleData.title} rule created and committed`);
-      setShowAddDialog(false);
-      
-    } catch (error) {
-      console.error('Error adding rule:', error);
-      toast.error('Failed to add AI rule');
+  // Form-managed state for prompt creation
+  const [formTitle, setFormTitle] = useState('');
+  const [formDirective, setFormDirective] = useState('process');
+  const [formPrompt, setFormPrompt] = useState('');
+
+  const handleCreatePromptConfirmed = useCallback(async () => {
+    const title = formTitle.trim();
+    const directive = formDirective.trim();
+    const promptBody = formPrompt.trim();
+    if (!title || !promptBody || !directive) {
+      toast.error('Please fill in title, directive, and prompt');
+      return;
     }
-  }, [createPrompt, save]);
+
+    const promptData = {
+      title,
+      directive,
+      prompt: promptBody,
+      state: 'committed',
+      scope: 'document',
+    } as any;
+
+    createPrompt(promptData);
+    const res = await save();
+    if (!res.ok) {
+      toast.error('Failed to create prompt');
+      return;
+    }
+
+    toast.success(`${title} rule created and committed`);
+    setShowAddDialog(false);
+    setFormTitle('');
+    setFormDirective('process');
+    setFormPrompt('');
+  }, [formTitle, formDirective, formPrompt, createPrompt, save]);
 
   // Save all pending changes with confirmation
   const handleSaveAllPrompts = useCallback(() => {
@@ -303,12 +303,52 @@ export default function PromptManagement({ document }: PromptControlsProps) {
         <PromptsList documentId={document.id} onEditPrompt={handleEditPrompt} />
       </div>
       
-      {/* Add Rule Dialog */}
-      <AddPromptDialog
+      {/* Add Prompt Dialog using reusable FormConfirmationDialog */}
+      <FormConfirmationDialog
         isOpen={showAddDialog}
         onClose={handleCloseAddDialog}
-        onConfirm={handleAddRule}
-        isSubmitting={false}
+        onConfirm={handleCreatePromptConfirmed}
+        title="Create AI Rule"
+        description="Fill in the prompt details. The rule will be created and immediately committed."
+        confirmButtonText="Create rule"
+        cancelButtonText="Cancel"
+        variant="default"
+        messages={[]}
+        formFields={[
+          (
+            <div key="title" className="space-y-1">
+              <label className="text-xs font-medium">Title</label>
+              <input
+                className="w-full h-9 px-3 rounded border border-input bg-background text-sm"
+                value={formTitle}
+                onChange={(e) => setFormTitle(e.target.value)}
+                placeholder="Short descriptive title"
+              />
+            </div>
+          ),
+          (
+            <div key="directive" className="space-y-1">
+              <label className="text-xs font-medium">Directive</label>
+              <input
+                className="w-full h-9 px-3 rounded border border-input bg-background text-sm"
+                value={formDirective}
+                onChange={(e) => setFormDirective(e.target.value)}
+                placeholder="process"
+              />
+            </div>
+          ),
+          (
+            <div key="prompt" className="space-y-1">
+              <label className="text-xs font-medium">Prompt</label>
+              <textarea
+                className="w-full min-h-32 px-3 py-2 rounded border border-input bg-background text-sm"
+                value={formPrompt}
+                onChange={(e) => setFormPrompt(e.target.value)}
+                placeholder="Detailed instructions for the AI"
+              />
+            </div>
+          ),
+        ]}
       />
       
       {/* Edit Rule Dialog */}

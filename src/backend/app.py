@@ -90,15 +90,6 @@ static_dir.mkdir(parents=True, exist_ok=True)
 (static_dir / "assets").mkdir(parents=True, exist_ok=True)
 app.mount("/assets", StaticFiles(directory=static_dir / "assets"), name="assets")
 
-# # Alias routes for api documentation
-# @app.get("/dev/api-swagger", include_in_schema=False)
-# async def swagger_alias(_: Request):
-#     return get_swagger_ui_html(
-#         openapi_url=app.openapi_url,
-#         title="API docs",
-#         oauth2_redirect_url="/api/docs/oauth2-redirect",
-#     )
-
 # Frontend routes - THESE MUST BE LAST to avoid intercepting API routes
 @app.get("/")
 async def serve_frontend_root():    
