@@ -125,8 +125,6 @@ export default function RenderLayer({ document: initialDocument, onDocumentSizeC
     setIsRendered,
   ]);
 
-
-
   const handleLoadSuccess = ({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
     setCurrentPage(0);

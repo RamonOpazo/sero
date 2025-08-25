@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { X, MousePointer2, Globe, Hash, Settings } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Trash2, MousePointer2, Globe, Hash, Settings, Telescope } from "lucide-react";
 import { useSelections } from "../../providers/selection-provider";
 import { useViewportState } from "../../providers/viewport-provider";
 import { useMemo, useRef, useEffect, useState, useCallback } from "react";
@@ -13,28 +13,28 @@ import type { Selection } from "../../types/viewer";
 import { getNormalizedState, getStatusLabel } from "../../utils/selection-styles";
 
 
-export default function SelectionList({ panelMode = false }: { panelMode?: boolean }) {
-  const { 
-    state: selectionState, 
-    selectedSelection, 
-    selectSelection, 
+export default function SelectionList() {
+  const {
+    state: selectionState,
+    selectedSelection,
+    selectSelection,
     deleteSelection,
     setSelectionPage,
     setOnSelectionDoubleClick,
     convertSelectionToStagedEdition,
   } = useSelections();
-  
+
   const { setCurrentPage, currentPage, numPages } = useViewportState();
-  
+
   // Dialog state for page selection
   const [dialogState, setDialogState] = useState<{
     isOpen: boolean;
     selectionId: string | null;
   }>({ isOpen: false, selectionId: null });
-  
+
   // Refs to track selection items for scrolling
   const itemRefs = useRef<Record<string, HTMLDivElement | null>>({});
-  
+
   // Auto-scroll to selected item when selection changes
   useEffect(() => {
     if (selectedSelection?.id) {
@@ -75,7 +75,7 @@ export default function SelectionList({ panelMode = false }: { panelMode?: boole
   const handleSelectSelection = (selectionId: string) => {
     // Find the selection to get its page number
     const selection = selectionsWithTypeInfo.find(sel => sel.id === selectionId);
-    
+
     // Toggle selection - if already selected, deselect; otherwise select
     if (selectedSelection?.id === selectionId) {
       selectSelection(null);
@@ -86,7 +86,7 @@ export default function SelectionList({ panelMode = false }: { panelMode?: boole
       }
     } else {
       selectSelection(selectionId);
-      
+
       // Navigate to the selection's page if it's not global (null) and we're not already on that page
       if (selection && selection.page_number !== null && selection.page_number !== undefined && selection.page_number !== currentPage) {
         setCurrentPage(selection.page_number);
@@ -96,7 +96,7 @@ export default function SelectionList({ panelMode = false }: { panelMode?: boole
 
   const handleToggleGlobal = (selectionId: string, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent selection when clicking the badge
-    
+
     // Only non-committed selections can change page/global
     const selection = selectionsWithTypeInfo.find(sel => sel.id === selectionId);
     const norm = getNormalizedState((selection as any)?.state);
@@ -107,14 +107,14 @@ export default function SelectionList({ panelMode = false }: { panelMode?: boole
     // Always open dialog for better UX - prevents accidental changes
     setDialogState({ isOpen: true, selectionId });
   };
-  
+
   const handleDialogConfirm = (pageNumber: number | null) => {
     if (dialogState.selectionId) {
       setSelectionPage(dialogState.selectionId, pageNumber);
     }
     setDialogState({ isOpen: false, selectionId: null });
   };
-  
+
   const handleDialogClose = () => {
     setDialogState({ isOpen: false, selectionId: null });
   };
@@ -145,17 +145,14 @@ export default function SelectionList({ panelMode = false }: { panelMode?: boole
     return value.toFixed(2);
   };
 
-
-  const renderSelectionItem = (sel: typeof selectionsWithTypeInfo[0]) => {
+  const renderSelectionItem = (sel: typeof selectionsWithTypeInfo[0], idx: number) => {
     const isGlobal = sel.page_number === null;
     const norm = getNormalizedState((sel as any).state);
-    const canOpenConfig = panelMode;
     const pageDisplay = isGlobal ? 'Global' : `Page ${(sel.page_number ?? 0) + 1}`;
     const isSelected = selectedSelection?.id === sel.id;
     const isNew = sel.type === 'new';
     const isModified = sel.isModified;
-    
-    
+
     // Determine status indicator
     const getStatusIndicator = () => {
       const norm = getNormalizedState((sel as any).state);
@@ -168,74 +165,79 @@ export default function SelectionList({ panelMode = false }: { panelMode?: boole
       const lab = getStatusLabel(norm);
       return { color: lab.colorClass, title: lab.title, label: lab.label };
     };
-    
+
     const statusIndicator = getStatusIndicator();
-    
+
     return (
       <div
         key={sel.displayId}
-        ref={(el) => {
-          itemRefs.current[sel.id] = el;
-        }}
+        ref={(el) => { itemRefs.current[sel.id] = el }}
         className={cn(
-          panelMode ? "group pr-2 py-3 text-xs cursor-pointer focus:outline-none focus:ring-0" : "group pr-4 py-3 text-xs cursor-pointer focus:outline-none focus:ring-0",
-          // Selection-specific classes
-          isSelected ? [
-            panelMode ? "border-l-2 border-l-primary pl-3 bg-primary/5 rounded-sm" : "border-l-2 border-l-primary bg-primary/3 shadow-sm pl-4"
-          ] : [
-            panelMode ? "border-l-2 border-transparent pl-1 rounded-sm" : "border-l-2 border-transparent pl-0 shadow-none",
-            "transition-all duration-200",
-            panelMode ? "hover:border-l-muted-foreground/30 hover:pl-3 hover:bg-muted/10" : "hover:border-l-muted-foreground/30 hover:pl-4 hover:bg-muted/10",
-            panelMode ? "focus:border-l-primary/50 focus:pl-3 focus:bg-muted/20" : "focus:border-l-primary/50 focus:pl-4 focus:bg-muted/20 focus:shadow-sm"
-          ]
+          "group p-2 text-xs cursor-pointer focus:outline-none focus:ring-0",
+          "border-l-2 border-transparent",
+          "bg-muted/30 pl-3",
+          "transition-all duration-200",
+          "hover:border-l-muted-foreground/30 hover:pl-5 hover:bg-muted/30",
+          "focus:border-l-primary/50 focus:pl-5 focus:bg-muted/70",
+          isSelected && "border-l-2 border-l-primary pl-5 bg-primary/5"
         )}
         onClick={() => handleSelectSelection(sel.id)}
         tabIndex={0}
       >
-        {/* Top row: Page badge, status, and delete button */}
+        {/* Top row: Simple coordinates */}
+        <div className="text-sm mt-1">
+          <span className="text-muted-foreground">Coords:</span> {formatValue(sel.x)}, {formatValue(sel.y)} • {formatValue(sel.width)} × {formatValue(sel.height)}
+        </div>
+
+        {/* Bottom row: Page badge, status, and delete button */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <button
+          <div className="flex justify-between gap-2">
+            <div className="flex items-center gap-1">
+              <span className="text-muted-foreground text-sm">{statusIndicator.label}</span>
+              <div className={cn("w-1.5 h-1.5 rounded-full", statusIndicator.color)} title={statusIndicator.title} />
+            </div>
+
+            <Badge
+              variant="outline"
               data-testid={`selection-toggle-${sel.id}`}
-              className={cn(
-                "flex items-center gap-1 font-medium px-2 py-0.5 rounded text-xs transition-colors hover:opacity-80 cursor-pointer",
-                isGlobal ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" :
-                "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
-              )}
               onClick={(e) => handleToggleGlobal(sel.id, e)}
-              title="Click to change page assignment"
             >
               {isGlobal ? <Globe className="h-3 w-3" /> : <Hash className="h-3 w-3" />}
               {pageDisplay}
-            </button>
-            
-            <div className="flex items-center gap-1">
-              <div className={cn("w-1.5 h-1.5 rounded-full", statusIndicator.color)} title={statusIndicator.title} />
-              <span className="text-muted-foreground text-xs">{statusIndicator.label}</span>
-            </div>
+            </Badge>
           </div>
-          
+
           {/* Config and delete buttons */}
           <div className="flex items-center gap-1 mr-1">
-            {canOpenConfig ? (
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (norm === 'committed' || norm === 'staged_deletion') {
-                    setConvertDialog({ open: true, selectionId: sel.id });
-                  } else {
-                    setDialogState({ isOpen: true, selectionId: sel.id });
-                  }
-                }}
-                className="h-6 w-6 p-0 text-muted-foreground/60 hover:text-foreground hover:bg-muted/10 opacity-0 group-hover:opacity-100 transition-all duration-200"
-                title="Configure selection"
-                aria-label="Configure selection"
-              >
-                <Settings className="h-3 w-3" />
-              </Button>
-            ) : null}
+            <Button
+              disabled
+              size="sm"
+              variant="ghost"
+              className="h-6 w-6 p-0 text-muted-foreground/60 hover:text-foreground hover:bg-muted/10 opacity-0 group-hover:opacity-100 transition-all duration-200 disabled:opacity-0"
+              title="Change scope"
+              aria-label="Change scope"
+            >
+              <Telescope className="h-3 w-3" />
+            </Button>
+
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (norm === 'committed' || norm === 'staged_deletion') {
+                  setConvertDialog({ open: true, selectionId: sel.id });
+                } else {
+                  setDialogState({ isOpen: true, selectionId: sel.id });
+                }
+              }}
+              className="h-6 w-6 p-0 text-muted-foreground/60 hover:text-foreground hover:bg-muted/10 opacity-0 group-hover:opacity-100 transition-all duration-200"
+              title="Configure selection"
+              aria-label="Configure selection"
+            >
+              <Settings className="h-3 w-3" />
+            </Button>
+
             <Button
               size="sm"
               variant="ghost"
@@ -247,31 +249,12 @@ export default function SelectionList({ panelMode = false }: { panelMode?: boole
               title="Delete selection"
               aria-label="Delete selection"
             >
-              <X className="h-3 w-3" />
+              <Trash2 className="h-3 w-3" />
             </Button>
           </div>
+        </div>
 
-          {/* Delete button */}
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleRemoveSelection(sel.id);
-            }}
-            className="h-6 w-6 p-0 text-muted-foreground/60 hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-all duration-200"
-          >
-            <X className="h-3 w-3" />
-          </Button>
-        </div>
-        
-        {/* Bottom row: Simple coordinates */}
-        <div className={cn(
-          "text-[11px] text-muted-foreground/70",
-          panelMode ? "mt-2 pt-2 border-t border-muted/20" : "mt-1.5"
-        )}>
-          <span className="text-muted-foreground/60">Coords:</span> {formatValue(sel.x)}, {formatValue(sel.y)} • {formatValue(sel.width)} × {formatValue(sel.height)}
-        </div>
+
       </div>
     );
   };
@@ -288,15 +271,15 @@ export default function SelectionList({ panelMode = false }: { panelMode?: boole
 
   return (
     <>
-      <ScrollArea className="h-80 hide-scrollbar">
-        <div className={cn(panelMode ? "space-y-2" : undefined)}>
+      <div className="h-full overflow-auto">
+        <div className="space-y-1">
           {/* Show all selections in order: new first, then saved */}
-          {[...groupedSelections.new, ...groupedSelections.saved].map((sel) => (
-            renderSelectionItem(sel)
+          {[...groupedSelections.new, ...groupedSelections.saved].map((sel, idx) => (
+            renderSelectionItem(sel, idx)
           ))}
         </div>
-      </ScrollArea>
-      
+      </div>
+
       {/* Page Selection Dialog (inline) */}
       <FormConfirmationDialog
         isOpen={dialogState.isOpen}

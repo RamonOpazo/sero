@@ -212,6 +212,7 @@ export default function SelectionManagement({ document }: SelectionControlsProps
           {isCommitting ? <RotateCcw className="mr-2 h-3 w-3 animate-spin" /> : <CheckCheck className="mr-2 h-3 w-3" />}
           {isCommitting ? 'Committing...' : 'Commit all staged'}
         </Button>
+
         <Button
           variant="outline"
           size="sm"
@@ -222,7 +223,20 @@ export default function SelectionManagement({ document }: SelectionControlsProps
           {isStaging ? <RotateCcw className="mr-2 h-3 w-3 animate-spin" /> : <Save className="mr-2 h-3 w-3" />}
           {isStaging ? 'Staging...' : 'Stage all changes'}
         </Button>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleDiscardAllChanges}
+          disabled={isViewingProcessedDocument || selectionStats.totalUnsavedChanges === 0}
+          className="w-full justify-start h-9 text-xs"
+        >
+          <Undo2 className="mr-2 h-3 w-3" />
+          Discard all changes
+        </Button>
       </div>
+
+      <Separator />
 
       {/* AI & Lifecycle Controls */}
       <div className="flex flex-col gap-2">
@@ -239,18 +253,6 @@ export default function SelectionManagement({ document }: SelectionControlsProps
             <Brain className="mr-2 h-3 w-3" />
           )}
           {isApplyingAI ? 'Applying AI...' : 'Apply AI'}
-        </Button>
-
-
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleDiscardAllChanges}
-          disabled={isViewingProcessedDocument || selectionStats.totalUnsavedChanges === 0}
-          className="w-full justify-start h-9 text-xs"
-        >
-          <Undo2 className="mr-2 h-3 w-3" />
-          Discard all changes
         </Button>
 
         <Button

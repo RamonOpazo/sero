@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { X, ListTree } from 'lucide-react';
+import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useSelections } from '../../providers/selection-provider';
@@ -33,9 +33,9 @@ export default function SelectionsPanelLayer({ isVisible, onToggleVisibility }: 
   return (
     <div
       className={cn(
-        "absolute top-0 left-0 bottom-0 z-[2100]",
+        "absolute top-0 left-0 bottom-0",
         "flex flex-col gap-4 w-[60ch] max-w-[60ch] p-4",
-        "rounded-l-md bg-black/90 backdrop-blur-xs backdrop-saturate-0",
+        "rounded-l-md border border-r-0 bg-background/90 backdrop-blur-xs backdrop-saturate-0",
         "text-xs transition-all duration-200 ease-out",
         `${visibilityClasses}`
       )}
@@ -51,13 +51,13 @@ export default function SelectionsPanelLayer({ isVisible, onToggleVisibility }: 
         <X />
       </Button>
 
-      <div className="flex items-center gap-2 mb-2">
+      {/* <div className="flex items-center gap-2 mb-2">
         <ListTree className="h-5 w-5" />
         <h1 className="text-lg font-semibold">Selections</h1>
-      </div>
+      </div> */}
 
       {/* Lifecycle summary header (InfoLayer-like styling) */}
-      <div>
+      <div className='mt-[4rem]'>
         <h2 className="uppercase tracking-wider text-muted-foreground mb-2">Lifecycle</h2>
         <div className="ml-4 space-y-1">
           <div><span className="text-muted-foreground">Unstaged:</span> <span className="font-medium">{stats.unstaged}</span></div>
@@ -67,8 +67,9 @@ export default function SelectionsPanelLayer({ isVisible, onToggleVisibility }: 
       </div>
 
       {/* Redesigned list: reuse existing list, which respects lifecycle actions */}
+      <h2 className="uppercase tracking-wider text-muted-foreground -mb-2">Selections</h2>
       <div className="flex-1 min-h-0">
-        <SelectionList panelMode />
+        <SelectionList />
       </div>
     </div>
   );

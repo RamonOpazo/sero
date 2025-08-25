@@ -77,9 +77,9 @@ export default function InfoLayer({ document, documentSize, isVisible, onToggleV
   return (
     <div
       className={cn(
-        "absolute top-0 left-0 bottom-0 z-[2100]",
+        "absolute top-0 left-0 bottom-0",
         "flex flex-col gap-4 w-[60ch] max-w-[60ch] p-4",
-        "rounded-l-md bg-black/90 backdrop-blur-xs backdrop-saturate-0",
+        "rounded-l-md border border-r-0 bg-background/90 backdrop-blur-xs backdrop-saturate-0",
         "text-xs transition-all duration-200 ease-out",
         `${visibilityClasses}`
       )}
@@ -95,11 +95,11 @@ export default function InfoLayer({ document, documentSize, isVisible, onToggleV
       >
         <X />
       </Button>
-      <div className="flex items-center gap-2 mb-2">
+      {/* <div className="flex items-center gap-2 mt-[5rem] mb-2">
         <Info className="h-5 w-5" />
         <h1 className="text-lg font-semibold">Info</h1>
-      </div>
-      <div>
+      </div> */}
+      <div className='mt-[4rem]'>
         <h2 className="uppercase tracking-wider text-muted-foreground">Document</h2>
         <h1 className="text-base sm:text-lg">{document.name}</h1>
         <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">{document.description}</p>

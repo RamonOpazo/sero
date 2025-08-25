@@ -80,9 +80,8 @@ export default function ActionsLayer({ isInfoVisible = false, onToggleInfo }: Ac
   };
 
   const handleResetView = () => {
-    resetView()
+    resetView();
     setMode("pan");
-    setShowSelections(false);
   }
 
   // Mouse-position-aware zoom handlers for button clicks
@@ -258,11 +257,11 @@ export default function ActionsLayer({ isInfoVisible = false, onToggleInfo }: Ac
           <Button
             variant="ghost"
             size="icon"
-            onClick={handleZoomIn}
+            onClick={handleZoomOut}
           >
-            <ZoomIn />
+            <ZoomOut />
           </Button>
-
+          
           <Button
             variant="ghost"
             size="icon"
@@ -274,9 +273,9 @@ export default function ActionsLayer({ isInfoVisible = false, onToggleInfo }: Ac
           <Button
             variant="ghost"
             size="icon"
-            onClick={handleZoomOut}
+            onClick={handleZoomIn}
           >
-            <ZoomOut />
+            <ZoomIn />
           </Button>
 
           {/* Selections visibility toggle */}
