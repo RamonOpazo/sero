@@ -468,7 +468,17 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
   // Lifecycle-based UI selections (compat-preserving for now)
   const uiSelections = useMemo(() => {
     try {
-      const persisted: UISelection[] = ((state as any).persistedItems || []).map((s: any) => fromApiSelection(s));
+      // Pull pending changes from manager to flag dirty persisted items
+      const pending = (manager as any).getPendingChanges?.() || { creates: [], updates: [], deletes: [] };
+      const dirtyIds = new Set<string>([
+        ...((pending.updates || []).map((u: any) => u?.id).filter(Boolean)),
+        ...((pending.deletes || []).map((d: any) => d?.id).filter(Boolean)),
+      ] as string[]);
+
+      const persisted: UISelection[] = ((state as any).persistedItems || []).map((s: any) => {
+        const ui = fromApiSelection(s);
+        return { ...ui, dirty: dirtyIds.has((s as any).id) } as UISelection;
+      });
       const drafts: UISelection[] = ((state as any).draftItems || []).map((s: any) => ({
         ...(s as any),
         stage: UISelectionStage.Unstaged,
@@ -479,7 +489,7 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
     } catch {
       return [] as UISelection[];
     }
-  }, [state]);
+  }, [state, manager]);
   
   const selectedSelection = useMemo(() => {
     const selectedId = (state as any).selectedItemId;

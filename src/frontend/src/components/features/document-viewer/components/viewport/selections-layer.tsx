@@ -33,6 +33,7 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
   const {
     state: selectionState,
     allSelections,
+    uiSelections,
     selectedSelection,
     selectSelection,
     updateSelectionBatch,
@@ -41,10 +42,9 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     updateDraw,
     finishDraw,
     onSelectionDoubleClick,
-    pendingChanges,
     getCurrentDraw,
     beginBatchOperation,
-  } = useSelections();
+  } = useSelections() as any;
   
   // Touch selectionState to avoid TS unused variable during builds
   void selectionState;
@@ -329,6 +329,13 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
   }, [handleResizeStart]);
 
 
+  // Build UI meta map for quick lookup
+  const uiMetaById = React.useMemo(() => {
+    const map = new Map<string, any>();
+    (uiSelections || []).forEach((u: any) => { if (u && u.id) map.set(u.id, u); });
+    return map;
+  }, [uiSelections]);
+
   // Render selection box
   const renderSelectionBox = useCallback((selection: Selection) => {
     // Convert normalized coordinates to pixel coordinates
@@ -338,20 +345,30 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     const height = Math.abs(selection.height) * documentSize.height;
 
     const isSelected = selectedSelection?.id === selection.id;
-    // Determine if this is a new unsaved selection (draft)
-    const isNew = (selection as any).state !== 'committed' && (selection as any).state !== 'staged_deletion' && (selection as any).state !== 'staged_edition' && (selection as any).state !== 'staged_creation';
     const isGlobal = selection.page_number === null;
 
-    // Determine staged status: persisted but not committed (new semantics)
-    const norm = getNormalizedState((selection as any).state);
-    const colors = getBoxColorClasses(norm === 'draft' && isNew ? 'draft' : norm);
+    // Determine visual state using UI lifecycle meta (dirty/stage) when available
+    const ui = uiMetaById.get(selection.id);
+    let visualNorm = getNormalizedState((selection as any).state);
+    if (ui && ui.stage) {
+      if (ui.stage === 'staged_creation') visualNorm = 'staged_creation';
+      else if (ui.stage === 'staged_edition') visualNorm = 'staged_edition';
+      else if (ui.stage === 'staged_deletion') visualNorm = 'staged_deletion';
+      else if (ui.dirty === true) visualNorm = 'draft';
+    } else {
+      // Fallback: if no UI meta, treat unknown states as drafts
+      if (visualNorm === 'draft') {
+        visualNorm = 'draft';
+      }
+    }
+    const colors = getBoxColorClasses(visualNorm);
 
     const selectionElement = (
       <div
         key={selection.id}
         data-testid="selection-box"
         data-selection-id={selection.id}
-        data-state={norm}
+        data-state={visualNorm}
         className={cn(
           "absolute pointer-events-auto group overflow-hidden",
           // Disable transitions during drag operations
@@ -419,7 +436,7 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     );
 
     return selectionElement;
-  }, [documentSize, selectedSelection, handleSelectionClick, dragState, renderResizeHandles, handleMoveStart]);
+  }, [documentSize, selectedSelection, handleSelectionClick, dragState, renderResizeHandles, handleMoveStart, uiMetaById]);
 
   // Filter selections for current page
   const pageSelections = allSelections.filter(

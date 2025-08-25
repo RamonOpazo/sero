@@ -331,7 +331,9 @@ const selectionExtensions = {
     
     // Page operations
     getSelectionsForPage: (state: any, page: number | null): Selection[] => {
-      return [...state.persistedItems, ...state.draftItems].filter((selection: Selection) => selection.page_number === page);
+      return [...state.persistedItems, ...state.draftItems].filter((selection: Selection) => (
+        page === null ? (selection.page_number == null) : (selection.page_number === page)
+      ));
     },
     
     getGlobalSelections: (state: any): Selection[] => {
