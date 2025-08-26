@@ -1,8 +1,11 @@
 import { z } from 'zod';
+import matter from 'gray-matter';
 
 const docSchema = z.object({
   slug: z.string(),
   title: z.string(),
+  date: z.string().optional(),
+  path: z.string(),
   content: z.string(),
 });
 
@@ -17,13 +20,21 @@ async function fetchDocs(): Promise<Doc[]> {
 
   const modules = import.meta.glob('/public/docs/*.md', { query: '?raw', import: 'default' });
   const promises = Object.entries(modules).map(async ([path, resolver]) => {
+    const rawContent = (await resolver()) as string;
+    const { data, content } = matter(rawContent);
     const slug = path.split('/').pop()?.replace('.md', '');
+
     if (!slug) {
       return null;
     }
-    const content = (await resolver()) as string;
-    const title = content.match(/^#\s+(.*)/m)?.[1] || slug;
-    return { slug, title, content };
+
+    return {
+      slug,
+      title: data.title || slug,
+      date: data.date,
+      path: data.path || `./${slug}`,
+      content,
+    };
   });
 
   const resolvedDocs = await Promise.all(promises);
@@ -38,7 +49,7 @@ export async function getDocs(): Promise<Doc[]> {
 export async function getDoc(slug: string): Promise<Doc | undefined> {
   const docs = await fetchDocs();
   if (slug === 'index') {
-    return docs.find(doc => doc.slug === 'whats-sero');
+    return docs.find(doc => doc.path === './');
   }
   return docs.find(doc => doc.slug === slug);
 }

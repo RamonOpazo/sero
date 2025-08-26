@@ -1,3 +1,10 @@
+---
+slug: whats-sero
+title: What is SERO?
+date: 2025-08-26T10:00:00.000Z
+path: ./
+---
+
 # What is SERO?
 
 SERO is a service for **secure redaction and obfuscation of clinical documents**, with a strong focus on **privacy, automation, and reproducibility**. It provides an opinionated yet flexible framework for handling sensitive data, making it easier to comply with privacy regulations such as HIPAA and GDPR while still enabling collaboration and research.
@@ -77,3 +84,4 @@ The long-term vision is to provide a secure, repeatable, and developer-friendly 
 ---
 
 In short, SERO brings automation and security to a process that has traditionally been manual and risky. It is both approachable for newcomers and extensible for advanced users, giving you the tools to protect sensitive information without slowing down your work.
+

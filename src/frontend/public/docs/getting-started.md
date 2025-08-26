@@ -1,3 +1,10 @@
+---
+slug: getting-started
+title: Getting Started with SERO
+date: 2025-08-26T10:01:00.000Z
+path: ./getting-started
+---
+
 # Getting Started with SERO
 
 This guide will help you get up and running with SERO in just a few minutes.

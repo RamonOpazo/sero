@@ -4,8 +4,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 import json
 
-from backend.api.schemas import documents_schema, ai_schema
-from backend.api.controllers import documents_controller
+from backend.api.schemas import documents_schema, ai_schema, selections_schema
 from backend.core.config import settings as app_settings
 from backend.core.ai_ollama import OllamaClient, OllamaOptions
 from backend.core.prompt_composer import compose_selection_instructions
@@ -16,10 +15,65 @@ from backend.crud import support_crud, documents_crud, selections_crud
 
 
 async def apply(db: Session, request: ai_schema.AiApplyRequest) -> documents_schema.AiApplyResponse:
-    """Apply AI to generate and stage selections for the given document.
-    Delegates to the documents controller to preserve staging semantics and telemetry.
-    """
-    return await documents_controller.apply_ai_and_stage_async(db=db, document_id=UUID(str(request.document_id)))
+    """Apply AI to generate and stage selections for the given document (non-stream)."""
+    document_id = UUID(str(request.document_id))
+
+    # Ensure document exists and load prompts/settings
+    document = support_crud.apply_or_404(
+        documents_crud.read,
+        db=db,
+        id=document_id,
+        join_with=["prompts", "project.ai_settings"],
+    )
+
+    committed_prompts = [p for p in document.prompts if getattr(p, "state", None) == CommitState.COMMITTED]
+
+    # Filter by minimum confidence threshold from defaults
+    from backend.core import defaults as core_defaults
+    min_conf = float(getattr(core_defaults, 'AI_MIN_CONFIDENCE', 0.0))
+
+    if not committed_prompts:
+        return documents_schema.AiApplyResponse(
+            selections=[],
+            telemetry=documents_schema.AiApplyTelemetry(
+                min_confidence=float(min_conf),
+                returned=0,
+                filtered_out=0,
+                staged=0,
+            ),
+        )
+
+    composed_prompts: list[str] = []
+    for p in committed_prompts:
+        composed_prompts.append(f"Directive: {p.directive}\nTitle: {p.title}\n\nInstructions:\n{p.prompt}")
+
+    from backend.service.ai_service import get_ai_service, GenerateSelectionsRequest, to_runtime_settings
+    svc = get_ai_service()
+    req = GenerateSelectionsRequest(
+        document_id=str(document_id),
+        system_prompt=(document.project.ai_settings.system_prompt if getattr(document, "project", None) and getattr(document.project, "ai_settings", None) else None),
+        prompts=composed_prompts,
+        ai_settings=to_runtime_settings(getattr(document.project, "ai_settings", None) if getattr(document, "project", None) else None),
+    )
+    res = await svc.generate_selections(req)
+
+    # Filter and stage
+    filtered = [s for s in res.selections if (float(s.confidence) if s.confidence is not None else 0.0) >= min_conf]
+
+    created_models = []
+    for sel in filtered:
+        sel.document_id = document_id
+        sel.state = CommitState.STAGED_CREATION
+        created_models.append(selections_crud.create(db=db, data=sel))
+
+    selections_out = [selections_schema.Selection.model_validate(i) for i in created_models]
+    telemetry = {
+        "min_confidence": float(min_conf),
+        "returned": int(len(res.selections)),
+        "filtered_out": int(len(res.selections) - len(filtered)),
+        "staged": int(len(created_models)),
+    }
+    return documents_schema.AiApplyResponse(selections=selections_out, telemetry=documents_schema.AiApplyTelemetry(**telemetry))
 
 
 async def apply_stream(db: Session, request: ai_schema.AiApplyRequest) -> StreamingResponse:
