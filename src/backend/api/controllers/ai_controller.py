@@ -3,6 +3,7 @@ from uuid import UUID
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 import json
+from loguru import logger
 
 from backend.api.schemas import documents_schema, ai_schema, selections_schema
 from backend.core.config import settings as app_settings
@@ -265,6 +266,7 @@ async def apply_stream(db: Session, request: ai_schema.AiApplyRequest) -> Stream
             yield ev("status", {"stage": stg, "stage_index": stage_index(stg), "stage_total": STAGE_TOTAL, "percent": stage_percent(stg)})
             yield ev("completed", {"ok": True})
         except Exception as e:
+            logger.exception("apply_stream failed")
             yield ev("error", {"message": str(e)})
             return
 
@@ -408,6 +410,7 @@ async def apply_project_stream(db: Session, request: ai_schema.AiApplyProjectReq
 
             yield ev("completed", {"ok": True})
         except Exception as e:
+            logger.exception("apply_project_stream failed")
             yield ev("error", {"message": str(e)})
             return
 

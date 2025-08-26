@@ -1,4 +1,3 @@
-import * as React from "react";
 import { Progress } from "@/components/ui/progress";
 
 interface AiProgressProps {
@@ -58,4 +57,3 @@ export function AiProgress(props: AiProgressProps) {
     </div>
   );
 }
-
