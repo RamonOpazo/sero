@@ -81,13 +81,13 @@ export const DocumentViewerAPI = {
   /**
    * Apply AI to generate staged selections (committed=false)
    */
-  async applyAi(documentId: string): Promise<Result<{ selections: SelectionType[]; telemetry: { min_confidence: number; returned: number; filtered_out: number; staged: number } }, unknown>> {
+  async applyAi(documentId: string, opts?: { keyId?: string; encryptedPassword?: string }): Promise<Result<{ selections: SelectionType[]; telemetry: { min_confidence: number; returned: number; filtered_out: number; staged: number } }, unknown>> {
     // Centralized AI endpoint; increase timeout to accommodate cold model load in Ollama
     return AsyncResultWrapper
       .from(
         api.safe.post<{ selections: SelectionType[]; telemetry: { min_confidence: number; returned: number; filtered_out: number; staged: number } }>(
           `/ai/apply`,
-          { document_id: documentId } as any,
+          { document_id: documentId, key_id: opts?.keyId ?? null, encrypted_password: opts?.encryptedPassword ?? null } as any,
           { timeout: 120_000 },
         )
       )
@@ -123,7 +123,7 @@ export const DocumentViewerAPI = {
         const resp = await fetch(`/api/ai/apply/stream`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ document_id: documentId }),
+          body: JSON.stringify({ document_id: documentId, key_id: (handlers as any)?.keyId ?? null, encrypted_password: (handlers as any)?.encryptedPassword ?? null }),
           signal,
         });
         if (!resp.ok || !resp.body) {
@@ -212,7 +212,7 @@ export const DocumentViewerAPI = {
         const resp = await fetch(`/api/ai/apply/project/stream`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ project_id: projectId }),
+          body: JSON.stringify({ project_id: projectId, key_id: (handlers as any)?.keyId ?? null, encrypted_password: (handlers as any)?.encryptedPassword ?? null }),
           signal,
         });
         if (!resp.ok || !resp.body) throw new Error(`Stream failed: ${resp.status}`);

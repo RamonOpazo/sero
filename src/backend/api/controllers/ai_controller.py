@@ -13,6 +13,7 @@ from backend.core.geometry import NormRect, merge_rects
 from backend.api.enums import CommitState
 from backend.api.schemas.selections_schema import SelectionCreate
 from backend.crud import support_crud, documents_crud, selections_crud
+from backend.service.text_extractor_service import get_text_extractor_service
 
 # Canonical stage ordering for progress semantics
 STAGES: list[str] = [
@@ -98,6 +99,21 @@ async def apply(db: Session, request: ai_schema.AiApplyRequest) -> documents_sch
     for p in committed_prompts:
         composed_prompts.append(f"Directive: {p.directive}\nTitle: {p.title}\n\nInstructions:\n{p.prompt}")
 
+    # Optional: extract text context if encrypted password provided
+    text_context: str | None = None
+    if request.key_id and request.encrypted_password:
+        try:
+            _, _, decrypted_data = support_crud.get_original_file_data_or_400_401_404_500(
+                db=db,
+                document_or_id=document,
+                encrypted_password_b64=request.encrypted_password,
+                key_id=request.key_id,
+                join_with=["files"],
+            )
+            text_context = get_text_extractor_service().extract_text(pdf_data=decrypted_data)
+        except Exception:
+            text_context = None
+
     from backend.service.ai_service import get_ai_service, GenerateSelectionsRequest, to_runtime_settings
     svc = get_ai_service()
     req = GenerateSelectionsRequest(
@@ -105,6 +121,7 @@ async def apply(db: Session, request: ai_schema.AiApplyRequest) -> documents_sch
         system_prompt=(document.project.ai_settings.system_prompt if getattr(document, "project", None) and getattr(document.project, "ai_settings", None) else None),
         prompts=composed_prompts,
         ai_settings=to_runtime_settings(getattr(document.project, "ai_settings", None) if getattr(document, "project", None) else None),
+        text_context=text_context,
     )
     res = await svc.generate_selections(req)
 
@@ -177,13 +194,29 @@ async def apply_stream(db: Session, request: ai_schema.AiApplyRequest) -> Stream
             client = OllamaClient(base_url=app_settings.ai.host, timeout=app_settings.ai.timeout)
             opts = OllamaOptions()
 
+            # Optional: extract text context if password provided
+            text_context: str | None = None
+            if request.key_id and request.encrypted_password:
+                try:
+                    _, _, decrypted_data = support_crud.get_original_file_data_or_400_401_404_500(
+                        db=db,
+                        document_or_id=doc,
+                        encrypted_password_b64=request.encrypted_password,
+                        key_id=request.key_id,
+                        join_with=["files"],
+                    )
+                    text_context = get_text_extractor_service().extract_text(pdf_data=decrypted_data)
+                except Exception:
+                    text_context = None
+
             # Stream tokens (generating)
             stg = "request_sent"
             yield ev("status", {"stage": stg, "stage_index": stage_index(stg), "stage_total": STAGE_TOTAL, "percent": stage_percent(stg)})
             token_chars = 0
             raw_parts: list[str] = []
             try:
-                async for delta in client.generate_stream(model=model_name, prompt=final_prompt, options=opts):
+                streaming_prompt = final_prompt if not text_context else f"{final_prompt}\n\n---\n\nDocument context (page-indexed):\n{text_context}"
+                async for delta in client.generate_stream(model=model_name, prompt=streaming_prompt, options=opts):
                     raw_parts.append(delta)
                     token_chars += len(delta)
                     # generating progress throttled
@@ -327,12 +360,28 @@ async def apply_project_stream(db: Session, request: ai_schema.AiApplyProjectReq
                 client = OllamaClient(base_url=app_settings.ai.host, timeout=app_settings.ai.timeout)
                 opts = OllamaOptions()
 
+                # Optional: extract text context for each document if password provided
+                text_context: str | None = None
+                if request.key_id and request.encrypted_password:
+                    try:
+                        _, _, decrypted_data = support_crud.get_original_file_data_or_400_401_404_500(
+                            db=db,
+                            document_or_id=doc,
+                            encrypted_password_b64=request.encrypted_password,
+                            key_id=request.key_id,
+                            join_with=["files"],
+                        )
+                        text_context = get_text_extractor_service().extract_text(pdf_data=decrypted_data)
+                    except Exception:
+                        text_context = None
+
                 # generating
                 yield ev("status", {"stage": "request_sent", "stage_index": stage_index("request_sent"), "stage_total": STAGE_TOTAL, "percent": stage_percent("request_sent"), "document_id": str(did)})
                 token_chars = 0
                 raw_parts: list[str] = []
                 try:
-                    async for delta in client.generate_stream(model=model_name, prompt=final_prompt, options=opts):
+                    streaming_prompt = final_prompt if not text_context else f"{final_prompt}\n\n---\n\nDocument context (page-indexed):\n{text_context}"
+                    async for delta in client.generate_stream(model=model_name, prompt=streaming_prompt, options=opts):
                         raw_parts.append(delta)
                         token_chars += len(delta)
                         if token_chars % 64 == 0:

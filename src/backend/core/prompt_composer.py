@@ -6,6 +6,7 @@ SCHEMA_HINT = (
     "Output MUST be exactly: {\"selections\": [ ... ] }\n"
     "Each selection item MUST include: {\"page_number\": int|null, \"x\": number, \"y\": number, \"width\": number, \"height\": number, \"confidence\": number}.\n"
     "All numbers MUST be decimals in [0,1] for x,y,width,height and [0,1] for confidence.\n"
+    "Page numbers are ZERO-BASED (first page is 0). Return null if unknown.\n"
     "If no detections, return {\"selections\": []}.\n"
 )
 
