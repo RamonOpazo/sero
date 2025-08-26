@@ -10,6 +10,10 @@ import {
   FileCheck2
 } from 'lucide-react'
 import { Logo } from '@/components/shared/logo'
+import {
+  TypographyTitle,
+  TypographyLead,
+} from '@/components/typography'
 
 export function HomePage() {
 
@@ -17,10 +21,9 @@ export function HomePage() {
     <div className="relative py-[2rem] px-[3rem]">
       <ScrollArea>
         <div className="max-w-[85ch] flex flex-col gap-8">
-          <h1 className="text-5xl font-bold tracking-tight sm:text-6xl">
-            {/* Welcome to <span className="text-purple-600">SERO</span> */}
+          <TypographyTitle>
             Welcome to <Logo variant='full' interactive/>
-          </h1>
+          </TypographyTitle>
 
           <div className="mt-2 hidden lg:flex flex-wrap gap-4">
             <Badge variant="outline" className="text-sm">
@@ -34,10 +37,10 @@ export function HomePage() {
             </Badge>
           </div>
 
-          <p className="text-lg leading-8 text-muted-foreground">
+          <TypographyLead>
             {/* <Logo variant='full' interactive/> <em className="text-foreground">Evelishly Redacts and Obfuscates</em> sensitive data from medical records, allowing users to maintain compliance to data protection laws, protect privacy of patients and providers, and keep documents usable with enterprise-grade security. */}
             <em className="text-foreground">SERO  <span className="text-muted-foreground">(/ˈsɛ.ɾo/)</span> Evelishly Redacts and Obfuscates</em> sensitive data from medical records, allowing users to maintain compliance to data protection laws, protect privacy of patients and providers, and keep documents usable with enterprise-grade security.
-          </p>
+          </TypographyLead>
 
           <div className="flex flex-col sm:flex-row gap-4">
             <Button asChild size="lg" className="px-8">

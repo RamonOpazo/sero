@@ -12,6 +12,7 @@ import { useSelections } from "../../providers/selection-provider";
 import { DocumentViewerAPI } from '@/lib/document-viewer-api';
 import { encryptPasswordSecurely, isWebCryptoSupported } from '@/lib/crypto';
 import { DocumentPasswordDialog } from '@/views/editor-view/dialogs';
+import { useAiProcessing } from '@/providers/ai-processing-provider';
 
 interface PromptControlsProps {
   document: MinimalDocumentType;
@@ -35,6 +36,7 @@ export default function PromptManagement({ document }: PromptControlsProps) {
   } = usePrompts();
   
   const { state: selectionStateDV } = useSelections() as any;
+  const aiProc = useAiProcessing();
   
   const isSaving = (state as any).isSaving || false;
   const isLoading = (state as any).isLoading || false;
@@ -121,20 +123,53 @@ export default function PromptManagement({ document }: PromptControlsProps) {
       setAiStage('start');
       setAiTokenChars(0);
       setAiSummary(null);
+
+      // Start global job in provider
+      aiProc.startJob({
+        id: document.id,
+        kind: 'document',
+        title: document.name ?? 'Document',
+        stage: 'initializing',
+        stageIndex: 0,
+        stageTotal: 1,
+        percent: 0,
+        hints: [],
+        meta: { documentId: document.id },
+      });
+
       const ctrl = DocumentViewerAPI.applyAiStream(document.id, {
         onStatus: (d: any) => {
           setAiStage(d.stage);
           if (typeof d.stage_index === 'number') setAiStageIndex(d.stage_index);
           if (typeof d.stage_total === 'number') setAiStageTotal(d.stage_total);
           if (typeof d.percent === 'number') setAiStagePercent(d.percent);
+
+          // Provider: map status to job update
+          aiProc.updateJob({
+            id: document.id,
+            stage: d.stage,
+            stageIndex: typeof d.stage_index === 'number' ? d.stage_index : 0,
+            stageTotal: typeof d.stage_total === 'number' ? d.stage_total : (aiProc.state.jobs[document.id]?.stageTotal ?? 1),
+            percent: typeof d.percent === 'number' ? d.percent : (aiProc.state.jobs[document.id]?.percent ?? 0),
+            hints: d.subtask ? [d.subtask] : [],
+            warning: d.provider_ok === false || d.model_listed === false ? { message: d.message ?? 'Provider/model check failed' } : undefined,
+          });
         },
-        onModel: (m: any) => setAiStage((prev) => prev ?? `model:${m.name}`),
-        onTokens: (t: any) => setAiTokenChars(t.chars),
+        onModel: (m: any) => {
+          setAiStage((prev) => prev ?? `model:${m.name}`);
+          aiProc.updateJob({ id: document.id, hints: [`model: ${m.name}`] });
+        },
+        onTokens: (t: any) => {
+          setAiTokenChars(t.chars);
+          aiProc.updateJob({ id: document.id, stage: 'generating' });
+        },
         onStagingProgress: (sp: any) => {
           if (typeof sp.percent === 'number') setAiStagePercent(sp.percent);
+          aiProc.updateJob({ id: document.id, percent: typeof sp.percent === 'number' ? sp.percent : undefined as any });
         },
         onSummary: async (s: any) => {
           setAiSummary(s);
+          aiProc.updateJob({ id: document.id, hints: [`staged: ${s.staged}`] });
           if (typeof (selectionStateDV as any).reload === 'function') {
             await (selectionStateDV as any).reload();
           }
@@ -145,6 +180,7 @@ export default function PromptManagement({ document }: PromptControlsProps) {
           setAiStagePercent(null);
           setAiStageIndex(null);
           setAiStageTotal(null);
+          aiProc.completeJob(document.id);
           const s = aiSummary;
           if (s) {
             const count = s.staged;
@@ -153,21 +189,26 @@ export default function PromptManagement({ document }: PromptControlsProps) {
           } else {
             toast.success('AI completed');
           }
+          // Optionally clear to remove from list
+          aiProc.clearJob(document.id);
         },
         onError: (e: any) => {
           setIsApplyingAI(false);
           setAiStage(null);
+          aiProc.failJob(document.id, { message: e.message ?? 'unknown' });
           toast.error(`AI error: ${e.message ?? 'unknown'}`);
+          aiProc.clearJob(document.id);
         },
         ...(keyId && encryptedPassword ? { keyId, encryptedPassword } : {}),
       } as any);
       cancelRef.current = ctrl.cancel;
+      aiProc.registerCancel(document.id, ctrl.cancel);
     } catch (err) {
       setIsApplyingAI(false);
       setAiStage(null);
       toast.error('Failed to run AI detection');
     }
-  }, [document.id, selectionStateDV, aiSummary]);
+  }, [document.id, document.name, selectionStateDV, aiProc, aiSummary]);
 
   // Handle password confirm: encrypt and start streaming
   const handleAIPasswordConfirm = useCallback(async (password: string) => {
@@ -194,13 +235,15 @@ export default function PromptManagement({ document }: PromptControlsProps) {
       if (cancelRef.current) {
         cancelRef.current();
       }
+      aiProc.cancelJob(document.id);
       cancelRef.current = null;
     } finally {
       setIsApplyingAI(false);
       setAiStage(null);
+      aiProc.clearJob(document.id);
       toast.info('AI run canceled');
     }
-  }, []);
+  }, [aiProc, document.id]);
 
   // Clear all prompts
   const handleClearAll = useCallback(() => {

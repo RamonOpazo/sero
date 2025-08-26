@@ -1,0 +1,15 @@
+export {
+    TypographyH1,
+    TypographyH2,
+    TypographyH3,
+    TypographyH4,
+    TypographyP,
+    TypographyBlockquote,
+    TypographyList,
+    TypographyInlineCode,
+    TypographyTitle,
+    TypographyLead,
+    TypographyLarge,
+    TypographySmall,
+    TypographyMuted,
+} from './typography'

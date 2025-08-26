@@ -105,14 +105,25 @@ export const DocumentViewerAPI = {
   applyAiStream(
     documentId: string,
     handlers: {
-      onStatus?: (data: { stage: string; stage_index?: number; stage_total?: number; percent?: number }) => void;
+      onStatus?: (data: {
+        stage: string;
+        stage_index?: number;
+        stage_total?: number;
+        percent?: number;
+        subtask?: string;
+        // Enhanced telemetry around request_sent stage
+        provider_ok?: boolean; // connecting_provider
+        model_listed?: boolean; // model_catalog
+        message?: string; // optional details/warnings
+        document_id?: string;
+      }) => void;
       onModel?: (data: { name: string; document_id?: string }) => void;
       onTokens?: (data: { chars: number; document_id?: string }) => void;
       onStagingProgress?: (data: { created: number; total: number; percent?: number; document_id?: string }) => void;
       onSummary?: (data: { returned: number; filtered_out: number; staged: number; min_confidence: number; document_id?: string }) => void;
       onCompleted?: (data: { ok: boolean; reason?: string }) => void;
       onError?: (data: { message: string; document_id?: string }) => void;
-    }
+    } & { keyId?: string; encryptedPassword?: string }
   ): { cancel: () => void } {
     const controller = new AbortController();
     const signal = controller.signal;
@@ -195,13 +206,23 @@ export const DocumentViewerAPI = {
       onProjectProgress?: (data: { processed: number; total: number }) => void;
       onProjectDocStart?: (data: { index: number; document_id: string }) => void;
       onProjectDocSummary?: (data: { document_id: string; returned: number; filtered_out: number; staged: number; min_confidence: number }) => void;
-      onStatus?: (data: { stage: string; stage_index?: number; stage_total?: number; percent?: number; document_id?: string }) => void;
+      onStatus?: (data: {
+        stage: string;
+        stage_index?: number;
+        stage_total?: number;
+        percent?: number;
+        subtask?: string;
+        provider_ok?: boolean;
+        model_listed?: boolean;
+        message?: string;
+        document_id?: string;
+      }) => void;
       onModel?: (data: { name: string; document_id?: string }) => void;
       onTokens?: (data: { chars: number; document_id?: string }) => void;
       onStagingProgress?: (data: { created: number; total: number; percent?: number; document_id?: string }) => void;
       onCompleted?: (data: { ok: boolean }) => void;
       onError?: (data: { message: string; document_id?: string }) => void;
-    }
+    } & { keyId?: string; encryptedPassword?: string }
   ): { cancel: () => void } {
     // Reuse the SSE parser; we just change the URL and handlers shape
     const controller = new AbortController();
