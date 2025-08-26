@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
 import { encryptPasswordSecurely, isWebCryptoSupported } from '@/lib/crypto';
-import { DocumentPasswordDialog } from '@/views/editor-view/dialogs';
+import { CredentialConfirmationDialog } from '@/components/shared/credential-confirmation-dialog';
 
 interface EncryptedCreds {
   keyId: string;
@@ -100,13 +100,13 @@ export function AiCredentialsProvider({ children }: { children: React.ReactNode 
   return (
     <AiCredentialsContext.Provider value={value}>
       {children}
-      <DocumentPasswordDialog
+      <CredentialConfirmationDialog
         isOpen={dialogOpen}
         onClose={handleClose}
         onConfirm={handleConfirm}
         error={error}
         isLoading={isEncrypting}
-        notice="Password is used locally to encrypt before sending."
+        providerName={pendingProvider.current}
       />
     </AiCredentialsContext.Provider>
   );

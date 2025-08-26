@@ -12,6 +12,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 
 export type FieldDescriptor =
   | ({ type: 'text' } & BaseField)
+  | ({ type: 'password' } & BaseField)
   | ({ type: 'textarea'; rows?: number } & BaseField)
   | ({ type: 'select'; options: { value: string; label: string }[] } & BaseField)
   | ({ type: 'checkbox' } & BaseField)
@@ -99,6 +100,8 @@ export function FormConfirmationDialog(props: FormConfirmationDialogProps) {
           <FormControl>
             {fd.type === 'text' ? (
               <Input placeholder={fd.placeholder} {...field} />
+            ) : fd.type === 'password' ? (
+              <Input type="password" placeholder={fd.placeholder} {...field} />
             ) : fd.type === 'textarea' ? (
               <Textarea placeholder={fd.placeholder} rows={(fd as any).rows ?? 8} {...field} />
             ) : fd.type === 'select' ? (

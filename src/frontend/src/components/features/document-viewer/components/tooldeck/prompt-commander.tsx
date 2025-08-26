@@ -10,9 +10,9 @@ import PromptsList from "./prompt-list";
 import { usePrompts } from "../../providers/prompt-provider";
 import { useSelections } from "../../providers/selection-provider";
 import { DocumentViewerAPI } from '@/lib/document-viewer-api';
-import { encryptPasswordSecurely, isWebCryptoSupported } from '@/lib/crypto';
-import { DocumentPasswordDialog } from '@/views/editor-view/dialogs';
 import { useAiProcessing } from '@/providers/ai-processing-provider';
+import { useAiCredentials } from '@/providers/ai-credentials-provider';
+import { ProjectsAPI } from '@/lib/projects-api';
 
 interface PromptControlsProps {
   document: MinimalDocumentType;
@@ -57,9 +57,7 @@ export default function PromptManagement({ document }: PromptControlsProps) {
   const cancelRef = useRef<(() => void) | null>(null);
 
   // Password dialog state for AI
-  const [isAIPasswordOpen, setAIPasswordOpen] = useState(false);
-  const [isEncrypting, setIsEncrypting] = useState(false);
-  const [aiPasswordError, setAIPasswordError] = useState<string | null>(null);
+  const { ensureCredentials } = useAiCredentials();
   
   // Load prompts when component mounts
   useEffect(() => {
@@ -109,12 +107,6 @@ export default function PromptManagement({ document }: PromptControlsProps) {
     toast.success(`${title} rule created and committed`);
     setShowAddDialog(false);
   }, [createPrompt, save]);
-
-  // Open password dialog for AI
-  const handleOpenAIDialog = useCallback(() => {
-    setAIPasswordOpen(true);
-    setAIPasswordError(null);
-  }, []);
 
   // Runner using credentials
   const handleRunAIDetectionWithCredentials = useCallback(async (keyId?: string, encryptedPassword?: string) => {
@@ -210,23 +202,22 @@ export default function PromptManagement({ document }: PromptControlsProps) {
     }
   }, [document.id, document.name, selectionStateDV, aiProc, aiSummary]);
 
-  // Handle password confirm: encrypt and start streaming
-  const handleAIPasswordConfirm = useCallback(async (password: string) => {
+  // Start AI: ensure credentials then run
+  const handleStartAI = useCallback(async () => {
     try {
-      if (!isWebCryptoSupported()) {
-        setAIPasswordError('Web Crypto API is not supported in this browser');
-        return;
-      }
-      setIsEncrypting(true);
-      const encrypted = await encryptPasswordSecurely(password);
-      setIsEncrypting(false);
-      setAIPasswordOpen(false);
-      await handleRunAIDetectionWithCredentials(encrypted.keyId, encrypted.encryptedPassword);
+      const res = await ProjectsAPI.getProjectAiSettings(document.project_id);
+      const providerName = res.ok ? (res.value as any).provider : 'ollama';
+      const { keyId, encryptedPassword } = await ensureCredentials(providerName);
+      await handleRunAIDetectionWithCredentials(keyId, encryptedPassword);
     } catch (e) {
-      setIsEncrypting(false);
-      setAIPasswordError('Failed to encrypt password');
+      // user cancelled or encryption failed
+      if ((e as any)?.message !== 'validation') {
+        // suppress validation errors already toasted elsewhere
+      }
     }
-  }, [handleRunAIDetectionWithCredentials]);
+  }, [document.project_id, ensureCredentials, handleRunAIDetectionWithCredentials]);
+
+  // Deprecated: inline password dialog replaced with AiCredentialsProvider
 
   const stageLabel = aiStage;
 
@@ -365,7 +356,7 @@ export default function PromptManagement({ document }: PromptControlsProps) {
         <Button
           variant="default"
           size="sm"
-        onClick={handleOpenAIDialog}
+        onClick={handleStartAI}
           disabled={isAnyOperationInProgress || isApplyingAI}
           className="w-full justify-start h-9 text-xs"
         >
@@ -406,15 +397,7 @@ export default function PromptManagement({ document }: PromptControlsProps) {
         <PromptsList documentId={document.id} onEditPrompt={handleEditPrompt} />
       </div>
       
-      {/* AI Password Dialog */}
-      <DocumentPasswordDialog
-        isOpen={isAIPasswordOpen}
-        onClose={() => { setAIPasswordOpen(false); setAIPasswordError(null); }}
-        onConfirm={handleAIPasswordConfirm}
-        error={aiPasswordError}
-        isLoading={isEncrypting}
-        notice="Password is used locally to encrypt before sending."
-      />
+      {/* Password dialog handled by AiCredentialsProvider globally */}
 
       {/* Add Prompt Dialog using reusable FormConfirmationDialog */}
       <FormConfirmationDialog
