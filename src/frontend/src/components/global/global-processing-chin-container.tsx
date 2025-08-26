@@ -6,8 +6,8 @@ import { useAiProcessing } from '@/providers/ai-processing-provider';
  * Chooses the most recent active job (not done and percent < 100).
  */
 export function GlobalProcessingChinContainer() {
-  const { state } = useAiProcessing();
-  const { order, jobs } = state;
+  const aiProc = useAiProcessing();
+  const { order, jobs } = aiProc.state;
 
   const activeId = order.find((id) => {
     const j = jobs[id];
@@ -25,6 +25,11 @@ export function GlobalProcessingChinContainer() {
   // Compose a short subtask from hints (last hint)
   const lastHint = job.hints.length > 0 ? job.hints[job.hints.length - 1] : null;
 
+  const handleCancel = () => {
+    aiProc.cancelJob(activeId);
+    aiProc.clearJob(activeId);
+  };
+
   return (
     <GlobalProcessingChin
       stageIndex={job.stageIndex}
@@ -35,6 +40,8 @@ export function GlobalProcessingChinContainer() {
       percent={job.percent}
       batchText={batchText}
       link={job.link ?? null}
+      onCancel={handleCancel}
+      cancelLabel={job.kind === 'project' ? 'Cancel project' : 'Cancel'}
     />
   );
 }

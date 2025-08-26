@@ -1,108 +1,186 @@
 import { cn } from "@/lib/utils"
+import { Separator } from "@/components/ui/separator"
 import type { ClassName } from "react-pdf/dist/shared/types.js"
+import { type LinkProps, Link } from "react-router-dom"
 
 interface Props {
   children: React.ReactNode
   className?: ClassName
 }
 
-interface StringProps {
-  s: string
-}
-
-interface ItemsProps {
-  is: React.ReactElement<"li">[]
-}
-
-export function TypographyH1({ s }: StringProps) {
+export function TypographyHeader({ className, children }: Props) {
   return (
-    <h1 className="scroll-m-20 text-center text-4xl font-extrabold tracking-tight text-balance">{s}</h1>
+    <div
+      className={cn(
+        "flex flex-col justify-start gap-8 mb-8 leading-relaxed",
+        className,
+      )}
+    >
+      {children}
+    </div>
   )
 }
 
-export function TypographyH2({ s }: StringProps) {
+export function TypographyContent({ className, children }: Props) {
   return (
-    <h2 className="scroll-m-20 border-b pb-2 text-3xl font-semibold tracking-tight first:mt-0">{s}</h2>
+    <div
+      className={cn(
+        "flex flex-col justify-start gap-2 mb-8 leading-relaxed",
+        className,
+      )}
+    >
+      {children}
+    </div>
   )
 }
 
-export function TypographyH3({ s }: StringProps) {
+export function TypographyFooter({ className, children }: Props) {
   return (
-    <h3 className="scroll-m-20 text-2xl font-semibold tracking-tight">{s}</h3>
+    <div
+      className={cn(
+        "flex flex-col justify-start gap-2 mt-8 leading-relaxed text-sm",
+        className,
+      )}
+    >
+      <Separator className="mb-8"/>
+      {children}
+    </div>
   )
 }
 
-export function TypographyH4({ s }: StringProps) {
+export function TypographyH1({ className, children }: Props) {
   return (
-    <h4 className="scroll-m-20 text-xl font-semibold tracking-tight">{s}</h4>
+    <h1 className={cn(
+      "scroll-m-20 text-center text-4xl font-extrabold tracking-tight text-balance",
+      className,
+    )}
+    >{children}</h1>
   )
 }
 
-export function TypographyP({ s }: StringProps) {
+export function TypographyH2({ className, children }: Props) {
   return (
-    <p className="leading-7 [&:not(:first-child)]:mt-6">{s}</p>
+    <h2 className={cn(
+      "scroll-m-20 border-b pb-2 text-3xl font-semibold tracking-tight first:mt-0",
+      className,
+    )}
+    >{children}</h2>
   )
 }
 
-export function TypographyBlockquote({ s }: StringProps) {
+export function TypographyH3({ className, children }: Props) {
   return (
-    <blockquote className="mt-6 border-l-2 pl-6 italic">
-      {s}
-    </blockquote>
+    <h3 className={cn(
+      "scroll-m-20 text-2xl font-semibold tracking-tight",
+      className,
+    )}
+    >{children}</h3>
   )
 }
 
-export function TypographyList({ is }: ItemsProps) {
+export function TypographyH4({ className, children }: Props) {
   return (
-    <ul className="my-6 ml-6 list-disc [&>li]:mt-2">
-      {is}
-    </ul>
+    <h4 className={cn(
+      "scroll-m-20 text-xl font-semibold tracking-tight",
+      className,
+    )}
+    >{children}</h4>
   )
 }
 
-export function TypographyInlineCode({ s }: StringProps) {
+export function TypographyP({ className, children }: Props) {
   return (
-    <code className="bg-muted relative rounded px-[0.3rem] py-[0.2rem] font-mono text-sm font-semibold">
-      {s}
+    <p className={cn(
+      "text-md text-foreground",
+      className,
+    )}
+    >{children}</p>
+  )
+}
+
+export function TypographyBlockquote({ className, children }: Props) {
+  return (
+    <blockquote className={cn(
+      "mt-6 border-l-2 pl-6 italic",
+      className,
+    )}
+    >{children}</blockquote>
+  )
+}
+
+export function TypographyUnorderedList({ className, children }: Props) {
+  return (
+    <ul className={cn(
+      "list-disc ml-6 space-y-2 text-muted-foreground",
+      className
+    )}
+    >{children}</ul>
+  )
+}
+
+export function TypographyInlineCode({ className, children }: Props) {
+  return (
+    <code className={cn(
+      "bg-muted relative rounded px-[0.3rem] py-[0.2rem] font-mono text-sm font-semibold",
+      className,
+    )}
+    >
+      {children}
     </code>
   )
 }
 
-export function TypographyTitle({ ...props }: Props) {
+export function TypographyTitle({ className, children }: Props) {
   return (
     <h1
       className={cn(
         "text-5xl font-bold tracking-tight sm:text-6xl",
-        props.className
+        className
       )}
-    >{props.children}</h1>
+    >{children}</h1>
   )
 }
 
-export function TypographyLead({ ...props }: Props) {
+export function TypographyLead({ className, children }: Props) {
   return (
     <p className={cn(
       "text-muted-foreground text-xl",
-      props.className
+      className
     )}
-    >{props.children}</p>
+    >{children}</p>
   )
 }
 
-export function TypographyLarge({ s }: StringProps) {
+export function TypographySubtitle({ className, children }: Props) {
   return (
-    <div className="text-lg font-semibold">{s}</div>
+    <h2
+      className={cn(
+        "text-md font-medium text-primary mt-4 mb-1",
+        className
+      )}
+    >{children}</h2>
   )
 }
 
-export function TypographySmall({ s }: StringProps) {
+export function TypographyMuted({ className, children }: Props) {
   return (
-    <small className="text-sm leading-none font-medium">{s}</small>
+    <p
+      className={cn(
+        "text-md text-muted-foreground",
+        className
+      )}
+    >{children}</p>
   )
 }
 
-export function TypographyMuted({ s }: StringProps) {
+export function TypographyLink({ className, children, ...props }: Props & LinkProps) {
   return (
-    <p className="text-muted-foreground text-sm">{s}</p>
+    <Link
+      {...props}
+      className={cn(
+        "text-md text-primary hover:underline",
+        className
+      )}
+    >{children}</Link>
   )
 }

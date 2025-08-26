@@ -13,16 +13,22 @@ import { Logo } from '@/components/shared/logo'
 import {
   TypographyTitle,
   TypographyLead,
+  TypographySubtitle,
+  TypographyMuted,
+  TypographyUnorderedList,
+  TypographyLink,
+  TypographyHeader,
+  TypographyContent,
 } from '@/components/typography'
 
 export function HomePage() {
 
   return (
-    <div className="relative py-[2rem] px-[3rem]">
+    <div className="relative py-[2rem] px-[3rem] max-w-[70ch] box-content">
       <ScrollArea>
-        <div className="max-w-[85ch] flex flex-col gap-8">
+        <TypographyHeader>
           <TypographyTitle>
-            Welcome to <Logo variant='full' interactive/>
+            Welcome to <Logo variant='full' interactive />
           </TypographyTitle>
 
           <div className="mt-2 hidden lg:flex flex-wrap gap-4">
@@ -38,7 +44,6 @@ export function HomePage() {
           </div>
 
           <TypographyLead>
-            {/* <Logo variant='full' interactive/> <em className="text-foreground">Evelishly Redacts and Obfuscates</em> sensitive data from medical records, allowing users to maintain compliance to data protection laws, protect privacy of patients and providers, and keep documents usable with enterprise-grade security. */}
             <em className="text-foreground">SERO  <span className="text-muted-foreground">(/ˈsɛ.ɾo/)</span> Evelishly Redacts and Obfuscates</em> sensitive data from medical records, allowing users to maintain compliance to data protection laws, protect privacy of patients and providers, and keep documents usable with enterprise-grade security.
           </TypographyLead>
 
@@ -55,42 +60,36 @@ export function HomePage() {
               </Link>
             </Button>
           </div>
+        </TypographyHeader>
+        {/* <div className="max-w-[85ch] flex flex-col gap-8"> */}
 
-          <div className="flex flex-col justify-center lg:justify-start gap-2">
-            <h2 className="mt-4">How does SERO works?</h2>
-            <p className="text-muted-foreground">
-              SERO allows healthcare professionals to redact patient information
-              with precision. Choose between manual redaction for full control,
-              AI-powered redaction for speed and efficiency, or combine both
-              approaches for maximum security.
-            </p>
-            <p className="text-muted-foreground">
-              With industry-standard encryption and simple document workflows,
-              SERO ensures data remains private and compliant while still useful
-              for research and operations.
-            </p>
+        <TypographyContent>
+          <TypographySubtitle>How does SERO works?</TypographySubtitle>
+          <TypographyMuted>
+            SERO allows healthcare professionals to redact patient information
+            with precision. Choose between manual redaction for full control,
+            AI-powered redaction for speed and efficiency, or combine both
+            approaches for maximum security.
+          </TypographyMuted>
+          <TypographyMuted>
+            With industry-standard encryption and simple document workflows,
+            SERO ensures data remains private and compliant while still useful
+            for research and operations.
+          </TypographyMuted>
 
-            <h2 className="mt-4">Do you want to learn more?</h2>
-            <p className="text-muted-foreground">
-              Explore the documentation to understand how to securely protect sensitive
-              information and integrate the SERO workflow to your own:
-            </p>
+          <TypographySubtitle>Do you want to learn more?</TypographySubtitle>
+          <TypographyMuted>
+            Explore the documentation to understand how to securely protect sensitive
+            information and integrate the SERO workflow to your own:
+          </TypographyMuted>
 
-            <ul className="list-disc ml-6 space-y-2 text-muted-foreground">
-              <li>
-                Start with <Link to="/documentation/getting-started" className="text-primary hover:underline">Getting Started</Link> to set up your first redaction project.
-              </li>
-              <li>
-                Read about the <Link to="/documentation/security-model" className="text-primary hover:underline">Security Model</Link>, SERO's cryptographic backbone.
-              </li>
-              <li>
-                Dive into the <Link to="/documentation/redaction-workflow" className="text-primary hover:underline">Redaction Workflow</Link> for an overview on how documents are processed step by step.
-              </li>
-            </ul>
-          </div>
-        </div>
-
-      </ScrollArea>
-    </div>
+          <TypographyUnorderedList>
+            <li>Start with <TypographyLink to="/documentation/getting-started">Getting Started</TypographyLink> to set up your first redaction project.</li>
+            <li>Read about the <TypographyLink to="/documentation/security-model">Security Model</TypographyLink>, SERO's cryptographic backbone.</li>
+            <li>Dive into the <TypographyLink to="/documentation/redaction-workflow">Redaction Workflow</TypographyLink> for an overview on how documents are processed step by step.</li>
+          </TypographyUnorderedList>
+        </TypographyContent>
+      </ScrollArea >
+    </div >
   );
 }

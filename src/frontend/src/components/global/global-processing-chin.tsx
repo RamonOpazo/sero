@@ -1,4 +1,5 @@
 import { Progress } from '@/components/ui/progress';
+import { Button } from '@/components/ui/button';
 
 interface GlobalProcessingChinProps {
   stageIndex?: number | null;
@@ -10,6 +11,8 @@ interface GlobalProcessingChinProps {
   batchText?: string | null; // e.g., "Documents 2 of 10"
   link?: string | null;
   onClickLink?: () => void;
+  onCancel?: () => void;
+  cancelLabel?: string;
 }
 
 /**
@@ -71,6 +74,18 @@ export function GlobalProcessingChin(props: GlobalProcessingChinProps) {
           >
             View details
           </button>
+        ) : null}
+        {/* Cancel button (optional) */}
+        {props.onCancel ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="h-6 py-0 text-[11px]"
+            onClick={props.onCancel}
+          >
+            {props.cancelLabel ?? 'Cancel'}
+          </Button>
         ) : null}
         {/* Progress Bar */}
         <div className="shrink-0 w-48">
