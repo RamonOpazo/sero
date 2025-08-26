@@ -82,11 +82,17 @@ export const DocumentViewerAPI = {
    * Apply AI to generate staged selections (committed=false)
    */
   async applyAi(documentId: string): Promise<Result<{ selections: SelectionType[]; telemetry: { min_confidence: number; returned: number; filtered_out: number; staged: number } }, unknown>> {
-    // Use document-specific endpoint that stages AI selections server-side
+    // Centralized AI endpoint; increase timeout to accommodate cold model load in Ollama
     return AsyncResultWrapper
-      .from(api.safe.post<{ selections: SelectionType[]; telemetry: { min_confidence: number; returned: number; filtered_out: number; staged: number } }>(`/documents/id/${documentId}/ai/apply`))
+      .from(
+        api.safe.post<{ selections: SelectionType[]; telemetry: { min_confidence: number; returned: number; filtered_out: number; staged: number } }>(
+          `/ai/apply`,
+          { document_id: documentId } as any,
+          { timeout: 120_000 },
+        )
+      )
       .catch((error: unknown) => {
-        toast.error("Failed to apply AI", { description: "Please try again." });
+        toast.error("Failed to apply AI", { description: error instanceof Error ? error.message : "Please try again." });
         throw error;
       })
       .toResult();

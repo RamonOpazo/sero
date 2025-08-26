@@ -1,6 +1,11 @@
 from __future__ import annotations
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from fastapi.responses import StreamingResponse
+from sqlalchemy.orm import Session
+from backend.core.database import get_db_session
 from backend.service.ai_service import get_ai_service, GenerateSelectionsRequest, GenerateSelectionsResponse
+from backend.api.schemas import ai_schema
+from backend.api.controllers import ai_controller
 
 router = APIRouter()
 
@@ -35,3 +40,13 @@ async def ai_introspect(payload: GenerateSelectionsRequest) -> list[dict]:
     # Return a raw list for frontend convenience
     return [s.model_dump() for s in result.selections]
 
+@router.post("/apply", response_model=dict)
+async def ai_apply(payload: ai_schema.AiApplyRequest, db: Session = Depends(get_db_session)):
+    """Apply AI for a document: generate and stage selections; return telemetry and staged selections."""
+    res = await ai_controller.apply(db=db, request=payload)
+    return res.model_dump()
+
+@router.post("/apply/stream")
+async def ai_apply_stream(payload: ai_schema.AiApplyRequest, db: Session = Depends(get_db_session)) -> StreamingResponse:
+    """SSE endpoint streaming live telemetry for AI apply."""
+    return await ai_controller.apply_stream(db=db, request=payload)
