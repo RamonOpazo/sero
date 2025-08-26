@@ -3,7 +3,7 @@ import { type MinimalDocumentType } from "@/types";
 import { useViewportState } from '../../providers/viewport-provider';
 import { useSelections } from '../../providers/selection-provider';
 import { usePrompts } from '../../providers/prompt-provider';
-import { X, Info } from 'lucide-react';
+import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { UISelectionStage } from '../../types/selection-lifecycle';

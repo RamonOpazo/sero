@@ -263,7 +263,7 @@ def commit_staged_selections(db: Session, document_id: UUID, request: selections
     return [selections_schema.Selection.model_validate(i) for i in committed]
 
 
-def apply_ai_and_stage(db: Session, document_id: UUID) -> list[selections_schema.Selection]:
+def apply_ai_and_stage(db: Session, document_id: UUID) -> documents_schema.AiApplyResponse:
     # Ensure document exists and load prompts/settings
     document = support_crud.apply_or_404(
         documents_crud.read,
@@ -273,8 +273,22 @@ def apply_ai_and_stage(db: Session, document_id: UUID) -> list[selections_schema
     )
 
     committed_prompts = [p for p in document.prompts if getattr(p, "state", None) == CommitState.COMMITTED]
+
+    # Filter by minimum confidence threshold from defaults
+    from backend.core import defaults as core_defaults
+    min_conf = float(getattr(core_defaults, 'AI_MIN_CONFIDENCE', 0.0))
+
     if not committed_prompts:
-        return []
+        # No prompts to run AI with; return empty response and telemetry
+        return documents_schema.AiApplyResponse(
+            selections=[],
+            telemetry=documents_schema.AiApplyTelemetry(
+                min_confidence=float(min_conf),
+                returned=0,
+                filtered_out=0,
+                staged=0,
+            ),
+        )
 
     composed_prompts: list[str] = []
     for p in committed_prompts:
@@ -294,10 +308,6 @@ def apply_ai_and_stage(db: Session, document_id: UUID) -> list[selections_schema
 
     res = asyncio.run(_run())
 
-    # Filter by minimum confidence threshold from defaults
-    from backend.core import defaults as core_defaults
-    min_conf = float(getattr(core_defaults, 'AI_MIN_CONFIDENCE', 0.0))
-
     filtered = [s for s in res.selections if (float(s.confidence) if s.confidence is not None else 0.0) >= min_conf]
 
     created_models = []
@@ -306,7 +316,14 @@ def apply_ai_and_stage(db: Session, document_id: UUID) -> list[selections_schema
         sel.state = CommitState.STAGED_CREATION
         created_models.append(selections_crud.create(db=db, data=sel))
 
-    return [selections_schema.Selection.model_validate(i) for i in created_models]
+    selections_out = [selections_schema.Selection.model_validate(i) for i in created_models]
+    telemetry = {
+        "min_confidence": float(min_conf),
+        "returned": int(len(res.selections)),
+        "filtered_out": int(len(res.selections) - len(filtered)),
+        "staged": int(len(created_models)),
+    }
+    return documents_schema.AiApplyResponse(selections=selections_out, telemetry=documents_schema.AiApplyTelemetry(**telemetry))
 
 
 def update(db: Session, document_id: UUID, document_data: documents_schema.DocumentUpdate) -> documents_schema.Document:

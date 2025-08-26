@@ -94,6 +94,18 @@ class DocumentSummary(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class AiApplyTelemetry(BaseModel):
+    min_confidence: float
+    returned: int
+    filtered_out: int
+    staged: int
+
+
+class AiApplyResponse(BaseModel):
+    selections: list[Selection]
+    telemetry: AiApplyTelemetry
+
+
 class DocumentBulkUpload(BaseModel):
     document_data: DocumentCreate
     file_data: FileCreate

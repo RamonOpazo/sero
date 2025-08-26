@@ -4,7 +4,6 @@ import { Trash2, Plus, Hourglass, AlertCircle, Bot } from "lucide-react";
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { toast } from "sonner";
 import type { MinimalDocumentType } from "@/types";
-import { TypedConfirmationDialog, type TypedMessage } from "@/components/shared/typed-confirmation-dialog";
 import { FormConfirmationDialog } from "@/components/shared";
 import PromptsList from "./prompt-list";
 import { usePrompts } from "../../providers/prompt-provider";
@@ -26,7 +25,6 @@ export default function PromptManagement({ document }: PromptControlsProps) {
     createPrompt,
     updatePrompt,
     clearAll,
-    discardAllChanges,
     allPrompts,
     hasUnsavedChanges,
     pendingChangesCount,
@@ -43,7 +41,6 @@ export default function PromptManagement({ document }: PromptControlsProps) {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editingPromptId, setEditingPromptId] = useState<string | null>(null);
-  const [showSaveConfirmDialog, setShowSaveConfirmDialog] = useState(false);
   const [isApplyingAI, setIsApplyingAI] = useState(false);
   
   // Load prompts when component mounts
@@ -95,46 +92,18 @@ export default function PromptManagement({ document }: PromptControlsProps) {
     setShowAddDialog(false);
   }, [createPrompt, save]);
 
-  // Save all pending changes with confirmation
-  const handleSaveAllPrompts = useCallback(() => {
-    if (promptStats.totalUnsavedChanges === 0) {
-      toast.info('No pending changes to save');
-      return;
-    }
-    setShowSaveConfirmDialog(true);
-  }, [promptStats.totalUnsavedChanges]);
-  
-  // Handler to close save confirmation dialog
-  const handleCloseSaveConfirmDialog = useCallback(() => {
-    setShowSaveConfirmDialog(false);
-  }, []);
-  
-  // Handler for confirmed save action
-  const handleConfirmedSave = useCallback(async () => {
-    try {
-      const result = await save();
-      if (result.ok) {
-        const savedCount = promptStats.totalUnsavedChanges;
-        toast.success(`Successfully saved ${savedCount} change${savedCount === 1 ? '' : 's'}`);
-        setShowSaveConfirmDialog(false);
-      } else {
-        toast.error('Failed to save changes');
-      }
-    } catch (error) {
-      console.error('Error saving changes:', error);
-      toast.error('Failed to save changes');
-    }
-  }, [save, promptStats.totalUnsavedChanges]);
-  
   // Run AI detection to generate staged selections
   const handleRunAIDetection = useCallback(async () => {
     try {
       setIsApplyingAI(true);
       const result = await import('@/lib/document-viewer-api').then(m => m.DocumentViewerAPI.applyAi(document.id));
       if (result.ok) {
-        const count = result.value.length;
+        const { selections, telemetry } = result.value;
+        const count = selections.length;
         const plural = count === 1 ? '' : 's';
-        toast.success(`AI generated ${count} selection${plural} (staged)`);
+        const filtered = telemetry.filtered_out;
+        const returned = telemetry.returned;
+        toast.success(`AI generated ${count} selection${plural} (staged) – filtered ${filtered} of ${returned}`);
         if (typeof (selectionStateDV as any).reload === 'function') {
           await (selectionStateDV as any).reload();
         }
@@ -148,17 +117,6 @@ export default function PromptManagement({ document }: PromptControlsProps) {
     }
   }, [document.id, selectionStateDV]);
 
-  // Discard all unsaved changes
-  const handleDiscardAllChanges = useCallback(() => {
-    if (promptStats.totalUnsavedChanges === 0) {
-      toast.info('No unsaved changes to discard');
-      return;
-    }
-    
-    discardAllChanges();
-    toast.success(`Discarded ${promptStats.totalUnsavedChanges} unsaved change${promptStats.totalUnsavedChanges === 1 ? '' : 's'}`);
-  }, [discardAllChanges, promptStats.totalUnsavedChanges]);
-  
   // Clear all prompts
   const handleClearAll = useCallback(() => {
     if (promptStats.totalCount === 0) {

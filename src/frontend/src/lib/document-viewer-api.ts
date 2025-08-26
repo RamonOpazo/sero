@@ -81,10 +81,10 @@ export const DocumentViewerAPI = {
   /**
    * Apply AI to generate staged selections (committed=false)
    */
-  async applyAi(documentId: string): Promise<Result<SelectionType[], unknown>> {
+  async applyAi(documentId: string): Promise<Result<{ selections: SelectionType[]; telemetry: { min_confidence: number; returned: number; filtered_out: number; staged: number } }, unknown>> {
     // Use document-specific endpoint that stages AI selections server-side
     return AsyncResultWrapper
-      .from(api.safe.post<SelectionType[]>(`/documents/id/${documentId}/ai/apply`))
+      .from(api.safe.post<{ selections: SelectionType[]; telemetry: { min_confidence: number; returned: number; filtered_out: number; staged: number } }>(`/documents/id/${documentId}/ai/apply`))
       .catch((error: unknown) => {
         toast.error("Failed to apply AI", { description: "Please try again." });
         throw error;

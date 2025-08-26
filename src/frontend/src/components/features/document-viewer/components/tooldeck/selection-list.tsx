@@ -163,7 +163,7 @@ export default function SelectionList() {
     return value.toFixed(2);
   };
 
-  const renderSelectionItem = (sel: typeof selectionsWithTypeInfo[0], idx: number) => {
+  const renderSelectionItem = (sel: typeof selectionsWithTypeInfo[0]) => {
     const isGlobal = sel.page_number === null;
     const norm = getNormalizedState((sel as any).state);
     const pageDisplay = isGlobal ? 'Global' : `Page ${(sel.page_number ?? 0) + 1}`;
@@ -320,8 +320,8 @@ export default function SelectionList() {
       <div className="h-full overflow-auto">
         <div className="space-y-1">
           {/* Show all selections in order: new first, then saved */}
-          {[...groupedSelections.new, ...groupedSelections.saved].map((sel, idx) => (
-            renderSelectionItem(sel, idx)
+          {[...groupedSelections.new, ...groupedSelections.saved].map((sel) => (
+            renderSelectionItem(sel)
           ))}
         </div>
       </div>

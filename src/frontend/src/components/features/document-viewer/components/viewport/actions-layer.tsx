@@ -20,6 +20,7 @@ export default function ActionsLayer({ isInfoVisible = false, onToggleInfo }: Ac
     setMode,
     showSelections,
     dispatch,
+    showPromptPanel,
   } = useViewportState();
   
   const { 
@@ -318,6 +319,7 @@ export default function ActionsLayer({ isInfoVisible = false, onToggleInfo }: Ac
             variant="ghost"
             size="icon"
             onClick={togglePromptPanel}
+            className={showPromptPanel ? 'bg-accent text-accent-foreground' : ''}
             title="Toggle rules panel (R)"
           >
             <ListTree />
