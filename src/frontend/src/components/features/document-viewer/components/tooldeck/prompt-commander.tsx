@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Trash2, Plus, Hourglass, AlertCircle, Bot } from "lucide-react";
+import { AiProgress } from "./ai-progress";
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import type { MinimalDocumentType } from "@/types";
@@ -46,6 +47,9 @@ export default function PromptManagement({ document }: PromptControlsProps) {
   const [aiStage, setAiStage] = useState<string | null>(null);
   const [aiTokenChars, setAiTokenChars] = useState<number>(0);
   const [aiSummary, setAiSummary] = useState<{ returned: number; filtered_out: number; staged: number; min_confidence: number } | null>(null);
+  const [aiStageIndex, setAiStageIndex] = useState<number | null>(null);
+  const [aiStageTotal, setAiStageTotal] = useState<number | null>(null);
+  const [aiStagePercent, setAiStagePercent] = useState<number | null>(null);
   const cancelRef = useRef<(() => void) | null>(null);
   
   // Load prompts when component mounts
@@ -105,9 +109,17 @@ export default function PromptManagement({ document }: PromptControlsProps) {
       setAiTokenChars(0);
       setAiSummary(null);
       const ctrl = DocumentViewerAPI.applyAiStream(document.id, {
-        onStatus: (d) => setAiStage(d.stage),
+        onStatus: (d) => {
+          setAiStage(d.stage);
+          if (typeof d.stage_index === 'number') setAiStageIndex(d.stage_index);
+          if (typeof d.stage_total === 'number') setAiStageTotal(d.stage_total);
+          if (typeof d.percent === 'number') setAiStagePercent(d.percent);
+        },
         onModel: (m) => setAiStage((prev) => prev ?? `model:${m.name}`),
         onTokens: (t) => setAiTokenChars(t.chars),
+        onStagingProgress: (sp) => {
+          if (typeof sp.percent === 'number') setAiStagePercent(sp.percent);
+        },
         onSummary: async (s) => {
           setAiSummary(s);
           // refresh selections on summary
@@ -118,6 +130,9 @@ export default function PromptManagement({ document }: PromptControlsProps) {
         onCompleted: () => {
           setIsApplyingAI(false);
           setAiStage(null);
+          setAiStagePercent(null);
+          setAiStageIndex(null);
+          setAiStageTotal(null);
           const s = aiSummary;
           if (s) {
             const count = s.staged;
@@ -141,6 +156,8 @@ export default function PromptManagement({ document }: PromptControlsProps) {
       toast.error('Failed to run AI detection');
     }
   }, [document.id, selectionStateDV, aiSummary]);
+
+  const stageLabel = aiStage;
 
   const handleCancelAI = useCallback(() => {
     try {
@@ -257,15 +274,19 @@ export default function PromptManagement({ document }: PromptControlsProps) {
       {/* Action Controls */}
       <div className="flex flex-col gap-2">
         {isApplyingAI && (
-          <div className="text-[11px] text-muted-foreground flex items-center justify-between gap-2 px-2 py-1 border rounded bg-muted/30">
-            <div className="flex items-center gap-2 min-w-0">
-              <Hourglass className="h-3 w-3 animate-spin" />
-              <span className="truncate">{aiStage ? `Stage: ${aiStage}` : 'Running AI...'}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              {aiTokenChars > 0 && <span className="font-mono">{aiTokenChars} chars</span>}
-              <Button size="xs" variant="outline" onClick={handleCancelAI}>Cancel</Button>
-            </div>
+          <div className="flex flex-col gap-2">
+            <AiProgress
+              currentStageLabel={stageLabel}
+              stageIndex={aiStageIndex}
+              stageTotal={aiStageTotal}
+              stagePercent={aiStagePercent}
+              onCancel={handleCancelAI}
+            />
+            {aiTokenChars > 0 && (
+              <div className="text-[11px] text-muted-foreground flex items-center justify-end">
+                <span className="font-mono">{aiTokenChars} chars</span>
+              </div>
+            )}
           </div>
         )}
         <Button

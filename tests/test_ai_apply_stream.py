@@ -69,8 +69,10 @@ def test_api_apply_ai_stream_emits_events_and_stages(client, test_session: Sessi
     # Assert: HTTP ok and SSE events present
     assert res.status_code == 200
     text = res.text
-    # basic events should appear in the stream
+    # basic events should appear in the stream, including progress fields
     assert "event: status" in text
+    assert "stage_index" in text and "stage_total" in text
+    assert "event: staging_progress" in text
     assert "event: summary" in text
     assert "event: completed" in text
 

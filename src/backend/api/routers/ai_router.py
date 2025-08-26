@@ -50,3 +50,9 @@ async def ai_apply(payload: ai_schema.AiApplyRequest, db: Session = Depends(get_
 async def ai_apply_stream(payload: ai_schema.AiApplyRequest, db: Session = Depends(get_db_session)) -> StreamingResponse:
     """SSE endpoint streaming live telemetry for AI apply."""
     return await ai_controller.apply_stream(db=db, request=payload)
+
+
+@router.post("/apply/project/stream")
+async def ai_apply_project_stream(payload: ai_schema.AiApplyProjectRequest, db: Session = Depends(get_db_session)) -> StreamingResponse:
+    """SSE endpoint streaming live telemetry for project-wise AI apply."""
+    return await ai_controller.apply_project_stream(db=db, request=payload)

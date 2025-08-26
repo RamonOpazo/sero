@@ -18,9 +18,9 @@ async function fetchDocs(): Promise<Doc[]> {
     return docs;
   }
 
-  const modules = import.meta.glob('/src/docs/*.md', { as: 'raw' });
+  const modules = import.meta.glob('/docs/*.md', { query: '?raw', import: 'default' });
   const promises = Object.entries(modules).map(async ([path, resolver]) => {
-    const rawContent = await resolver();
+    const rawContent = (await resolver()) as string;
     const { attributes, body } = fm(rawContent);
     const slug = path.split('/').pop()?.replace('.md', '');
 
@@ -30,10 +30,10 @@ async function fetchDocs(): Promise<Doc[]> {
 
     const docData = {
       slug,
-      title: (attributes as any).title || slug,
-      date: (attributes as any).date,
-      path: (attributes as any).path || `./${slug}`,
-      content: body,
+      title: (attributes as Record<string, string>).title || slug,
+      date: (attributes as Record<string, string>).date,
+      path: (attributes as Record<string, string>).path || `./${slug}`,
+      content: body as string,
     };
 
     const validation = docSchema.safeParse(docData);

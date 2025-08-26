@@ -105,12 +105,13 @@ export const DocumentViewerAPI = {
   applyAiStream(
     documentId: string,
     handlers: {
-      onStatus?: (data: { stage: string }) => void;
-      onModel?: (data: { name: string }) => void;
-      onTokens?: (data: { chars: number }) => void;
-      onSummary?: (data: { returned: number; filtered_out: number; staged: number; min_confidence: number }) => void;
-      onCompleted?: (data: { ok: boolean }) => void;
-      onError?: (data: { message: string }) => void;
+      onStatus?: (data: { stage: string; stage_index?: number; stage_total?: number; percent?: number }) => void;
+      onModel?: (data: { name: string; document_id?: string }) => void;
+      onTokens?: (data: { chars: number; document_id?: string }) => void;
+      onStagingProgress?: (data: { created: number; total: number; percent?: number; document_id?: string }) => void;
+      onSummary?: (data: { returned: number; filtered_out: number; staged: number; min_confidence: number; document_id?: string }) => void;
+      onCompleted?: (data: { ok: boolean; reason?: string }) => void;
+      onError?: (data: { message: string; document_id?: string }) => void;
     }
   ): { cancel: () => void } {
     const controller = new AbortController();
@@ -156,7 +157,12 @@ export const DocumentViewerAPI = {
                 case 'status': handlers.onStatus?.(payload); break;
                 case 'model': handlers.onModel?.(payload); break;
                 case 'tokens': handlers.onTokens?.(payload); break;
+                case 'staging_progress': handlers.onStagingProgress?.(payload); break;
                 case 'summary': handlers.onSummary?.(payload); break;
+                case 'project_init': (handlers as any).onProjectInit?.(payload); break;
+                case 'project_progress': (handlers as any).onProjectProgress?.(payload); break;
+                case 'project_doc_start': (handlers as any).onProjectDocStart?.(payload); break;
+                case 'project_doc_summary': (handlers as any).onProjectDocSummary?.(payload); break;
                 case 'completed': handlers.onCompleted?.(payload); break;
                 case 'error': handlers.onError?.(payload); break;
                 default: break;
@@ -177,6 +183,84 @@ export const DocumentViewerAPI = {
     return {
       cancel: () => controller.abort(),
     };
+  },
+
+  /**
+   * Stream AI apply for an entire project (batch) with project-level events.
+   */
+  applyAiProjectStream(
+    projectId: string,
+    handlers: {
+      onProjectInit?: (data: { total_documents: number }) => void;
+      onProjectProgress?: (data: { processed: number; total: number }) => void;
+      onProjectDocStart?: (data: { index: number; document_id: string }) => void;
+      onProjectDocSummary?: (data: { document_id: string; returned: number; filtered_out: number; staged: number; min_confidence: number }) => void;
+      onStatus?: (data: { stage: string; stage_index?: number; stage_total?: number; percent?: number; document_id?: string }) => void;
+      onModel?: (data: { name: string; document_id?: string }) => void;
+      onTokens?: (data: { chars: number; document_id?: string }) => void;
+      onStagingProgress?: (data: { created: number; total: number; percent?: number; document_id?: string }) => void;
+      onCompleted?: (data: { ok: boolean }) => void;
+      onError?: (data: { message: string; document_id?: string }) => void;
+    }
+  ): { cancel: () => void } {
+    // Reuse the SSE parser; we just change the URL and handlers shape
+    const controller = new AbortController();
+    const signal = controller.signal;
+
+    const parseStream = async () => {
+      try {
+        const resp = await fetch(`/api/ai/apply/project/stream`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ project_id: projectId }),
+          signal,
+        });
+        if (!resp.ok || !resp.body) throw new Error(`Stream failed: ${resp.status}`);
+        const reader = resp.body.getReader();
+        const decoder = new TextDecoder();
+        let buf = '';
+        let currentEvent: string | null = null;
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buf += decoder.decode(value, { stream: true });
+          let idx;
+          while ((idx = buf.indexOf('\n\n')) !== -1) {
+            const chunk = buf.slice(0, idx);
+            buf = buf.slice(idx + 2);
+            const lines = chunk.split('\n');
+            currentEvent = null;
+            let dataLine = '';
+            for (const ln of lines) {
+              if (ln.startsWith('event: ')) currentEvent = ln.slice(7).trim();
+              if (ln.startsWith('data: ')) dataLine = ln.slice(6).trim();
+            }
+            if (!currentEvent || !dataLine) continue;
+            try {
+              const payload = JSON.parse(dataLine);
+              switch (currentEvent) {
+                case 'project_init': handlers.onProjectInit?.(payload); break;
+                case 'project_progress': handlers.onProjectProgress?.(payload); break;
+                case 'project_doc_start': handlers.onProjectDocStart?.(payload); break;
+                case 'project_doc_summary': handlers.onProjectDocSummary?.(payload); break;
+                case 'status': handlers.onStatus?.(payload); break;
+                case 'model': handlers.onModel?.(payload); break;
+                case 'tokens': handlers.onTokens?.(payload); break;
+                case 'staging_progress': handlers.onStagingProgress?.(payload); break;
+                case 'completed': handlers.onCompleted?.(payload); break;
+                case 'error': handlers.onError?.(payload); break;
+                default: break;
+              }
+            } catch { /* ignore */ }
+          }
+        }
+      } catch (err: any) {
+        handlers.onError?.({ message: err?.message ?? 'stream-error' });
+      }
+    };
+
+    void parseStream();
+    return { cancel: () => controller.abort() };
   },
 
   /**
