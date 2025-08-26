@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Toaster } from '@/components/ui/sonner';
 import { WorkspaceProvider } from '@/providers/workspace-provider';
 import { AiProcessingProvider } from '@/providers/ai-processing-provider';
+import { AiCredentialsProvider } from '@/providers/ai-credentials-provider';
 import { ThemeToggle } from '@/components/shared';
 import { Separator } from '@/components/ui/separator';
 import { Breadcrumbs } from './navigation';
@@ -16,8 +17,9 @@ interface LayoutProps {
 export function MainLayout({ children }: LayoutProps) {
   return (
     <WorkspaceProvider>
-      <AiProcessingProvider>
-        <SidebarProvider layout="grid">
+      <AiCredentialsProvider>
+        <AiProcessingProvider>
+          <SidebarProvider layout="grid">
           <AppSidebar layout="grid" />
           <SidebarInset layout="grid">
             <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
@@ -42,7 +44,8 @@ export function MainLayout({ children }: LayoutProps) {
         <Toaster />
         {/* Global processing chin mounted at the root level, full-width and independent of layout */}
         <GlobalProcessingChinContainer />
-      </AiProcessingProvider>
+        </AiProcessingProvider>
+      </AiCredentialsProvider>
     </WorkspaceProvider>
   )
 }

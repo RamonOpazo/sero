@@ -9,7 +9,9 @@ import { ProjectAiSettingsDialog } from './dialogs/project-ai-settings-dialog';
 import { TypedConfirmationDialog } from '@/components/shared/typed-confirmation-dialog';
 import { useProjectsView } from './use-projects-view';
 import { useAiProcessing } from '@/providers/ai-processing-provider';
+import { useAiCredentials } from '@/providers/ai-credentials-provider';
 import { startProjectRun } from '@/lib/ai-runner';
+import { ProjectsAPI } from '@/lib/projects-api';
 import type { ProjectShallowType } from '@/types';
 import type { ColumnConfig } from '@/components/features/data-table/columns';
 import type { ColumnOption, CustomButtonOption } from '@/components/features/data-table/types';
@@ -43,6 +45,7 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
   } = useProjectsView(onProjectSelect);
 
   const aiProc = useAiProcessing();
+  const { ensureCredentials } = useAiCredentials();
 
   // Pure UI rendering functions
   const nameRenderer = useCallback((project: ProjectShallowType) => {
@@ -161,9 +164,18 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
           id: 'run-ai',
           label: 'Run AI (project)',
           icon: Bot,
-          onClick: (project) => {
-            startProjectRun(aiProc as any, project.id);
-            toast.success('Project AI run started', { description: project.name });
+          onClick: async (project) => {
+            // Fetch project AI settings to know provider name
+            const res = await ProjectsAPI.getProjectAiSettings(project.id);
+            const providerName = res.ok ? (res.value as any).provider : 'ollama';
+            try {
+              const { keyId, encryptedPassword } = await ensureCredentials(providerName);
+              startProjectRun(aiProc as any, project.id, { keyId, encryptedPassword });
+              toast.success('Project AI run started', { description: project.name });
+            } catch (e) {
+              // User cancelled or encryption failed
+              toast.info('Project AI run cancelled');
+            }
           }
         },
         {
