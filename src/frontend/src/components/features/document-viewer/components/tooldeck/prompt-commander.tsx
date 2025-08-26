@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Trash2, Plus, Hourglass, AlertCircle, Bot } from "lucide-react";
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import type { MinimalDocumentType } from "@/types";
 import { FormConfirmationDialog } from "@/components/shared";
@@ -43,6 +43,10 @@ export default function PromptManagement({ document }: PromptControlsProps) {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editingPromptId, setEditingPromptId] = useState<string | null>(null);
   const [isApplyingAI, setIsApplyingAI] = useState(false);
+  const [aiStage, setAiStage] = useState<string | null>(null);
+  const [aiTokenChars, setAiTokenChars] = useState<number>(0);
+  const [aiSummary, setAiSummary] = useState<{ returned: number; filtered_out: number; staged: number; min_confidence: number } | null>(null);
+  const cancelRef = useRef<(() => void) | null>(null);
   
   // Load prompts when component mounts
   useEffect(() => {
@@ -97,26 +101,59 @@ export default function PromptManagement({ document }: PromptControlsProps) {
   const handleRunAIDetection = useCallback(async () => {
     try {
       setIsApplyingAI(true);
-      const result = await DocumentViewerAPI.applyAi(document.id);
-      if (result.ok) {
-        const { selections, telemetry } = result.value;
-        const count = selections.length;
-        const plural = count === 1 ? '' : 's';
-        const filtered = telemetry.filtered_out;
-        const returned = telemetry.returned;
-        toast.success(`AI generated ${count} selection${plural} (staged) – filtered ${filtered} of ${returned}`);
-        if (typeof (selectionStateDV as any).reload === 'function') {
-          await (selectionStateDV as any).reload();
-        }
-      } else {
-        toast.error('Failed to run AI detection');
-      }
+      setAiStage('start');
+      setAiTokenChars(0);
+      setAiSummary(null);
+      const ctrl = DocumentViewerAPI.applyAiStream(document.id, {
+        onStatus: (d) => setAiStage(d.stage),
+        onModel: (m) => setAiStage((prev) => prev ?? `model:${m.name}`),
+        onTokens: (t) => setAiTokenChars(t.chars),
+        onSummary: async (s) => {
+          setAiSummary(s);
+          // refresh selections on summary
+          if (typeof (selectionStateDV as any).reload === 'function') {
+            await (selectionStateDV as any).reload();
+          }
+        },
+        onCompleted: () => {
+          setIsApplyingAI(false);
+          setAiStage(null);
+          const s = aiSummary;
+          if (s) {
+            const count = s.staged;
+            const plural = count === 1 ? '' : 's';
+            toast.success(`AI generated ${count} selection${plural} (staged) – filtered ${s.filtered_out} of ${s.returned}`);
+          } else {
+            toast.success('AI completed');
+          }
+        },
+        onError: (e) => {
+          setIsApplyingAI(false);
+          setAiStage(null);
+          toast.error(`AI error: ${e.message ?? 'unknown'}`);
+        },
+      });
+      // store cancel so we can abort
+      cancelRef.current = ctrl.cancel;
     } catch (err) {
+      setIsApplyingAI(false);
+      setAiStage(null);
       toast.error('Failed to run AI detection');
+    }
+  }, [document.id, selectionStateDV, aiSummary]);
+
+  const handleCancelAI = useCallback(() => {
+    try {
+      if (cancelRef.current) {
+        cancelRef.current();
+      }
+      cancelRef.current = null;
     } finally {
       setIsApplyingAI(false);
+      setAiStage(null);
+      toast.info('AI run canceled');
     }
-  }, [document.id, selectionStateDV]);
+  }, []);
 
   // Clear all prompts
   const handleClearAll = useCallback(() => {
@@ -219,6 +256,18 @@ export default function PromptManagement({ document }: PromptControlsProps) {
       
       {/* Action Controls */}
       <div className="flex flex-col gap-2">
+        {isApplyingAI && (
+          <div className="text-[11px] text-muted-foreground flex items-center justify-between gap-2 px-2 py-1 border rounded bg-muted/30">
+            <div className="flex items-center gap-2 min-w-0">
+              <Hourglass className="h-3 w-3 animate-spin" />
+              <span className="truncate">{aiStage ? `Stage: ${aiStage}` : 'Running AI...'}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              {aiTokenChars > 0 && <span className="font-mono">{aiTokenChars} chars</span>}
+              <Button size="xs" variant="outline" onClick={handleCancelAI}>Cancel</Button>
+            </div>
+          </div>
+        )}
         <Button
           variant="default"
           size="sm"

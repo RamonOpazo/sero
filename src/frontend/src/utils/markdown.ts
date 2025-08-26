@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import matter from 'gray-matter';
+import fm from 'front-matter';
 
 const docSchema = z.object({
   slug: z.string(),
@@ -18,23 +18,30 @@ async function fetchDocs(): Promise<Doc[]> {
     return docs;
   }
 
-  const modules = import.meta.glob('/public/docs/*.md', { query: '?raw', import: 'default' });
+  const modules = import.meta.glob('/src/docs/*.md', { as: 'raw' });
   const promises = Object.entries(modules).map(async ([path, resolver]) => {
-    const rawContent = (await resolver()) as string;
-    const { data, content } = matter(rawContent);
+    const rawContent = await resolver();
+    const { attributes, body } = fm(rawContent);
     const slug = path.split('/').pop()?.replace('.md', '');
 
     if (!slug) {
       return null;
     }
 
-    return {
+    const docData = {
       slug,
-      title: data.title || slug,
-      date: data.date,
-      path: data.path || `./${slug}`,
-      content,
+      title: (attributes as any).title || slug,
+      date: (attributes as any).date,
+      path: (attributes as any).path || `./${slug}`,
+      content: body,
     };
+
+    const validation = docSchema.safeParse(docData);
+    if (validation.success) {
+      return validation.data;
+    }
+    console.error(`Invalid doc: ${slug}`, validation.error);
+    return null;
   });
 
   const resolvedDocs = await Promise.all(promises);

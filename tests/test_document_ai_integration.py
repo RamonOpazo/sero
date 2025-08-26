@@ -75,7 +75,10 @@ def test_document_scoped_ai_integration(test_session: Session, monkeypatch):
     monkeypatch.setattr("backend.service.ai_service.get_ai_service", lambda: FakeSvc())
 
     # 7) Apply AI and stage selections
-    out = documents_controller.apply_ai_and_stage(db=test_session, document_id=doc.id)
+    from backend.api.controllers import ai_controller
+    from backend.api.schemas.ai_schema import AiApplyRequest
+    import asyncio
+    out = asyncio.run(ai_controller.apply(db=test_session, request=AiApplyRequest(document_id=doc.id)))
 
     # 8) Assertions: ensure AI selections exist and are staged
     assert out.selections and len(out.selections) == 2

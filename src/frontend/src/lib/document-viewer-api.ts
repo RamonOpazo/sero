@@ -99,6 +99,87 @@ export const DocumentViewerAPI = {
   },
 
   /**
+   * Stream AI apply progress via POST + SSE-like event parsing.
+   * Returns a cancel function to abort streaming.
+   */
+  applyAiStream(
+    documentId: string,
+    handlers: {
+      onStatus?: (data: { stage: string }) => void;
+      onModel?: (data: { name: string }) => void;
+      onTokens?: (data: { chars: number }) => void;
+      onSummary?: (data: { returned: number; filtered_out: number; staged: number; min_confidence: number }) => void;
+      onCompleted?: (data: { ok: boolean }) => void;
+      onError?: (data: { message: string }) => void;
+    }
+  ): { cancel: () => void } {
+    const controller = new AbortController();
+    const signal = controller.signal;
+
+    // Simple SSE parser for lines of form: `event: name` and `data: {...}`
+    const parseStream = async () => {
+      try {
+        const resp = await fetch(`/api/ai/apply/stream`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ document_id: documentId }),
+          signal,
+        });
+        if (!resp.ok || !resp.body) {
+          throw new Error(`Stream failed: ${resp.status}`);
+        }
+        const reader = resp.body.getReader();
+        const decoder = new TextDecoder();
+        let buf = '';
+        let currentEvent: string | null = null;
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buf += decoder.decode(value, { stream: true });
+
+          let idx;
+          while ((idx = buf.indexOf('\n\n')) !== -1) {
+            const chunk = buf.slice(0, idx);
+            buf = buf.slice(idx + 2);
+            const lines = chunk.split('\n');
+            currentEvent = null;
+            let dataLine = '';
+            for (const ln of lines) {
+              if (ln.startsWith('event: ')) currentEvent = ln.slice(7).trim();
+              if (ln.startsWith('data: ')) dataLine = ln.slice(6).trim();
+            }
+            if (!currentEvent || !dataLine) continue;
+            try {
+              const payload = JSON.parse(dataLine);
+              switch (currentEvent) {
+                case 'status': handlers.onStatus?.(payload); break;
+                case 'model': handlers.onModel?.(payload); break;
+                case 'tokens': handlers.onTokens?.(payload); break;
+                case 'summary': handlers.onSummary?.(payload); break;
+                case 'completed': handlers.onCompleted?.(payload); break;
+                case 'error': handlers.onError?.(payload); break;
+                default: break;
+              }
+            } catch (e) {
+              // ignore JSON parse errors
+            }
+          }
+        }
+      } catch (err: any) {
+        handlers.onError?.({ message: err?.message ?? 'stream-error' });
+      }
+    };
+
+    // kick off parsing without awaiting
+    void parseStream();
+
+    return {
+      cancel: () => controller.abort(),
+    };
+  },
+
+  /**
    * Commit staged selections (by IDs or all)
    */
   async commitStagedSelections(documentId: string, args: { selection_ids?: string[]; commit_all?: boolean }): Promise<Result<SelectionType[], unknown>> {

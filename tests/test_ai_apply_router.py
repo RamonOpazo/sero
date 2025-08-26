@@ -64,8 +64,8 @@ def test_api_apply_ai_and_stage_selections(client, test_session: Session, monkey
 
     monkeypatch.setattr("backend.service.ai_service.get_ai_service", lambda: FakeSvc())
 
-    # Act: call API endpoint to apply AI and stage selections
-    res = client.post(f"/api/documents/id/{doc_id}/ai/apply")
+    # Act: call centralized AI endpoint to apply and stage selections
+    res = client.post("/api/ai/apply", json={"document_id": doc_id})
 
     # Assert: response is AiApplyResponse with two selections staged
     assert res.status_code == 200

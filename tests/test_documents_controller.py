@@ -122,7 +122,10 @@ class TestDocumentsController:
         proj = self._create_project(test_session)
         doc = self._create_document(test_session, proj.id)
         # no prompts enabled -> returns empty selections within AiApplyResponse
-        res = documents_controller.apply_ai_and_stage(db=test_session, document_id=doc.id)
+        from backend.api.controllers import ai_controller
+        from backend.api.schemas.ai_schema import AiApplyRequest
+        import asyncio
+        res = asyncio.run(ai_controller.apply(db=test_session, request=AiApplyRequest(document_id=doc.id)))
         assert isinstance(res, AiApplyResponse)
         assert res.selections == []
 
@@ -323,7 +326,10 @@ class TestDocumentsController:
                 })()
         monkeypatch.setattr("backend.service.ai_service.get_ai_service", lambda: FakeSvc())
         from backend.api.enums import CommitState as CS
-        out = documents_controller.apply_ai_and_stage(db=test_session, document_id=doc.id)
+        from backend.api.controllers import ai_controller
+        from backend.api.schemas.ai_schema import AiApplyRequest
+        import asyncio
+        out = asyncio.run(ai_controller.apply(db=test_session, request=AiApplyRequest(document_id=doc.id)))
         assert isinstance(out, AiApplyResponse)
         assert len(out.selections) == 1 and getattr(out.selections[0], "is_staged", False) is True
 

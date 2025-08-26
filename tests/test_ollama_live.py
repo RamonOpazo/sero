@@ -79,7 +79,9 @@ def test_ollama_health_and_generate_selections_live(test_session: Session):
     )
 
     # 5) Invoke live AI flow and stage selections
-    out = documents_controller.apply_ai_and_stage(db=test_session, document_id=doc.id)
+    from backend.api.controllers import ai_controller
+    from backend.api.schemas.ai_schema import AiApplyRequest
+    out = asyncio.run(ai_controller.apply(db=test_session, request=AiApplyRequest(document_id=doc.id)))
 
     # 6) Assert we got a response; optionally require at least one selection based on env flag
     assert out is not None

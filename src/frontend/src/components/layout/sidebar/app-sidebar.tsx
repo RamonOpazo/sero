@@ -18,7 +18,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     async function fetchDocItems() {
       const docs = await getDocs()
       const items = docs
-        .filter(doc => doc.slug !== 'index' && doc.slug !== 'whats-sero')
+        .filter(doc => doc.path !== './')
         .map(doc => ({ title: doc.title, url: `/docs/${doc.slug}` }))
       setDocItems(items)
     }
@@ -44,10 +44,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         title: "Documentation",
         url: "/docs",
         icon: BookOpen,
-        items: [
-          { title: "What's Sero", url: "/docs/whats-sero" },
-          ...docItems,
-        ],
+        items: docItems,
       },
       {
         title: "Settings",
