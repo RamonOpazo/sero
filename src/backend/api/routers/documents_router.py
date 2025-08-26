@@ -201,7 +201,7 @@ async def apply_ai(
     db: Session = Depends(get_db_session),
 ):
     """Apply AI to generate staged selections (committed=False)."""
-    return documents_controller.apply_ai_and_stage(db=db, document_id=document_id)
+    return await documents_controller.apply_ai_and_stage_async(db=db, document_id=document_id)
 
 
 @router.patch("/id/{document_id}/selections/commit", response_model=list[selections_schema.Selection])

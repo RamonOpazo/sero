@@ -263,7 +263,7 @@ def commit_staged_selections(db: Session, document_id: UUID, request: selections
     return [selections_schema.Selection.model_validate(i) for i in committed]
 
 
-def apply_ai_and_stage(db: Session, document_id: UUID) -> documents_schema.AiApplyResponse:
+async def apply_ai_and_stage_async(db: Session, document_id: UUID) -> documents_schema.AiApplyResponse:
     # Ensure document exists and load prompts/settings
     document = support_crud.apply_or_404(
         documents_crud.read,
@@ -294,19 +294,17 @@ def apply_ai_and_stage(db: Session, document_id: UUID) -> documents_schema.AiApp
     for p in committed_prompts:
         composed_prompts.append(f"Directive: {p.directive}\nTitle: {p.title}\n\nInstructions:\n{p.prompt}")
 
-    from backend.service.ai_service import get_ai_service, GenerateSelectionsRequest
-    import asyncio
+    from backend.service.ai_service import get_ai_service, GenerateSelectionsRequest, to_runtime_settings
 
-    async def _run():
-        svc = get_ai_service()
-        req = GenerateSelectionsRequest(
-            document_id=str(document_id),
-            system_prompt=(document.project.ai_settings.system_prompt if getattr(document, "project", None) and getattr(document.project, "ai_settings", None) else None),
-            prompts=composed_prompts,
-        )
-        return await svc.generate_selections(req)
-
-    res = asyncio.run(_run())
+    svc = get_ai_service()
+    ai = (document.project.ai_settings if getattr(document, "project", None) and getattr(document.project, "ai_settings", None) else None)
+    req = GenerateSelectionsRequest(
+        document_id=str(document_id),
+        system_prompt=None,
+        prompts=composed_prompts,
+        ai_settings=to_runtime_settings(ai),
+    )
+    res = await svc.generate_selections(req)
 
     filtered = [s for s in res.selections if (float(s.confidence) if s.confidence is not None else 0.0) >= min_conf]
 
@@ -324,6 +322,12 @@ def apply_ai_and_stage(db: Session, document_id: UUID) -> documents_schema.AiApp
         "staged": int(len(created_models)),
     }
     return documents_schema.AiApplyResponse(selections=selections_out, telemetry=documents_schema.AiApplyTelemetry(**telemetry))
+
+
+def apply_ai_and_stage(db: Session, document_id: UUID) -> documents_schema.AiApplyResponse:
+    """Sync wrapper for contexts without an event loop."""
+    import asyncio
+    return asyncio.run(apply_ai_and_stage_async(db=db, document_id=document_id))
 
 
 def update(db: Session, document_id: UUID, document_data: documents_schema.DocumentUpdate) -> documents_schema.Document:

@@ -7,3 +7,4 @@ export * from './ThemeToggle';
 export * from './SettingsToggle';
 export * from './Widget';
 export * from '../features/data-table';
+export * from './logo';

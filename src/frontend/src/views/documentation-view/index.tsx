@@ -29,7 +29,7 @@ export function DocumentationView({ docName }: DocumentationViewProps) {
 
   // Business logic handlers
   const handleBackToDocumentationIndex = useCallback(() => {
-    navigate("/documentation");
+    navigate("/docs");
   }, [navigate]);
 
   useEffect(() => {
@@ -39,7 +39,7 @@ export function DocumentationView({ docName }: DocumentationViewProps) {
 
       try {
         // Check if the doc exists
-        if (!docExists(actualDocName)) {
+        if (!(await docExists(actualDocName))) {
           setError(`Documentation page "${actualDocName}" not found`)
           setLoading(false)
           return
@@ -91,19 +91,19 @@ export function DocumentationView({ docName }: DocumentationViewProps) {
             a: ({ href, children, ...props }) => {
               const h = typeof href === 'string' ? href : ''
               const isInternal = h.startsWith('/') || h.startsWith('#')
-              const isDocsLike = h.startsWith('./') || h.startsWith('/documentation/')
+              const isDocsLike = h.startsWith('./') || h.startsWith('/docs/')
 
-              // Normalize docs links like ./page.md or /documentation/page.md -> /documentation/page
+              // Normalize docs links like ./page.md or /docs/page.md -> /docs/page
               if (isDocsLike) {
-                // Remove leading './' or '/documentation/'
+                // Remove leading './' or '/docs/'
                 const withoutPrefix = h.startsWith('./')
                   ? h.slice(2)
-                  : h.replace(/^\/documentation\//, '')
+                  : h.replace(/^\/docs\//, '')
 
                 // Preserve hash fragments if present
                 const [base, hash = ''] = withoutPrefix.split('#')
                 const slug = base.replace(/\.md$/i, '')
-                const to = `/documentation/${slug}${hash ? `#${hash}` : ''}`
+                const to = `/docs/${slug}${hash ? `#${hash}` : ''}`
 
                 return (
                   <Link

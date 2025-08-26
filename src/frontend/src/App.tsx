@@ -43,8 +43,8 @@ function App() {
             <Route path="/projects" element={<ProjectsView />} />
 
             {/* Documentation routes */}
-            <Route path="/documentation" element={<DocsPage docName="index" />} />
-            <Route path="/documentation/:docName" element={<DocsPage />} />
+            <Route path="/docs" element={<DocsPage docName="index" />} />
+            <Route path="/docs/:docName" element={<DocsPage />} />
 
             {/* Developer routes */}
             <Route path="/dev/api-swagger" element={<SwaggerPage />}/>

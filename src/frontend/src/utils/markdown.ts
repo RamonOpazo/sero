@@ -1,59 +1,62 @@
-// Markdown utility for loading documentation from files
-// Documentation files are stored as .md files in src/pages/docs/
+import { z } from 'zod';
 
-// Available documentation files
-const availableDocs = [
-  'index',
-  'whats-sero',
-  'getting-started',
-  'project-management',
-  'redaction-workflow',
-  'security',
-  'api-reference'
-]
+const docSchema = z.object({
+  slug: z.string(),
+  title: z.string(),
+  content: z.string(),
+});
 
-/**
- * Load raw markdown content for a documentation page
- */
-export async function loadMarkdownDoc(docName: string): Promise<string> {
-  if (!availableDocs.includes(docName)) {
-    throw new Error(`Documentation page not found: ${docName}`)
+type Doc = z.infer<typeof docSchema>;
+
+let docs: Doc[] | null = null;
+
+async function fetchDocs(): Promise<Doc[]> {
+  if (docs) {
+    return docs;
   }
 
-  const response = await fetch(`/docs/${docName}.md`)
+  const modules = import.meta.glob('/public/docs/*.md', { query: '?raw', import: 'default' });
+  const promises = Object.entries(modules).map(async ([path, resolver]) => {
+    const slug = path.split('/').pop()?.replace('.md', '');
+    if (!slug) {
+      return null;
+    }
+    const content = (await resolver()) as string;
+    const title = content.match(/^#\s+(.*)/m)?.[1] || slug;
+    return { slug, title, content };
+  });
 
-  if (!response.ok) {
-    throw new Error(`Failed to load documentation: ${response.statusText}`)
-  }
-  
-  return await response.text()
+  const resolvedDocs = await Promise.all(promises);
+  docs = resolvedDocs.filter((doc): doc is Doc => doc !== null);
+  return docs;
 }
 
-/**
- * Get the title from a documentation page
- */
-export function getDocTitle(docName: string): string {
-  const titles: Record<string, string> = {
-    'index': 'Documentation',
-    'whats-sero': "What's SERO",
-    'getting-started': 'Getting Started',
-    'projects': 'Working with Projects',
-    'documents': 'Document Management',
-    'redaction': 'Redaction Process',
-    'security': 'Security Overview',
-    'encryption': 'Encryption Details',
-    'api-reference': 'API Reference',
-    'authentication': 'Authentication',
-    'troubleshooting': 'Troubleshooting',
-    'faq': 'FAQ'
-  }
-
-  return titles[docName] || 'Documentation'
+export async function getDocs(): Promise<Doc[]> {
+  return await fetchDocs();
 }
 
-/**
- * Check if a documentation page exists
- */
-export function docExists(docName: string): boolean {
-  return availableDocs.includes(docName)
+export async function getDoc(slug: string): Promise<Doc | undefined> {
+  const docs = await fetchDocs();
+  if (slug === 'index') {
+    return docs.find(doc => doc.slug === 'whats-sero');
+  }
+  return docs.find(doc => doc.slug === slug);
+}
+
+export async function docExists(slug: string): Promise<boolean> {
+  const doc = await getDoc(slug);
+  return !!doc;
+}
+
+export async function getDocTitle(slug: string): Promise<string> {
+  const doc = await getDoc(slug);
+  return doc?.title || 'Documentation';
+}
+
+export async function loadMarkdownDoc(slug: string): Promise<string> {
+  const doc = await getDoc(slug);
+  if (!doc) {
+    throw new Error(`Documentation page not found: ${slug}`);
+  }
+  return doc.content;
 }

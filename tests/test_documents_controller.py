@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 
 from backend.api.controllers import documents_controller
-from backend.api.schemas.documents_schema import DocumentCreate, DocumentUpdate
+from backend.api.schemas.documents_schema import DocumentCreate, DocumentUpdate, AiApplyResponse
 from backend.api.schemas.prompts_schema import PromptCreate
 from backend.api.schemas.files_schema import EncryptedFileDownloadRequest
 from backend.core.security import security_manager
@@ -121,9 +121,10 @@ class TestDocumentsController:
     def test_apply_ai_and_stage_no_enabled_prompts(self, test_session: Session):
         proj = self._create_project(test_session)
         doc = self._create_document(test_session, proj.id)
-        # no prompts enabled -> returns empty
+        # no prompts enabled -> returns empty selections within AiApplyResponse
         res = documents_controller.apply_ai_and_stage(db=test_session, document_id=doc.id)
-        assert res == []
+        assert isinstance(res, AiApplyResponse)
+        assert res.selections == []
 
     def test_process_success_and_downloads(self, test_session: Session, client, monkeypatch):
         password = "StrongPW!123"
@@ -323,7 +324,8 @@ class TestDocumentsController:
         monkeypatch.setattr("backend.service.ai_service.get_ai_service", lambda: FakeSvc())
         from backend.api.enums import CommitState as CS
         out = documents_controller.apply_ai_and_stage(db=test_session, document_id=doc.id)
-        assert len(out) == 1 and getattr(out[0], "is_staged", False) is True
+        assert isinstance(out, AiApplyResponse)
+        assert len(out.selections) == 1 and getattr(out.selections[0], "is_staged", False) is True
 
     def test_summarize_document_fields(self, test_session: Session):
         proj = self._create_project(test_session)
