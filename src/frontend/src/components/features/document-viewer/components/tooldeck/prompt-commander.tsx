@@ -10,6 +10,8 @@ import PromptsList from "./prompt-list";
 import { usePrompts } from "../../providers/prompt-provider";
 import { useSelections } from "../../providers/selection-provider";
 import { DocumentViewerAPI } from '@/lib/document-viewer-api';
+import { encryptPasswordSecurely, isWebCryptoSupported } from '@/lib/crypto';
+import { DocumentPasswordDialog } from '@/views/editor-view/dialogs';
 
 interface PromptControlsProps {
   document: MinimalDocumentType;
@@ -51,6 +53,11 @@ export default function PromptManagement({ document }: PromptControlsProps) {
   const [aiStageTotal, setAiStageTotal] = useState<number | null>(null);
   const [aiStagePercent, setAiStagePercent] = useState<number | null>(null);
   const cancelRef = useRef<(() => void) | null>(null);
+
+  // Password dialog state for AI
+  const [isAIPasswordOpen, setAIPasswordOpen] = useState(false);
+  const [isEncrypting, setIsEncrypting] = useState(false);
+  const [aiPasswordError, setAIPasswordError] = useState<string | null>(null);
   
   // Load prompts when component mounts
   useEffect(() => {
@@ -101,28 +108,33 @@ export default function PromptManagement({ document }: PromptControlsProps) {
     setShowAddDialog(false);
   }, [createPrompt, save]);
 
-  // Run AI detection to generate staged selections
-  const handleRunAIDetection = useCallback(async () => {
+  // Open password dialog for AI
+  const handleOpenAIDialog = useCallback(() => {
+    setAIPasswordOpen(true);
+    setAIPasswordError(null);
+  }, []);
+
+  // Runner using credentials
+  const handleRunAIDetectionWithCredentials = useCallback(async (keyId?: string, encryptedPassword?: string) => {
     try {
       setIsApplyingAI(true);
       setAiStage('start');
       setAiTokenChars(0);
       setAiSummary(null);
       const ctrl = DocumentViewerAPI.applyAiStream(document.id, {
-        onStatus: (d) => {
+        onStatus: (d: any) => {
           setAiStage(d.stage);
           if (typeof d.stage_index === 'number') setAiStageIndex(d.stage_index);
           if (typeof d.stage_total === 'number') setAiStageTotal(d.stage_total);
           if (typeof d.percent === 'number') setAiStagePercent(d.percent);
         },
-        onModel: (m) => setAiStage((prev) => prev ?? `model:${m.name}`),
-        onTokens: (t) => setAiTokenChars(t.chars),
-        onStagingProgress: (sp) => {
+        onModel: (m: any) => setAiStage((prev) => prev ?? `model:${m.name}`),
+        onTokens: (t: any) => setAiTokenChars(t.chars),
+        onStagingProgress: (sp: any) => {
           if (typeof sp.percent === 'number') setAiStagePercent(sp.percent);
         },
-        onSummary: async (s) => {
+        onSummary: async (s: any) => {
           setAiSummary(s);
-          // refresh selections on summary
           if (typeof (selectionStateDV as any).reload === 'function') {
             await (selectionStateDV as any).reload();
           }
@@ -142,13 +154,13 @@ export default function PromptManagement({ document }: PromptControlsProps) {
             toast.success('AI completed');
           }
         },
-        onError: (e) => {
+        onError: (e: any) => {
           setIsApplyingAI(false);
           setAiStage(null);
           toast.error(`AI error: ${e.message ?? 'unknown'}`);
         },
-      });
-      // store cancel so we can abort
+        ...(keyId && encryptedPassword ? { keyId, encryptedPassword } : {}),
+      } as any);
       cancelRef.current = ctrl.cancel;
     } catch (err) {
       setIsApplyingAI(false);
@@ -156,6 +168,24 @@ export default function PromptManagement({ document }: PromptControlsProps) {
       toast.error('Failed to run AI detection');
     }
   }, [document.id, selectionStateDV, aiSummary]);
+
+  // Handle password confirm: encrypt and start streaming
+  const handleAIPasswordConfirm = useCallback(async (password: string) => {
+    try {
+      if (!isWebCryptoSupported()) {
+        setAIPasswordError('Web Crypto API is not supported in this browser');
+        return;
+      }
+      setIsEncrypting(true);
+      const encrypted = await encryptPasswordSecurely(password);
+      setIsEncrypting(false);
+      setAIPasswordOpen(false);
+      await handleRunAIDetectionWithCredentials(encrypted.keyId, encrypted.encryptedPassword);
+    } catch (e) {
+      setIsEncrypting(false);
+      setAIPasswordError('Failed to encrypt password');
+    }
+  }, [handleRunAIDetectionWithCredentials]);
 
   const stageLabel = aiStage;
 
@@ -292,7 +322,7 @@ export default function PromptManagement({ document }: PromptControlsProps) {
         <Button
           variant="default"
           size="sm"
-          onClick={handleRunAIDetection}
+        onClick={handleOpenAIDialog}
           disabled={isAnyOperationInProgress || isApplyingAI}
           className="w-full justify-start h-9 text-xs"
         >
@@ -333,6 +363,16 @@ export default function PromptManagement({ document }: PromptControlsProps) {
         <PromptsList documentId={document.id} onEditPrompt={handleEditPrompt} />
       </div>
       
+      {/* AI Password Dialog */}
+      <DocumentPasswordDialog
+        isOpen={isAIPasswordOpen}
+        onClose={() => { setAIPasswordOpen(false); setAIPasswordError(null); }}
+        onConfirm={handleAIPasswordConfirm}
+        error={aiPasswordError}
+        isLoading={isEncrypting}
+        notice="Password is used locally to encrypt before sending."
+      />
+
       {/* Add Prompt Dialog using reusable FormConfirmationDialog */}
       <FormConfirmationDialog
         isOpen={showAddDialog}
