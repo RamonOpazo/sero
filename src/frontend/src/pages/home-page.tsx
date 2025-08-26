@@ -15,16 +15,12 @@ export function HomePage() {
   return (
     <div className="relative py-[2rem] px-[3rem]">
       <ScrollArea>
-        <div className="max-w-[65ch] flex flex-col gap-8">
+        <div className="max-w-[85ch] flex flex-col gap-8">
           <h1 className="text-5xl font-bold tracking-tight sm:text-6xl">
             Welcome to <span className="text-purple-600">SERO</span>
           </h1>
 
-          <p className="mt-2 text-lg leading-8 text-muted-foreground">
-            <strong className="text-purple-600">SERO</strong> <em className="text-foreground">Evelishly Redacts and Obfuscates</em> sensitive data from medical records, allowing users to maintain compliance to data protection laws, protect privacy of patients and providers, and keep documents usable with enterprise-grade security.
-          </p>
-
-          <div className="hidden lg:flex flex-wrap gap-4">
+          <div className="mt-2 hidden lg:flex flex-wrap gap-4">
             <Badge variant="outline" className="text-sm">
               <FileCheck2 className="mr-1 h-4 w-4" /> Document Manager
             </Badge>
@@ -35,6 +31,10 @@ export function HomePage() {
               <Lock className="mr-1 h-4 w-4" /> RSA-2048 Encryption
             </Badge>
           </div>
+
+          <p className="text-lg leading-8 text-muted-foreground">
+            <strong className="text-purple-600">SERO</strong> <em className="text-foreground">Evelishly Redacts and Obfuscates</em> sensitive data from medical records, allowing users to maintain compliance to data protection laws, protect privacy of patients and providers, and keep documents usable with enterprise-grade security.
+          </p>
 
           <div className="flex flex-col sm:flex-row gap-4">
             <Button asChild size="lg" className="px-8">
@@ -78,7 +78,7 @@ export function HomePage() {
                 Read about the <Link to="/documentation/security-model" className="text-primary hover:underline">Security Model</Link>, SERO's cryptographic backbone.
               </li>
               <li>
-                Dive into the <Link to="/documentation/redaction-pipeline" className="text-primary hover:underline">Redaction Pipeline</Link> for an overview on how documents are processed step by step.
+                Dive into the <Link to="/documentation/redaction-workflow" className="text-primary hover:underline">Redaction Workflow</Link> for an overview on how documents are processed step by step.
               </li>
             </ul>
           </div>

@@ -108,7 +108,7 @@ export function DocumentationView({ docName }: DocumentationViewProps) {
                 return (
                   <Link
                     to={to}
-                    className="docs-internal-link"
+                    className="docs-internal-link no-underline hover:underline"
                     {...props}
                   >
                     {children}
@@ -120,7 +120,7 @@ export function DocumentationView({ docName }: DocumentationViewProps) {
                 return (
                   <Link
                     to={h}
-                    className="docs-internal-link"
+                    className="docs-internal-link no-underline hover:underline"
                     {...props}
                   >
                     {children}
@@ -131,7 +131,7 @@ export function DocumentationView({ docName }: DocumentationViewProps) {
               return (
                 <Link
                   to={h}
-                  className="docs-external-link"
+                  className="docs-external-link no-underline hover:underline"
                   target="_blank"
                   rel="noopener noreferrer"
                   {...props}
@@ -144,12 +144,58 @@ export function DocumentationView({ docName }: DocumentationViewProps) {
               <div className="overflow-x-auto">
                 <table {...props}>{children}</table>
               </div>
-            )
+            ),
+            h1: ({ node, ...props }) => (
+              <h1 className="text-5xl font-bold tracking-tight sm:text-6xl" {...props} />
+            ),
+            p: ({ node, ...props }) => (
+              <p className="text-md text-muted-foreground mb-3 mt-3" {...props} />
+            ),
+            strong: ({ node, ...props }) => (
+              <strong className="text-md text-foreground/80 mb-3 mt-3" {...props} />
+            ),
+            ul: ({ node, ...props }) => (
+              <ul className="list-disc text-muted-foreground mb-2" {...props} />
+            ),
+            ol: ({ node, ...props }) => (
+              <ul className="list-decimal text-foreground mb-2" {...props} />
+            ),
+            li: ({ node, ...props }) => (
+              <li className="marker:text-foreground/80 marker:font-bold text-muted-foreground ml-2 mb-2" {...props} />
+            ),
+            pre: ({ node, className, ...props }) => (
+              <pre className={`p-0 rounded-sm ${className}`} {...props} />
+            ),
+            code({ node, className, children, ...props }) {
+              const match = /language-(\w+)/.exec(className || "")
+              const lang = match ? match[1] : ""
+              const hljs = className ? className.includes("hljs") : false
+              if (hljs) {
+                return (
+                  <>
+                    {lang && (
+                      <span className="font-mono font-bold inline-block px-4 pb-1 pt-2 text-md m-0 text-right w-full">
+                        {lang}
+                      </span>
+                    )}
+                    <code className={`block p-4 ${className}`} {...props}>
+                      {children}
+                    </code>
+                  </>
+                )
+              }
+
+              return (
+                <code className={`mx-[0.25ch] font-mono text-md ${className}`} {...props}>
+                  {children}
+                </code>
+              )
+            }
           }}
         >
           {docContent}
         </ReactMarkdown>
-      </div>
+      </div >
     )
   })();
 

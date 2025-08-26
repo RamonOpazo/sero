@@ -8,6 +8,7 @@ import { FormConfirmationDialog } from "@/components/shared";
 import PromptsList from "./prompt-list";
 import { usePrompts } from "../../providers/prompt-provider";
 import { useSelections } from "../../providers/selection-provider";
+import { DocumentViewerAPI } from '@/lib/document-viewer-api';
 
 interface PromptControlsProps {
   document: MinimalDocumentType;
@@ -96,7 +97,7 @@ export default function PromptManagement({ document }: PromptControlsProps) {
   const handleRunAIDetection = useCallback(async () => {
     try {
       setIsApplyingAI(true);
-      const result = await import('@/lib/document-viewer-api').then(m => m.DocumentViewerAPI.applyAi(document.id));
+      const result = await DocumentViewerAPI.applyAi(document.id);
       if (result.ok) {
         const { selections, telemetry } = result.value;
         const count = selections.length;
