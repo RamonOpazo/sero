@@ -190,7 +190,27 @@ async def apply_stream(db: Session, request: ai_schema.AiApplyRequest) -> Stream
 
             # Prepare Ollama client and options
             model_name = (doc.project.ai_settings.model_name if getattr(doc, "project", None) and getattr(doc.project, "ai_settings", None) else app_settings.ai.model)
-            yield ev("model", {"name": model_name})
+            # Provider health and model catalog insight
+            try:
+                from backend.service.ai_service import get_ai_service
+                svc = get_ai_service()
+                ok = await svc.health()  # type: ignore[attr-defined]
+                yield ev("status", {"stage": "connecting_provider", "ok": bool(ok)})
+                catalog = await svc.catalog()
+                in_catalog = False
+                try:
+                    for p in catalog.providers:
+                        if p.name == "ollama" and model_name in (p.models or []):
+                            in_catalog = True
+                            break
+                except Exception:
+                    in_catalog = False
+                yield ev("status", {"stage": "model_catalog", "model": model_name, "available": in_catalog})
+            except Exception:
+                # Non-fatal telemetry
+                yield ev("status", {"stage": "connecting_provider", "ok": False})
+            # Loading model stage
+            yield ev("status", {"stage": "loading_model", "stage_index": stage_index("request_sent"), "stage_total": STAGE_TOTAL})
             client = OllamaClient(base_url=app_settings.ai.host, timeout=app_settings.ai.timeout)
             opts = OllamaOptions()
 
@@ -216,9 +236,14 @@ async def apply_stream(db: Session, request: ai_schema.AiApplyRequest) -> Stream
             raw_parts: list[str] = []
             try:
                 streaming_prompt = final_prompt if not text_context else f"{final_prompt}\n\n---\n\nDocument context (page-indexed):\n{text_context}"
+                first = True
                 async for delta in client.generate_stream(model=model_name, prompt=streaming_prompt, options=opts):
                     raw_parts.append(delta)
                     token_chars += len(delta)
+                    if first:
+                        first = False
+                        # signal first token arrival immediately
+                        yield ev("status", {"stage": "generating", "stage_index": stage_index("generating"), "stage_total": STAGE_TOTAL, "percent": stage_percent("generating", token_chars=token_chars)})
                     # generating progress throttled
                     if token_chars % 64 == 0:
                         yield ev("status", {"stage": "generating", "stage_index": stage_index("generating"), "stage_total": STAGE_TOTAL, "percent": stage_percent("generating", token_chars=token_chars)})
@@ -357,6 +382,15 @@ async def apply_project_stream(db: Session, request: ai_schema.AiApplyProjectReq
                 # Model init
                 model_name = (doc.project.ai_settings.model_name if getattr(doc, "project", None) and getattr(doc.project, "ai_settings", None) else app_settings.ai.model)
                 yield ev("model", {"name": model_name, "document_id": str(did)})
+                # Provider health + catalog (once per project start already done, but non-fatal here too)
+                try:
+                    from backend.service.ai_service import get_ai_service
+                    svc = get_ai_service()
+                    ok = await svc.health()  # type: ignore[attr-defined]
+                    yield ev("status", {"stage": "connecting_provider", "ok": bool(ok), "document_id": str(did)})
+                except Exception:
+                    pass
+                yield ev("status", {"stage": "loading_model", "stage_index": stage_index("request_sent"), "stage_total": STAGE_TOTAL, "document_id": str(did)})
                 client = OllamaClient(base_url=app_settings.ai.host, timeout=app_settings.ai.timeout)
                 opts = OllamaOptions()
 
@@ -381,9 +415,13 @@ async def apply_project_stream(db: Session, request: ai_schema.AiApplyProjectReq
                 raw_parts: list[str] = []
                 try:
                     streaming_prompt = final_prompt if not text_context else f"{final_prompt}\n\n---\n\nDocument context (page-indexed):\n{text_context}"
+                    first = True
                     async for delta in client.generate_stream(model=model_name, prompt=streaming_prompt, options=opts):
                         raw_parts.append(delta)
                         token_chars += len(delta)
+                        if first:
+                            first = False
+                            yield ev("status", {"stage": "generating", "stage_index": stage_index("generating"), "stage_total": STAGE_TOTAL, "percent": stage_percent("generating", token_chars=token_chars), "document_id": str(did)})
                         if token_chars % 64 == 0:
                             yield ev("status", {"stage": "generating", "stage_index": stage_index("generating"), "stage_total": STAGE_TOTAL, "percent": stage_percent("generating", token_chars=token_chars), "document_id": str(did)})
                             yield ev("tokens", {"chars": token_chars, "document_id": str(did)})
