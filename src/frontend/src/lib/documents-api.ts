@@ -283,5 +283,33 @@ export const DocumentsAPI = {
         throw error;
       })
       .toResult();
-  }
+  },
+
+  /**
+   * Process an original document using already-encrypted credentials
+   */
+  async processDocumentEncrypted(
+    documentId: string,
+    creds: { keyId: string; encryptedPassword: string },
+  ): Promise<Result<ApiResponse, unknown>> {
+    return AsyncResultWrapper
+      .from(api.safe.post(`/documents/id/${documentId}/process`, {
+        key_id: creds.keyId,
+        encrypted_password: creds.encryptedPassword,
+      }) as Promise<Result<ApiResponse, unknown>>)
+      .tap(() => {
+        toast.success(
+          'Processing started',
+          { description: 'Your document is being processed. This may take a moment.' },
+        );
+      })
+      .catch((error: unknown) => {
+        toast.error(
+          'Failed to process document',
+          { description: error instanceof Error ? error.message : 'Please try again.' },
+        );
+        throw error;
+      })
+      .toResult();
+  },
 };
