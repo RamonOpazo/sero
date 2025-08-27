@@ -20,8 +20,9 @@ export interface EphemeralKeyResponse {
 }
 
 export interface EncryptedPassword {
-  keyId: string;
-  encryptedPassword: string; // Base64 encoded
+  keyId: string,
+  encryptedPassword: string, // Base64 encoded
+  expiresInSeconds: number,
 }
 
 /**
@@ -124,7 +125,8 @@ export async function encryptPasswordSecurely(password: string): Promise<Encrypt
     
     return {
       keyId: keyData.key_id,
-      encryptedPassword: encryptedPassword
+      encryptedPassword: encryptedPassword,
+      expiresInSeconds: Number(keyData.expires_in_seconds) || 0,
     };
     
   } catch (error) {
