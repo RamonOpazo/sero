@@ -1,5 +1,5 @@
 import type React from 'react';
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 import { useViewportState } from '@/components/features/document-viewer/providers/viewport-provider';
 import type { ViewportAction } from '../../../providers/viewport-provider';
 
@@ -200,14 +200,22 @@ export function createMouseButtonHandlers(deps: MouseDeps): MouseHandlers {
   };
 }
 
-// Adapter hook: returns mouse button handlers wired to viewport state
+// Adapter hook: returns mouse button handlers wired to viewport state and a derived cursor
 export function useMouseButtonHandlers(params: {
-  eventStateRef: React.MutableRefObject<MouseEventState>,
   throttledPanUpdate: (p: { x: number, y: number }) => void,
-}): MouseHandlers {
+}): MouseHandlers & { cursor: string } {
   const { mode, pan, setPan, isPanning, setIsPanning } = useViewportState();
+  const eventStateRef = useRef<MouseEventState>({
+    leftButtonDown: false,
+    middleButtonDown: false,
+    rightButtonDown: false,
+    panStart: null,
+    selectionPageIndex: null,
+    isTemporaryPanning: false,
+    originalMode: null,
+  });
 
-  return useMemo(
+  const handlers = useMemo(
     () =>
       createMouseButtonHandlers({
         mode,
@@ -216,17 +224,21 @@ export function useMouseButtonHandlers(params: {
         isPanning,
         setIsPanning,
         throttledPanUpdate: params.throttledPanUpdate,
-        eventStateRef: params.eventStateRef,
+        eventStateRef,
       }),
-    [
-      mode,
-      pan,
-      setPan,
-      isPanning,
-      setIsPanning,
-      params.throttledPanUpdate,
-      params.eventStateRef,
-    ],
+    [mode, pan, setPan, isPanning, setIsPanning, params.throttledPanUpdate],
   );
+
+  const cursor = useMemo(() => {
+    if (eventStateRef.current.isTemporaryPanning || (mode === 'pan' && isPanning)) {
+      return 'grabbing';
+    }
+    if (mode === 'pan') {
+      return 'grab';
+    }
+    return 'default';
+  }, [mode, isPanning]);
+
+  return { ...handlers, cursor };
 }
 

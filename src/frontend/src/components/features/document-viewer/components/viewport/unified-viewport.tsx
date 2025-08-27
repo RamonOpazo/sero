@@ -2,8 +2,7 @@ import React, { useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { useViewportState } from '../../providers/viewport-provider';
 import { useSelections } from '../../providers/selection-provider';
-import { useKeyboardHandler } from './input/keyboard';
-import { useWheelHandler, useMouseButtonHandlers } from './input/mouse';
+import { useKeyboardHandler, useWheelHandler, useMouseButtonHandlers } from './input';
 import { useThrottle } from '@/lib/hooks/use-throttle';
 
 interface UnifiedViewportProps {
@@ -22,7 +21,6 @@ export function UnifiedViewport({
     pan,
     setPan,
     isPanning,
-    mode,
     currentPage,
     setCurrentPage,
   } = useViewportState();
@@ -36,24 +34,6 @@ export function UnifiedViewport({
   const viewportRef = useRef<HTMLDivElement>(null);
   const animationFrameRef = useRef<number | null>(null);
   
-  // Event state management for multi-button mouse handling
-  const eventStateRef = useRef<{
-    leftButtonDown: boolean;
-    middleButtonDown: boolean;
-    rightButtonDown: boolean;
-    panStart: { x: number; y: number } | null;
-    selectionPageIndex: number | null;
-    isTemporaryPanning: boolean;
-    originalMode: string | null; // Store original mode during temporary operations
-  }>({
-    leftButtonDown: false,
-    middleButtonDown: false,
-    rightButtonDown: false,
-    panStart: null,
-    selectionPageIndex: null,
-    isTemporaryPanning: false,
-    originalMode: null,
-  });
 
   // Throttled pan update for smooth performance
   const throttledPanUpdate = useThrottle((newPan: { x: number; y: number }) => {
@@ -61,8 +41,7 @@ export function UnifiedViewport({
   }, 16); // ~60fps
 
 // Mouse button handlers via adapter hook
-  const { onContextMenu, onMouseDown, onMouseMove, onMouseUp, onMouseLeave } = useMouseButtonHandlers({
-    eventStateRef,
+  const { onContextMenu, onMouseDown, onMouseMove, onMouseUp, onMouseLeave, cursor } = useMouseButtonHandlers({
     throttledPanUpdate,
   });
 
@@ -125,18 +104,8 @@ export function UnifiedViewport({
     willChange: isPanning ? 'transform' : 'auto',
   }), [pan.x, pan.y, isPanning]);
 
-  // Cursor style based on mode and state
-  const cursorStyle = React.useMemo(() => {
-    // Show grabbing cursor during temporary panning (middle button)
-    if (eventStateRef.current.isTemporaryPanning || (mode === 'pan' && isPanning)) {
-      return 'grabbing';
-    }
-    // Show grab cursor in pan mode or during middle button hover
-    if (mode === 'pan') {
-      return 'grab';
-    }
-    return 'default';
-  }, [mode, isPanning]);
+  // Cursor style derived from mouse adapter
+  const cursorStyle = React.useMemo(() => cursor, [cursor]);
 
   return (
       <div
