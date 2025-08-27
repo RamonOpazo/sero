@@ -5,7 +5,7 @@ const docSchema = z.object({
   slug: z.string(),
   title: z.string(),
   date: z.string().optional(),
-  path: z.string(),
+  is_index: z.boolean().optional(),
   content: z.string(),
 });
 
@@ -38,15 +38,19 @@ function parseDoc(slug: string, raw: string): Doc | null {
         ? rawDate.toISOString()
         : undefined;
 
-    const computedPath = (
-      (attrs as Record<string, string>).path ?? (slug === 'index' ? './' : `./${slug}`)
-    );
+    // Coerce is-index to boolean when present
+    const rawIsIndex = (attrs as Record<string, unknown>)["is-index"];
+    const is_index = typeof rawIsIndex === 'boolean'
+      ? rawIsIndex
+      : typeof rawIsIndex === 'string'
+        ? /^(true|1|yes)$/i.test(rawIsIndex)
+        : undefined;
 
     const docData = {
       slug,
       title: (attrs as Record<string, string>).title || slug,
       date,
-      path: computedPath,
+      is_index,
       content: body as string,
     };
 
@@ -86,14 +90,13 @@ export async function getDocs(): Promise<Doc[]> {
 
 export async function getDoc(slug: string): Promise<Doc | undefined> {
   if (slug === 'index') {
-    // Try conventional index first
-    const indexDoc = await fetchDocBySlug('index');
-    if (indexDoc) return indexDoc;
-    // Fallback: the designated index page is the one whose path is './'
-    // Probe known docs and pick the first with path './'
+    // Redirect-style resolution for the designated index doc
     const docs = await getDocs();
-    const home = docs.find((d) => d.path === './');
-    return home ?? undefined;
+    const home = docs.find((d) => d.is_index);
+    if (home) return home;
+    // As a fallback, try an actual index.md if present
+    const indexDoc = await fetchDocBySlug('index');
+    return indexDoc ?? undefined;
   }
   return await fetchDocBySlug(slug);
 }

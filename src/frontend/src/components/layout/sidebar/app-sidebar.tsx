@@ -17,8 +17,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   React.useEffect(() => {
     async function fetchDocItems() {
       const docs = await getDocs()
-      const items = docs
-        .filter(doc => doc.path !== './')
+      const items = [...docs]
+        .sort((a, b) => (b.is_index ? 1 : 0) - (a.is_index ? 1 : 0))
         .map(doc => ({ title: doc.title, url: `/docs/${doc.slug}` }))
       setDocItems(items)
     }
