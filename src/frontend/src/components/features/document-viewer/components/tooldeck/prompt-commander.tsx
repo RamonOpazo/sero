@@ -6,6 +6,7 @@ import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import type { MinimalDocumentType } from "@/types";
 import { FormConfirmationDialog } from "@/components/shared";
+import { SimpleConfirmationDialog } from "@/components/shared/simple-confirmation-dialog/simple-confirmation-dialog";
 import PromptsList from "./prompt-list";
 import { usePrompts } from "../../providers/prompt-provider";
 import { useSelections } from "../../providers/selection-provider";
@@ -44,6 +45,7 @@ export default function PromptManagement({ document }: PromptControlsProps) {
   const isAnyOperationInProgress = !!(isSaving || isLoading || isDeleting);
 
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showClearAllDialog, setShowClearAllDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editingPromptId, setEditingPromptId] = useState<string | null>(null);
   const [isApplyingAI, setIsApplyingAI] = useState(false);
@@ -239,10 +241,8 @@ export default function PromptManagement({ document }: PromptControlsProps) {
       toast.info('No prompts to clear');
       return;
     }
-    
-    clearAll();
-    toast.success(`Cleared all ${promptStats.totalCount} prompts`);
-  }, [clearAll, promptStats.totalCount]);
+    setShowClearAllDialog(true);
+  }, [promptStats.totalCount]);
 
   // Handle add prompt button
   const handleOpenAddDialog = useCallback(() => {
@@ -395,6 +395,42 @@ export default function PromptManagement({ document }: PromptControlsProps) {
       </div>
       
       {/* Password dialog handled by AiCredentialsProvider globally */}
+
+      {/* Confirm Clear All Rules dialog */}
+      <SimpleConfirmationDialog
+        isOpen={showClearAllDialog}
+        onClose={() => setShowClearAllDialog(false)}
+        onConfirm={async () => {
+          try {
+            const res = await DocumentViewerAPI.clearDocumentPrompts(document.id);
+            if (res.ok) {
+              await load();
+              toast.success('All rules cleared');
+            } else {
+              throw new Error('api');
+            }
+          } catch (e) {
+            toast.error('Failed to clear all rules');
+            throw e;
+          }
+        }}
+        title="Clear all rules"
+        description={
+          <div className="text-xs">
+            <p className="mb-2">This will permanently delete all AI rules (prompts) for this document.</p>
+            <ul className="list-disc ml-4 space-y-1">
+              <li>This action cannot be undone.</li>
+              <li>All rules will be deleted immediately (no staging).</li>
+            </ul>
+          </div>
+        }
+        confirmButtonText="Delete all rules"
+        cancelButtonText="Cancel"
+        variant="destructive"
+        messages={[
+          { variant: 'warning', title: 'Irreversible operation', description: 'All prompts will be permanently removed from this document.' },
+        ]}
+      />
 
       {/* Add Prompt Dialog using reusable FormConfirmationDialog */}
       <FormConfirmationDialog

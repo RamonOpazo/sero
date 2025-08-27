@@ -1,8 +1,9 @@
 #!/bin/bash
 #
-# SERO Installation Script
+# SERO Installation Script (v2)
 #
-# This script installs Ollama, uv, and the SERO application from its GitHub repository.
+# This script installs Ollama, uv, and the SERO application using the `uv tool` command
+# for a clean, isolated installation.
 #
 set -e
 
@@ -34,6 +35,18 @@ else
   echo "Ollama installed successfully."
 fi
 
+# --- Ollama Model Setup ---
+OLLAMA_MODEL="llama2"
+echo_step "Checking for Ollama model: $OLLAMA_MODEL..."
+if ollama list | grep -q "$OLLAMA_MODEL"; then
+  echo "✅ Model '$OLLAMA_MODEL' is already available."
+else
+  echo "Model not found. Pulling '$OLLAMA_MODEL' (this may take a while)..."
+  ollama pull "$OLLAMA_MODEL"
+  echo "✅ Model '$OLLAMA_MODEL' pulled successfully."
+fi
+
+
 # --- uv Installation ---
 echo_step "Checking for uv..."
 if command_exists uv; then
@@ -51,34 +64,20 @@ echo_step "Installing the SERO application..."
 
 # This is the GitHub repository URL for the project.
 GITHUB_REPO_URL="git+https://github.com/RamonOpazo/sero.git"
+APP_NAME="sero"
 
-INSTALL_DIR="$HOME/sero_app"
-VENV_DIR="$INSTALL_DIR/.venv"
-
-echo "SERO will be installed in: $INSTALL_DIR"
-mkdir -p "$INSTALL_DIR"
-cd "$INSTALL_DIR"
-
-echo "Creating virtual environment..."
-uv venv
-
-echo "Installing SERO from GitHub..."
-# Activate the venv to install into it
-source "$VENV_DIR/bin/activate"
-uv pip install "$GITHUB_REPO_URL"
+echo "Installing '$APP_NAME' from GitHub using 'uv tool install'..."
+uv tool install --from "$GITHUB_REPO_URL" "$APP_NAME"
 
 echo ""
 echo "-------------------------------------------------"
-echo "SERO installation complete!"
+echo "🎉 SERO installation complete!"
 echo "-------------------------------------------------"
 echo ""
-echo "To run the application:"
-echo "1. Change into the application directory:"
-echo "   cd $INSTALL_DIR"
+echo "'$APP_NAME' is now installed in an isolated environment."
+echo "You can now run it from anywhere by simply typing:"
 echo ""
-echo "2. Activate the virtual environment:"
-echo "   source .venv/bin/activate"
+echo "   $APP_NAME"
 echo ""
-echo "3. Run the application:"
-echo "   sero"
+echo "NOTE: You may need to restart your terminal session for the $APP_NAME command to be available in your PATH."
 echo ""

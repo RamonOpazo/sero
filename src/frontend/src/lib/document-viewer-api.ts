@@ -76,6 +76,22 @@ export const DocumentViewerAPI = {
       .toResult() as Promise<Result<void, unknown>>;
   },
 
+  /**
+   * Delete all prompts for a document
+   */
+  async clearDocumentPrompts(documentId: string): Promise<Result<{ message: string; detail?: any }, unknown>> {
+    return AsyncResultWrapper
+      .from(api.safe.delete(`/prompts/by-document/id/${documentId}`) as Promise<Result<{ message: string; detail?: any }, unknown>>)
+      .tap((resp) => {
+        toast.success('All prompts deleted', { description: resp?.message ?? '' } as any);
+      })
+      .catch((error: unknown) => {
+        toast.error('Failed to clear prompts', { description: 'Please try again.' });
+        throw error;
+      })
+      .toResult();
+  },
+
   // ===== SELECTION OPERATIONS =====
 
   /**

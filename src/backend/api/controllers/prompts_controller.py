@@ -50,3 +50,11 @@ def delete(db: Session, prompt_id: UUID) -> generics_schema.Success:
     """Delete a prompt by ID."""
     support_crud.apply_or_404(prompts_crud.delete, db=db, id=prompt_id)
     return generics_schema.Success(message=f"Prompt with ID {str(prompt_id)!r} deleted successfully")
+
+
+def delete_all_by_document(db: Session, document_id: UUID) -> generics_schema.Success:
+    """Delete all prompts for a given document in one operation."""
+    # Ensure document exists first
+    support_crud.apply_or_404(documents_crud.read, db=db, id=document_id)
+    deleted = prompts_crud.delete_by_document(db=db, document_id=document_id)
+    return generics_schema.Success(message="Deleted all prompts for document", detail={"deleted_count": int(deleted)})

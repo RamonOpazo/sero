@@ -55,3 +55,12 @@ async def delete_prompt(
 ):
     """Delete a prompt."""
     return prompts_controller.delete(db=db, prompt_id=prompt_id)
+
+
+@router.delete("/by-document/id/{document_id}", response_model=generics_schema.Success)
+async def delete_prompts_by_document(
+    document_id: UUID,
+    db: Session = Depends(get_db_session),
+):
+    """Delete all prompts associated with a document."""
+    return prompts_controller.delete_all_by_document(db=db, document_id=document_id)
