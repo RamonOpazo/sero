@@ -1,8 +1,8 @@
 from uuid import UUID
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
-from backend.crud import projects_crud, support_crud, ai_settings_crud
-from backend.api.schemas import projects_schema, generics_schema, settings_schema
+from backend.crud import projects_crud, support_crud, ai_settings_crud, documents_crud, templates_crud
+from backend.api.schemas import projects_schema, generics_schema, settings_schema, templates_schema
 from backend.api.enums import ProjectStatus
 
 
@@ -145,3 +145,30 @@ def summarize(db: Session, project_id: UUID) -> projects_schema.ProjectSummary:
             "newest_document_date": lambda ctx: (max((d.created_at for d in doc_iter(ctx)), default=None)),
         },
     )
+
+    
+def get_template(db: Session, project_id: UUID) -> templates_schema.Template:
+    tpl = templates_crud.read_by_project(db=db, project_id=project_id)
+    if tpl is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No project-scoped document set for this project")
+    return templates_schema.Template.model_validate(tpl)
+
+
+def set_template(db: Session, project_id: UUID, data: templates_schema.TemplateUpdate) -> templates_schema.Template:
+    # Ensure project and document exist and are related correctly
+    _ = support_crud.apply_or_404(projects_crud.read, db=db, id=project_id)
+    if data.document_id is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="document_id is required")
+    doc = support_crud.apply_or_404(documents_crud.read, db=db, id=data.document_id)
+    if doc.project_id != project_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Document does not belong to this project")
+    updated = templates_crud.update_by_project(db=db, project_id=project_id, data=data)
+    return templates_schema.Template.model_validate(updated)
+
+
+def clear_template(db: Session, project_id: UUID) -> generics_schema.Success:
+    _ = support_crud.apply_or_404(projects_crud.read, db=db, id=project_id)
+    deleted = templates_crud.delete_by_project(db=db, project_id=project_id)
+    if deleted is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No project-scoped document to clear")
+    return generics_schema.Success(message="Cleared project-scoped document", detail={"project_id": str(project_id)})

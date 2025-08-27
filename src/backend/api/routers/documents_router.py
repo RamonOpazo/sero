@@ -4,7 +4,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from backend.core.database import get_db_session
-from backend.api.schemas import documents_schema, generics_schema, files_schema, prompts_schema, selections_schema
+from backend.api.schemas import documents_schema, generics_schema, files_schema, prompts_schema, selections_schema, templates_schema
 from backend.api.controllers import documents_controller
 
 
@@ -265,5 +265,14 @@ async def download_redacted_file(
     """Download the redacted file for a document."""
     return documents_controller.download_redacted_file(
         db=db, 
-        document_id=document_id
+        document_id=document_id,
     )
+
+
+@router.put("/id/{document_id}/template", response_model=templates_schema.Template)
+async def set_document_as_project_template(
+    document_id: UUID,
+    db: Session = Depends(get_db_session),
+):
+    """Set this document as the project-scoped document for its project."""
+    return documents_controller.set_as_project_template(db=db, document_id=document_id)

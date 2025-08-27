@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from backend.core.database import get_db_session
-from backend.api.schemas import projects_schema, generics_schema, settings_schema
+from backend.api.schemas import projects_schema, generics_schema, settings_schema, templates_schema
 from backend.api.controllers import projects_controller
 
 
@@ -86,6 +86,34 @@ async def update_project(
 ):
     """Update a project."""
     return projects_controller.update(db=db, project_id=project_id, project_data=project_data)
+
+
+@router.get("/id/{project_id}/template", response_model=templates_schema.Template)
+async def get_project_template(
+    project_id: UUID,
+    db: Session = Depends(get_db_session),
+):
+    """Get the project-scoped document mapping (template)."""
+    return projects_controller.get_template(db=db, project_id=project_id)
+
+
+@router.put("/id/{project_id}/template", response_model=templates_schema.Template)
+async def set_project_template(
+    project_id: UUID,
+    data: templates_schema.TemplateUpdate,
+    db: Session = Depends(get_db_session),
+):
+    """Set or replace the project-scoped document (template)."""
+    return projects_controller.set_template(db=db, project_id=project_id, data=data)
+
+
+@router.delete("/id/{project_id}/template", response_model=generics_schema.Success)
+async def clear_project_template(
+    project_id: UUID,
+    db: Session = Depends(get_db_session),
+):
+    """Clear the project-scoped document mapping (template)."""
+    return projects_controller.clear_template(db=db, project_id=project_id)
 
 
 @router.delete("/id/{project_id}", response_model=generics_schema.Success)

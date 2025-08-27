@@ -7,8 +7,8 @@ from sqlalchemy.orm import Session
 from backend.core.security import security_manager
 from backend.core.pdf_redactor import AreaSelection
 from backend.service.redactor_service import get_redactor_service
-from backend.crud import support_crud, documents_crud, prompts_crud, selections_crud, files_crud
-from backend.api.schemas import documents_schema, generics_schema, files_schema, prompts_schema, selections_schema
+from backend.crud import support_crud, documents_crud, prompts_crud, selections_crud, files_crud, templates_crud
+from backend.api.schemas import documents_schema, generics_schema, files_schema, prompts_schema, selections_schema, templates_schema
 from backend.api.enums import FileType, CommitState
 
 
@@ -468,5 +468,13 @@ def download_redacted_file(
     return StreamingResponse(
         io.BytesIO(file_data),
         media_type=redacted_file.mime_type,
-        headers=headers
+        headers=headers,
     )
+
+
+def set_as_project_template(db: Session, document_id: UUID) -> templates_schema.Template:
+    # Ensure document exists
+    doc = support_crud.apply_or_404(documents_crud.read, db=db, id=document_id)
+    # Set or replace project template mapping
+    updated = templates_crud.update_by_project(db=db, project_id=doc.project_id, data=templates_schema.TemplateUpdate(document_id=document_id))
+    return templates_schema.Template.model_validate(updated)
