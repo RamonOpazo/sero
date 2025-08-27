@@ -1,5 +1,5 @@
 import { toast } from 'sonner';
-import type { ApiResponse, DocumentShallowType, DocumentCreateType, DocumentUpdateType, DocumentBulkUploadRequestType, DocumentType } from '@/types';
+import type { ApiResponse, DocumentShallowType, DocumentCreateType, DocumentUpdateType, DocumentType } from '@/types';
 import { AsyncResultWrapper, type Result } from '@/lib/result';
 import { api } from '@/lib/axios';
 import { encryptPasswordSecurely, isWebCryptoSupported } from '@/lib/crypto';
@@ -211,45 +211,6 @@ export const DocumentsAPI = {
     }
   },
 
-  /**
-   * Upload documents in bulk
-   * Note: Backend returns a Success response, not the created documents list.
-   */
-  async uploadDocuments(uploadData: DocumentBulkUploadRequestType): Promise<Result<ApiResponse, unknown>> {
-    const formData = new FormData();
-    formData.append('project_id', uploadData.project_id);
-    formData.append('password', uploadData.password);
-    
-    if (uploadData.template_description) {
-      formData.append('template_description', uploadData.template_description);
-    }
-    
-    // Add all files to the form data
-    for (let i = 0; i < uploadData.files.length; i++) {
-      formData.append('files', uploadData.files[i]);
-    }
-
-    return AsyncResultWrapper
-      .from(api.safe.post(`/documents/bulk-upload`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      }) as Promise<Result<ApiResponse, unknown>>)
-      .tap((resp) => {
-        toast.success(
-          "Successfully uploaded documents",
-          { description: resp?.message ?? 'Upload complete' } as any
-        );
-      })
-      .catch((error: unknown) => {
-        toast.error(
-          "Failed to upload documents",
-          { description: error instanceof Error ? error.message : "Please try again." }
-        );
-        throw error;
-      })
-      .toResult();
-  },
 
   /**
    * Upload documents in bulk with encrypted password (preferred)
