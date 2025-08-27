@@ -28,7 +28,6 @@ interface UploadDocumentsDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (uploadData: { files: FileList; template_description?: string }) => Promise<void>;
-  projectId: string;
 }
 
 const formSchema = z.object({
@@ -41,7 +40,7 @@ type FormData = {
   description?: string;
 };
 
-export function UploadDocumentsDialog({ isOpen, onClose, onSubmit, projectId }: UploadDocumentsDialogProps) {
+export function UploadDocumentsDialog({ isOpen, onClose, onSubmit }: UploadDocumentsDialogProps) {
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {

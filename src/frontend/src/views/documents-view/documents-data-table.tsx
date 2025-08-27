@@ -39,7 +39,6 @@ export function DocumentsDataTable({ onDocumentSelect }: DocumentsDataTableProps
 
   // Extract all business logic to custom hook
   const {
-    projectId,
     documents,
     isLoading,
     error,
@@ -351,7 +350,6 @@ export function DocumentsDataTable({ onDocumentSelect }: DocumentsDataTableProps
 
       {/* Document Upload Dialog */}
       <UploadDocumentsDialog
-        projectId={projectId!}
         isOpen={dialogState.upload.isOpen}
         onClose={dialogState.upload.onClose}
         onSubmit={dialogState.upload.onSubmit}

@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { X, Loader2, Brain } from "lucide-react";
+import { X, Loader2, Bot } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePrompts } from "../../providers/prompt-provider";
 import { toast } from "sonner";
@@ -133,7 +133,7 @@ export default function PromptList({ onEditPrompt }: Props) {
   if (promptsWithTypeInfo.length === 0) {
     return (
       <div className="text-xs text-muted-foreground text-center py-6 border border-dashed rounded-md">
-        <Brain className="h-8 w-8 mx-auto mb-2 opacity-50" />
+        <Bot className="h-8 w-8 mx-auto mb-2 opacity-50" />
         <div>No AI rules yet</div>
         <div className="text-xs opacity-70 mt-1">Click "Add Rule" to create your first AI processing rule</div>
       </div>

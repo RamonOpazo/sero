@@ -51,16 +51,10 @@ export default function PromptPanelLayer({ document, isVisible, onToggleVisibili
         <X />
       </Button>
 
-      <div className='mt-[4rem]'>
-        <h2 className="uppercase tracking-wider text-muted-foreground mb-2">AI Rules</h2>
-        <div className="ml-4 space-y-1">
-          <div><span className="text-muted-foreground">Document:</span> <span className="font-medium">{document.name}</span></div>
-        </div>
-      </div>
+      <div className='mt-[4rem] grid grid-cols-2 gap-2'>
+        <h2 className="col-span-2 uppercase tracking-wider text-muted-foreground mb-2">AI Rules Lifecycle</h2>
 
-      {/* Lifecycle Summary */}
-      <div className="grid grid-cols-2 gap-2">
-        <div className="flex items-center justify-between px-2 py-1 rounded border bg-muted/30">
+        <div className="col-span-2 flex items-center justify-between px-2 py-1 rounded border bg-muted/30">
           <span className="text-muted-foreground">Total</span>
           <span className="font-mono">{stats.total}</span>
         </div>
@@ -71,14 +65,6 @@ export default function PromptPanelLayer({ document, isVisible, onToggleVisibili
         <div className="flex items-center justify-between px-2 py-1 rounded border bg-muted/30">
           <span className="text-muted-foreground">New</span>
           <span className="font-mono">{stats.created}</span>
-        </div>
-        <div className="flex items-center justify-between px-2 py-1 rounded border bg-muted/30">
-          <span className="text-muted-foreground">Staged</span>
-          <span className="font-mono">{stats.stagedPersisted}</span>
-        </div>
-        <div className="flex items-center justify-between px-2 py-1 rounded border bg-muted/30 col-span-2">
-          <span className="text-muted-foreground">Pending changes</span>
-          <span className="font-mono">{stats.pending}</span>
         </div>
       </div>
 

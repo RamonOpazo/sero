@@ -14,7 +14,6 @@ export function EditorView({ fileType }: EditorViewProps) {
     isLoading,
     error,
     documentForViewer,
-    passwordDialogState,
     actionHandlers,
     formatFileSize,
   } = useEditorView(fileType);

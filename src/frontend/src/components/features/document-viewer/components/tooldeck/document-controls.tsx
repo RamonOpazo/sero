@@ -24,7 +24,6 @@ export default function DocumentControls({ document }: DocumentControlsProps) {
   const { isViewingProcessedDocument, dispatch } = useViewportState();
   const { selectionCount, hasUnsavedChanges, saveLifecycle, uiSelections } = useSelections() as any;
   const [isProcessing, setIsProcessing] = React.useState(false);
-  const [processError, setProcessError] = React.useState<string | null>(null);
   const { ensureProjectTrust } = useProjectTrust();
 
   React.useEffect(() => {
@@ -180,7 +179,6 @@ export default function DocumentControls({ document }: DocumentControlsProps) {
           size="sm"
           onClick={async () => {
             try {
-              setProcessError(null);
               setIsProcessing(true);
 
               // Guard: must have at least one selection
@@ -195,7 +193,6 @@ export default function DocumentControls({ document }: DocumentControlsProps) {
                 const saveResult = await saveLifecycle();
                 if (!saveResult.ok) {
                   setIsProcessing(false);
-                  setProcessError('Failed to stage selections before processing');
                   toast.error('Failed to stage selections');
                   return;
                 }
@@ -206,7 +203,6 @@ export default function DocumentControls({ document }: DocumentControlsProps) {
               const result = await DocumentsAPI.processDocumentEncrypted(document.id, { keyId, encryptedPassword });
               if (!result.ok) {
                 setIsProcessing(false);
-                setProcessError('Invalid credentials or server error');
                 return;
               }
 
@@ -250,7 +246,6 @@ export default function DocumentControls({ document }: DocumentControlsProps) {
                 toast.message('Project unlock cancelled');
                 return;
               }
-              setProcessError('Processing failed');
               toast.error('Processing failed');
             }
           }}
