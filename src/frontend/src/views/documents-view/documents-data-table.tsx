@@ -51,17 +51,11 @@ export function DocumentsDataTable({ onDocumentSelect }: DocumentsDataTableProps
   const processedStatusRenderer = useCallback((document: DocumentShallowType) => {
     if (document.is_processed) {
       return (
-        <Badge variant="default" className="flex items-center space-x-1">
-          <CheckCircle2 className="h-3 w-3" />
-          <span>Processed</span>
-        </Badge>
+        <Badge variant="outline" status="success">Processed</Badge>
       );
     } else {
       return (
-        <Badge variant="secondary" className="flex items-center space-x-1">
-          <AlertCircle className="h-3 w-3" />
-          <span>Pending</span>
-        </Badge>
+        <Badge variant="outline" status="muted">Pending</Badge>
       );
     }
   }, []);

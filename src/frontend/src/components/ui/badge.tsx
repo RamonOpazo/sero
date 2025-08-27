@@ -25,7 +25,7 @@ const badgeVariants = cva(
   }
 )
 
-type statusVariants = "default" | "info" | "success" | "warning" | "error"
+type statusVariants = "default" | "muted" | "info" | "success" | "warning" | "error"
 
 function Badge({
   className,
@@ -47,7 +47,8 @@ function Badge({
       {status !== "default" && (
         <span
           className={cn(
-            "size-2 rounded-full",
+            "size-1.5 rounded-full mr-1 animate-pulse",
+            status === "muted" && "bg-muted-foreground/50",
             status === "info" && "bg-blue-500",
             status === "success" && "bg-green-500",
             status === "warning" && "bg-yellow-500",

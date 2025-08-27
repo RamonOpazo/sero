@@ -35,22 +35,29 @@ const buttonVariants = cva(
   }
 )
 
+type statusVariants = "default" | "info" | "success" | "warning" | "error"
+
 function Button({
   className,
   variant,
+  status = "default",
   size,
   asChild = false,
   ...props
 }: React.ComponentProps<"button"> &
-  VariantProps<typeof buttonVariants> & {
-    asChild?: boolean
-  }) {
+  VariantProps<typeof buttonVariants> & { asChild?: boolean } & { status?: statusVariants }) {
   const Comp = asChild ? Slot : "button"
 
   return (
     <Comp
       data-slot="button"
-      className={cn(buttonVariants({ variant, size, className }))}
+      className={cn(
+        buttonVariants({ variant, size, className }),
+        status === "info" && "border-blue-500/50",
+        status === "success" && "border-green-500/50",
+        status === "warning" && "border-yellow-500/50",
+        status === "error" && "border-red-500/50",
+      )}
       {...props}
     />
   )
