@@ -27,7 +27,8 @@ function toShallow(doc: DocumentType): DocumentShallowType {
     prompt_count,
     selection_count,
     is_processed,
-    is_template: (doc as any).is_template ?? false,
+    // backend returns `template` on full Document payloads; treat presence as project-scoped
+    is_template: Boolean((doc as any).template),
   };
 }
 

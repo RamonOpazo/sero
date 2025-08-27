@@ -67,7 +67,7 @@ def search_list(db: Session, skip: int, limit: int, name: str | None, project_id
         skip=skip,
         limit=limit,
         order_by=[("name", "asc"), ("created_at", "desc")],
-        join_with=["files", "prompts", "selections"],
+        join_with=["files", "prompts", "selections", "template"],
         project_id=project_id,
         **({"name": ("like", name.replace("*", "%"))} if name is not None else {})  # dismiss name field filter if name is None, else, replace wildcard
     )
