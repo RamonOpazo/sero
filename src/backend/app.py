@@ -34,10 +34,12 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Sero - Document Obfuscation Service",
-    description="A web service for medical document obfuscation and data extraction",
+    title="Sero",
+    description="SERO Eveleishly Redacts and Obfuscates",
     version=get_version(),
     lifespan=lifespan,
+    docs_url="/api/docs",
+    openapi_url="/api/openapi.json",
 )
 
 
@@ -86,7 +88,6 @@ app.include_router(ai_router.router, prefix="/api/ai", tags=["ai"])
 static_dir = Path(__file__).parent / "static"
 static_dir.mkdir(parents=True, exist_ok=True)
 (static_dir / "assets").mkdir(parents=True, exist_ok=True)
-
 app.mount("/assets", StaticFiles(directory=static_dir / "assets"), name="assets")
 
 # Frontend routes - THESE MUST BE LAST to avoid intercepting API routes

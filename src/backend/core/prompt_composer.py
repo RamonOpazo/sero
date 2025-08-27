@@ -2,18 +2,26 @@ from __future__ import annotations
 from typing import Sequence
 
 SCHEMA_HINT = (
-    "You must respond with JSON only. Schema: {\"selections\": ["
-    "{\"page_number\": int|null, \"x\": float, \"y\": float, \"width\": float, \"height\": float, \"confidence\": float}"
-    "]}"
+    "Return STRICT JSON ONLY. No prose, no markdown fences, no code blocks.\n"
+    "Output MUST be exactly: {\"selections\": [ ... ] }\n"
+    "Each selection item MUST include: {\"page_number\": int|null, \"x\": number, \"y\": number, \"width\": number, \"height\": number, \"confidence\": number}.\n"
+    "All numbers MUST be decimals in [0,1] for x,y,width,height and [0,1] for confidence.\n"
+    "Page numbers are ZERO-BASED (first page is 0). Return null if unknown.\n"
+    "If no detections, return {\"selections\": []}.\n"
 )
 
 MODEL_GUARDRAILS = (
-    "Rules: \n"
-    "- Use all relevant rules provided.\n"
-    "- If unsure, be conservative with selections.\n"
-    "- Confidence must be a float in [0,1].\n"
-    "- Coordinates are normalized [0,1] relative to page dimensions.\n"
-    "- If the entire page must be redacted, return width=1,height=1 and x=0,y=0 with page_number.\n"
+    "You are an expert at identifying sensitive content for redaction in PDFs. Follow these rules precisely:\n"
+    "- Output ONLY JSON as specified; NEVER include explanations, backticks, or extra fields.\n"
+    "- Use all relevant user rules provided below (they describe what to find/redact).\n"
+    "- Coordinates are normalized [0,1] relative to page width/height.\n"
+    "- confidence is a float in [0,1] indicating how sure you are that the box contains sensitive content.\n"
+    "- If a whole page must be redacted, return x=0,y=0,width=1,height=1 with that page_number.\n"
+    "- Prefer tight boxes around the smallest region that covers the sensitive content.\n"
+    "- If uncertain but there are strong hints (e.g., visible PII patterns like emails, SSNs, credit cards, phone numbers, names near signatures), still propose boxes with moderate confidence (0.4–0.6).\n"
+    "- Examples of sensitive patterns: emails (user@example.com), SSNs (###-##-####), credit cards (#### #### #### ####), phone numbers, physical addresses, DOB, MRN/medical IDs, API keys/tokens.\n"
+    "- Place boxes on likely areas given typical document structure when text context is limited: headers (top 15%), footers (bottom 15%), signature lines (bottom 25%), addresses (top-left quadrant), totals (top-right or near the end).\n"
+    "- However, do NOT produce random boxes; always relate to the provided rules. If nothing matches, return an empty list.\n"
 )
 
 SEPARATOR = "\n\n---\n\n"

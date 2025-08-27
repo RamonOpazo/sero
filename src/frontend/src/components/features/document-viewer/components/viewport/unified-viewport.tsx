@@ -58,12 +58,17 @@ export function UnifiedViewport({
     setCurrentPage,
     setMode,
     showHelpOverlay,
+    showInfoPanel,
+    showSelectionsPanel,
+    showPromptPanel,
     isViewingProcessedDocument,
   } = useViewportState();
   
   // Get viewport actions
   const {
     toggleInfoPanel,
+    toggleSelectionsPanel,
+    togglePromptPanel,
     toggleHelpOverlay,
   } = useViewportActions();
   
@@ -225,9 +230,26 @@ export function UnifiedViewport({
         }
         // Cancel any current selection drawing - handled by SelectionsLayerNew
         cancelDraw();
-        // Close help overlay if open
+        // Close overlays/panels if open
         if (showHelpOverlay) {
           toggleHelpOverlay();
+          event.preventDefault();
+          break;
+        }
+        if (showInfoPanel) {
+          toggleInfoPanel();
+          event.preventDefault();
+          break;
+        }
+        if (showSelectionsPanel) {
+          toggleSelectionsPanel();
+          event.preventDefault();
+          break;
+        }
+        if (showPromptPanel) {
+          togglePromptPanel();
+          event.preventDefault();
+          break;
         }
         event.preventDefault();
         break;
@@ -339,6 +361,24 @@ export function UnifiedViewport({
         }
         break;
 
+      // Selections panel toggle (L)
+      case 'l':
+      case 'L':
+        if (!isModifierPressed) {
+          toggleSelectionsPanel();
+          event.preventDefault();
+        }
+        break;
+
+      // Prompts panel toggle (R)
+      case 'r':
+      case 'R':
+        if (!isModifierPressed) {
+          togglePromptPanel();
+          event.preventDefault();
+        }
+        break;
+
       // Help overlay toggle
       case 'h':
       case 'H':
@@ -431,7 +471,7 @@ export function UnifiedViewport({
         }
         break;
     }
-  }, [mode, isPanning, zoom, isViewingProcessedDocument, setIsPanning, cancelDraw, dispatch, currentPage, numPages, setCurrentPage, setMode, toggleInfoPanel, showHelpOverlay, toggleHelpOverlay, deleteSelectedSelection, undo, redo]);
+  }, [mode, isPanning, zoom, isViewingProcessedDocument, setIsPanning, cancelDraw, dispatch, currentPage, numPages, setCurrentPage, setMode, toggleInfoPanel, toggleSelectionsPanel, togglePromptPanel, showHelpOverlay, showInfoPanel, showSelectionsPanel, showPromptPanel, toggleHelpOverlay, deleteSelectedSelection, undo, redo]);
 
   // Wire navigation callback so undo/redo move to the relevant page
   useEffect(() => {
@@ -553,7 +593,7 @@ export function UnifiedViewport({
       >
         {/* Grid background */}
         <div
-          className="absolute inset-0 pointer-events-none"
+          className="absolute inset-0 pointer-events-none rounded-md border"
           style={{
             background: `radial-gradient(circle at 2px 2px, color-mix(in srgb, var(--ring) 25%, transparent) 2px, transparent 0px)`,
             backgroundSize: `${25 * zoom}px ${25 * zoom}px`,

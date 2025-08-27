@@ -40,6 +40,38 @@ class OllamaClient:
             data = r.json()
             return data.get("response", "")
 
+    async def generate_stream(self, model: str, prompt: str, options: OllamaOptions | None = None):
+        """Async generator yielding incremental response text chunks from Ollama.
+        Uses /api/generate with stream=True which returns JSON lines with 'response' and 'done'.
+        """
+        payload: dict[str, Any] = {
+            "model": model,
+            "prompt": prompt,
+            "stream": True,
+        }
+        if options is not None:
+            payload["options"] = options.model_dump(exclude_none=True)
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
+            async with client.stream("POST", f"{self.base_url}/api/generate", json=payload) as r:
+                r.raise_for_status()
+                async for line in r.aiter_lines():
+                    if not line:
+                        continue
+                    try:
+                        obj = httpx.Response(200, text=line).json()
+                    except Exception:
+                        # attempt best-effort parse via json module if line isn't a full httpx json
+                        import json as _json
+                        try:
+                            obj = _json.loads(line)
+                        except Exception:
+                            continue
+                    delta = obj.get("response") if isinstance(obj, dict) else None
+                    if isinstance(delta, str) and delta:
+                        yield delta
+                    if isinstance(obj, dict) and obj.get("done") is True:
+                        break
+
     async def list_models(self) -> list[str]:
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:

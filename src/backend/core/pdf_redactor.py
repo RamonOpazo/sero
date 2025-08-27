@@ -183,3 +183,28 @@ redactor = PdfRedactor(watermark_settings=WatermarkSettings())
 # Redactor factory
 def create_redactor() -> PdfRedactor:
     return PdfRedactor(watermark_settings=WatermarkSettings())
+
+
+def generate_test_pdf(text: str = "SERO TEST PDF", pages: int = 1) -> bytes:
+    """Generate a simple PDF for tests with predictable geometry using PyMuPDF.
+
+    - Places the provided text near the top-left with a standard font size.
+    - Returns the PDF bytes.
+    """
+    import pymupdf
+
+    if pages <= 0:
+        pages = 1
+    doc = pymupdf.open()
+    try:
+        for _ in range(pages):
+            page = doc.new_page(width=595, height=842)  # A4 roughly, portrait
+            page.insert_text(
+                (72, 72),  # 1 inch from top-left
+                text,
+                fontsize=12,
+                fontname="courier",
+            )
+        return doc.tobytes()
+    finally:
+        doc.close()

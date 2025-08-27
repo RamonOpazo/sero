@@ -1,3 +1,9 @@
+---
+slug: security
+title: Security Overview
+date: 2025-08-26T10:05:00.000Z
+---
+
 # Security Overview
 
 SERO is built with security as a foundational principle, implementing multiple layers of protection for your sensitive documents.

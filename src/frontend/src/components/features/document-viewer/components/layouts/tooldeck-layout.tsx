@@ -3,6 +3,7 @@ import { WidgetContainer, Widget } from "@/components/shared/Widget";
 import { useState, useEffect } from "react";
 import type { MinimalDocumentType } from "@/types";
 import { useSelections } from "../../providers/selection-provider";
+import { useViewportState } from "../../providers/viewport-provider";
 import {
   DocumentControls,
   SelectionCommander,
@@ -22,13 +23,34 @@ interface ControlsLayoutProps {
 export default function ControlsLayout({ document, className, ...props }: ControlsLayoutProps & React.ComponentProps<"div">) {
   const { selectedSelection } = useSelections();
   const [activePanel, setActivePanel] = useState<string>("document-controls");
-  
-  // Auto-expand selection panel when a selection is made
+
+  // Viewport panel state setters
+  const { setShowInfoPanel, setShowSelections, setShowSelectionsPanel, setShowPromptPanel } = (useViewportState() as any);
+
+  // Handle panel changes explicitly to avoid fighting user toggles (ESC)
+  const handleActivePanelChange = (value: string) => {
+    setActivePanel(value);
+    setShowInfoPanel(value === 'document-controls');
+    setShowSelectionsPanel(value === 'selections');
+    setShowPromptPanel(value === 'prompts');
+    if (value === 'selections') {
+      // Ensure visual selections on the canvas when managing them
+      setShowSelections((prev: boolean) => prev || true);
+    }
+  };
+
+  // Auto-switch to selections tool when a selection is made (one-shot)
   useEffect(() => {
-    if (selectedSelection) {
-      setActivePanel("selections");
+    if (selectedSelection && activePanel !== 'selections') {
+      handleActivePanelChange('selections');
     }
   }, [selectedSelection]);
+  
+  // Initialize default panel state on mount
+  useEffect(() => {
+    handleActivePanelChange(activePanel);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   
   return (
     <WidgetContainer
@@ -36,7 +58,7 @@ export default function ControlsLayout({ document, className, ...props }: Contro
       expanded
       accordion
       value={activePanel}
-      onValueChange={setActivePanel}
+      onValueChange={handleActivePanelChange}
       className={cn(className)} 
       {...props}
     >

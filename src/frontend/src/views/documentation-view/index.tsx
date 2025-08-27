@@ -8,10 +8,22 @@ import rehypeAutolinkHeadings from 'rehype-autolink-headings'
 import { loadMarkdownDoc, docExists } from '@/utils/markdown'
 import { EmptyState } from '@/components'
 import { ArrowLeft } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import {
+  TypographyTitle,
+  // TypographyLead,
+  // TypographySubtitle,
+  TypographyMuted,
+  TypographyUnorderedList,
+  TypographyLink,
+  // TypographyHeader,
+  // TypographyContent,
+  TypographyH2,
+  TypographyH3,
+} from '@/components/typography'
 
 // Import highlight.js theme
 import 'highlight.js/styles/github-dark.css'
+import { TypographyInlineCode, TypographyOrderedList } from '@/components/typography/typography'
 
 interface DocumentationViewProps {
   docName?: string
@@ -29,7 +41,7 @@ export function DocumentationView({ docName }: DocumentationViewProps) {
 
   // Business logic handlers
   const handleBackToDocumentationIndex = useCallback(() => {
-    navigate("/documentation");
+    navigate("/docs");
   }, [navigate]);
 
   useEffect(() => {
@@ -39,7 +51,7 @@ export function DocumentationView({ docName }: DocumentationViewProps) {
 
       try {
         // Check if the doc exists
-        if (!docExists(actualDocName)) {
+        if (!(await docExists(actualDocName))) {
           setError(`Documentation page "${actualDocName}" not found`)
           setLoading(false)
           return
@@ -91,65 +103,98 @@ export function DocumentationView({ docName }: DocumentationViewProps) {
             a: ({ href, children, ...props }) => {
               const h = typeof href === 'string' ? href : ''
               const isInternal = h.startsWith('/') || h.startsWith('#')
-              const isDocsLike = h.startsWith('./') || h.startsWith('/documentation/')
+              const isDocsLike = h.startsWith('./') || h.startsWith('/docs/')
 
-              // Normalize docs links like ./page.md or /documentation/page.md -> /documentation/page
+              // Normalize docs links like ./page.md or /docs/page.md -> /docs/page
               if (isDocsLike) {
-                // Remove leading './' or '/documentation/'
+                // Remove leading './' or '/docs/'
                 const withoutPrefix = h.startsWith('./')
                   ? h.slice(2)
-                  : h.replace(/^\/documentation\//, '')
+                  : h.replace(/^\/docs\//, '')
 
                 // Preserve hash fragments if present
                 const [base, hash = ''] = withoutPrefix.split('#')
                 const slug = base.replace(/\.md$/i, '')
-                const to = `/documentation/${slug}${hash ? `#${hash}` : ''}`
+                const to = `/docs/${slug}${hash ? `#${hash}` : ''}`
 
                 return (
-                  <Link
-                    to={to}
-                    className="docs-internal-link"
-                    {...props}
-                  >
+                  <TypographyLink to={to} {...props}>
                     {children}
-                  </Link>
+                  </TypographyLink>
                 )
               }
 
               if (isInternal) {
                 return (
-                  <Link
-                    to={h}
-                    className="docs-internal-link"
-                    {...props}
-                  >
+                  <TypographyLink to={h} {...props}>
                     {children}
-                  </Link>
+                  </TypographyLink>
                 )
               }
 
               return (
-                <Link
-                  to={h}
-                  className="docs-external-link"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  {...props}
-                >
+                <TypographyLink to={h} target="_blank" rel="noopener noreferrer" {...props}>
                   {children}
-                </Link>
+                </TypographyLink>
               )
             },
             table: ({ children, ...props }) => (
               <div className="overflow-x-auto">
                 <table {...props}>{children}</table>
               </div>
-            )
+            ),
+            h1: ({ children, ...props }) => (
+              <TypographyTitle {...props}>{children}</TypographyTitle>
+            ),
+            h2: ({ children, ...props }) => (
+              <TypographyH2 {...props}>{children}</TypographyH2>
+            ),
+            h3: ({ children, ...props }) => (
+              <TypographyH3 {...props}>{children}</TypographyH3>
+            ),
+            p: ({ children, ...props }) => (
+              <TypographyMuted {...props}>{children}</TypographyMuted>
+            ),
+            strong: ({ node, ...props }) => (
+              <strong className="text-md text-foreground/80 mb-3 mt-3" {...props} />
+            ),
+            ul: ({ children, ...props }) => (
+              <TypographyUnorderedList {...props}>{children}</TypographyUnorderedList>
+            ),
+            ol: ({ children, ...props }) => (
+              <TypographyOrderedList {...props}>{children}</TypographyOrderedList>
+            ),
+            li: ({ node, ...props }) => (
+              <li {...props} />
+            ),
+            pre: ({ node, className, ...props }) => (
+              <pre className={`p-0 rounded-sm ${className}`} {...props} />
+            ),
+            code({ node, className, children, ...props }) {
+              const match = /language-(\w+)/.exec(className || "")
+              const lang = match ? match[1] : ""
+              if (lang) {
+                return (
+                  <>
+                    <span className="font-mono font-bold inline-block px-4 pb-1 pt-2 text-md m-0 text-right w-full">
+                      {lang}
+                    </span>
+                    <code className={`block p-4 ${className}`} {...props}>
+                      {children}
+                    </code>
+                  </>
+                )
+              }
+
+              return (
+                <TypographyInlineCode {...props}>{children}</TypographyInlineCode>
+              )
+            }
           }}
         >
           {docContent}
         </ReactMarkdown>
-      </div>
+      </div >
     )
   })();
 

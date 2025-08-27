@@ -45,6 +45,7 @@ interface TypedConfirmationDialogProps {
   onConfirm: () => Promise<void>,
   title: string,
   description?: string | React.ReactNode,
+  formFields?: React.ReactNode[],
   confirmationText: string,
   confirmButtonText?: string,
   cancelButtonText?: string,
@@ -73,6 +74,7 @@ export function TypedConfirmationDialog({
   onConfirm,
   title,
   description,
+  formFields = [],
   confirmationText,
   confirmButtonText = 'Confirm',
   cancelButtonText = 'Cancel',
@@ -170,9 +172,17 @@ export function TypedConfirmationDialog({
           </div>
         )}
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleConfirm)} className="mt-2 space-y-4">
-            {showConfirmationInput && (
+        {/* Render provided form fields regardless of confirmation input usage */}
+        {formFields && formFields.length > 0 ? (
+          <div className="mt-2 space-y-4">
+            {formFields}
+          </div>
+        ) : null}
+
+        {/* Optional confirmation input */}
+        {showConfirmationInput ? (
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleConfirm)} className="mt-2 space-y-4">
               <FormField
                 control={form.control}
                 name="confirmation"
@@ -191,27 +201,56 @@ export function TypedConfirmationDialog({
                   </FormItem>
                 )}
               />
-            )}
 
-            <DialogFooter className="gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleClose}
-                disabled={isSubmitting}
-              >
-                {cancelButtonText}
-              </Button>
-              <Button
-                type="submit"
-                variant={variant}
-                disabled={isSubmitting || !isConfirmationMatch}
-              >
-                {isSubmitting ? 'Processing...' : confirmButtonText}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+              <DialogFooter className="gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleClose}
+                  disabled={isSubmitting}
+                >
+                  {cancelButtonText}
+                </Button>
+                <Button
+                  type="submit"
+                  variant={variant}
+                  disabled={isSubmitting || !isConfirmationMatch}
+                >
+                  {isSubmitting ? 'Processing...' : confirmButtonText}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        ) : (
+          <DialogFooter className="gap-2 mt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleClose}
+              disabled={isSubmitting}
+            >
+              {cancelButtonText}
+            </Button>
+            <Button
+              type="button"
+              variant={variant}
+              disabled={isSubmitting}
+              onClick={async () => {
+                setIsSubmitting(true)
+                try {
+                  await onConfirm()
+                  onClose()
+                } catch (e) {
+                  console.error('Error during confirmation action:', e)
+                } finally {
+                  setIsSubmitting(false)
+                }
+              }}
+            >
+              {isSubmitting ? 'Processing...' : confirmButtonText}
+            </Button>
+          </DialogFooter>
+        )}
       </DialogContent>
     </Dialog>
   )

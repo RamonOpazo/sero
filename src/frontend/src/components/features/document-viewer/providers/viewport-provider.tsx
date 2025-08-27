@@ -36,6 +36,8 @@ export interface UIState {
   showSelections: boolean;
   userPreferredShowSelections: boolean;
   showInfoPanel: boolean;
+  showSelectionsPanel: boolean;
+  showPromptPanel: boolean;
   showHelpOverlay: boolean;
   isPanning: boolean;
 }
@@ -72,6 +74,8 @@ export type ViewportAction =
   | { type: 'SET_DOCUMENT_CONTAINER'; payload: HTMLElement | null }
   | { type: 'SET_SHOW_SELECTIONS'; payload: boolean }
   | { type: 'SET_SHOW_INFO_PANEL'; payload: boolean }
+  | { type: 'SET_SHOW_SELECTIONS_PANEL'; payload: boolean }
+  | { type: 'SET_SHOW_PROMPT_PANEL'; payload: boolean }
   | { type: 'SET_SHOW_HELP_OVERLAY'; payload: boolean }
   | { type: 'SET_VIEWING_PROCESSED'; payload: boolean }
   | { type: 'SET_VOLATILE_BLOB'; payload: { blob: Blob | null; forProcessed: boolean } }
@@ -103,6 +107,8 @@ const createInitialState = (): ViewportState => ({
     showSelections: true,
     userPreferredShowSelections: true,
     showInfoPanel: false,
+    showSelectionsPanel: false,
+    showPromptPanel: false,
     showHelpOverlay: false,
     isPanning: false
   }
@@ -229,6 +235,24 @@ function viewportStateReducer(state: ViewportState, action: ViewportAction): Vie
         }
       };
 
+    case 'SET_SHOW_SELECTIONS_PANEL':
+      return {
+        ...state,
+        ui: {
+          ...state.ui,
+          showSelectionsPanel: action.payload
+        }
+      };
+
+    case 'SET_SHOW_PROMPT_PANEL':
+      return {
+        ...state,
+        ui: {
+          ...state.ui,
+          showPromptPanel: action.payload
+        }
+      };
+
     case 'SET_SHOW_HELP_OVERLAY':
       return {
         ...state,
@@ -309,6 +333,8 @@ export interface ViewportContextType {
   toggleMode: () => void;
   toggleSelections: () => void;
   toggleInfoPanel: () => void;
+  toggleSelectionsPanel: () => void;
+  togglePromptPanel: () => void;
   toggleHelpOverlay: () => void;
 }
 
@@ -352,8 +378,33 @@ export function ViewportProvider({ children, document }: ViewportProviderProps) 
   }, [state.ui.showSelections]);
 
   const toggleInfoPanel = useCallback(() => {
-    dispatch({ type: 'SET_SHOW_INFO_PANEL', payload: !state.ui.showInfoPanel });
+    const next = !state.ui.showInfoPanel;
+    dispatch({ type: 'SET_SHOW_INFO_PANEL', payload: next });
+    if (next) {
+      // Ensure mutual exclusivity with selections panel
+      dispatch({ type: 'SET_SHOW_SELECTIONS_PANEL', payload: false });
+    }
   }, [state.ui.showInfoPanel]);
+
+  const toggleSelectionsPanel = useCallback(() => {
+    const next = !state.ui.showSelectionsPanel;
+    dispatch({ type: 'SET_SHOW_SELECTIONS_PANEL', payload: next });
+    if (next) {
+      // Ensure mutual exclusivity with info and prompt panels
+      dispatch({ type: 'SET_SHOW_INFO_PANEL', payload: false });
+      dispatch({ type: 'SET_SHOW_PROMPT_PANEL', payload: false });
+    }
+  }, [state.ui.showSelectionsPanel]);
+
+  const togglePromptPanel = useCallback(() => {
+    const next = !state.ui.showPromptPanel;
+    dispatch({ type: 'SET_SHOW_PROMPT_PANEL', payload: next });
+    if (next) {
+      // Ensure mutual exclusivity with info and selections panels
+      dispatch({ type: 'SET_SHOW_INFO_PANEL', payload: false });
+      dispatch({ type: 'SET_SHOW_SELECTIONS_PANEL', payload: false });
+    }
+  }, [state.ui.showPromptPanel]);
 
   const toggleHelpOverlay = useCallback(() => {
     dispatch({ type: 'SET_SHOW_HELP_OVERLAY', payload: !state.ui.showHelpOverlay });
@@ -367,6 +418,8 @@ export function ViewportProvider({ children, document }: ViewportProviderProps) 
     toggleMode,
     toggleSelections,
     toggleInfoPanel,
+    toggleSelectionsPanel,
+    togglePromptPanel,
     toggleHelpOverlay,
   }), [
     state,
@@ -374,6 +427,8 @@ export function ViewportProvider({ children, document }: ViewportProviderProps) 
     toggleMode,
     toggleSelections,
     toggleInfoPanel,
+    toggleSelectionsPanel,
+    togglePromptPanel,
     toggleHelpOverlay,
   ]);
 
@@ -411,6 +466,8 @@ export function useViewportState() {
     isViewingProcessedDocument: state.navigation.isViewingProcessedDocument,
     showSelections: state.ui.showSelections,
     showInfoPanel: state.ui.showInfoPanel,
+    showSelectionsPanel: state.ui.showSelectionsPanel,
+    showPromptPanel: state.ui.showPromptPanel,
     showHelpOverlay: state.ui.showHelpOverlay,
     isRendered: state.pdf.isRendered,
     pageRefs: { current: state.pdf.pageRefs },
@@ -435,6 +492,8 @@ export function useViewportState() {
     }, [dispatch, state.ui.showSelections]),
     setIsViewingProcessedDocument: useCallback((value: boolean) => dispatch({ type: 'SET_VIEWING_PROCESSED', payload: value }), [dispatch]),
     setShowInfoPanel: useCallback((value: boolean) => dispatch({ type: 'SET_SHOW_INFO_PANEL', payload: value }), [dispatch]),
+    setShowSelectionsPanel: useCallback((value: boolean) => dispatch({ type: 'SET_SHOW_SELECTIONS_PANEL', payload: value }), [dispatch]),
+    setShowPromptPanel: useCallback((value: boolean) => dispatch({ type: 'SET_SHOW_PROMPT_PANEL', payload: value }), [dispatch]),
     userPreferredShowSelections: state.ui.userPreferredShowSelections,
     resetView: useCallback(() => dispatch({ type: 'RESET_VIEW' }), [dispatch]),
     registerPage: useCallback((el: HTMLElement | null, index: number) => {
@@ -449,6 +508,8 @@ export function useViewportActions() {
     toggleMode, 
     toggleSelections, 
     toggleInfoPanel,
+    toggleSelectionsPanel,
+    togglePromptPanel,
     toggleHelpOverlay,
   } = useViewportContext();
   
@@ -457,6 +518,8 @@ export function useViewportActions() {
     toggleMode,
     toggleSelections,
     toggleInfoPanel,
+    toggleSelectionsPanel,
+    togglePromptPanel,
     toggleHelpOverlay,
   };
 }

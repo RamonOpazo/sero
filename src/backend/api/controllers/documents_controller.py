@@ -263,46 +263,6 @@ def commit_staged_selections(db: Session, document_id: UUID, request: selections
     return [selections_schema.Selection.model_validate(i) for i in committed]
 
 
-def apply_ai_and_stage(db: Session, document_id: UUID) -> list[selections_schema.Selection]:
-    # Ensure document exists and load prompts/settings
-    document = support_crud.apply_or_404(
-        documents_crud.read,
-        db=db,
-        id=document_id,
-        join_with=["prompts", "project.ai_settings"],
-    )
-
-    committed_prompts = [p for p in document.prompts if getattr(p, "state", None) == CommitState.COMMITTED]
-    if not committed_prompts:
-        return []
-
-    composed_prompts: list[str] = []
-    for p in committed_prompts:
-        composed_prompts.append(f"Directive: {p.directive}\nTitle: {p.title}\n\nInstructions:\n{p.prompt}")
-
-    from backend.service.ai_service import get_ai_service, GenerateSelectionsRequest
-    import asyncio
-
-    async def _run():
-        svc = get_ai_service()
-        req = GenerateSelectionsRequest(
-            document_id=str(document_id),
-            system_prompt=(document.project.ai_settings.system_prompt if getattr(document, "project", None) and getattr(document.project, "ai_settings", None) else None),
-            prompts=composed_prompts,
-        )
-        return await svc.generate_selections(req)
-
-    res = asyncio.run(_run())
-
-    created_models = []
-    for sel in res.selections:
-        sel.document_id = document_id
-        sel.state = CommitState.STAGED_CREATION
-        created_models.append(selections_crud.create(db=db, data=sel))
-
-    return [selections_schema.Selection.model_validate(i) for i in created_models]
-
-
 def update(db: Session, document_id: UUID, document_data: documents_schema.DocumentUpdate) -> documents_schema.Document:
     document = support_crud.apply_or_404(documents_crud.update, db=db, id=document_id, data=document_data)
     return documents_schema.Document.model_validate(document)

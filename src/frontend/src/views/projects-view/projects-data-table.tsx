@@ -1,5 +1,5 @@
 import { useMemo, useCallback, useState } from 'react';
-import { Eye, Plus, Copy, Edit, Trash2, Settings2, ArrowLeft } from 'lucide-react';
+import { Eye, Plus, Copy, Edit, Trash2, Settings2, ArrowLeft, Bot } from 'lucide-react';
 import { toast } from 'sonner';
 import { DataTable } from '@/components/features/data-table';
 import { columns, adaptColumns } from '@/components/features/data-table/columns';
@@ -8,6 +8,9 @@ import { CreateProjectDialog, EditProjectDialog } from './dialogs';
 import { ProjectAiSettingsDialog } from './dialogs/project-ai-settings-dialog';
 import { TypedConfirmationDialog } from '@/components/shared/typed-confirmation-dialog';
 import { useProjectsView } from './use-projects-view';
+import { useAiProcessing } from '@/providers/ai-processing-provider';
+import { useProjectTrust } from '@/providers/project-trust-provider';
+import { startProjectRun } from '@/lib/ai-runner';
 import type { ProjectShallowType } from '@/types';
 import type { ColumnConfig } from '@/components/features/data-table/columns';
 import type { ColumnOption, CustomButtonOption } from '@/components/features/data-table/types';
@@ -39,6 +42,9 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
     dialogState,
     actionHandlers,
   } = useProjectsView(onProjectSelect);
+
+  const aiProc = useAiProcessing();
+  const { ensureProjectTrust } = useProjectTrust();
 
   // Pure UI rendering functions
   const nameRenderer = useCallback((project: ProjectShallowType) => {
@@ -152,6 +158,21 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
           label: 'AI Settings',
           icon: Settings2,
           onClick: actionHandlers.onOpenAiSettings
+        },
+        {
+          id: 'run-ai',
+          label: 'Run AI (project)',
+          icon: Bot,
+          onClick: async (project) => {
+            try {
+              const { keyId, encryptedPassword } = await ensureProjectTrust(project.id);
+              startProjectRun(aiProc as any, project.id, { keyId, encryptedPassword });
+              toast.success('Project AI run started', { description: project.name });
+            } catch (e) {
+              // User cancelled or encryption failed
+              toast.info('Project AI run cancelled');
+            }
+          }
         },
         {
           id: 'delete',

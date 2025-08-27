@@ -1,12 +1,17 @@
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Save, Trash2, Plus, Undo2, RotateCcw, AlertCircle } from "lucide-react";
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { Trash2, Plus, Hourglass, AlertCircle, Bot } from "lucide-react";
+import { AiProgress } from "./ai-progress";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import type { MinimalDocumentType } from "@/types";
-import { AddPromptDialog, SavePromptChangesConfirmationDialog } from "../dialogs";
+import { FormConfirmationDialog } from "@/components/shared";
 import PromptsList from "./prompt-list";
 import { usePrompts } from "../../providers/prompt-provider";
+import { useSelections } from "../../providers/selection-provider";
+import { DocumentViewerAPI } from '@/lib/document-viewer-api';
+import { useAiProcessing } from '@/providers/ai-processing-provider';
+import { useProjectTrust } from '@/providers/project-trust-provider';
 
 interface PromptControlsProps {
   document: MinimalDocumentType;
@@ -24,11 +29,13 @@ export default function PromptManagement({ document }: PromptControlsProps) {
     createPrompt,
     updatePrompt,
     clearAll,
-    discardAllChanges,
     allPrompts,
     hasUnsavedChanges,
     pendingChangesCount,
   } = usePrompts();
+  
+  const { state: selectionStateDV } = useSelections() as any;
+  const aiProc = useAiProcessing();
   
   const isSaving = (state as any).isSaving || false;
   const isLoading = (state as any).isLoading || false;
@@ -39,7 +46,17 @@ export default function PromptManagement({ document }: PromptControlsProps) {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editingPromptId, setEditingPromptId] = useState<string | null>(null);
-  const [showSaveConfirmDialog, setShowSaveConfirmDialog] = useState(false);
+  const [isApplyingAI, setIsApplyingAI] = useState(false);
+  const [aiStage, setAiStage] = useState<string | null>(null);
+  const [aiTokenChars, setAiTokenChars] = useState<number>(0);
+  const [aiSummary, setAiSummary] = useState<{ returned: number; filtered_out: number; staged: number; min_confidence: number } | null>(null);
+  const [aiStageIndex, setAiStageIndex] = useState<number | null>(null);
+  const [aiStageTotal, setAiStageTotal] = useState<number | null>(null);
+  const [aiStagePercent, setAiStagePercent] = useState<number | null>(null);
+  const cancelRef = useRef<(() => void) | null>(null);
+
+  // Password dialog state for AI
+  const { ensureProjectTrust } = useProjectTrust();
   
   // Load prompts when component mounts
   useEffect(() => {
@@ -61,78 +78,161 @@ export default function PromptManagement({ document }: PromptControlsProps) {
   }, [allPrompts.length, (state as any).persistedItems?.length, (state as any).draftItems?.length, hasUnsavedChanges, pendingChangesCount]);
 
   // Add new rule locally (not saved to server until saveAllChanges is called)
-  const handleAddRule = useCallback((ruleData: {
-    type: string;
-    title: string;
-    rule: string;
-    priority: 'high' | 'medium' | 'low';
-    enabled: boolean;
-  }) => {
-    try {
-      const promptText = `Rule Type: ${ruleData.type}\n` +
-                        `Priority: ${ruleData.priority.toUpperCase()}\n` +
-                        `Title: ${ruleData.title}\n\n` +
-                        `Instructions:\n${ruleData.rule}`;
-      const promptData = {
-        title: ruleData.title,
-        prompt: promptText,
-        directive: 'process',
-        state: 'committed',
-        scope: 'document',
-      } as any;
-      
-      createPrompt(promptData);
-      toast.success(`${ruleData.title} rule added (not yet saved)`);
-      setShowAddDialog(false);
-      
-    } catch (error) {
-      console.error('Error adding rule:', error);
-      toast.error('Failed to add AI rule');
+  // Declarative create handler
+  const handleCreatePromptSubmit = useCallback(async (values: Record<string, any>) => {
+    const title = String(values.title ?? '').trim();
+    const directive = String(values.directive ?? '').trim();
+    const promptBody = String(values.prompt ?? '').trim();
+    if (!title || !promptBody || !directive) {
+      toast.error('Please fill in title, directive, and prompt');
+      throw new Error('validation');
     }
-  }, [createPrompt]);
 
-  // Save all pending changes with confirmation
-  const handleSaveAllPrompts = useCallback(() => {
-    if (promptStats.totalUnsavedChanges === 0) {
-      toast.info('No pending changes to save');
-      return;
+    const promptData = {
+      title,
+      directive,
+      prompt: promptBody,
+      state: 'committed',
+      scope: 'document',
+    } as any;
+
+    createPrompt(promptData);
+    const res = await save();
+    if (!res.ok) {
+      toast.error('Failed to create prompt');
+      throw new Error('api');
     }
-    setShowSaveConfirmDialog(true);
-  }, [promptStats.totalUnsavedChanges]);
-  
-  // Handler to close save confirmation dialog
-  const handleCloseSaveConfirmDialog = useCallback(() => {
-    setShowSaveConfirmDialog(false);
-  }, []);
-  
-  // Handler for confirmed save action
-  const handleConfirmedSave = useCallback(async () => {
+
+    toast.success(`${title} rule created and committed`);
+    setShowAddDialog(false);
+  }, [createPrompt, save]);
+
+  // Runner using credentials
+  const handleRunAIDetectionWithCredentials = useCallback(async (keyId?: string, encryptedPassword?: string) => {
     try {
-      const result = await save();
-      if (result.ok) {
-        const savedCount = promptStats.totalUnsavedChanges;
-        toast.success(`Successfully saved ${savedCount} change${savedCount === 1 ? '' : 's'}`);
-        setShowSaveConfirmDialog(false);
-      } else {
-        toast.error('Failed to save changes');
+      setIsApplyingAI(true);
+      setAiStage('start');
+      setAiTokenChars(0);
+      setAiSummary(null);
+
+      // Start global job in provider
+      aiProc.startJob({
+        id: document.id,
+        kind: 'document',
+        title: document.name ?? 'Document',
+        stage: 'initializing',
+        stageIndex: 0,
+        stageTotal: 1,
+        percent: 0,
+        hints: [],
+        meta: { documentId: document.id },
+      });
+
+      const ctrl = DocumentViewerAPI.applyAiStream(document.id, {
+        onStatus: (d: any) => {
+          setAiStage(d.stage);
+          if (typeof d.stage_index === 'number') setAiStageIndex(d.stage_index);
+          if (typeof d.stage_total === 'number') setAiStageTotal(d.stage_total);
+          if (typeof d.percent === 'number') setAiStagePercent(d.percent);
+
+          // Provider: map status to job update
+          aiProc.updateJob({
+            id: document.id,
+            stage: d.stage,
+            stageIndex: typeof d.stage_index === 'number' ? d.stage_index : 0,
+            stageTotal: typeof d.stage_total === 'number' ? d.stage_total : (aiProc.state.jobs[document.id]?.stageTotal ?? 1),
+            percent: typeof d.percent === 'number' ? d.percent : (aiProc.state.jobs[document.id]?.percent ?? 0),
+            hints: d.subtask ? [d.subtask] : [],
+            warning: d.provider_ok === false || d.model_listed === false ? { message: d.message ?? 'Provider/model check failed' } : undefined,
+          });
+        },
+        onModel: (m: any) => {
+          setAiStage((prev) => prev ?? `model:${m.name}`);
+          aiProc.updateJob({ id: document.id, hints: [`model: ${m.name}`] });
+        },
+        onTokens: (t: any) => {
+          setAiTokenChars(t.chars);
+          aiProc.updateJob({ id: document.id, stage: 'generating' });
+        },
+        onStagingProgress: (sp: any) => {
+          if (typeof sp.percent === 'number') setAiStagePercent(sp.percent);
+          aiProc.updateJob({ id: document.id, percent: typeof sp.percent === 'number' ? sp.percent : undefined as any });
+        },
+        onSummary: async (s: any) => {
+          setAiSummary(s);
+          aiProc.updateJob({ id: document.id, hints: [`staged: ${s.staged}`] });
+          if (typeof (selectionStateDV as any).reload === 'function') {
+            await (selectionStateDV as any).reload();
+          }
+        },
+        onCompleted: () => {
+          setIsApplyingAI(false);
+          setAiStage(null);
+          setAiStagePercent(null);
+          setAiStageIndex(null);
+          setAiStageTotal(null);
+          aiProc.completeJob(document.id);
+          const s = aiSummary;
+          if (s) {
+            const count = s.staged;
+            const plural = count === 1 ? '' : 's';
+            toast.success(`AI generated ${count} selection${plural} (staged) – filtered ${s.filtered_out} of ${s.returned}`);
+          } else {
+            toast.success('AI completed');
+          }
+          // Optionally clear to remove from list
+          aiProc.clearJob(document.id);
+        },
+        onError: (e: any) => {
+          setIsApplyingAI(false);
+          setAiStage(null);
+          aiProc.failJob(document.id, { message: e.message ?? 'unknown' });
+          toast.error(`AI error: ${e.message ?? 'unknown'}`);
+          aiProc.clearJob(document.id);
+        },
+        ...(keyId && encryptedPassword ? { keyId, encryptedPassword } : {}),
+      } as any);
+      cancelRef.current = ctrl.cancel;
+      aiProc.registerCancel(document.id, ctrl.cancel);
+    } catch (err) {
+      setIsApplyingAI(false);
+      setAiStage(null);
+      toast.error('Failed to run AI detection');
+    }
+  }, [document.id, document.name, selectionStateDV, aiProc, aiSummary]);
+
+  // Start AI: ensure credentials then run
+  const handleStartAI = useCallback(async () => {
+    try {
+      const { keyId, encryptedPassword } = await ensureProjectTrust(document.project_id);
+      await handleRunAIDetectionWithCredentials(keyId, encryptedPassword);
+    } catch (e) {
+      // user cancelled or encryption failed
+      if ((e as any)?.message !== 'validation') {
+        // suppress validation errors already toasted elsewhere
       }
-    } catch (error) {
-      console.error('Error saving changes:', error);
-      toast.error('Failed to save changes');
     }
-  }, [save, promptStats.totalUnsavedChanges]);
-  
-  // Discard all unsaved changes
-  const handleDiscardAllChanges = useCallback(() => {
-    if (promptStats.totalUnsavedChanges === 0) {
-      toast.info('No unsaved changes to discard');
-      return;
+  }, [document.project_id, ensureProjectTrust, handleRunAIDetectionWithCredentials]);
+
+  // Deprecated: inline password dialog replaced with AiCredentialsProvider
+
+  const stageLabel = aiStage;
+
+  const handleCancelAI = useCallback(() => {
+    try {
+      if (cancelRef.current) {
+        cancelRef.current();
+      }
+      aiProc.cancelJob(document.id);
+      cancelRef.current = null;
+    } finally {
+      setIsApplyingAI(false);
+      setAiStage(null);
+      aiProc.clearJob(document.id);
+      toast.info('AI run canceled');
     }
-    
-    discardAllChanges();
-    toast.success(`Discarded ${promptStats.totalUnsavedChanges} unsaved change${promptStats.totalUnsavedChanges === 1 ? '' : 's'}`);
-  }, [discardAllChanges, promptStats.totalUnsavedChanges]);
-  
+  }, [aiProc, document.id]);
+
   // Clear all prompts
   const handleClearAll = useCallback(() => {
     if (promptStats.totalCount === 0) {
@@ -164,40 +264,33 @@ export default function PromptManagement({ document }: PromptControlsProps) {
     setEditingPromptId(null);
   }, []);
 
-  // Handle edit rule submission
-  const handleEditRule = useCallback((ruleData: {
-    type: string;
-    title: string;
-    rule: string;
-    priority: 'high' | 'medium' | 'low';
-    enabled: boolean;
-  }) => {
-    if (!editingPromptId) return;
-    
-    try {
-      // Transform rule data to prompt format
-      const promptText = `Rule Type: ${ruleData.type}\n` +
-                        `Priority: ${ruleData.priority.toUpperCase()}\n` +
-                        `Title: ${ruleData.title}\n\n` +
-                        `Instructions:\n${ruleData.rule}`;
-      
-      updatePrompt(editingPromptId, {
-        title: ruleData.title,
-        prompt: promptText,
-        directive: 'process',
-        state: 'committed',
-        scope: 'document',
-      } as any);
-      
-      toast.success(`${ruleData.title} rule updated (not yet saved)`);
-      setShowEditDialog(false);
-      setEditingPromptId(null);
-      
-    } catch (error) {
-      console.error('Error updating rule:', error);
-      toast.error('Failed to update AI rule');
+  // Declarative edit handler
+  const handleEditPromptSubmit = useCallback(async (values: Record<string, any>) => {
+    if (!editingPromptId) throw new Error('no-id');
+    const title = String(values.title ?? '').trim();
+    const directive = String(values.directive ?? '').trim();
+    const promptBody = String(values.prompt ?? '').trim();
+    if (!title || !promptBody || !directive) {
+      toast.error('Please fill in title, directive, and prompt');
+      throw new Error('validation');
     }
-  }, [editingPromptId, updatePrompt]);
+
+    updatePrompt(editingPromptId, {
+      title,
+      prompt: promptBody,
+      directive,
+      state: 'committed',
+      scope: 'document',
+    } as any);
+    const res = await save();
+    if (!res.ok) {
+      toast.error('Failed to update prompt');
+      throw new Error('api');
+    }
+    toast.success('Rule updated and committed');
+    setShowEditDialog(false);
+    setEditingPromptId(null);
+  }, [editingPromptId, updatePrompt, save]);
 
   if (error) {
     return (
@@ -241,8 +334,39 @@ export default function PromptManagement({ document }: PromptControlsProps) {
       
       {/* Action Controls */}
       <div className="flex flex-col gap-2">
+        {isApplyingAI && (
+          <div className="flex flex-col gap-2">
+            <AiProgress
+              currentStageLabel={stageLabel}
+              stageIndex={aiStageIndex}
+              stageTotal={aiStageTotal}
+              stagePercent={aiStagePercent}
+              onCancel={handleCancelAI}
+            />
+            {aiTokenChars > 0 && (
+              <div className="text-[11px] text-muted-foreground flex items-center justify-end">
+                <span className="font-mono">{aiTokenChars} chars</span>
+              </div>
+            )}
+          </div>
+        )}
         <Button
           variant="default"
+          size="sm"
+        onClick={handleStartAI}
+          disabled={isAnyOperationInProgress || isApplyingAI}
+          className="w-full justify-start h-9 text-xs"
+        >
+          {isApplyingAI ? (
+            <Hourglass className="mr-2 h-3 w-3 animate-spin" />
+          ) : (
+            <Bot className="mr-2 h-3 w-3" />
+          )}
+          {isApplyingAI ? 'Running AI...' : 'Run AI Detection'}
+        </Button>
+        
+        <Button
+          variant="outline"
           size="sm"
           onClick={handleOpenAddDialog}
           disabled={isAnyOperationInProgress}
@@ -253,32 +377,6 @@ export default function PromptManagement({ document }: PromptControlsProps) {
         </Button>
         
         <Button
-          variant="default"
-          size="sm"
-          onClick={handleSaveAllPrompts}
-          disabled={isAnyOperationInProgress || promptStats.totalUnsavedChanges === 0}
-          className="w-full justify-start h-9 text-xs"
-        >
-          {isSaving ? (
-            <RotateCcw className="mr-2 h-3 w-3 animate-spin" />
-          ) : (
-            <Save className="mr-2 h-3 w-3" />
-          )}
-          Save all changes
-        </Button>
-        
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleDiscardAllChanges}
-          disabled={promptStats.totalUnsavedChanges === 0}
-          className="w-full justify-start h-9 text-xs"
-        >
-          <Undo2 className="mr-2 h-3 w-3" />
-          Discard all changes
-        </Button>
-        
-        <Button
           variant="destructive"
           size="sm"
           onClick={handleClearAll}
@@ -286,7 +384,7 @@ export default function PromptManagement({ document }: PromptControlsProps) {
           className="w-full justify-start h-9 text-xs"
         >
           <Trash2 className="mr-2 h-3 w-3" />
-          Clear all
+          Clear all rules
         </Button>
       </div>
 
@@ -296,93 +394,80 @@ export default function PromptManagement({ document }: PromptControlsProps) {
         <PromptsList documentId={document.id} onEditPrompt={handleEditPrompt} />
       </div>
       
-      {/* Add Rule Dialog */}
-      <AddPromptDialog
+      {/* Password dialog handled by AiCredentialsProvider globally */}
+
+      {/* Add Prompt Dialog using reusable FormConfirmationDialog */}
+      <FormConfirmationDialog
         isOpen={showAddDialog}
         onClose={handleCloseAddDialog}
-        onConfirm={handleAddRule}
-        isSubmitting={false}
+        title="Create AI Rule"
+        description="Fill in the prompt details. The rule will be created and immediately committed."
+        confirmButtonText="Create rule"
+        cancelButtonText="Cancel"
+        variant="default"
+        messages={[]}
+        initialValues={{ title: '', directive: 'process', prompt: '' }}
+        fields={[
+          { type: 'text', name: 'title', label: 'Title', placeholder: 'Short descriptive title', required: true },
+          {
+            type: 'select',
+            name: 'directive',
+            label: 'Directive',
+            placeholder: 'Select directive',
+            tooltip: 'Choose what the AI should do with this rule',
+            required: true,
+            options: [
+              { value: 'process', label: 'Process (general processing)' },
+              { value: 'identify', label: 'Identify (mark content for review)' },
+              { value: 'redact', label: 'Redact (remove or obfuscate sensitive content)' },
+              { value: 'preserve', label: 'Preserve (explicitly keep content)' },
+              { value: 'exclude', label: 'Exclude (ignore specific content)' },
+            ],
+          },
+          { type: 'textarea', name: 'prompt', label: 'Prompt', placeholder: 'Detailed instructions for the AI', required: true },
+        ]}
+        onSubmit={handleCreatePromptSubmit}
       />
       
-      {/* Edit Rule Dialog */}
-      {editingPromptId && (() => {
-        const editingPrompt = allPrompts.find(p => p.id === editingPromptId);
-        if (!editingPrompt) return null;
-        
-        // Parse the prompt text to extract form data
-        const parsePromptText = (text: string) => {
-          const lines = text.split('\n');
-          let ruleType: string = 'custom';
-          let priority: string = 'medium';
-          let title: string = 'AI Rule';
-          let instructions: string = text;
-          
-          lines.forEach((line, index) => {
-            if (line.startsWith('Rule Type: ')) {
-              ruleType = line.replace('Rule Type: ', '').trim();
-            } else if (line.startsWith('Priority: ')) {
-              priority = line.replace('Priority: ', '').toLowerCase().trim();
-            } else if (line.startsWith('Title: ')) {
-              title = line.replace('Title: ', '').trim();
-            } else if (line.startsWith('Instructions:')) {
-              instructions = lines.slice(index + 1).join('\n').trim();
-            }
-          });
-          
-          // Map rule type strings to enum values
-          const getRuleType = (typeStr: string) => {
-            const normalizedType = typeStr.toLowerCase();
-            if (normalizedType.includes('identify-and-mark') || normalizedType.includes('identify and mark')) return 'identify-and-mark';
-            if (normalizedType.includes('redact-content') || normalizedType.includes('redact content')) return 'redact-content';
-            if (normalizedType.includes('preserve-content') || normalizedType.includes('preserve content')) return 'preserve-content';
-            if (normalizedType.includes('exclude-content') || normalizedType.includes('exclude content')) return 'exclude-content';
-            return 'custom';
-          };
-          
-          // Map priority strings
-          const getPriority = (priorityStr: string) => {
-            const normalizedPriority = priorityStr.toLowerCase();
-            if (normalizedPriority === 'high') return 'high';
-            if (normalizedPriority === 'low') return 'low';
-            return 'medium';
-          };
-          
-          return {
-            type: getRuleType(ruleType),
-            title,
-            rule: instructions,
-            priority: getPriority(priority)
-          };
-        };
-        
-        const parsedData = parsePromptText(editingPrompt.prompt);
-        
-        return (
-          <AddPromptDialog
-            isOpen={showEditDialog}
-            onClose={handleCloseEditDialog}
-            onConfirm={handleEditRule}
-            isSubmitting={false}
-            mode="edit"
-            initialData={{
-              id: editingPrompt.id,
-              type: parsedData.type as any,
-              title: parsedData.title,
-              rule: parsedData.rule,
-              priority: parsedData.priority as any
-            }}
-          />
-        );
-      })()}
+      {/* Edit Rule Dialog using FormConfirmationDialog */}
+      {editingPromptId ? (
+        <FormConfirmationDialog
+          isOpen={showEditDialog}
+          onClose={handleCloseEditDialog}
+          title="Edit AI Rule"
+          description="Modify the rule. Changes will be saved and committed."
+          confirmButtonText="Save changes"
+          cancelButtonText="Cancel"
+          variant="default"
+          messages={[]}
+          initialValues={() => {
+            const editing = allPrompts.find(p => p.id === editingPromptId) as any;
+            return editing ? { title: editing.title ?? '', directive: editing.directive ?? 'process', prompt: editing.prompt ?? '' } : { title: '', directive: 'process', prompt: '' };
+          }}
+          fields={[
+            { type: 'text', name: 'title', label: 'Title', placeholder: 'Short descriptive title', required: true },
+            {
+              type: 'select',
+              name: 'directive',
+              label: 'Directive',
+              placeholder: 'Select directive',
+              tooltip: 'Choose what the AI should do with this rule',
+              required: true,
+              options: [
+                { value: 'process', label: 'Process (general processing)' },
+                { value: 'identify', label: 'Identify (mark content for review)' },
+                { value: 'redact', label: 'Redact (remove or obfuscate sensitive content)' },
+                { value: 'preserve', label: 'Preserve (explicitly keep content)' },
+                { value: 'exclude', label: 'Exclude (ignore specific content)' },
+              ],
+            },
+            { type: 'textarea', name: 'prompt', label: 'Prompt', placeholder: 'Detailed instructions for the AI', required: true },
+          ]}
+          onSubmit={handleEditPromptSubmit}
+        />
+      ) : null}
       
-      {/* Save Confirmation Dialog */}
-      <SavePromptChangesConfirmationDialog
-        isOpen={showSaveConfirmDialog}
-        onClose={handleCloseSaveConfirmDialog}
-        onConfirm={handleConfirmedSave}
-        changesCount={promptStats.totalUnsavedChanges}
-        isSaving={isSaving}
-      />
+      {/* Save Confirmation Dialog (inline) */}
     </div>
   );
 }

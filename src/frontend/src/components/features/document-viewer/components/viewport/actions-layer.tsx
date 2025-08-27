@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Hand, MousePointerClick, Eye, EyeOff, Scan, Info, Pen, PenOff, Keyboard } from "lucide-react";
+import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Hand, MousePointerClick, Eye, EyeOff, Scan, Info, Pen, PenOff, Keyboard, ListTree } from "lucide-react";
 import { useViewportState, useViewportActions } from '../../providers/viewport-provider';
 
 interface ActionsLayerProps {
@@ -20,11 +20,14 @@ export default function ActionsLayer({ isInfoVisible = false, onToggleInfo }: Ac
     setMode,
     showSelections,
     dispatch,
+    showPromptPanel,
   } = useViewportState();
   
-  const {
+  const { 
     toggleSelections,
     resetView,
+    toggleSelectionsPanel,
+    togglePromptPanel,
     toggleHelpOverlay,
   } = useViewportActions();
   
@@ -79,9 +82,8 @@ export default function ActionsLayer({ isInfoVisible = false, onToggleInfo }: Ac
   };
 
   const handleResetView = () => {
-    resetView()
+    resetView();
     setMode("pan");
-    setShowSelections(false);
   }
 
   // Mouse-position-aware zoom handlers for button clicks
@@ -215,12 +217,12 @@ export default function ActionsLayer({ isInfoVisible = false, onToggleInfo }: Ac
   return (
     <div id="__actions_layer__">
       {/* Mode Toggle Button - Left Side */}
-      <div className="absolute top-4 left-4 z-1000 bg-muted/80 rounded-md shadow-md">
+      <div className="absolute top-4 left-4 z-1000 bg-background/90 rounded-md shadow-md">
         <Button
           variant="ghost"
           size="icon"
           onClick={handleModeToggle}
-          className={(mode === "pan" || isTemporaryPanning) ? 'bg-accent text-accent-foreground' : ''}
+          // className={(mode === "pan" || isTemporaryPanning) ? 'bg-accent text-accent-foreground' : ''}
           title={
             isTemporaryPanning
               ? "Temporary Pan Mode (Middle Button)"
@@ -235,7 +237,7 @@ export default function ActionsLayer({ isInfoVisible = false, onToggleInfo }: Ac
       </div>
 
       {/* Show/Hide Bar Toggle Button - Right Side */}
-      <div className="absolute top-4 right-4 z-1000 bg-muted/80 rounded-md shadow-md">
+      <div className="absolute top-4 right-4 z-1000 bg-background/90 rounded-md shadow-md">
         <Button
           variant="ghost"
           size="icon"
@@ -246,43 +248,22 @@ export default function ActionsLayer({ isInfoVisible = false, onToggleInfo }: Ac
         </Button>
       </div>
 
-      {/* Main Control Bar - Center */}
+      {/* Main Control Bar - Center (Top) */}
       <div className={`
-        absolute top-4 left-1/2 -translate-x-1/2 z-1001 bg-muted/80 rounded-md
+        absolute top-4 left-1/2 -translate-x-1/2 z-1001 bg-background/90 rounded-md
         transition-all duration-300 ease-in-out
         ${(visible && showBar) ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4 pointer-events-none"}
       `}>
         <div className="shadow-md flex items-center gap-2">
-          {/* Pagination */}
-          <Button
-            variant="ghost"
-            size="icon"
-            disabled={currentPage + 1 <= 1}
-            onClick={() => setCurrentPage(currentPage - 1)}
-          >
-            <ChevronLeft />
-          </Button>
-          <span className="text-sm font-medium w-24 text-center">
-            Page {currentPage + 1} of {numPages}
-          </span>
-          <Button
-            variant="ghost"
-            size="icon"
-            disabled={currentPage + 1 >= numPages}
-            onClick={() => setCurrentPage(currentPage + 1)}
-          >
-            <ChevronRight />
-          </Button>
-
           {/* Zoom */}
           <Button
             variant="ghost"
             size="icon"
-            onClick={handleZoomIn}
+            onClick={handleZoomOut}
           >
-            <ZoomIn />
+            <ZoomOut />
           </Button>
-
+          
           <Button
             variant="ghost"
             size="icon"
@@ -294,9 +275,9 @@ export default function ActionsLayer({ isInfoVisible = false, onToggleInfo }: Ac
           <Button
             variant="ghost"
             size="icon"
-            onClick={handleZoomOut}
+            onClick={handleZoomIn}
           >
-            <ZoomOut />
+            <ZoomIn />
           </Button>
 
           {/* Selections visibility toggle */}
@@ -323,6 +304,27 @@ export default function ActionsLayer({ isInfoVisible = false, onToggleInfo }: Ac
             </Button>
           )}
 
+          {/* Selections panel toggle */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleSelectionsPanel}
+            title="Toggle selections panel"
+          >
+            <ListTree />
+          </Button>
+
+          {/* Prompts panel toggle (R) */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={togglePromptPanel}
+            className={showPromptPanel ? 'bg-accent text-accent-foreground' : ''}
+            title="Toggle rules panel (R)"
+          >
+            <ListTree />
+          </Button>
+
           {/* Keyboard shortcuts dialog toggle */}
           <Button
             variant="ghost"
@@ -333,6 +335,35 @@ export default function ActionsLayer({ isInfoVisible = false, onToggleInfo }: Ac
             <Keyboard />
           </Button>
 
+        </div>
+      </div>
+
+      {/* Pagination Bar - Bottom Center */}
+      <div className={`
+        absolute bottom-4 left-1/2 -translate-x-1/2 z-1001 bg-background/90 rounded-md
+        transition-all duration-300 ease-in-out
+        ${(visible && showBar) ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"}
+      `}>
+        <div className="shadow-md flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            disabled={currentPage + 1 <= 1}
+            onClick={() => setCurrentPage(currentPage - 1)}
+          >
+            <ChevronLeft />
+          </Button>
+          <span className="text-sm font-medium w-24 text-center">
+            Page {currentPage + 1} of {numPages}
+          </span>
+          <Button
+            variant="ghost"
+            size="icon"
+            disabled={currentPage + 1 >= numPages}
+            onClick={() => setCurrentPage(currentPage + 1)}
+          >
+            <ChevronRight />
+          </Button>
         </div>
       </div>
     </div>

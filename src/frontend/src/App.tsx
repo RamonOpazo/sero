@@ -1,5 +1,5 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useParams, useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
 import { ThemeProvider } from '@/providers';
 import { MainLayout } from '@/components/layout';
 import { HomePage } from '@/pages/home-page';
@@ -9,6 +9,8 @@ import { EditorView } from '@/views/editor-view';
 import { DocsPage } from '@/pages/docs-page';
 import { SettingsPage } from '@/pages/settings-page';
 import { CryptoTestView } from '@/views/crypto-test-view';
+import { SwaggerPage } from './pages/swagger-page';
+import { getDocs } from '@/utils/markdown';
 
 // Redirect component for /projects/:projectId -> /projects/:projectId/documents
 function ProjectRedirect() {
@@ -22,11 +24,20 @@ function DocumentRedirect() {
   return <Navigate to={`/projects/${projectId}/documents/${documentId}/original-file`} replace />;
 }
 
-// Redirect component for API docs
-function ApiDocsRedirect() {
-  React.useEffect(() => {
-    window.location.href = '/docs';
-  }, []);
+// Redirect component for /docs -> /docs/<slug-of-is-index>
+function DocsRootRedirect() {
+  const navigate = useNavigate();
+  useEffect(() => {
+    (async () => {
+      try {
+        const docs = await getDocs();
+        const idx = docs.find(d => d.is_index);
+        navigate(`/docs/${idx ? idx.slug : 'whats-sero'}`, { replace: true });
+      } catch {
+        navigate('/docs/whats-sero', { replace: true });
+      }
+    })();
+  }, [navigate]);
   return null;
 }
 
@@ -43,11 +54,11 @@ function App() {
             <Route path="/projects" element={<ProjectsView />} />
 
             {/* Documentation routes */}
-            <Route path="/documentation" element={<DocsPage docName="index" />} />
-            <Route path="/documentation/:docName" element={<DocsPage />} />
+            <Route path="/docs" element={<DocsRootRedirect />} />
+            <Route path="/docs/:docName" element={<DocsPage />} />
 
             {/* Developer routes */}
-            <Route path="/dev/api-swagger" element={<ApiDocsRedirect />} />
+            <Route path="/dev/api-swagger" element={<SwaggerPage />}/>
             <Route path="/dev/crypto-test" element={<CryptoTestView />} />
 
             {/* Settings */}

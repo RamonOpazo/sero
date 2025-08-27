@@ -1,15 +1,16 @@
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { RotateCcw, AlertCircle, Trash2, FileX, Undo2, Brain, Save, CheckCheck } from "lucide-react";
+import { RotateCcw, AlertCircle, Trash2, FileX, Undo2, Save, CheckCheck } from "lucide-react";
 import { useViewportState } from "../../providers/viewport-provider";
 import { useSelections } from "../../providers/selection-provider";
 import { toast } from "sonner";
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo } from "react";
 import type { MinimalDocumentType } from "@/types";
 import { TypedConfirmationDialog } from "@/components/shared/typed-confirmation-dialog";
+import type { TypedMessage } from "@/components/shared/typed-confirmation-dialog";
+import { Switch } from "@/components/ui/switch";
 import { useStageCommit } from "../../hooks/use-stage-commit";
 import { UISelectionStage } from "../../types/selection-lifecycle";
-import SelectionsList from "./selection-list";
 
 interface SelectionControlsProps {
   document: MinimalDocumentType;
@@ -23,7 +24,6 @@ export default function SelectionManagement({ document }: SelectionControlsProps
   const { isViewingProcessedDocument, currentPage } = useViewportState();
 
   const {
-    state: selectionState,
     uiSelections,
     allSelections,
     clearAll,
@@ -31,10 +31,10 @@ export default function SelectionManagement({ document }: SelectionControlsProps
     discardAllChanges,
   } = useSelections() as any;
 
-  const [isApplyingAI, setIsApplyingAI] = useState(false);
-  const { selectionStats: scSel, canStage, canCommit, isStaging, isCommitting, stageAll, commitAll, stageMessages, commitMessages } = useStageCommit(document.id);
+  const { selectionStats: scSel, promptStats: prSel, canStage, canCommit, isStaging, isCommitting, stageAll, commitAll, stageMessages } = useStageCommit(document.id) as any;
   const [showStageDialog, setShowStageDialog] = useState(false);
   const [showCommitDialog, setShowCommitDialog] = useState(false);
+  const [commitAutoStage, setCommitAutoStage] = useState(false);
 
   // Calculate selection statistics using lifecycle uiSelections
   const selectionStats = useMemo(() => {
@@ -58,26 +58,6 @@ export default function SelectionManagement({ document }: SelectionControlsProps
     };
   }, [uiSelections]);
 
-  // Apply AI to generate staged selections
-  const handleApplyAI = useCallback(async () => {
-    try {
-      setIsApplyingAI(true);
-      const result = await import('@/lib/document-viewer-api').then(m => m.DocumentViewerAPI.applyAi((selectionState as any).contextId));
-      if (result.ok) {
-        toast.success(`AI generated ${result.value.length} selection${result.value.length === 1 ? '' : 's'} (staged)`);
-        // Reload selections from backend to reflect staged items
-        if (typeof (selectionState as any).reload === 'function') {
-          await (selectionState as any).reload();
-        }
-      } else {
-        toast.error('Failed to apply AI');
-      }
-    } catch (err) {
-      toast.error('Failed to apply AI');
-    } finally {
-      setIsApplyingAI(false);
-    }
-  }, [selectionState]);
 
   // Clear all selections
   const handleClearAll = useCallback(() => {
@@ -113,22 +93,58 @@ export default function SelectionManagement({ document }: SelectionControlsProps
     toast.success(`Cleared ${pageSelections.length} selections from page ${currentPage + 1}`);
   }, [clearPage, currentPage, allSelections]);
 
-  // Single consolidated debug log for selections only
-  useEffect(() => {
-    const committed = scSel.committed;
-    const creates = scSel.created;
-    const updates = scSel.updated;
-    const deletes = scSel.deleted;
-    const unstaged = scSel.pending; // creates + updates + deletes
+  // Build commit dialog messages with correct counts depending on auto-stage
+  const commitDialogMessages = useMemo<TypedMessage[]>(() => {
+    const selectionsToCommit = commitAutoStage
+      ? (scSel.stagedPersisted + scSel.created + scSel.updated)
+      : scSel.stagedPersisted;
+    const promptsToCommit = commitAutoStage
+      ? (prSel.stagedPersisted + prSel.created + prSel.updated + (prSel.deleted || 0))
+      : prSel.stagedPersisted;
+    const totalToCommit = selectionsToCommit + promptsToCommit;
+    const msgs: TypedMessage[] = [];
 
-    // eslint-disable-next-line no-console
-    console.log(`Selections:
-      \tUNSTAGED: ${unstaged}
-      \tSTAGED_CREATION: ${creates}
-      \tSTAGED_EDITION: ${updates}
-      \tSTAGED_DELETION: ${deletes}
-      \tCOMMITTED: ${committed}`
-    )});
+    if (totalToCommit === 0) {
+      msgs.push({
+        variant: 'warning',
+        title: 'Nothing to commit',
+        description: 'There are no changes to commit.',
+      });
+      return msgs;
+    }
+
+    // Irreversibility warning first
+    msgs.push({
+      variant: 'warning',
+      title: 'Irreversible operation',
+      description: 'Once committed, changes cannot be undone from here.',
+    });
+
+    if (selectionsToCommit > 0) {
+      msgs.push({
+        variant: 'info',
+        title: 'Selections to commit',
+        description: `${selectionsToCommit} selection change(s) will be committed`,
+      });
+    }
+    if (promptsToCommit > 0) {
+      msgs.push({
+        variant: 'info',
+        title: 'Prompts to commit',
+        description: `${promptsToCommit} prompt change(s) will be committed`,
+      });
+    }
+
+    msgs.push({
+      variant: 'success',
+      title: 'Commit scope',
+      description: commitAutoStage
+        ? 'Unstaged changes will be staged and committed in one step.'
+        : 'Only currently staged changes will be committed.',
+    });
+
+    return msgs;
+  }, [scSel.stagedPersisted, scSel.created, scSel.updated, prSel.stagedPersisted, prSel.created, prSel.updated, prSel.deleted, commitAutoStage]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -174,6 +190,7 @@ export default function SelectionManagement({ document }: SelectionControlsProps
           {isCommitting ? <RotateCcw className="mr-2 h-3 w-3 animate-spin" /> : <CheckCheck className="mr-2 h-3 w-3" />}
           {isCommitting ? 'Committing...' : 'Commit all staged'}
         </Button>
+
         <Button
           variant="outline"
           size="sm"
@@ -184,25 +201,6 @@ export default function SelectionManagement({ document }: SelectionControlsProps
           {isStaging ? <RotateCcw className="mr-2 h-3 w-3 animate-spin" /> : <Save className="mr-2 h-3 w-3" />}
           {isStaging ? 'Staging...' : 'Stage all changes'}
         </Button>
-      </div>
-
-      {/* AI & Lifecycle Controls */}
-      <div className="flex flex-col gap-2">
-        <Button
-          variant="default"
-          size="sm"
-          onClick={handleApplyAI}
-          disabled={isApplyingAI || isViewingProcessedDocument}
-          className="w-full justify-start h-9 text-xs"
-        >
-          {isApplyingAI ? (
-            <RotateCcw className="mr-2 h-3 w-3 animate-spin" />
-          ) : (
-            <Brain className="mr-2 h-3 w-3" />
-          )}
-          {isApplyingAI ? 'Applying AI...' : 'Apply AI'}
-        </Button>
-
 
         <Button
           variant="outline"
@@ -214,7 +212,12 @@ export default function SelectionManagement({ document }: SelectionControlsProps
           <Undo2 className="mr-2 h-3 w-3" />
           Discard all changes
         </Button>
+      </div>
 
+      <Separator />
+
+      {/* Lifecycle Controls */}
+      <div className="flex flex-col gap-2">
         <Button
           variant="outline"
           size="sm"
@@ -236,12 +239,6 @@ export default function SelectionManagement({ document }: SelectionControlsProps
           <Trash2 className="mr-2 h-3 w-3" />
           Clear all
         </Button>
-      </div>
-
-      <Separator />
-
-      <div className="flex flex-col gap-2">
-        <SelectionsList />
       </div>
 
       {/* Confirmation dialogs for staging and committing */}
@@ -266,15 +263,37 @@ export default function SelectionManagement({ document }: SelectionControlsProps
         onClose={() => setShowCommitDialog(false)}
         onConfirm={async () => {
           setShowCommitDialog(false);
-          await commitAll();
+          await commitAll(commitAutoStage);
+          setCommitAutoStage(false);
         }}
         title="Commit all staged"
-        description="This will commit all staged selections and prompts. This action is irreversible."
+        description={undefined}
         confirmationText="commit"
-        confirmButtonText="Commit all staged"
+        confirmButtonText="Commit"
         cancelButtonText="Cancel"
         variant="default"
-        messages={commitMessages}
+        messages={(() => {
+          const autoMsg: TypedMessage = commitAutoStage
+            ? { variant: 'warning', title: 'Auto-stage is ON', description: 'Pending changes will be staged and committed in one step.' }
+            : {
+                variant: 'info',
+                title: 'Optional: auto-stage before commit',
+                description: 'If enabled, any unstaged changes will be staged first, then committed. This may hide which changes were staged vs pre-staged.',
+                className: 'border-muted/40 bg-muted/20 [&>svg]:text-muted-foreground *:data-[slot=alert-title]:text-muted-foreground *:data-[slot=alert-description]:text-muted-foreground/80',
+              };
+          return [...commitDialogMessages, autoMsg];
+        })()}
+        formFields={[
+          (
+            <div key="autostage" className="flex items-center justify-between text-xs p-2 border rounded">
+              <div className="flex flex-col">
+                <span className="font-medium">Auto-stage before commit</span>
+                <span className="text-muted-foreground">Stage pending changes first, then commit</span>
+              </div>
+              <Switch checked={commitAutoStage} onCheckedChange={setCommitAutoStage} />
+            </div>
+          )
+        ]}
       />
 
     </div>

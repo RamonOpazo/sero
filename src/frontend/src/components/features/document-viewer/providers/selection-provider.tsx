@@ -9,7 +9,6 @@ import React, { createContext, useContext, useEffect, useState, useRef, useMemo,
 import { createSelectionManager, type SelectionDomainManager, type Selection, type SelectionCreateType } from '../core/selection-manager';
 import type { SelectionCreateDraft } from '../types/viewer';
 import type { Result } from '@/lib/result';
-import type { PendingChanges } from '@/lib/domain-manager';
 import { DocumentViewerAPI } from '@/lib/document-viewer-api';
 import { fromApiSelection } from '../core/selection-lifecycle-mapper';
 import { UISelectionStage, type UISelection } from '../types/selection-lifecycle';
@@ -75,6 +74,7 @@ interface SelectionContextValue {
   
   // Data loading
   loadSavedSelections: (selections: Selection[]) => void;
+  reload: () => Promise<void>;
   
   // Event callbacks
   onSelectionDoubleClick?: (selection: Selection) => void;
@@ -475,6 +475,20 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
     // Capture baseline immediately after loading so subsequent edits are tracked
     dispatch('CAPTURE_BASELINE' as any, undefined as any);
   }, [dispatch]);
+
+  const reload = useCallback(async (): Promise<void> => {
+    try {
+      const docId = (state as any)?.contextId as string | undefined;
+      if (!docId) return;
+      const fetched = await DocumentViewerAPI.fetchDocumentSelections(docId);
+      if (fetched.ok) {
+        dispatch('LOAD_ITEMS', fetched.value as any);
+        dispatch('CAPTURE_BASELINE' as any, undefined as any);
+      }
+    } catch {
+      // noop
+    }
+  }, [state, dispatch]);
   
   // ========================================
   // EVENT CALLBACKS
@@ -611,6 +625,7 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
     
     // Data loading
     loadSavedSelections,
+    reload,
     
     // Event callbacks
     onSelectionDoubleClick,
@@ -636,7 +651,7 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
     deleteSelection, deleteSelectedSelection, undo, redo, canUndo, canRedo,
     clearPage, clearAll, save, commitChanges, discardAllChanges,
     selectSelection, selectedSelection, toggleSelectionGlobal, setSelectionPage,
-    loadSavedSelections, onSelectionDoubleClick, setOnSelectionDoubleClick,
+    loadSavedSelections, reload, onSelectionDoubleClick, setOnSelectionDoubleClick,
     allSelections, uiSelections, hasUnsavedChanges,
     hasSelections, selectionCount, getCurrentDraw, isCurrentlyDrawing,
     getSelectionsForPage, getGlobalSelections, getPageSelections
