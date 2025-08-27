@@ -30,8 +30,8 @@ export function DocumentsDataTable({ onDocumentSelect }: DocumentsDataTableProps
 
   // Column visibility state - exclude pinned columns from state management
   const [visibleColumns, setVisibleColumns] = useState<string[]>([
-    'description', 'file_count', 'prompt_count',
-    'selection_count', 'status', 'created_at'
+    'description', 'scope', 'file_count', 'prompt_count',
+    'selection_count', 'status', 'created_at',
   ])
 
   // Selection state for checkboxes
@@ -58,6 +58,14 @@ export function DocumentsDataTable({ onDocumentSelect }: DocumentsDataTableProps
         <Badge variant="outline" status="muted">Pending</Badge>
       );
     }
+  }, []);
+
+  const scopeRenderer = useCallback((document: DocumentShallowType) => {
+    return document.is_template ? (
+      <Badge variant="outline" status="warning">Project</Badge>
+    ) : (
+      <Badge variant="outline" status="muted">Document</Badge>
+    );
   }, []);
 
   // Pure UI rendering functions
@@ -93,8 +101,20 @@ export function DocumentsDataTable({ onDocumentSelect }: DocumentsDataTableProps
       header: 'Description',
       maxLength: 30,
       width: '250px',
-      placeholder: 'No description'
+      placeholder: 'No description',
     }),
+
+    // Scope - shows whether this document is project-scoped or document-scoped
+    columns.custom<DocumentShallowType, boolean>(
+      'scope',
+      'is_template',
+      {
+        header: 'Scope',
+        width: '120px',
+        align: 'left',
+        render: (_value, row) => scopeRenderer(row),
+      },
+    ),
 
     // Prompt count - displayed as badge
     columns.number<DocumentShallowType>('prompt_count', {
@@ -188,11 +208,12 @@ export function DocumentsDataTable({ onDocumentSelect }: DocumentsDataTableProps
   // Column options for visibility toggle - exclude pinned columns
   const tableColumns: ColumnOption[] = useMemo(() => [
     { key: 'description', header: 'Description' },
+    { key: 'scope', header: 'Scope' },
     { key: 'prompt_count', header: '# Prompts' },
     { key: 'selection_count', header: '# Selections' },
     { key: 'status', header: 'Status' },
     { key: 'created_at', header: 'Created' },
-    { key: 'updated_at', header: 'Last Updated' }
+    { key: 'updated_at', header: 'Last Updated' },
   ], []);
 
   // Custom buttons for the toolbar - delete button always visible
