@@ -1,7 +1,7 @@
 import type React from 'react';
 import { useMemo, useRef } from 'react';
 import { useViewportState } from '@/components/features/document-viewer/providers/viewport-provider';
-import type { ViewportAction } from '../../../providers/viewport-provider';
+import type { ViewportAction } from '@/components/features/document-viewer/providers/viewport-provider';
 
 export interface WheelDeps {
   viewportRef: React.RefObject<HTMLDivElement | null>,
@@ -15,13 +15,17 @@ export function createWheelHandler({ viewportRef, zoom, pan, setPan, dispatch }:
   return (event: WheelEvent) => {
     event.preventDefault();
 
-    if (!viewportRef.current) return;
+    const el = viewportRef.current;
+    if (!el) return;
 
     const zoomFactor = event.deltaY > 0 ? 0.9 : 1.1;
     const newZoom = Math.max(0.5, Math.min(3, zoom * zoomFactor));
 
+    // No-op if clamped at bounds (avoids unnecessary state updates)
+    if (newZoom === zoom) return;
+
     // Get viewport bounds
-    const rect = viewportRef.current.getBoundingClientRect();
+    const rect = el.getBoundingClientRect();
 
     // Mouse position relative to viewport center
     const mouseX = event.clientX - rect.left - rect.width / 2;
@@ -40,7 +44,9 @@ export function createWheelHandler({ viewportRef, zoom, pan, setPan, dispatch }:
 
     // Update zoom and pan simultaneously
     dispatch({ type: 'SET_ZOOM', payload: newZoom });
-    setPan({ x: newPanX, y: newPanY });
+    if (newPanX !== pan.x || newPanY !== pan.y) {
+      setPan({ x: newPanX, y: newPanY });
+    }
   };
 }
 
@@ -59,9 +65,7 @@ export type MouseEventState = {
   middleButtonDown: boolean,
   rightButtonDown: boolean,
   panStart: { x: number, y: number } | null,
-  selectionPageIndex: number | null,
   isTemporaryPanning: boolean,
-  originalMode: string | null,
 };
 
 export interface MouseDeps {
@@ -107,7 +111,6 @@ export function createMouseButtonHandlers(deps: MouseDeps): MouseHandlers {
       // Middle button
       eventStateRef.current.middleButtonDown = true;
       eventStateRef.current.isTemporaryPanning = true;
-      eventStateRef.current.originalMode = mode;
 
       // Start temporary panning
       setIsPanning(true);
@@ -175,16 +178,22 @@ export function createMouseButtonHandlers(deps: MouseDeps): MouseHandlers {
         setIsPanning(false);
         eventStateRef.current.panStart = null;
         eventStateRef.current.isTemporaryPanning = false;
-        eventStateRef.current.originalMode = null;
       }
     } else if (event.button === 2) {
       // Right button
       eventStateRef.current.rightButtonDown = false;
     }
   };
-  const onMouseLeave: MouseHandlers['onMouseLeave'] = (event) => {
-    // Treat mouse leave as mouse up to end any ongoing operations
-    onMouseUp(event);
+  const onMouseLeave: MouseHandlers['onMouseLeave'] = (_event) => {
+    // End any ongoing operations on leave
+    if (eventStateRef.current.isTemporaryPanning || eventStateRef.current.leftButtonDown) {
+      setIsPanning(false);
+    }
+    eventStateRef.current.leftButtonDown = false;
+    eventStateRef.current.middleButtonDown = false;
+    eventStateRef.current.rightButtonDown = false;
+    eventStateRef.current.panStart = null;
+    eventStateRef.current.isTemporaryPanning = false;
   };
   const onContextMenu: MouseHandlers['onContextMenu'] = (event) => {
     // Prevent default context menu for now; custom menu can be implemented later
@@ -210,9 +219,7 @@ export function useMouseButtonHandlers(params: {
     middleButtonDown: false,
     rightButtonDown: false,
     panStart: null,
-    selectionPageIndex: null,
     isTemporaryPanning: false,
-    originalMode: null,
   });
 
   const handlers = useMemo(
@@ -241,4 +248,3 @@ export function useMouseButtonHandlers(params: {
 
   return { ...handlers, cursor };
 }
-

@@ -1,9 +1,9 @@
 import React, { useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
+import { useThrottle } from '@/lib/hooks/use-throttle';
 import { useViewportState } from '../../providers/viewport-provider';
 import { useSelections } from '../../providers/selection-provider';
 import { useKeyboardHandler, useWheelHandler, useMouseButtonHandlers } from './input';
-import { useThrottle } from '@/lib/hooks/use-throttle';
 
 interface UnifiedViewportProps {
   children: React.ReactNode,
@@ -25,7 +25,7 @@ export function UnifiedViewport({ children, className, }: UnifiedViewportProps) 
   const {
     setOnNavigateToPage,
   } = useSelections();
-  
+
   const viewportRef = useRef<HTMLDivElement>(null);
 
   // Throttled pan update for smooth performance
@@ -85,40 +85,40 @@ export function UnifiedViewport({ children, className, }: UnifiedViewportProps) 
   const cursorStyle = React.useMemo(() => cursor, [cursor]);
 
   return (
+    <div
+      ref={viewportRef}
+      className={cn(
+        'unified-viewport',
+        'relative h-full w-full overflow-hidden',
+        'flex items-center justify-center',
+        className
+      )}
+      style={{ cursor: cursorStyle }}
+      onMouseDown={onMouseDown}
+      onMouseMove={onMouseMove}
+      onMouseUp={onMouseUp}
+      onMouseLeave={onMouseLeave}
+      onContextMenu={onContextMenu}
+      tabIndex={0} // Make the viewport focusable for keyboard events
+    >
+      {/* Grid background */}
       <div
-        ref={viewportRef}
-        className={cn(
-          'unified-viewport',
-          'relative h-full w-full overflow-hidden',
-          'flex items-center justify-center',
-          className
-        )}
-        style={{ cursor: cursorStyle }}
-        onMouseDown={onMouseDown}
-        onMouseMove={onMouseMove}
-        onMouseUp={onMouseUp}
-        onMouseLeave={onMouseLeave}
-        onContextMenu={onContextMenu}
-        tabIndex={0} // Make the viewport focusable for keyboard events
-      >
-        {/* Grid background */}
-        <div
-          className="absolute inset-0 pointer-events-none rounded-md border"
-          style={{
-            background: `radial-gradient(circle at 2px 2px, color-mix(in srgb, var(--ring) 25%, transparent) 2px, transparent 0px)`,
-            backgroundSize: `${25 * zoom}px ${25 * zoom}px`,
-            backgroundPosition: `${pan.x}px ${pan.y}px`,
-          }}
-        />
+        className="absolute inset-0 pointer-events-none rounded-md border"
+        style={{
+          background: `radial-gradient(circle at 2px 2px, color-mix(in srgb, var(--ring) 25%, transparent) 2px, transparent 0px)`,
+          backgroundSize: `${25 * zoom}px ${25 * zoom}px`,
+          backgroundPosition: `${pan.x}px ${pan.y}px`,
+        }}
+      />
 
-        {/* Transform container - all children inherit this transform */}
-        <div
-          className="unified-transform absolute"
-          style={transformStyle}
-        >
-          {children}
-        </div>
+      {/* Transform container - all children inherit this transform */}
+      <div
+        className="unified-transform absolute"
+        style={transformStyle}
+      >
+        {children}
       </div>
+    </div>
   );
 }
 
