@@ -90,10 +90,10 @@ Task breakdown and status (Phase 1)
 
 Phase 2 (planned)
 
-- [ ] Bulk upload: switch plaintext password to { key_id, encrypted_password }
-  - Frontend: UploadDocumentsDialog prompt via ProjectTrustProvider and POST key_id + encrypted_password instead of password
+- [x] Bulk upload: switch plaintext password to { key_id, encrypted_password }
+  - Frontend: UploadDocumentsDialog uses ProjectTrustProvider and POSTs key_id + encrypted_password (implemented)
   - Backend: accept encrypted credentials on /documents/bulk-upload and verify per-file as needed
-  - Docs: update types/document.ts to remove plaintext password from request types (frontend)
+  - Docs: update types/document.ts to remove plaintext password from request types (frontend) [pending]
 - [x] Project creation: encrypt password-in-transit
   - Frontend: encrypts project password before POST (implemented)
   - Backend: still hash password server-side; accept encrypted payload and decrypt (assumed available)

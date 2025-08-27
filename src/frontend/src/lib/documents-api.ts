@@ -252,6 +252,44 @@ export const DocumentsAPI = {
   },
 
   /**
+   * Upload documents in bulk with encrypted password (preferred)
+   */
+  async uploadDocumentsEncrypted(
+    uploadData: { project_id: string; files: FileList; template_description?: string },
+    creds: { keyId: string; encryptedPassword: string },
+  ): Promise<Result<ApiResponse, unknown>> {
+    const formData = new FormData();
+    formData.append('project_id', uploadData.project_id);
+    formData.append('key_id', creds.keyId);
+    formData.append('encrypted_password', creds.encryptedPassword);
+    if (uploadData.template_description) {
+      formData.append('template_description', uploadData.template_description);
+    }
+    for (let i = 0; i < uploadData.files.length; i++) {
+      formData.append('files', uploadData.files[i]);
+    }
+
+    return AsyncResultWrapper
+      .from(api.safe.post(`/documents/bulk-upload`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      }) as Promise<Result<ApiResponse, unknown>>)
+      .tap((resp) => {
+        toast.success(
+          'Successfully uploaded documents',
+          { description: resp?.message ?? 'Upload complete' } as any,
+        );
+      })
+      .catch((error: unknown) => {
+        toast.error(
+          'Failed to upload documents',
+          { description: error instanceof Error ? error.message : 'Please try again.' },
+        );
+        throw error;
+      })
+      .toResult();
+  },
+
+  /**
    * Process an original document to produce a redacted file
    * Uses encrypted password as required by backend.
    */
