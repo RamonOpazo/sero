@@ -200,3 +200,33 @@ export function createMouseButtonHandlers(deps: MouseDeps): MouseHandlers {
   };
 }
 
+// Adapter hook: returns mouse button handlers wired to viewport state
+export function useMouseButtonHandlers(params: {
+  eventStateRef: React.MutableRefObject<MouseEventState>,
+  throttledPanUpdate: (p: { x: number, y: number }) => void,
+}): MouseHandlers {
+  const { mode, pan, setPan, isPanning, setIsPanning } = useViewportState();
+
+  return useMemo(
+    () =>
+      createMouseButtonHandlers({
+        mode,
+        pan,
+        setPan,
+        isPanning,
+        setIsPanning,
+        throttledPanUpdate: params.throttledPanUpdate,
+        eventStateRef: params.eventStateRef,
+      }),
+    [
+      mode,
+      pan,
+      setPan,
+      isPanning,
+      setIsPanning,
+      params.throttledPanUpdate,
+      params.eventStateRef,
+    ],
+  );
+}
+

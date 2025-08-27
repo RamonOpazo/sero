@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils';
 import { useViewportState, useViewportActions } from '../../providers/viewport-provider';
 import { useSelections } from '../../providers/selection-provider';
 import { createKeyboardHandler } from './input/keyboard';
-import { createMouseButtonHandlers, useWheelHandler } from './input/mouse';
+import { useWheelHandler, useMouseButtonHandlers } from './input/mouse';
 import { useThrottle } from '@/lib/hooks/use-throttle';
 
 interface UnifiedViewportProps {
@@ -80,24 +80,11 @@ export function UnifiedViewport({
     setPan(newPan);
   }, 16); // ~60fps
 
-  // Mouse button handlers (context menu only for now)
-  const { onContextMenu, onMouseDown, onMouseMove, onMouseUp, onMouseLeave } = React.useMemo(() => createMouseButtonHandlers({
-    mode,
-    pan,
-    setPan,
-    isPanning,
-    setIsPanning,
-    throttledPanUpdate,
+// Mouse button handlers via adapter hook
+  const { onContextMenu, onMouseDown, onMouseMove, onMouseUp, onMouseLeave } = useMouseButtonHandlers({
     eventStateRef,
-  }), [
-    mode,
-    pan,
-    setPan,
-    isPanning,
-    setIsPanning,
     throttledPanUpdate,
-    eventStateRef,
-  ]);
+  });
 
   // Keyboard event handling
   const handleKeyDown = React.useMemo(() => createKeyboardHandler({
