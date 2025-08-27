@@ -1,6 +1,10 @@
 from unittest.mock import patch
 from fastapi import status
 from sqlalchemy.exc import DatabaseError
+from backend.core.security import security_manager
+from cryptography.hazmat.primitives import serialization, hashes
+from cryptography.hazmat.primitives.asymmetric import padding
+import base64
 
 
 class TestAppErrorHandlers:
