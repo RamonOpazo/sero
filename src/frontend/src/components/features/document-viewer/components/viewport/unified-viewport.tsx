@@ -1,8 +1,8 @@
 import React, { useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
-import { useViewportState, useViewportActions } from '../../providers/viewport-provider';
+import { useViewportState } from '../../providers/viewport-provider';
 import { useSelections } from '../../providers/selection-provider';
-import { createKeyboardHandler } from './input/keyboard';
+import { useKeyboardHandler } from './input/keyboard';
 import { useWheelHandler, useMouseButtonHandlers } from './input/mouse';
 import { useThrottle } from '@/lib/hooks/use-throttle';
 
@@ -22,34 +22,14 @@ export function UnifiedViewport({
     pan,
     setPan,
     isPanning,
-    setIsPanning,
     mode,
-    dispatch,
     currentPage,
-    numPages,
     setCurrentPage,
-    setMode,
-    showHelpOverlay,
-    showInfoPanel,
-    showSelectionsPanel,
-    showPromptPanel,
-    isViewingProcessedDocument,
   } = useViewportState();
   
-  // Get viewport actions
-  const {
-    toggleInfoPanel,
-    toggleSelectionsPanel,
-    togglePromptPanel,
-    toggleHelpOverlay,
-  } = useViewportActions();
   
   // Get selection state from new system
   const {
-    deleteSelectedSelection,
-    undo,
-    redo,
-    cancelDraw,
     setOnNavigateToPage,
   } = useSelections();
   
@@ -86,52 +66,8 @@ export function UnifiedViewport({
     throttledPanUpdate,
   });
 
-  // Keyboard event handling
-  const handleKeyDown = React.useMemo(() => createKeyboardHandler({
-    isPanning,
-    setIsPanning,
-    cancelDraw,
-    showHelpOverlay,
-    showInfoPanel,
-    showSelectionsPanel,
-    showPromptPanel,
-    toggleHelpOverlay,
-    toggleInfoPanel,
-    toggleSelectionsPanel,
-    togglePromptPanel,
-    numPages,
-    currentPage,
-    setCurrentPage,
-    zoom,
-    dispatch,
-    setMode,
-    deleteSelectedSelection,
-    undo,
-    redo,
-    isViewingProcessedDocument,
-  }), [
-    isPanning,
-    setIsPanning,
-    cancelDraw,
-    showHelpOverlay,
-    showInfoPanel,
-    showSelectionsPanel,
-    showPromptPanel,
-    toggleHelpOverlay,
-    toggleInfoPanel,
-    toggleSelectionsPanel,
-    togglePromptPanel,
-    numPages,
-    currentPage,
-    setCurrentPage,
-    zoom,
-    dispatch,
-    setMode,
-    deleteSelectedSelection,
-    undo,
-    redo,
-    isViewingProcessedDocument,
-  ]);
+  // Keyboard event handling via adapter hook
+  const handleKeyDown = useKeyboardHandler();
 
   // Wire navigation callback so undo/redo move to the relevant page
   useEffect(() => {

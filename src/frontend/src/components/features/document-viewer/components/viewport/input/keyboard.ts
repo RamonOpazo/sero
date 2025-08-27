@@ -1,5 +1,8 @@
 import { toast } from 'sonner';
+import { useMemo } from 'react';
 import type React from 'react';
+import { useViewportState, useViewportActions } from '@/components/features/document-viewer/providers/viewport-provider';
+import { useSelections } from '@/components/features/document-viewer/providers/selection-provider';
 import type { ViewportAction } from '../../../providers/viewport-provider';
 
 export interface KeyboardDeps {
@@ -313,4 +316,82 @@ export function createKeyboardHandler(deps: KeyboardDeps) {
         break;
     }
   };
+}
+
+// Adapter hook: returns a memoized keyboard handler wired to viewport and selection state
+export function useKeyboardHandler() {
+  const {
+    isPanning,
+    setIsPanning,
+    zoom,
+    dispatch,
+    currentPage,
+    numPages,
+    setCurrentPage,
+    setMode,
+    showHelpOverlay,
+    showInfoPanel,
+    showSelectionsPanel,
+    showPromptPanel,
+    isViewingProcessedDocument,
+  } = useViewportState();
+
+  const {
+    toggleHelpOverlay,
+    toggleInfoPanel,
+    toggleSelectionsPanel,
+    togglePromptPanel,
+  } = useViewportActions();
+
+  const { deleteSelectedSelection, undo, redo, cancelDraw } = useSelections();
+
+  return useMemo(
+    () =>
+      createKeyboardHandler({
+        isPanning,
+        setIsPanning,
+        cancelDraw,
+        showHelpOverlay,
+        showInfoPanel,
+        showSelectionsPanel,
+        showPromptPanel,
+        toggleHelpOverlay,
+        toggleInfoPanel,
+        toggleSelectionsPanel,
+        togglePromptPanel,
+        numPages,
+        currentPage,
+        setCurrentPage,
+        zoom,
+        dispatch,
+        setMode,
+        deleteSelectedSelection,
+        undo,
+        redo,
+        isViewingProcessedDocument,
+      }),
+    [
+      isPanning,
+      setIsPanning,
+      cancelDraw,
+      showHelpOverlay,
+      showInfoPanel,
+      showSelectionsPanel,
+      showPromptPanel,
+      toggleHelpOverlay,
+      toggleInfoPanel,
+      toggleSelectionsPanel,
+      togglePromptPanel,
+      numPages,
+      currentPage,
+      setCurrentPage,
+      zoom,
+      dispatch,
+      setMode,
+      deleteSelectedSelection,
+      undo,
+      redo,
+      isViewingProcessedDocument,
+    ],
+  );
 }
