@@ -2,6 +2,7 @@
 slug: redaction-workflow
 title: The Redaction Workflow
 date: 2025-08-26T10:04:00.000Z
+next: security
 ---
 
 # The Redaction Workflow
@@ -20,7 +21,7 @@ The password is crucial. The UI reminds you that it will be needed again to down
 
 ## Step 2 — Uploading documents
 
-Inside the project view you see two main panels: **Documents** and **Templates**. In the **Documents** panel, click **“Upload”**. A file picker lets you select one or many PDFs from your machine. After you confirm, a progress bar shows each file being encrypted and stored. The UI will display them in a table once complete, showing filename, upload time, and status.
+Inside the project view you see two main panels: **Documents** and **Templates**. In the **Documents** panel, click **“Upload”**. A file picker lets you select one or many PDFs from your machine. After you confirm, the UI establishes a project trust session (prompting for the password if needed) and encrypts the password in transit with a fresh ephemeral RSA key. A progress bar shows each file being encrypted and stored. The UI will display them in a table once complete, showing filename, upload time, and status.
 
 At this stage, no redaction has happened yet. You have only safely deposited your source material into an encrypted vault.
 
@@ -42,7 +43,7 @@ Choosing **Preview** generates a redacted copy and opens it directly in the brow
 
 ## Step 5 — Processing the whole project
 
-When you are satisfied with the preview, go back to the project dashboard. At the top-right you will find a **“Process All”** button. This command lets you apply a chosen set of templates to every document in the project. You’ll be asked again for the project password, and then you’ll see a progress table showing each file being processed. Large projects will process in the background; you can leave the page and return later.
+When you are satisfied with the preview, go back to the project dashboard. At the top-right you will find a **“Process All”** button. This command lets you apply a chosen set of templates to every document in the project. If the project isn’t already unlocked, the UI will prompt you to unlock it; otherwise it will reuse the active trust session and re-encrypt your password per request with a fresh ephemeral key. You’ll then see a progress table showing each file being processed. Large projects will process in the background; you can leave the page and return later.
 
 The **status column** updates to show whether each document has been successfully redacted. Failures, if any, are clearly marked with error messages so you can re-try after fixing the underlying issue.
 
@@ -66,7 +67,7 @@ Imagine you need to share 200 discharge summaries with an external research grou
 
 ## What you should expect
 
-At the end of this workflow you will always have a one-to-one correspondence: every uploaded PDF remains available in its encrypted original form, and every processed PDF is downloadable in its redacted/obfuscated form. You control the redaction logic via templates, and the UI ensures that every sensitive step—upload, process, download—is gated by the project password. The experience is deliberately interactive: drag rectangles, preview replacements, review a sample, and only then commit to batch operations. This gives you both safety and confidence.
+At the end of this workflow you will always have a one-to-one correspondence: every uploaded PDF remains available in its encrypted original form, and every processed PDF is downloadable in its redacted/obfuscated form. You control the redaction logic via templates, and the UI ensures that every sensitive step—upload, process, download—is gated by the project password. The trust session is held in memory only and per-request credentials are re-encrypted with fresh ephemeral keys to avoid reuse. The experience is deliberately interactive: drag rectangles, preview replacements, review a sample, and only then commit to batch operations. This gives you both safety and confidence.
 
 ## Tips from the UI perspective
 

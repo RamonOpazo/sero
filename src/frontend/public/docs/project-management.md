@@ -125,13 +125,23 @@ PROJECT_ID=(
   | jq -r .id
 )
 
-# 2) upload two PDFs into it
+# 2) upload two PDFs into it (legacy plaintext example)
 for f in scans/*.pdf; do
   curl -X POST "http://localhost:8000/projects/$PROJECT_ID/documents" \
     -H "Content-Type: multipart/form-data" \
     -F "password=horse-battery-staple" \
     -F "file=@$f"
 done
+
+# Recommended: encrypted-in-transit bulk upload (fields may differ by build)
+# 1) fetch ephemeral key and encrypt password client-side, then:
+curl -X POST "http://localhost:8000/documents/bulk-upload" \
+  -H "Content-Type: multipart/form-data" \
+  -F "project_id=$PROJECT_ID" \
+  -F "key_id=<ephemeral-key-id>" \
+  -F "encrypted_password=<base64-ciphertext>" \
+  -F "template_description=Initial intake set" \
+  -F "files=@scans/doc1.pdf" -F "files=@scans/doc2.pdf"
 ```
 
 List projects and show counts:

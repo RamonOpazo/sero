@@ -2,6 +2,7 @@
 slug: getting-started
 title: Getting Started
 date: 2025-08-26T10:01:00.000Z
+next: project-management
 ---
 
 # Getting Started
@@ -32,7 +33,7 @@ Your project is now ready for document uploads.
 4. Maximum file size: 50MB per document
 5. Wait for the upload to complete
 
-Documents are encrypted during upload using AES-256 encryption.
+Documents are encrypted during upload using AES-256 encryption. The web UI establishes a short-lived trust session and re-encrypts your project password per request using fresh ephemeral RSA keys for sensitive operations.
 
 ### Step 3: AI Redaction
 
