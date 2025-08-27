@@ -1,5 +1,6 @@
 import uuid
 import pytest
+import base64
 from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 
@@ -7,6 +8,8 @@ from fastapi import HTTPException, status
 
 from backend.api.controllers import projects_controller
 from backend.api.schemas.projects_schema import ProjectCreate, ProjectUpdate
+from cryptography.hazmat.primitives import serialization, hashes
+from cryptography.hazmat.primitives.asymmetric import padding
 from backend.api.schemas.documents_schema import DocumentCreate
 from backend.api.enums import FileType, ProjectStatus
 from backend.core.security import security_manager
@@ -16,12 +19,25 @@ from backend.db.models import Project as ProjectModel, Document as DocumentModel
 class TestProjectsController:
     def _create_project(self, db: Session, *, name: str = None) -> ProjectModel:
         name = name or f"proj-{uuid.uuid4().hex[:6]}"
+        # Create encrypted password payload
+        key_id, public_pem = security_manager.generate_ephemeral_rsa_keypair()
+        public_key = serialization.load_pem_public_key(public_pem.encode("utf-8"))
+        ciphertext = public_key.encrypt(
+            b"StrongPW!123",
+            padding.OAEP(
+                mgf=padding.MGF1(algorithm=hashes.SHA256()),
+                algorithm=hashes.SHA256(),
+                label=None,
+            ),
+        )
+        import base64
         pc = ProjectCreate(
             name=name,
             description="desc",
             contact_name="tester",
             contact_email="tester@example.com",
-            password="StrongPW!123",
+            key_id=key_id,
+            encrypted_password=base64.b64encode(ciphertext).decode("ascii"),
         )
         created = projects_controller.create(db=db, project_data=pc)
         # return ORM model for further seeding
@@ -81,6 +97,17 @@ class TestProjectsController:
         name = f"dup-{uuid.uuid4().hex[:6]}"
         _ = self._create_project(test_session, name=name)
         with pytest.raises(HTTPException) as exc:
+            # Prepare encrypted payload for duplicate creation attempt
+            key_id2, public_pem2 = security_manager.generate_ephemeral_rsa_keypair()
+            public_key2 = serialization.load_pem_public_key(public_pem2.encode("utf-8"))
+            ciphertext2 = public_key2.encrypt(
+                b"StrongPW!123",
+                padding.OAEP(
+                    mgf=padding.MGF1(algorithm=hashes.SHA256()),
+                    algorithm=hashes.SHA256(),
+                    label=None,
+                ),
+            )
             projects_controller.create(
                 db=test_session,
                 project_data=ProjectCreate(
@@ -88,7 +115,8 @@ class TestProjectsController:
                     description="desc",
                     contact_name="tester",
                     contact_email="tester@example.com",
-                    password="StrongPW!123",
+                    key_id=key_id2,
+                    encrypted_password=base64.b64encode(ciphertext2).decode("ascii"),
                 ),
             )
         assert exc.value.status_code == status.HTTP_400_BAD_REQUEST

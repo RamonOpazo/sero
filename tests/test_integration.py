@@ -1,6 +1,9 @@
 import uuid
 import base64
 from fastapi import status
+from backend.core.security import security_manager
+from cryptography.hazmat.primitives import serialization, hashes
+from cryptography.hazmat.primitives.asymmetric import padding
 
 
 class TestAPIIntegration:
@@ -159,9 +162,24 @@ class TestAPIIntegration:
         # Create multiple projects to test pagination
         created_projects = []
         for i in range(5):
+            # Generate fresh encrypted credentials per request (ephemeral keys are one-time use)
+            key_id, public_pem = security_manager.generate_ephemeral_rsa_keypair()
+            public_key = serialization.load_pem_public_key(public_pem.encode("utf-8"))
+            ciphertext = public_key.encrypt(
+                b"TestPassword123!",
+                padding.OAEP(
+                    mgf=padding.MGF1(algorithm=hashes.SHA256()),
+                    algorithm=hashes.SHA256(),
+                    label=None,
+                ),
+            )
             project_data = {
-                **sample_project_data,
                 "name": f"Test Project {i}",
+                "description": sample_project_data["description"],
+                "contact_name": sample_project_data["contact_name"],
+                "contact_email": sample_project_data["contact_email"],
+                "key_id": key_id,
+                "encrypted_password": base64.b64encode(ciphertext).decode("ascii"),
             }
             response = client.post("/api/projects", json=project_data)
             assert response.status_code == status.HTTP_201_CREATED

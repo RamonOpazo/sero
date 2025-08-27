@@ -5,12 +5,27 @@ from fastapi import HTTPException, status
 
 from backend.api.controllers import prompts_controller, projects_controller, documents_controller
 from backend.api.schemas.projects_schema import ProjectCreate
+from backend.core.security import security_manager
+from cryptography.hazmat.primitives import serialization, hashes
+from cryptography.hazmat.primitives.asymmetric import padding
 from backend.api.schemas.documents_schema import DocumentCreate
 from backend.api.schemas.prompts_schema import PromptCreate, PromptUpdate
 
 
 class TestPromptsController:
     def _create_project_and_document(self, db: Session):
+        # Prepare encrypted credentials for project creation
+        key_id, public_pem = security_manager.generate_ephemeral_rsa_keypair()
+        public_key = serialization.load_pem_public_key(public_pem.encode("utf-8"))
+        ciphertext = public_key.encrypt(
+            b"StrongPW!123",
+            padding.OAEP(
+                mgf=padding.MGF1(algorithm=hashes.SHA256()),
+                algorithm=hashes.SHA256(),
+                label=None,
+            ),
+        )
+        import base64
         proj = projects_controller.create(
             db=db,
             project_data=ProjectCreate(
@@ -18,7 +33,8 @@ class TestPromptsController:
                 description="desc",
                 contact_name="tester",
                 contact_email="tester@example.com",
-                password="StrongPW!123",
+                key_id=key_id,
+                encrypted_password=base64.b64encode(ciphertext).decode("ascii"),
             ),
         )
         doc = documents_controller.create(

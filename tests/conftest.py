@@ -102,15 +102,38 @@ async def async_client(override_get_db_session):
         yield ac
 
 
+from cryptography.hazmat.primitives import serialization, hashes
+from cryptography.hazmat.primitives.asymmetric import padding
+from backend.core.security import security_manager
+
+
+def _encrypt_password_for_project(password: str) -> dict:
+    """Generate an ephemeral key and return dict with key_id and encrypted_password (base64)."""
+    key_id, public_pem = security_manager.generate_ephemeral_rsa_keypair()
+    public_key = serialization.load_pem_public_key(public_pem.encode("utf-8"))
+    ciphertext = public_key.encrypt(
+        password.encode("utf-8"),
+        padding.OAEP(
+            mgf=padding.MGF1(algorithm=hashes.SHA256()),
+            algorithm=hashes.SHA256(),
+            label=None,
+        ),
+    )
+    import base64
+    return {"key_id": key_id, "encrypted_password": base64.b64encode(ciphertext).decode("ascii")}
+
+
 @pytest.fixture
 def sample_project_data():
-    """Sample project data for testing."""
+    """Sample project data for testing (uses encrypted-in-transit password)."""
+    enc = _encrypt_password_for_project("TestPassword123!")
     return {
         "name": f"Test Project {uuid.uuid4().hex[:8]}",
         "description": "A test project for API testing",
         "contact_name": "Test User",
         "contact_email": "test@example.com",
-        "password": "TestPassword123!"
+        "key_id": enc["key_id"],
+        "encrypted_password": enc["encrypted_password"],
     }
 
 

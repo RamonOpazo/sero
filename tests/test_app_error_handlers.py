@@ -130,7 +130,8 @@ class TestAppErrorHandlers:
         assert len(results) == 5
         for result in results:
             if isinstance(result, int):
-                assert result in [status.HTTP_201_CREATED, status.HTTP_422_UNPROCESSABLE_ENTITY, status.HTTP_500_INTERNAL_SERVER_ERROR]
+                # Under concurrent conditions, ephemeral keys may be one-time used; 400 is acceptable
+                assert result in [status.HTTP_201_CREATED, status.HTTP_422_UNPROCESSABLE_ENTITY, status.HTTP_500_INTERNAL_SERVER_ERROR, status.HTTP_400_BAD_REQUEST]
 
     def test_malformed_uuid_handling(self, client):
         """Test handling of malformed UUIDs in URL parameters."""
@@ -201,12 +202,24 @@ class TestAppErrorHandlers:
 
     def test_unicode_characters_handling(self, client, mock_security_manager):
         """Test handling of unicode characters in text fields."""
+        # Build encrypted credentials
+        key_id, public_pem = security_manager.generate_ephemeral_rsa_keypair()
+        public_key = serialization.load_pem_public_key(public_pem.encode("utf-8"))
+        ciphertext = public_key.encrypt(
+            b"TestPassword123!",
+            padding.OAEP(
+                mgf=padding.MGF1(algorithm=hashes.SHA256()),
+                algorithm=hashes.SHA256(),
+                label=None,
+            ),
+        )
         project_data = {
             "name": "Test Project 测试 🚀",
             "description": "Description with émojis and ñ characters",
             "contact_name": "José María García-Sánchez",
             "contact_email": "test@example.com",
-            "password": "TestPassword123!"
+            "key_id": key_id,
+            "encrypted_password": base64.b64encode(ciphertext).decode("ascii"),
         }
         
         response = client.post("/api/projects", json=project_data)
