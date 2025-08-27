@@ -80,8 +80,8 @@ Task breakdown and status (Phase 1)
 - [x] Documentation: migration plan created (this document)
 - [x] EditorAPI: add loadOriginalFileEncrypted(documentId, { keyId, encryptedPassword })
 - [x] DocumentsAPI: add processDocumentEncrypted(documentId, { keyId, encryptedPassword })
-- [ ] use-editor-view.ts: migrate to trust flow (ensureProjectTrust → loadOriginalFileEncrypted); remove password dialog state/handlers; add retryUnlock
-- [ ] editor-view.tsx: remove DocumentPasswordDialog; wire retry button to unlock action
+- [x] use-editor-view.ts: migrate to trust flow (ensureProjectTrust → loadOriginalFileEncrypted); remove password dialog state/handlers; add retryUnlock
+- [x] editor-view.tsx: remove DocumentPasswordDialog; wire retry button to unlock action
 - [ ] document-controls.tsx: migrate Process action to trust flow; remove password dialog
 - [ ] Remove legacy files: dialogs/document-password-dialog.tsx and dialogs/index.ts
 - [ ] Sweep codebase for legacy references (DocumentPasswordDialog, passwordDialog, onRetryPassword, onOpenPasswordDialog)

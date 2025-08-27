@@ -1,6 +1,5 @@
 import { ArrowLeft, KeyRound } from 'lucide-react';
 import { useEditorView } from './use-editor-view';
-import { DocumentPasswordDialog } from './dialogs';
 import DocumentViewer from '@/components/features/document-viewer';
 import { EmptyState } from '@/components';
 
@@ -45,9 +44,9 @@ export function EditorView({ fileType }: EditorViewProps) {
       return (
         <EmptyState
           message="File Not Loaded"
-          buttonText="Retry Password"
+          buttonText="Unlock Project"
           buttonIcon={<KeyRound />}
-          onButtonClick={actionHandlers.onRetryPassword}
+          onButtonClick={actionHandlers.onRetryUnlock}
         />
       );
     }
@@ -77,15 +76,6 @@ export function EditorView({ fileType }: EditorViewProps) {
   return (
     <>
       {content}
-
-      {/* Password Dialog */}
-      <DocumentPasswordDialog
-        isOpen={passwordDialogState.isOpen}
-        onClose={passwordDialogState.onClose}
-        onConfirm={passwordDialogState.onConfirm}
-        error={passwordDialogState.error}
-        isLoading={passwordDialogState.isLoading}
-      />
     </>
   );
 }
