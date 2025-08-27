@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useForm } from 'react-hook-form'
 import { TypedConfirmationDialog, type TypedMessage } from '@/components/shared/typed-confirmation-dialog'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
@@ -75,7 +75,13 @@ export function FormConfirmationDialog(props: FormConfirmationDialogProps) {
   const form = useForm<Record<string, any>>({
     defaultValues: useMemo(() => ({ ...(initialValues || {}) }), [initialValues]),
     mode: 'onSubmit',
+    shouldUnregister: true,
   })
+
+  // Reset form values whenever the dialog opens/closes to avoid retaining sensitive inputs
+  useEffect(() => {
+    form.reset({ ...(initialValues || {}) })
+  }, [isOpen, initialValues, form])
 
   // Render a field based on descriptor
   const renderField = (fd: FieldDescriptor) => (
@@ -99,9 +105,20 @@ export function FormConfirmationDialog(props: FormConfirmationDialogProps) {
           </div>
           <FormControl>
             {fd.type === 'text' ? (
-              <Input placeholder={fd.placeholder} {...field} />
+              <Input placeholder={fd.placeholder} autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck={false} {...field} />
             ) : fd.type === 'password' ? (
-              <Input type="password" placeholder={fd.placeholder} {...field} />
+              <Input 
+                type="password"
+                placeholder={fd.placeholder}
+                autoComplete="new-password"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
+                data-lpignore="true"
+                data-1p-ignore="true"
+                data-bwignore="true"
+                {...field}
+              />
             ) : fd.type === 'textarea' ? (
               <Textarea placeholder={fd.placeholder} rows={(fd as any).rows ?? 8} {...field} />
             ) : fd.type === 'select' ? (
@@ -154,7 +171,7 @@ export function FormConfirmationDialog(props: FormConfirmationDialogProps) {
   // Build form content for TypedConfirmationDialog
   const builtFields = isDeclarative ? [
     <Form key="__built_form__" {...form}>
-      <form onSubmit={form.handleSubmit(async (values) => { await (onSubmit as any)(values) })} className="space-y-4">
+      <form onSubmit={form.handleSubmit(async (values) => { await (onSubmit as any)(values) })} className="space-y-4" autoComplete="off">
         {fields!.map(renderField)}
       </form>
     </Form>,
