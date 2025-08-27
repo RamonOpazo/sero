@@ -1,6 +1,239 @@
 # CHANGELOG
 
 
+## v1.6.0 (2025-08-27)
+
+### Bug Fixes
+
+- **docs**: Serve home doc (path './') at /docs and slug; coerce frontmatter date to string; load
+  markdown from public
+  ([`f0289ea`](https://github.com/RamonOpazo/sero/commit/f0289ea3332f892bb928af6ada685213f5acaf08))
+
+- **esc**: Ensure ESC closes selections panel with one press by including panel state in key handler
+  deps
+  ([`c3678e9`](https://github.com/RamonOpazo/sero/commit/c3678e99e7bcac95f3d1060bc97a4a4ab76b4864))
+
+- **frontend**: Make app build pass by excluding tests from tsc, removing unused imports, adding
+  types, and silencing unused vars
+  ([`9a01db8`](https://github.com/RamonOpazo/sero/commit/9a01db8d6f3c903d8344c6e96e5b31b8f4ad9bc1))
+
+- **prompt panel**: Ensure keyboard handler updates with showPromptPanel/togglePromptPanel and avoid
+  panel state fighting; ESC closes prompt panel reliably; R toggles consistently
+  ([`ab25f55`](https://github.com/RamonOpazo/sero/commit/ab25f557263ac67d92df1f1a8fcc51eaa467d136))
+
+- **viewer-panels**: Panels close only via quit button or clicking outside (backdrop); remove
+  onClick from panel containers; add transparent backdrop; maintain exclusivity
+  ([`3b281cf`](https://github.com/RamonOpazo/sero/commit/3b281cf3fe96bd14ebef99ef1dc6a8d5df6f196a))
+
+### Chores
+
+- Added License
+  ([`7934177`](https://github.com/RamonOpazo/sero/commit/7934177df64702a7907b060d034ee94b2e42b5a2))
+
+- Remove obsolete one-off dialog components; use inline dialogs and shared components instead
+  ([`a4432ef`](https://github.com/RamonOpazo/sero/commit/a4432efe662cb61fd41213d85155ded52af0f24e))
+
+- **frontend**: Finalize Project Trust Session migration and docs
+  ([`10453e2`](https://github.com/RamonOpazo/sero/commit/10453e23912cf1cbded207f16a7ac2515794befd))
+
+- Wrap app with ProjectTrustProvider, remove legacy credentials usage\n- Update document and project
+  AI runs to use ensureProjectTrust(projectId)\n- Add shared CredentialConfirmationDialog and
+  password support in FormConfirmationDialog\n- Add docs/project-trust-session.md\n- Build passes
+  (pnpm -C src/frontend build)
+
+- **selection-manager**: Remove embedded SelectionsList; use left-side Selections Panel for listing
+  ([`6bc6d30`](https://github.com/RamonOpazo/sero/commit/6bc6d3042516665d1627af16f7d80477a6d56046))
+
+### Code Style
+
+- **selections-panel**: Reorganize entries for Info-like look; add spacing, rounded, muted coords
+  section; maintain badges, config and delete
+  ([`780506c`](https://github.com/RamonOpazo/sero/commit/780506cb0875da17bfa040d46bdee6ce43a431b4))
+
+### Documentation
+
+- Add AI Processing Progress Plan (global chin UI, processing provider, milestones)
+  ([`7e33eff`](https://github.com/RamonOpazo/sero/commit/7e33eff359d225f81a5aeaa3eb5e89af6bd2a687))
+
+### Features
+
+- **ai**: Add AI_MIN_CONFIDENCE default and filter AI detections before staging in
+  apply_ai_and_stage
+  ([`f3dcfeb`](https://github.com/RamonOpazo/sero/commit/f3dcfeb942203b7339037c1fc9d2426696ef631d))
+
+- **ai**: Centralize apply in ai router/controller and add SSE stream; strengthen system prompt
+  ([`e9e0ffb`](https://github.com/RamonOpazo/sero/commit/e9e0ffb9aa4cddddba06c8b6c5756688bba680c7))
+
+- add ai_schema.AiApplyRequest - add ai_controller.apply and apply_stream (SSE) - wire /api/ai/apply
+  and /api/ai/apply/stream - frontend: call /api/ai/apply with {document_id}, keep extended timeout
+  - improve prompt_composer guardrails and schema hint
+
+- **ai**: Introduce AiRuntimeSettings and async apply; stage AI selections
+  ([`f2e4376`](https://github.com/RamonOpazo/sero/commit/f2e4376314e6cdd11a8ffeaa9a5c55bf24a5cec6))
+
+test: add controller and API integration tests, conditional live Ollama test
+
+chore(pdf): add deterministic test PDF generator
+
+- **ai**: Stage AI selections via document-scoped endpoint in DocumentViewerAPI.applyAi; frontend
+  reload now reflects AI-generated staged items
+  ([`79be73a`](https://github.com/RamonOpazo/sero/commit/79be73a6562f03f63f3a0665d68246e9a13e3dac))
+
+- **api**: Add /api/ai/introspect endpoint using AiService; wire frontend DocumentViewerAPI.applyAi
+  to new route
+  ([`85eb671`](https://github.com/RamonOpazo/sero/commit/85eb671968c891c7605976d8570bd25ad3412603))
+
+- **commit dialog**: Gray optional auto-stage warning when OFF; compute commit counts based on
+  auto-stage
+  ([`3e64ca2`](https://github.com/RamonOpazo/sero/commit/3e64ca2d739dc5373f05d4d0a242ad480bce71d3))
+
+- **dialog**: Add checkbox, switch, file input field types and optional tooltip support to
+  declarative forms
+  ([`644ce77`](https://github.com/RamonOpazo/sero/commit/644ce77ed23a72a638f5712ed7a45b90b621d43d))
+
+- **dialog**: Support declarative field descriptors in FormConfirmationDialog and refactor prompts
+  create/edit to use it
+  ([`67583b1`](https://github.com/RamonOpazo/sero/commit/67583b1297f5ab435f52be389cd375f484cf404a))
+
+- **docs**: Support is-index frontmatter; redirect /docs to designated index and show it first in
+  sidebar
+  ([`eba28f8`](https://github.com/RamonOpazo/sero/commit/eba28f8801bc9c2f5adc8b4481dfc3fbfedec745))
+
+- **document-viewer**: Highlight prompts toolbar toggle when active; add AI apply telemetry and
+  update UI
+  ([`c700f7e`](https://github.com/RamonOpazo/sero/commit/c700f7e65bd59f699646ad2d383283ecd2f5db94))
+
+Backend: - Add AiApplyTelemetry and AiApplyResponse to documents schema - Update
+  /documents/id/{id}/ai/apply to return AiApplyResponse - Ensure empty-commit scenario returns empty
+  selections with zeroed telemetry
+
+Frontend: - Update DocumentViewerAPI.applyAi to return { selections, telemetry } - Move AI action to
+  prompt commander with Bot icon and toast including filtered/returned stats - Highlight prompts
+  toolbar button when panel is open - Fix TS build errors (remove unused imports/vars, minor
+  signature cleanup)
+
+- **frontend**: Add zod schemas and types for AI detections (AiDetection, AiBox) with parser
+  ([`aa8a58c`](https://github.com/RamonOpazo/sero/commit/aa8a58c2c6e28c12cc17ce067ffb28decc293b6b))
+
+- **frontend**: Beautiful credentials dialog + document runs use session creds
+  ([`c1dbe83`](https://github.com/RamonOpazo/sero/commit/c1dbe83875fb96128145e41db1b9c1c2c2eeb38b))
+
+- Extend FormConfirmationDialog with password field\n- Add CredentialConfirmationDialog based on
+  shared dialog styling\n- Use AiCredentialsProvider dialog\n- Document PromptCommander now uses
+  ensureCredentials() and passes {keyId, encryptedPassword} to streaming\n- Build passes (pnpm -C
+  src/frontend build)
+
+- **frontend**: Global processing chin + AI streaming progress wiring
+  ([`e6d0b3f`](https://github.com/RamonOpazo/sero/commit/e6d0b3f7b8997b0b41ef6a3e056cb71c7041e8c2))
+
+- Add GlobalProcessingChin UI and container; mount in MainLayout\n- Enhance AiProcessingProvider
+  with cancel registry and job state\n- Extend DocumentViewerAPI streaming handlers with enhanced
+  status fields\n- Wire Prompt Commander to provider and streaming events\n- Build passes (pnpm -C
+  src/frontend build)
+
+- **frontend**: Introduce Swagger page and migrate docs to public/docs
+  ([`3be7fa2`](https://github.com/RamonOpazo/sero/commit/3be7fa214e289ceb0e637add8530030ac8801f11))
+
+- **frontend**: Project Trust Session provider and gating
+  ([`ed2fcf4`](https://github.com/RamonOpazo/sero/commit/ed2fcf4fa68adfbb96f214d3518601e0bb307873))
+
+- Add ProjectTrustProvider (session-scoped, TTL) with beautiful credential dialog\n- Wrap app with
+  ProjectTrustProvider\n- Use ensureProjectTrust(projectId) for project AI runs and document AI
+  runs\n- Keep encryption local; pass {keyId, encryptedPassword} to streaming\n- Build passes (pnpm
+  -C src/frontend build)
+
+- **frontend**: Project-level AI run wiring + global chin cancel
+  ([`bbf264d`](https://github.com/RamonOpazo/sero/commit/bbf264d6413ee4357ec99cab0c9d5621dcbe24b0))
+
+- Add Cancel to GlobalProcessingChin and wire via provider\n- Add ai-runner helper to map project
+  streaming events to provider\n- Add Run AI (project) action in Projects table\n- Build passes:
+  pnpm -C src/frontend build
+
+- **frontend**: Session-scoped encrypted credentials cache + project run integration
+  ([`d9215f8`](https://github.com/RamonOpazo/sero/commit/d9215f886798025039091846495524369be21fe3))
+
+- Add AiCredentialsProvider with TTL in-memory cache; never store plaintext\n- Wrap app with
+  credentials provider\n- Projects: fetch AI settings, ensure credentials via provider, and start
+  project run with {keyId, encryptedPassword}\n- Migration doc:
+  docs/frontend-ai-credentials-session-cache.md\n- Build passes (pnpm -C src/frontend build)
+
+- **frontend**: Wire Run AI Detection to /documents/{id}/ai/apply and refresh selections
+  ([`550cca6`](https://github.com/RamonOpazo/sero/commit/550cca684b6ee4902762b7cdd722d036a3062628))
+
+- add reload() to selection-provider and use after AI apply - keep telemetry toast; align with
+  backend AiApplyResponse
+
+- **panels**: Auto-open Info layer when Document Controls is active; ensure selections are visible
+  when Selection Manager is active
+  ([`8e60b23`](https://github.com/RamonOpazo/sero/commit/8e60b23435b53e0a0d0477465ab8bb12bd8559f5))
+
+- **panels**: Sync Selections Panel open/close with Selection Manager widget; expose
+  setShowSelectionsPanel in viewport state; keep selections visible when managing
+  ([`a9f363a`](https://github.com/RamonOpazo/sero/commit/a9f363a49c6af0b950db702ff88e823f00931e7c))
+
+- **prompts**: Change directive input to select with sensible options in add/edit dialogs
+  ([`a97baaa`](https://github.com/RamonOpazo/sero/commit/a97baaa8b3c03aede6fb4a7d96d705f8b11930d3))
+
+- **prompts**: Create prompts as committed and persist immediately to avoid data loss
+  ([`3f3bc3a`](https://github.com/RamonOpazo/sero/commit/3f3bc3a00df63691d942f0ec1c7874219764931d))
+
+- **prompts**: Stable Prompt Panel toggling via R/ESC + tooldeck state handler; add AI badge and
+  filter select to SelectionList
+  ([`897811e`](https://github.com/RamonOpazo/sero/commit/897811e6f6a8c2a72edcd56fca5e03defb603472))
+
+- **selection-commander**: Add auto-stage option in commit dialog; wire useStageCommit(commitAll) to
+  stage before commit when enabled; introduce warnings and messages; integrate
+  FormConfirmationDialog for prompts UI
+  ([`54e6bdb`](https://github.com/RamonOpazo/sero/commit/54e6bdbc65e71570e6bdd48330ac2c29d575887f))
+
+- **selections-panel**: Add inline switches: Stage (committed→staged) and Global toggle with async
+  handling and toasts; panel-only controls; preserve badge and delete
+  ([`171ea66`](https://github.com/RamonOpazo/sero/commit/171ea66865ad9a70dcf9304d78daa18725caeec5))
+
+- **selections-panel**: Improve list container to use full height; prepare for alternating row
+  backgrounds; ongoing panel integration and actions-layer split
+  ([`d3470f3`](https://github.com/RamonOpazo/sero/commit/d3470f3325164689e14c5065d11be1c887042d63))
+
+- **ui**: Add status variants to Badge/Button and update documents table statuses
+  ([`16cb90c`](https://github.com/RamonOpazo/sero/commit/16cb90ce288b6f435d99425a47e8bbe3254ef43b))
+
+- **ui**: Make processing chin part of layout flow (non-fixed) and render at bottom of content
+  ([`9ef617a`](https://github.com/RamonOpazo/sero/commit/9ef617a049a33d4edfa16fb31b2459aed9a29c07))
+
+- **ui**: Use FormConfirmationDialog for prompt creation and persist as committed; fix typed dialog
+  to render form fields without confirmation input
+  ([`918023d`](https://github.com/RamonOpazo/sero/commit/918023de978a7f55fd23e29cdf501129a73be5cf))
+
+- **viewer**: Introduce Selections Panel layer (right-side panel) with lifecycle summary and
+  redesigned list; add showSelectionsPanel state and toggles; wire into layout and actions bar
+  ([`23049bd`](https://github.com/RamonOpazo/sero/commit/23049bdf13bd41abb7fca82c99db1d3d12e197ea))
+
+- **viewer**: Move Selections Panel to left, match Info layer styling; add panelMode list style and
+  keep delete/global controls; panels are mutually exclusive via provider
+  ([`35e0acc`](https://github.com/RamonOpazo/sero/commit/35e0accc92a515ca9018adf9894298796e325abd))
+
+- **viewer hotkeys**: Esc closes help/info/selections panels (in order); add (L) to toggle
+  Selections panel
+  ([`83a3c52`](https://github.com/RamonOpazo/sero/commit/83a3c523d033324892f94f8a997fc66bd228f6ba))
+
+### Refactoring
+
+- **ai**: Move non-stream apply logic from documents controller to ai controller
+  ([`77db4a2`](https://github.com/RamonOpazo/sero/commit/77db4a21c5054f66bac182da5ec24df2050f2c4e))
+
+- **dialogs**: Migrate save dialogs to TypedConfirmationDialog; use declarative
+  FormConfirmationDialog with number+switch for page selection
+  ([`f22d8f0`](https://github.com/RamonOpazo/sero/commit/f22d8f03e22e42a0400a87c992782be7effb8284))
+
+- **prompts**: Replace legacy AddPromptDialog with FormConfirmationDialog for create/edit; persist
+  changes immediately
+  ([`ee1a071`](https://github.com/RamonOpazo/sero/commit/ee1a0710bf249a1ae9764610d940b101b9484276))
+
+- **ui**: Inline confirmation and page selection dialogs where used to avoid transient one-off
+  components
+  ([`a5d0250`](https://github.com/RamonOpazo/sero/commit/a5d025052af3503f1d770f64152538a4e197b5b5))
+
+
 ## v1.5.0 (2025-08-25)
 
 ### Bug Fixes
@@ -21,6 +254,9 @@
 
 - **docs**: Note removal of legacy pending changes adapter for selections
   ([`7b44e5e`](https://github.com/RamonOpazo/sero/commit/7b44e5efbfddfd9435ef1b31d67d5cfeadfb21fb))
+
+- **release**: V1.5.0 [skip ci]
+  ([`b07c81a`](https://github.com/RamonOpazo/sero/commit/b07c81aff1545e43cb3ad640efb330f9aaa4047b))
 
 - **test**: Remove remaining @types/jest devDependency after Vitest migration
   ([`692e6fc`](https://github.com/RamonOpazo/sero/commit/692e6fc764923c9f7b5ba6c21d1923be9ed5f70a))
