@@ -48,13 +48,8 @@ class ProjectCreate(BaseModel):
     description: str | None = Field(None, max_length=500)
     contact_name: str = Field(..., min_length=1, max_length=100)
     contact_email: str = Field(..., min_length=1, max_length=100)
-    password: str = Field(..., min_length=8)
-    
-    @field_validator("password")
-    def validate_password(cls, value: str):
-        if not security_manager.is_strong_password(value):
-            raise ValueError("Password must contain at least 8 characters with uppercase, lowercase, digits, and special characters")
-        return value
+    key_id: str = Field(..., min_length=1)
+    encrypted_password: str = Field(..., min_length=1)
 
 
 class ProjectUpdate(BaseModel):

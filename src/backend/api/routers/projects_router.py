@@ -46,7 +46,7 @@ async def create_project(
     project_data: projects_schema.ProjectCreate,
     db: Session = Depends(get_db_session)
 ):
-    """Create a new project."""
+    """Create a new project using encrypted-in-transit password (key_id + encrypted_password)."""
     return projects_controller.create(db=db, project_data=project_data)
 
 

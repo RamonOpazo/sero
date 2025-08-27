@@ -1,6 +1,8 @@
 from uuid import UUID
 from typing import override
 from sqlalchemy.orm import Session
+import base64
+from fastapi import HTTPException, status
 
 from backend.core.security import security_manager
 from backend.api.schemas import projects_schema
@@ -11,10 +13,25 @@ from backend.crud.base import BaseCrud
 class ProjectCrud(BaseCrud[Project, projects_schema.ProjectCreate, projects_schema.ProjectUpdate]):
     @override
     def create(self, db: Session, data: projects_schema.ProjectCreate) -> Project:
-        project = self.model(**data.model_dump(exclude=["password"]))
-        password_hash = security_manager.hash_password(data.password)
+        # Decrypt password using ephemeral key
+        try:
+            ciphertext = base64.b64decode(data.encrypted_password)
+        except Exception:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid encrypted_password (base64)")
+
+        plaintext = security_manager.decrypt_with_ephemeral_key(key_id=data.key_id, encrypted_data=ciphertext)
+        if not plaintext:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired key/ciphertext")
+
+        # Validate password strength
+        if not security_manager.is_strong_password(plaintext):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Password does not meet strength requirements")
+
+        # Create project and set password hash
+        project = self.model(**data.model_dump(exclude=["key_id", "encrypted_password"]))
+        password_hash = security_manager.hash_password(plaintext)
         project.password_hash = password_hash.encode("utf-8")
-        
+
         db.add(project)
         db.commit()
         db.refresh(project)
