@@ -2,6 +2,7 @@
 slug: project-management
 title: Project Management
 date: 2025-08-26T10:03:00.000Z
+next: redaction-workflow
 ---
 
 # Project Management
@@ -32,11 +33,22 @@ You can rename a project at any time without touching encryption. Rotating the p
 
 ## Creating projects
 
-In the UI, the “New Project” button brings up a small form: name, optional description, password. SERO validates that the password meets your policy and persists the project atomically so that you don’t risk creating half-configured storage. If the project is created successfully, you land on its dashboard, which shows an empty document list and convenient entry points for uploading files or creating templates. In the data table views, SERO uses sensible defaults and confirmation dialogs to protect you from accidental destructive actions.
+In the UI, the “New Project” button brings up a small form: name, optional description, password. On the web, the password is encrypted in transit using a fresh ephemeral RSA key from the server before being sent, then the server decrypts and hashes it for storage. If the project is created successfully, you land on its dashboard, which shows an empty document list and convenient entry points for uploading files or creating templates. In the data table views, SERO uses sensible defaults and confirmation dialogs to protect you from accidental destructive actions.
 
-Via API, creation is intentionally boring:
+Via API, creation supports encrypted-in-transit passwords as well:
 
 ```bash
+# Recommended: encrypted-in-transit (fields may differ by build)
+curl -X POST http://localhost:8000/projects \
+  -H "Content-Type: application/json" \
+  -d '{
+        "name": "Cardio Trials 2024",
+        "description": "Phase II anonymization set",
+        "key_id": "<ephemeral-key-id>",
+        "encrypted_password": "<base64-ciphertext>"
+      }'
+
+# Legacy (plaintext-in-transit); some deployments may still accept this
 curl -X POST http://localhost:8000/projects \
   -H "Content-Type: application/json" \
   -d '{

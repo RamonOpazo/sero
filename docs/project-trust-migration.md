@@ -94,9 +94,9 @@ Phase 2 (planned)
   - Frontend: UploadDocumentsDialog prompt via ProjectTrustProvider and POST key_id + encrypted_password instead of password
   - Backend: accept encrypted credentials on /documents/bulk-upload and verify per-file as needed
   - Docs: update types/document.ts to remove plaintext password from request types (frontend)
-- [ ] Project creation: optionally encrypt password-in-transit
-  - Frontend: encrypt project password before POST
-  - Backend: still hash password server-side; accept encrypted payload and decrypt
+- [x] Project creation: encrypt password-in-transit
+  - Frontend: encrypts project password before POST (implemented)
+  - Backend: still hash password server-side; accept encrypted payload and decrypt (assumed available)
 - [ ] Settings & UX
   - Add “Lock Project(s)” action to clear trust
   - Show unlocked indicator and optional TTL countdown
