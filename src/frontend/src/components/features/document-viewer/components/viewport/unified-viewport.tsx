@@ -1,38 +1,11 @@
-import React, { useRef, useCallback, useEffect } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { useViewportState, useViewportActions } from '../../providers/viewport-provider';
 import { useSelections } from '../../providers/selection-provider';
 import { createKeyboardHandler } from './input/keyboard';
 import { createWheelHandler, createMouseButtonHandlers } from './input/mouse';
+import { useThrottle } from '@/lib/hooks/use-throttle';
 
-/**
- * Throttle utility for high-frequency events like mouse move
- */
-function useThrottle<T extends (...args: any[]) => any>(
-  func: T,
-  delay: number
-): T {
-  const lastCall = useRef<number>(0);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-  
-  return useCallback((...args: Parameters<T>) => {
-    const now = Date.now();
-    
-    if (now - lastCall.current >= delay) {
-      lastCall.current = now;
-      func(...args);
-    } else {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-      
-      timeoutRef.current = setTimeout(() => {
-        lastCall.current = Date.now();
-        func(...args);
-      }, delay - (now - lastCall.current));
-    }
-  }, [func, delay]) as T;
-}
 
 
 interface UnifiedViewportProps {
