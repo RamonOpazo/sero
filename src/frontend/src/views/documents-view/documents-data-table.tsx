@@ -1,5 +1,5 @@
 import { useMemo, useCallback, useState } from 'react';
-import { Eye, Plus, CheckCircle2, AlertCircle, Copy, Edit, Trash2, ArrowLeft } from 'lucide-react';
+import { Eye, Plus, Copy, Edit, Trash2, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { DataTable } from '@/components/features/data-table';
 import { columns, adaptColumns } from '@/components/features/data-table/columns';
