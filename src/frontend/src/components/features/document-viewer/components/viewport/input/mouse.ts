@@ -1,5 +1,5 @@
 import type React from 'react';
-import { useMemo, useRef } from 'react';
+import { useMemo, useRef, useCallback, useEffect } from 'react';
 import { useViewportState } from '@/components/features/document-viewer/providers/viewport-provider';
 import type { ViewportAction } from '@/components/features/document-viewer/providers/viewport-provider';
 
@@ -53,10 +53,13 @@ export function createWheelHandler({ viewportRef, zoom, pan, setPan, dispatch }:
 // Adapter hook: returns a memoized wheel handler wired to viewport state
 export function useWheelHandler(viewportRef: React.RefObject<HTMLDivElement | null>) {
   const { zoom, pan, setPan, dispatch } = useViewportState();
-  return useMemo(
-    () => createWheelHandler({ viewportRef, zoom, pan, setPan, dispatch }),
-    [viewportRef, zoom, pan, setPan, dispatch],
-  );
+  const handlerRef = useRef<(e: WheelEvent) => void>(() => {});
+
+  useEffect(() => {
+    handlerRef.current = createWheelHandler({ viewportRef, zoom, pan, setPan, dispatch });
+  }, [viewportRef, zoom, pan, setPan, dispatch]);
+
+  return useCallback((e: WheelEvent) => handlerRef.current(e), []);
 }
 
 // Mouse button handlers scaffold
@@ -157,6 +160,7 @@ export function createMouseButtonHandlers(deps: MouseDeps): MouseHandlers {
       // Selection drawing handled elsewhere
     }
   };
+
   const onMouseUp: MouseHandlers['onMouseUp'] = (event) => {
     if (event.button === 0) {
       // Left button
@@ -184,6 +188,7 @@ export function createMouseButtonHandlers(deps: MouseDeps): MouseHandlers {
       eventStateRef.current.rightButtonDown = false;
     }
   };
+
   const onMouseLeave: MouseHandlers['onMouseLeave'] = (_event) => {
     // End any ongoing operations on leave
     if (eventStateRef.current.isTemporaryPanning || eventStateRef.current.leftButtonDown) {
@@ -195,6 +200,7 @@ export function createMouseButtonHandlers(deps: MouseDeps): MouseHandlers {
     eventStateRef.current.panStart = null;
     eventStateRef.current.isTemporaryPanning = false;
   };
+  
   const onContextMenu: MouseHandlers['onContextMenu'] = (event) => {
     // Prevent default context menu for now; custom menu can be implemented later
     event.preventDefault();
@@ -222,19 +228,25 @@ export function useMouseButtonHandlers(params: {
     isTemporaryPanning: false,
   });
 
-  const handlers = useMemo(
-    () =>
-      createMouseButtonHandlers({
-        mode,
-        pan,
-        setPan,
-        isPanning,
-        setIsPanning,
-        throttledPanUpdate: params.throttledPanUpdate,
-        eventStateRef,
-      }),
-    [mode, pan, setPan, isPanning, setIsPanning, params.throttledPanUpdate],
-  );
+  const handlersRef = useRef<MouseHandlers | null>(null);
+
+  useEffect(() => {
+    handlersRef.current = createMouseButtonHandlers({
+      mode,
+      pan,
+      setPan,
+      isPanning,
+      setIsPanning,
+      throttledPanUpdate: params.throttledPanUpdate,
+      eventStateRef,
+    });
+  }, [mode, pan, setPan, isPanning, setIsPanning, params.throttledPanUpdate]);
+
+  const onMouseDown = useCallback<MouseHandlers['onMouseDown']>((e) => handlersRef.current?.onMouseDown(e), []);
+  const onMouseMove = useCallback<MouseHandlers['onMouseMove']>((e) => handlersRef.current?.onMouseMove(e), []);
+  const onMouseUp = useCallback<MouseHandlers['onMouseUp']>((e) => handlersRef.current?.onMouseUp(e), []);
+  const onMouseLeave = useCallback<MouseHandlers['onMouseLeave']>((e) => handlersRef.current?.onMouseLeave(e), []);
+  const onContextMenu = useCallback<MouseHandlers['onContextMenu']>((e) => handlersRef.current?.onContextMenu(e), []);
 
   const cursor = useMemo(() => {
     if (eventStateRef.current.isTemporaryPanning || (mode === 'pan' && isPanning)) {
@@ -246,5 +258,5 @@ export function useMouseButtonHandlers(params: {
     return 'default';
   }, [mode, isPanning]);
 
-  return { ...handlers, cursor };
+  return { onMouseDown, onMouseMove, onMouseUp, onMouseLeave, onContextMenu, cursor };
 }

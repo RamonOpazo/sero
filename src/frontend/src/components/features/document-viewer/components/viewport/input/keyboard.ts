@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import type React from 'react';
 import { toast } from 'sonner';
 import { useViewportState, useViewportActions } from '@/components/features/document-viewer/providers/viewport-provider';
@@ -150,12 +150,16 @@ export function createKeyboardHandler(deps: KeyboardDeps) {
       case '=':
         if (!isModifierPressed) {
           const newZoom = Math.min(zoom * 1.1, 3);
-          dispatch({ type: 'SET_ZOOM', payload: newZoom });
-          toast.success(`Zoom ${Math.round(newZoom * 100)}%`);
+          if (newZoom !== zoom) {
+            dispatch({ type: 'SET_ZOOM', payload: newZoom });
+            toast.success(`Zoom ${Math.round(newZoom * 100)}%`);
+          }
           event.preventDefault();
         } else if (ctrlKey || metaKey) {
-          // Keep existing Ctrl+Plus behavior
-          dispatch({ type: 'SET_ZOOM', payload: Math.min(zoom * 1.1, 3) });
+          const newZoom = Math.min(zoom * 1.1, 3);
+          if (newZoom !== zoom) {
+            dispatch({ type: 'SET_ZOOM', payload: newZoom });
+          }
           event.preventDefault();
         }
         break;
@@ -163,12 +167,16 @@ export function createKeyboardHandler(deps: KeyboardDeps) {
       case '-':
         if (!isModifierPressed) {
           const newZoom = Math.max(zoom / 1.1, 0.5);
-          dispatch({ type: 'SET_ZOOM', payload: newZoom });
-          toast.success(`Zoom ${Math.round(newZoom * 100)}%`);
+          if (newZoom !== zoom) {
+            dispatch({ type: 'SET_ZOOM', payload: newZoom });
+            toast.success(`Zoom ${Math.round(newZoom * 100)}%`);
+          }
           event.preventDefault();
         } else if (ctrlKey || metaKey) {
-          // Keep existing Ctrl+Minus behavior
-          dispatch({ type: 'SET_ZOOM', payload: Math.max(zoom / 1.1, 0.5) });
+          const newZoom = Math.max(zoom / 1.1, 0.5);
+          if (newZoom !== zoom) {
+            dispatch({ type: 'SET_ZOOM', payload: newZoom });
+          }
           event.preventDefault();
         }
         break;
@@ -318,7 +326,7 @@ export function createKeyboardHandler(deps: KeyboardDeps) {
   };
 }
 
-// Adapter hook: returns a memoized keyboard handler wired to viewport and selection state
+// Adapter hook: returns a stable keyboard handler wired to viewport and selection state
 export function useKeyboardHandler() {
   const {
     isPanning,
@@ -345,32 +353,11 @@ export function useKeyboardHandler() {
 
   const { deleteSelectedSelection, undo, redo, cancelDraw } = useSelections();
 
-  return useMemo(
-    () =>
-      createKeyboardHandler({
-        isPanning,
-        setIsPanning,
-        cancelDraw,
-        showHelpOverlay,
-        showInfoPanel,
-        showSelectionsPanel,
-        showPromptPanel,
-        toggleHelpOverlay,
-        toggleInfoPanel,
-        toggleSelectionsPanel,
-        togglePromptPanel,
-        numPages,
-        currentPage,
-        setCurrentPage,
-        zoom,
-        dispatch,
-        setMode,
-        deleteSelectedSelection,
-        undo,
-        redo,
-        isViewingProcessedDocument,
-      }),
-    [
+  // Keep the generated handler in a ref and expose a stable proxy
+  const handlerRef = useRef<(e: KeyboardEvent) => void>(() => {});
+
+  useEffect(() => {
+    handlerRef.current = createKeyboardHandler({
       isPanning,
       setIsPanning,
       cancelDraw,
@@ -392,6 +379,30 @@ export function useKeyboardHandler() {
       undo,
       redo,
       isViewingProcessedDocument,
-    ],
-  );
+    });
+  }, [
+    isPanning,
+    setIsPanning,
+    cancelDraw,
+    showHelpOverlay,
+    showInfoPanel,
+    showSelectionsPanel,
+    showPromptPanel,
+    toggleHelpOverlay,
+    toggleInfoPanel,
+    toggleSelectionsPanel,
+    togglePromptPanel,
+    numPages,
+    currentPage,
+    setCurrentPage,
+    zoom,
+    dispatch,
+    setMode,
+    deleteSelectedSelection,
+    undo,
+    redo,
+    isViewingProcessedDocument,
+  ]);
+
+  return useCallback((e: KeyboardEvent) => handlerRef.current(e), []);
 }
