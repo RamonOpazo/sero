@@ -40,7 +40,7 @@ export default function ViewportLayout({ document, className, ...props }: Render
       {...props}
     >
       {/* Main viewport with document and selections */}
-      <UnifiedViewport documentSize={documentSize}>
+      <UnifiedViewport>
         <RenderLayer 
           document={document} 
           onDocumentSizeChange={handleDocumentSizeChange}

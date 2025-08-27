@@ -6,16 +6,12 @@ import { useKeyboardHandler, useWheelHandler, useMouseButtonHandlers } from './i
 import { useThrottle } from '@/lib/hooks/use-throttle';
 
 interface UnifiedViewportProps {
-  children: React.ReactNode;
-  className?: string;
-  documentSize?: { width: number; height: number };
+  children: React.ReactNode,
+  className?: string,
 }
 
-export function UnifiedViewport({ 
-  children, 
-  className,
-}: UnifiedViewportProps) {
-  // Get viewport state from new minimal system
+export function UnifiedViewport({ children, className, }: UnifiedViewportProps) {
+  // Get viewport state from minimal system
   const {
     zoom,
     pan,
@@ -24,29 +20,29 @@ export function UnifiedViewport({
     currentPage,
     setCurrentPage,
   } = useViewportState();
-  
-  
+
   // Get selection state from new system
   const {
     setOnNavigateToPage,
   } = useSelections();
   
   const viewportRef = useRef<HTMLDivElement>(null);
-  const animationFrameRef = useRef<number | null>(null);
-  
 
   // Throttled pan update for smooth performance
   const throttledPanUpdate = useThrottle((newPan: { x: number; y: number }) => {
     setPan(newPan);
   }, 16); // ~60fps
 
-// Mouse button handlers via adapter hook
+  // Mouse button handlers via adapter hook
   const { onContextMenu, onMouseDown, onMouseMove, onMouseUp, onMouseLeave, cursor } = useMouseButtonHandlers({
     throttledPanUpdate,
   });
 
   // Keyboard event handling via adapter hook
   const handleKeyDown = useKeyboardHandler();
+
+  // Wheel handler attached to the viewport element
+  const wheelHandler = useWheelHandler(viewportRef);
 
   // Wire navigation callback so undo/redo move to the relevant page
   useEffect(() => {
@@ -59,42 +55,23 @@ export function UnifiedViewport({
     return () => setOnNavigateToPage(undefined);
   }, [setOnNavigateToPage, setCurrentPage, currentPage]);
 
-  // Attach keyboard and wheel event listeners to document/viewport
-  const wheelHandler = useWheelHandler(viewportRef);
-
+  // Attach keyboard and wheel event listeners to document and viewport
   useEffect(() => {
     document.addEventListener('keydown', handleKeyDown);
-    
+
     const viewport = viewportRef.current;
     if (viewport) {
       viewport.addEventListener('wheel', wheelHandler, { passive: false });
-      return () => {
-        document.removeEventListener('keydown', handleKeyDown);
-        viewport.removeEventListener('wheel', wheelHandler);
-      };
     }
 
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
+      if (viewport) {
+        viewport.removeEventListener('wheel', wheelHandler);
+      }
     };
   }, [handleKeyDown, wheelHandler]);
 
-  // Update viewport bounds reference
-  useEffect(() => {
-    if (viewportRef.current) {
-      // Store reference for coordinate calculations in the unified state
-      // The state management will handle viewport bounds calculation
-    }
-  }, []);
-
-  // Cleanup animation frame on unmount
-  useEffect(() => {
-    return () => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-    };
-  }, []);
 
   // Calculate transform styles - only translation since PDF renders at zoom level
   const transformStyle = React.useMemo(() => ({
