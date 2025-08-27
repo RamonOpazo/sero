@@ -66,15 +66,11 @@ async function fetchAndParseDoc(meta: DocMeta, indexSlug: string): Promise<Doc |
         const { data: rawContent } = await axios.get(url);
 
         // --- Title Logic ---
-        let title = meta.title; // 1. Check manifest
-        if (!title) {
-            const h1Match = rawContent.match(/^# (.*)/m); // 2. Check for H1 in content
-            if (h1Match && h1Match[1]) {
-                title = h1Match[1];
-            } else {
-                title = "Untitled!"; // 3. Fallback
-            }
-        }
+        const title = (() => {
+          const h1Match = rawContent.match(/^# (.*)/m); // 2. Check for H1 in content
+          if (!meta.title && !h1Match) return "Untitled!"
+          return meta.title || h1Match[0]
+        })();
 
         const doc: Doc = {
             ...meta,

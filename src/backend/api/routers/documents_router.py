@@ -59,16 +59,22 @@ async def create_document_with_file(
     project_id: UUID = Form(...),
     file: UploadFile = File(...),
     description: str | None = Form(None),
-    password: str = Form(...),
+    key_id: str = Form(...),
+    encrypted_password: str = Form(...),
     db: Session = Depends(get_db_session)
 ):
-    """Create a document with an associated file upload."""
+    """Create a document with an associated file upload using encrypted password fields (key_id, encrypted_password)."""
     upload_data = files_schema.FileUpload(
         project_id=project_id,
         file=file,
         description=description
     )
-    return documents_controller.create_with_file(db=db, upload_data=upload_data, password=password)
+    return documents_controller.create_with_file_encrypted(
+        db=db,
+        upload_data=upload_data,
+        key_id=key_id,
+        encrypted_password=encrypted_password,
+    )
 
 
 @router.post("/bulk-upload", response_model=generics_schema.Success)
@@ -76,10 +82,11 @@ async def bulk_upload_documents(
     project_id: UUID = Form(...),
     files: list[UploadFile] = File(...),
     template_description: str | None = Form(None),
-    password: str = Form(...),
+    key_id: str = Form(...),
+    encrypted_password: str = Form(...),
     db: Session = Depends(get_db_session)
 ):
-    """Bulk upload multiple documents to a project."""
+    """Bulk upload multiple documents to a project using encrypted password fields (key_id, encrypted_password)."""
     uploads_data = [
         files_schema.FileUpload(
             project_id=project_id,
@@ -88,11 +95,12 @@ async def bulk_upload_documents(
         )
         for file in files
     ]
-    return documents_controller.bulk_create_with_files(
-        db=db, 
-        uploads_data=uploads_data, 
-        password=password, 
-        template_description=template_description
+    return documents_controller.bulk_create_with_files_encrypted(
+        db=db,
+        uploads_data=uploads_data,
+        key_id=key_id,
+        encrypted_password=encrypted_password,
+        template_description=template_description,
     )
 
 

@@ -129,6 +129,14 @@ def create_with_file(db: Session, upload_data: files_schema.FileUpload, password
         )
 
 
+def create_with_file_encrypted(db: Session, upload_data: files_schema.FileUpload, key_id: str, encrypted_password: str) -> documents_schema.Document:
+    """Create a document with file using encrypted password fields from multipart form.
+    Decrypts the password using ephemeral RSA and delegates to create_with_file.
+    """
+    decrypted_password = support_crud._decrypt_password_or_400(encrypted_password_b64=encrypted_password, key_id=key_id)
+    return create_with_file(db=db, upload_data=upload_data, password=decrypted_password)
+
+
 def bulk_create_with_files(db: Session, uploads_data: list[files_schema.FileUpload], password: str, template_description: str | None = None) -> generics_schema.Success:
     # Validate inputs and password
     if not uploads_data:
@@ -189,6 +197,23 @@ def bulk_create_with_files(db: Session, uploads_data: list[files_schema.FileUplo
             "success_count": len(successful_uploads),
             "error_count": len(failed_uploads)
         }
+    )
+
+
+def bulk_create_with_files_encrypted(
+    db: Session,
+    uploads_data: list[files_schema.FileUpload],
+    key_id: str,
+    encrypted_password: str,
+    template_description: str | None = None,
+) -> generics_schema.Success:
+    """Bulk upload handler that accepts encrypted password fields and delegates to plaintext variant after decryption."""
+    decrypted_password = support_crud._decrypt_password_or_400(encrypted_password_b64=encrypted_password, key_id=key_id)
+    return bulk_create_with_files(
+        db=db,
+        uploads_data=uploads_data,
+        password=decrypted_password,
+        template_description=template_description,
     )
 
 
