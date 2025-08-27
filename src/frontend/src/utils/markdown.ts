@@ -2,35 +2,28 @@ import { z } from 'zod';
 import axios from 'axios';
 
 // --- Schemas and Types ---
-
-// Metadata for a single doc, from the manifest
 const docMetaSchema = z.object({
   slug: z.string(),
-  title: z.string().optional(), // Title is now optional in the manifest
+  title: z.string().optional(),
   next: z.string().nullable().optional(),
 });
 
-// The structure of manifest.json
 const manifestSchema = z.object({
   indexSlug: z.string(),
   docs: z.array(docMetaSchema),
 });
 
-type DocMeta = z.infer<typeof docMetaSchema>;
 type Manifest = z.infer<typeof manifestSchema>;
 
-// The final, combined Doc object. Title is non-optional here.
-export interface Doc extends DocMeta {
+export interface Doc extends z.infer<typeof docMetaSchema> {
   title: string;
   content: string;
   is_index: boolean;
 }
 
 // --- Caching ---
-
 const manifestCache: { current: Manifest | null } = { current: null };
 const docCache = new Map<string, Doc>();
-
 
 // --- Core Functions ---
 
@@ -43,82 +36,64 @@ async function fetchManifest(): Promise<Manifest> {
   }
   const url = '/docs/manifest.json';
   const { data } = await axios.get(url);
-  const validation = manifestSchema.safeParse(data);
-  if (!validation.success) {
-    console.error("Invalid docs manifest:", validation.error);
-    throw new Error("Failed to load a valid docs manifest.");
-  }
-  manifestCache.current = validation.data;
-  return validation.data;
+  const manifest = manifestSchema.parse(data); // .parse throws on error
+  manifestCache.current = manifest;
+  return manifest;
 }
 
 /**
- * Fetches a single markdown file, determines its title, and uses its raw content.
+ * Gets a single documentation page by its slug, fetching and parsing if not cached.
+ * Handles 'index' as a special case.
  */
-async function fetchAndParseDoc(meta: DocMeta, indexSlug: string): Promise<Doc | undefined> {
-    const slug = meta.slug;
-    if (docCache.has(slug)) {
-        return docCache.get(slug);
-    }
+export async function getDoc(slug: string): Promise<Doc | undefined> {
+  const manifest = await fetchManifest();
+  const effectiveSlug = slug === 'index' ? manifest.indexSlug : slug;
 
-    const url = `/docs/${slug}.md`;
-    try {
-        const { data: rawContent } = await axios.get(url);
+  if (docCache.has(effectiveSlug)) {
+    return docCache.get(effectiveSlug);
+  }
 
-        // --- Title Logic ---
-        const title = (() => {
-          const h1Match = rawContent.match(/^# (.*)/m); // 2. Check for H1 in content
-          if (!meta.title && !h1Match) return "Untitled!"
-          return meta.title || h1Match[0]
-        })();
+  const meta = manifest.docs.find(d => d.slug === effectiveSlug);
+  if (!meta) return undefined;
 
-        const doc: Doc = {
-            ...meta,
-            title, // The resolved title
-            content: rawContent, // The entire file is the content
-            is_index: slug === indexSlug,
-        };
+  try {
+    const { data: rawContent } = await axios.get(`/docs/${effectiveSlug}.md`);
 
-        docCache.set(slug, doc);
-        return doc;
-    } catch (e) {
-        console.error(`Failed to fetch or parse doc: ${slug}`, e);
-        return undefined;
-    }
+    const h1Match = rawContent.match(/^# (.*)/m);
+    const title = meta.title ?? (h1Match?.[1] || "Untitled!");
+
+    const doc: Doc = {
+      ...meta,
+      title,
+      content: rawContent,
+      is_index: effectiveSlug === manifest.indexSlug,
+    };
+
+    docCache.set(effectiveSlug, doc);
+    return doc;
+  } catch (e) {
+    console.error(`Failed to fetch or parse doc: ${effectiveSlug}`, e);
+    return undefined;
+  }
 }
 
 /**
  * Gets a list of all documentation pages, ordered as they appear in the manifest.
  */
 export async function getDocs(): Promise<Doc[]> {
-  const manifest = await manifestCache.current ?? await fetchManifest();
+  const manifest = await fetchManifest();
   const results = await Promise.all(
-    manifest.docs.map(meta => fetchAndParseDoc(meta, manifest.indexSlug))
+    manifest.docs.map(meta => getDoc(meta.slug))
   );
   return results.filter((d): d is Doc => !!d);
-}
-
-/**
- * Gets a single documentation page by its slug.
- * Handles 'index' as a special case.
- */
-export async function getDoc(slug: string): Promise<Doc | undefined> {
-  const manifest = await manifestCache.current ?? await fetchManifest();
-  const effectiveSlug = slug === 'index' ? manifest.indexSlug : slug;
-
-  const meta = manifest.docs.find(d => d.slug === effectiveSlug);
-  if (!meta) {
-    return undefined;
-  }
-
-  return fetchAndParseDoc(meta, manifest.indexSlug);
 }
 
 // --- Utility Functions ---
 
 export async function docExists(slug: string): Promise<boolean> {
-  const doc = await getDoc(slug);
-  return !!doc;
+  const manifest = await fetchManifest();
+  const effectiveSlug = slug === 'index' ? manifest.indexSlug : slug;
+  return manifest.docs.some(d => d.slug === effectiveSlug);
 }
 
 export async function getDocTitle(slug: string): Promise<string> {

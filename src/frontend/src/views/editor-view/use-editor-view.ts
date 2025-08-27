@@ -146,10 +146,11 @@ export function useEditorView(fileType: 'original' | 'redacted') {
       }
     } catch (error) {
       // User may have cancelled the trust dialog or an error occurred
-      console.error('Unlock or original file load error:', error);
       if (error instanceof Error && error.message === 'cancelled') {
+        // Silent expected cancellation (no error log)
         toast.message('Project unlock cancelled');
       } else {
+        console.error('Failed to unlock or load original file:', error);
         setError('Failed to load original file');
       }
     } finally {
