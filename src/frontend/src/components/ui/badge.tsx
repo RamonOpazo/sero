@@ -17,14 +17,6 @@ const badgeVariants = cva(
           "border-transparent bg-destructive text-white [a&]:hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
         outline:
           "text-foreground [a&]:hover:bg-accent [a&]:hover:text-accent-foreground",
-        // info:
-        //   'bg-info text-info border-info',
-        // success:
-        //   'bg-success text-success border-success',
-        // warning:
-        //   'bg-warning text-warning border-warning',
-        // failure:
-        //   'bg-failure text-failure border-failure'
       },
     },
     defaultVariants: {
@@ -33,13 +25,17 @@ const badgeVariants = cva(
   }
 )
 
+type statusVariants = "default" | "info" | "success" | "warning" | "error"
+
 function Badge({
   className,
   variant,
+  status = "default",
   asChild = false,
+  children,
   ...props
 }: React.ComponentProps<"span"> &
-  VariantProps<typeof badgeVariants> & { asChild?: boolean }) {
+  VariantProps<typeof badgeVariants> & { asChild?: boolean } & { status?: statusVariants }) {
   const Comp = asChild ? Slot : "span"
 
   return (
@@ -47,7 +43,20 @@ function Badge({
       data-slot="badge"
       className={cn(badgeVariants({ variant }), className)}
       {...props}
-    />
+    >
+      {status !== "default" && (
+        <span
+          className={cn(
+            "size-2 rounded-full",
+            status === "info" && "bg-blue-500",
+            status === "success" && "bg-green-500",
+            status === "warning" && "bg-yellow-500",
+            status === "error" && "bg-red-500",
+          )}
+        />
+      )}
+      {children}
+    </Comp>
   )
 }
 
