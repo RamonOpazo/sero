@@ -8,20 +8,22 @@ import rehypeAutolinkHeadings from 'rehype-autolink-headings'
 import { loadMarkdownDoc, docExists } from '@/utils/markdown'
 import { EmptyState } from '@/components'
 import { ArrowLeft } from 'lucide-react'
-import { Link } from 'react-router-dom'
-// import {
-//   TypographyTitle,
-//   TypographyLead,
-//   TypographySubtitle,
-//   TypographyMuted,
-//   TypographyUnorderedList,
-//   TypographyLink,
-//   TypographyHeader,
-//   TypographyContent,
-// } from '@/components/typography'
+import {
+  TypographyTitle,
+  // TypographyLead,
+  // TypographySubtitle,
+  TypographyMuted,
+  TypographyUnorderedList,
+  TypographyLink,
+  // TypographyHeader,
+  // TypographyContent,
+  TypographyH2,
+  TypographyH3,
+} from '@/components/typography'
 
 // Import highlight.js theme
 import 'highlight.js/styles/github-dark.css'
+import { TypographyInlineCode, TypographyOrderedList } from '@/components/typography/typography'
 
 interface DocumentationViewProps {
   docName?: string
@@ -116,38 +118,24 @@ export function DocumentationView({ docName }: DocumentationViewProps) {
                 const to = `/docs/${slug}${hash ? `#${hash}` : ''}`
 
                 return (
-                  <Link
-                    to={to}
-                    className="docs-internal-link no-underline hover:underline"
-                    {...props}
-                  >
+                  <TypographyLink to={to} {...props}>
                     {children}
-                  </Link>
+                  </TypographyLink>
                 )
               }
 
               if (isInternal) {
                 return (
-                  <Link
-                    to={h}
-                    className="docs-internal-link no-underline hover:underline"
-                    {...props}
-                  >
+                  <TypographyLink to={h} {...props}>
                     {children}
-                  </Link>
+                  </TypographyLink>
                 )
               }
 
               return (
-                <Link
-                  to={h}
-                  className="docs-external-link no-underline hover:underline"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  {...props}
-                >
+                <TypographyLink to={h} target="_blank" rel="noopener noreferrer" {...props}>
                   {children}
-                </Link>
+                </TypographyLink>
               )
             },
             table: ({ children, ...props }) => (
@@ -155,23 +143,29 @@ export function DocumentationView({ docName }: DocumentationViewProps) {
                 <table {...props}>{children}</table>
               </div>
             ),
-            h1: ({ node, ...props }) => (
-              <h1 className="text-5xl font-bold tracking-tight sm:text-6xl" {...props} />
+            h1: ({ children, ...props }) => (
+              <TypographyTitle {...props}>{children}</TypographyTitle>
             ),
-            p: ({ node, ...props }) => (
-              <p className="text-md text-muted-foreground mb-3 mt-3" {...props} />
+            h2: ({ children, ...props }) => (
+              <TypographyH2 {...props}>{children}</TypographyH2>
+            ),
+            h3: ({ children, ...props }) => (
+              <TypographyH3 {...props}>{children}</TypographyH3>
+            ),
+            p: ({ children, ...props }) => (
+              <TypographyMuted {...props}>{children}</TypographyMuted>
             ),
             strong: ({ node, ...props }) => (
               <strong className="text-md text-foreground/80 mb-3 mt-3" {...props} />
             ),
-            ul: ({ node, ...props }) => (
-              <ul className="list-disc text-muted-foreground mb-2" {...props} />
+            ul: ({ children, ...props }) => (
+              <TypographyUnorderedList {...props}>{children}</TypographyUnorderedList>
             ),
-            ol: ({ node, ...props }) => (
-              <ul className="list-decimal text-foreground mb-2" {...props} />
+            ol: ({ children, ...props }) => (
+              <TypographyOrderedList {...props}>{children}</TypographyOrderedList>
             ),
             li: ({ node, ...props }) => (
-              <li className="marker:text-foreground/80 marker:font-bold text-muted-foreground ml-2 mb-2" {...props} />
+              <li {...props} />
             ),
             pre: ({ node, className, ...props }) => (
               <pre className={`p-0 rounded-sm ${className}`} {...props} />
@@ -179,15 +173,12 @@ export function DocumentationView({ docName }: DocumentationViewProps) {
             code({ node, className, children, ...props }) {
               const match = /language-(\w+)/.exec(className || "")
               const lang = match ? match[1] : ""
-              const hljs = className ? className.includes("hljs") : false
-              if (hljs) {
+              if (lang) {
                 return (
                   <>
-                    {lang && (
-                      <span className="font-mono font-bold inline-block px-4 pb-1 pt-2 text-md m-0 text-right w-full">
-                        {lang}
-                      </span>
-                    )}
+                    <span className="font-mono font-bold inline-block px-4 pb-1 pt-2 text-md m-0 text-right w-full">
+                      {lang}
+                    </span>
                     <code className={`block p-4 ${className}`} {...props}>
                       {children}
                     </code>
@@ -196,9 +187,7 @@ export function DocumentationView({ docName }: DocumentationViewProps) {
               }
 
               return (
-                <code className={`mx-[0.25ch] font-mono text-md ${className}`} {...props}>
-                  {children}
-                </code>
+                <TypographyInlineCode {...props}>{children}</TypographyInlineCode>
               )
             }
           }}

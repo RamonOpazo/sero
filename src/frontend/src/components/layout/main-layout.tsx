@@ -38,12 +38,12 @@ export function MainLayout({ children }: LayoutProps) {
             <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
               {children}
             </div>
+            {/* Processing chin participates in layout flow to reduce content height when visible */}
+            <GlobalProcessingChinContainer />
           </SidebarInset>
         </SidebarProvider>
         {/* Move Toaster outside the grid layout to prevent layout shifts */}
         <Toaster />
-        {/* Global processing chin mounted at the root level, full-width and independent of layout */}
-        <GlobalProcessingChinContainer />
         </AiProcessingProvider>
       </ProjectTrustProvider>
     </WorkspaceProvider>

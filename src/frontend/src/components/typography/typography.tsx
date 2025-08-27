@@ -61,7 +61,7 @@ export function TypographyH1({ className, children }: Props) {
 export function TypographyH2({ className, children }: Props) {
   return (
     <h2 className={cn(
-      "scroll-m-20 border-b pb-2 text-3xl font-semibold tracking-tight first:mt-0",
+      "scroll-m-20 text-3xl font-semibold tracking-tight first:mt-0",
       className,
     )}
     >{children}</h2>
@@ -111,10 +111,20 @@ export function TypographyBlockquote({ className, children }: Props) {
 export function TypographyUnorderedList({ className, children }: Props) {
   return (
     <ul className={cn(
-      "list-disc ml-6 space-y-2 text-muted-foreground",
+      "list-disc ml-6 space-y-2 text-muted-foreground marker:text-foreground",
       className
     )}
     >{children}</ul>
+  )
+}
+
+export function TypographyOrderedList({ className, children }: Props) {
+  return (
+    <ol className={cn(
+      "list-decimal ml-2 space-y-2 text-muted-foreground marker:text-foreground",
+      className
+    )}
+    >{children}</ol>
   )
 }
 
@@ -122,6 +132,7 @@ export function TypographyInlineCode({ className, children }: Props) {
   return (
     <code className={cn(
       "bg-muted relative rounded px-[0.3rem] py-[0.2rem] font-mono text-sm font-semibold",
+      "before:content-[''] after:content-[''] align-[0.05em]",
       className,
     )}
     >
@@ -178,7 +189,7 @@ export function TypographyLink({ className, children, ...props }: Props & LinkPr
     <Link
       {...props}
       className={cn(
-        "text-md text-primary hover:underline",
+        "no-underline text-md text-primary hover:underline",
         className
       )}
     >{children}</Link>

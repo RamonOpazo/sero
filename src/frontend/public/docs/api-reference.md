@@ -2,7 +2,6 @@
 slug: api-reference
 title: API Reference
 date: 2025-08-26T10:02:00.000Z
-path: ./api-reference
 ---
 
 # API Reference

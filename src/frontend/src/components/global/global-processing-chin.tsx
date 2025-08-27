@@ -37,15 +37,15 @@ export function GlobalProcessingChin(props: GlobalProcessingChinProps) {
   if (stageIndex === null || stageTotal === null || percent === null) return null;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 h-6 border-t bg-background/80 supports-[backdrop-filter]:backdrop-blur">
+    <div data-slot="processing-chin" className="h-8 border-t bg-background/80 supports-[backdrop-filter]:backdrop-blur shrink-0">
       <div className="mx-auto max-w-[1920px] h-full flex items-center gap-3 px-3 text-[11px]">
         {/* Milestone index/total */}
         <div className="shrink-0 tabular-nums text-muted-foreground">
-          {stageIndex + 1}/{stageTotal}
+          [ {stageIndex + 1} / {stageTotal} ]
         </div>
         {/* Milestone name */}
         <div className="shrink-0 truncate" title={stageLabel ?? undefined}>
-          {stageLabel ?? ''}
+          <span className="text-muted-foreground">milestone:</span> {stageLabel ?? ''}
         </div>
         {/* Subtask */}
         {subtask ? (
@@ -88,7 +88,7 @@ export function GlobalProcessingChin(props: GlobalProcessingChinProps) {
           </Button>
         ) : null}
         {/* Progress Bar */}
-        <div className="shrink-0 w-48">
+        <div className="shrink-0 w-50">
           <Progress value={percent} className="h-2" />
         </div>
       </div>

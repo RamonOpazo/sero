@@ -2,7 +2,6 @@
 slug: project-management
 title: Project Management
 date: 2025-08-26T10:03:00.000Z
-path: ./project-management
 ---
 
 # Project Management

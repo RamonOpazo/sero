@@ -2,7 +2,7 @@
 slug: whats-sero
 title: What is SERO?
 date: 2025-08-26T10:00:00.000Z
-path: ./
+is-index: true
 ---
 
 # What is SERO?

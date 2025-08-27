@@ -2,7 +2,6 @@
 slug: redaction-workflow
 title: The Redaction Workflow
 date: 2025-08-26T10:04:00.000Z
-path: ./redaction-workflow
 ---
 
 # The Redaction Workflow

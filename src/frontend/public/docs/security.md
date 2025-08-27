@@ -2,7 +2,6 @@
 slug: security
 title: Security Overview
 date: 2025-08-26T10:05:00.000Z
-path: ./security
 ---
 
 # Security Overview
