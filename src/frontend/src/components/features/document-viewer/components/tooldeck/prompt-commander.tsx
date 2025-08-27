@@ -11,8 +11,7 @@ import { usePrompts } from "../../providers/prompt-provider";
 import { useSelections } from "../../providers/selection-provider";
 import { DocumentViewerAPI } from '@/lib/document-viewer-api';
 import { useAiProcessing } from '@/providers/ai-processing-provider';
-import { useAiCredentials } from '@/providers/ai-credentials-provider';
-import { ProjectsAPI } from '@/lib/projects-api';
+import { useProjectTrust } from '@/providers/project-trust-provider';
 
 interface PromptControlsProps {
   document: MinimalDocumentType;
@@ -57,7 +56,7 @@ export default function PromptManagement({ document }: PromptControlsProps) {
   const cancelRef = useRef<(() => void) | null>(null);
 
   // Password dialog state for AI
-  const { ensureCredentials } = useAiCredentials();
+  const { ensureProjectTrust } = useProjectTrust();
   
   // Load prompts when component mounts
   useEffect(() => {
@@ -205,9 +204,7 @@ export default function PromptManagement({ document }: PromptControlsProps) {
   // Start AI: ensure credentials then run
   const handleStartAI = useCallback(async () => {
     try {
-      const res = await ProjectsAPI.getProjectAiSettings(document.project_id);
-      const providerName = res.ok ? (res.value as any).provider : 'ollama';
-      const { keyId, encryptedPassword } = await ensureCredentials(providerName);
+      const { keyId, encryptedPassword } = await ensureProjectTrust(document.project_id);
       await handleRunAIDetectionWithCredentials(keyId, encryptedPassword);
     } catch (e) {
       // user cancelled or encryption failed
@@ -215,7 +212,7 @@ export default function PromptManagement({ document }: PromptControlsProps) {
         // suppress validation errors already toasted elsewhere
       }
     }
-  }, [document.project_id, ensureCredentials, handleRunAIDetectionWithCredentials]);
+  }, [document.project_id, ensureProjectTrust, handleRunAIDetectionWithCredentials]);
 
   // Deprecated: inline password dialog replaced with AiCredentialsProvider
 
