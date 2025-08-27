@@ -82,9 +82,9 @@ Task breakdown and status (Phase 1)
 - [x] DocumentsAPI: add processDocumentEncrypted(documentId, { keyId, encryptedPassword })
 - [x] use-editor-view.ts: migrate to trust flow (ensureProjectTrust → loadOriginalFileEncrypted); remove password dialog state/handlers; add retryUnlock
 - [x] editor-view.tsx: remove DocumentPasswordDialog; wire retry button to unlock action
-- [ ] document-controls.tsx: migrate Process action to trust flow; remove password dialog
-- [ ] Remove legacy files: dialogs/document-password-dialog.tsx and dialogs/index.ts
-- [ ] Sweep codebase for legacy references (DocumentPasswordDialog, passwordDialog, onRetryPassword, onOpenPasswordDialog)
+- [x] document-controls.tsx: migrate Process action to trust flow; remove password dialog
+- [x] Remove legacy files: dialogs/document-password-dialog.tsx and dialogs/index.ts
+- [x] Sweep codebase for legacy references (DocumentPasswordDialog, passwordDialog, onRetryPassword, onOpenPasswordDialog)
 
 Phase 2 (tracked, not started)
 

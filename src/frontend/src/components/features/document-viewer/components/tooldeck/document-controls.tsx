@@ -9,8 +9,8 @@ import { UISelectionStage } from "../../types/selection-lifecycle";
 import type { MinimalDocumentType } from "@/types";
 import { DocumentsAPI } from "@/lib/documents-api";
 import { EditorAPI } from "@/lib/editor-api";
-import { DocumentPasswordDialog } from "@/views/editor-view/dialogs";
 import { toast } from "sonner";
+import { useProjectTrust } from "@/providers/project-trust-provider";
 
 interface DocumentControlsProps {
   document: MinimalDocumentType;
@@ -23,9 +23,9 @@ interface DocumentControlsProps {
 export default function DocumentControls({ document }: DocumentControlsProps) {
   const { isViewingProcessedDocument, dispatch } = useViewportState();
   const { selectionCount, hasUnsavedChanges, saveLifecycle, uiSelections } = useSelections() as any;
-  const [isPasswordDialogOpen, setPasswordDialogOpen] = React.useState(false);
   const [isProcessing, setIsProcessing] = React.useState(false);
   const [processError, setProcessError] = React.useState<string | null>(null);
+  const { ensureProjectTrust } = useProjectTrust();
 
   React.useEffect(() => {
     const hasRedacted = document.redacted_file !== null;
@@ -178,43 +178,7 @@ export default function DocumentControls({ document }: DocumentControlsProps) {
         <Button
           variant="default"
           size="sm"
-          onClick={() => setPasswordDialogOpen(true)}
-          disabled={isProcessing || isViewingProcessedDocument || !document.original_file || selectionCount === 0}
-          className="w-full justify-start h-9 text-xs"
-          title={selectionCount === 0 ? "Create a selection to enable processing" : undefined}
-        >
-          {isProcessing ? (
-            <span className="mr-2 h-3 w-3 animate-spin" />
-          ) : (
-            <Play className="mr-2 h-3 w-3" />
-          )}
-          {isProcessing ? 'Processing...' : 'Process Document'}
-        </Button>
-        {/* Commit state summary */}
-        {(() => {
-          const ui = (uiSelections || []) as any[];
-          const stagedCount = ui.filter((s: any) => [UISelectionStage.StagedCreation, UISelectionStage.StagedEdition, UISelectionStage.StagedDeletion].includes(s.stage)).length;
-          const committedCount = ui.filter((s: any) => s.stage === UISelectionStage.Committed).length;
-          return (
-            <div className="flex items-center gap-2 mt-1 text-xs">
-              <Badge variant="secondary" className="px-1.5 py-0.5">Committed: {committedCount}</Badge>
-              <Badge variant="outline" className="px-1.5 py-0.5">Staged: {stagedCount}</Badge>
-            </div>
-          );
-        })()}
-
-        <DocumentPasswordDialog
-          isOpen={isPasswordDialogOpen}
-          onClose={() => { setPasswordDialogOpen(false); setProcessError(null); }}
-          notice={(() => {
-            const ui = (uiSelections || []) as any[];
-            const stagedCount = ui.filter((s: any) => [UISelectionStage.StagedCreation, UISelectionStage.StagedEdition, UISelectionStage.StagedDeletion].includes(s.stage)).length;
-            const parts: string[] = [];
-            if (hasUnsavedChanges) parts.push('pending changes will be staged');
-            if (stagedCount > 0) parts.push(`${stagedCount} staged selection${stagedCount === 1 ? '' : 's'} present`);
-            return parts.length ? `Note: ${parts.join(' • ')}. Only committed selections are used for processing.` : 'Only committed selections are used for processing.';
-          })()}
-          onConfirm={async (password) => {
+          onClick={async () => {
             try {
               setProcessError(null);
               setIsProcessing(true);
@@ -237,11 +201,12 @@ export default function DocumentControls({ document }: DocumentControlsProps) {
                 }
               }
 
-              // Process on backend
-              const result = await DocumentsAPI.processDocument(document.id, password);
+              // Unlock project and process
+              const { keyId, encryptedPassword } = await ensureProjectTrust(document.project_id);
+              const result = await DocumentsAPI.processDocumentEncrypted(document.id, { keyId, encryptedPassword });
               if (!result.ok) {
                 setIsProcessing(false);
-                setProcessError('Invalid password or server error');
+                setProcessError('Invalid credentials or server error');
                 return;
               }
 
@@ -252,7 +217,6 @@ export default function DocumentControls({ document }: DocumentControlsProps) {
                 toast.warning('Processed, but failed to fetch redacted file', { description: 'Try toggling to Redacted view or downloading again.' });
                 // Still switch view; UI will try load later
                 dispatch({ type: 'SET_VIEWING_PROCESSED', payload: true });
-                setPasswordDialogOpen(false);
                 return;
               }
 
@@ -278,18 +242,42 @@ export default function DocumentControls({ document }: DocumentControlsProps) {
               dispatch({ type: 'SET_DOCUMENT', payload: nextDoc });
               dispatch({ type: 'SET_VIEWING_PROCESSED', payload: true });
 
-              setPasswordDialogOpen(false);
               setIsProcessing(false);
               toast.success('Document processed successfully');
-            } catch (err) {
+            } catch (err: any) {
               setIsProcessing(false);
+              if (err instanceof Error && err.message === 'cancelled') {
+                toast.message('Project unlock cancelled');
+                return;
+              }
               setProcessError('Processing failed');
               toast.error('Processing failed');
             }
           }}
-          error={processError}
-          isLoading={isProcessing}
-        />
+          disabled={isProcessing || isViewingProcessedDocument || !document.original_file || selectionCount === 0}
+          className="w-full justify-start h-9 text-xs"
+          title={selectionCount === 0 ? "Create a selection to enable processing" : undefined}
+        >
+          {isProcessing ? (
+            <span className="mr-2 h-3 w-3 animate-spin" />
+          ) : (
+            <Play className="mr-2 h-3 w-3" />
+          )}
+          {isProcessing ? 'Processing...' : 'Process Document'}
+        </Button>
+        {/* Commit state summary */}
+        {(() => {
+          const ui = (uiSelections || []) as any[];
+          const stagedCount = ui.filter((s: any) => [UISelectionStage.StagedCreation, UISelectionStage.StagedEdition, UISelectionStage.StagedDeletion].includes(s.stage)).length;
+          const committedCount = ui.filter((s: any) => s.stage === UISelectionStage.Committed).length;
+          return (
+            <div className="flex items-center gap-2 mt-1 text-xs">
+              <Badge variant="secondary" className="px-1.5 py-0.5">Committed: {committedCount}</Badge>
+              <Badge variant="outline" className="px-1.5 py-0.5">Staged: {stagedCount}</Badge>
+            </div>
+          );
+        })()}
+
 
         <Button
           variant="outline"
