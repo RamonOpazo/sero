@@ -25,7 +25,7 @@ export function useEditorView(fileType: 'original' | 'redacted') {
   const [error, setError] = useState<string | null>(null);
 
   // Trust flow state
-  const { ensureProjectTrust } = useProjectTrust();
+  const { ensureProjectTrust, clearProjectTrust } = useProjectTrust() as any;
   const [autoUnlockTried, setAutoUnlockTried] = useState(false);
 
   // Load document metadata for the current document
@@ -102,7 +102,7 @@ export function useEditorView(fileType: 'original' | 'redacted') {
 
     try {
       const { keyId, encryptedPassword } = await ensureProjectTrust(projectId);
-      const result = await EditorAPI.loadOriginalFileEncrypted(documentId, { keyId, encryptedPassword });
+      let result = await EditorAPI.loadOriginalFileEncrypted(documentId, { keyId, encryptedPassword });
 
       if (result.ok) {
         setFileData(result.value);
@@ -130,7 +130,19 @@ export function useEditorView(fileType: 'original' | 'redacted') {
           });
         }
       } else {
-        setError(result.error instanceof Error ? result.error.message : 'Failed to load original file');
+        // Possible expired ephemeral token; clear trust and retry once
+        try {
+          clearProjectTrust(projectId);
+          const { keyId: keyId2, encryptedPassword: enc2 } = await ensureProjectTrust(projectId);
+          result = await EditorAPI.loadOriginalFileEncrypted(documentId, { keyId: keyId2, encryptedPassword: enc2 });
+          if (result.ok) {
+            setFileData(result.value);
+          } else {
+            setError(result.error instanceof Error ? result.error.message : 'Failed to load original file');
+          }
+        } catch (e) {
+          setError('Failed to load original file');
+        }
       }
     } catch (error) {
       // User may have cancelled the trust dialog or an error occurred

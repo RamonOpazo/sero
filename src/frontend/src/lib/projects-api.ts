@@ -144,7 +144,7 @@ export const ProjectsAPI = {
   },
 
   /**
-   * Create a new project
+   * Create a new project (plaintext password - legacy)
    */
   async createProject(projectData: ProjectCreateType): Promise<Result<ProjectType, unknown>> {
     return AsyncResultWrapper
@@ -152,7 +152,40 @@ export const ProjectsAPI = {
       .tap(() => {
         toast.success(
           "Project created successfully",
-          { description: `Created "${projectData.name}"` }
+          { description: `Created \"${projectData.name}\"` }
+        );
+      })
+      .catch((error: unknown) => {
+        toast.error(
+          "Failed to create project",
+          { description: error instanceof Error ? error.message : "Please try again." }
+        );
+        throw error;
+      })
+      .toResult();
+  },
+
+  /**
+   * Create a new project with encrypted password in transit
+   */
+  async createProjectEncrypted(
+    projectData: Omit<ProjectCreateType, 'password'>,
+    creds: { keyId: string; encryptedPassword: string },
+  ): Promise<Result<ProjectType, unknown>> {
+    const payload = {
+      name: projectData.name?.trim(),
+      description: (projectData.description?.trim?.() || projectData.description) ?? undefined,
+      contact_name: projectData.contact_name?.trim(),
+      contact_email: projectData.contact_email?.trim(),
+      key_id: creds.keyId,
+      encrypted_password: creds.encryptedPassword,
+    };
+    return AsyncResultWrapper
+      .from(api.safe.post(`/projects`, payload) as Promise<Result<ProjectType, unknown>>)
+      .tap(() => {
+        toast.success(
+          "Project created successfully",
+          { description: `Created \"${projectData.name}\"` }
         );
       })
       .catch((error: unknown) => {

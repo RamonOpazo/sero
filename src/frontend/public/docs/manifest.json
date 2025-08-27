@@ -1,0 +1,25 @@
+{
+  "indexSlug": "whats-sero",
+  "docs": [
+    {
+      "slug": "whats-sero",
+      "next": "getting-started"
+    },
+    {
+      "slug": "getting-started",
+      "next": "project-management"
+    },
+    {
+      "slug": "project-management",
+      "next": "redaction-workflow"
+    },
+    {
+      "slug": "redaction-workflow",
+      "next": "security"
+    },
+    {
+      "slug": "security",
+      "next": null
+    }
+  ]
+}

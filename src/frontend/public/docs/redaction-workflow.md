@@ -1,10 +1,3 @@
----
-slug: redaction-workflow
-title: The Redaction Workflow
-date: 2025-08-26T10:04:00.000Z
-next: security
----
-
 # The Redaction Workflow
 
 Sero was designed to make redaction approachable and predictable even for teams who don’t want to write API calls or scripts. Every action you can perform with the API is mirrored in the user interface, and the interface is usually where first-time users will spend most of their time. This section walks through the entire redaction workflow as it looks from the UI: what you see on screen, what you are expected to provide, and what results to expect after each step.

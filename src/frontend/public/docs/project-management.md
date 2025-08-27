@@ -1,10 +1,3 @@
----
-slug: project-management
-title: Project Management
-date: 2025-08-26T10:03:00.000Z
-next: redaction-workflow
----
-
 # Project Management
 
 Projects are the backbone of SERO. They give you a clean perimeter for everything related to a redaction effort—documents, templates, processing history—and they enforce the central security primitive of SERO: a project password that gates decryption. If you remember one mental model, make it this one: a project is a sealed box; the password is the key. Without that key, encrypted artifacts are indistinguishable from noise.

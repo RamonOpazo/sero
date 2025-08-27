@@ -1,10 +1,3 @@
----
-slug: getting-started
-title: Getting Started
-date: 2025-08-26T10:01:00.000Z
-next: project-management
----
-
 # Getting Started
 
 This guide will help you get up and running with SERO in just a few minutes.
