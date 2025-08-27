@@ -3,10 +3,8 @@ import { cn } from '@/lib/utils';
 import { useViewportState, useViewportActions } from '../../providers/viewport-provider';
 import { useSelections } from '../../providers/selection-provider';
 import { createKeyboardHandler } from './input/keyboard';
-import { createWheelHandler, createMouseButtonHandlers } from './input/mouse';
+import { createMouseButtonHandlers, useWheelHandler } from './input/mouse';
 import { useThrottle } from '@/lib/hooks/use-throttle';
-
-
 
 interface UnifiedViewportProps {
   children: React.ReactNode;
@@ -82,12 +80,6 @@ export function UnifiedViewport({
     setPan(newPan);
   }, 16); // ~60fps
 
-  // No longer need debounced selection updates as drawing is handled by SelectionsLayerNew
-
-  // Enhanced mouse event handlers with multi-button support (Option A) - mousedown moved to input/mouse
-
-
-
   // Mouse button handlers (context menu only for now)
   const { onContextMenu, onMouseDown, onMouseMove, onMouseUp, onMouseLeave } = React.useMemo(() => createMouseButtonHandlers({
     mode,
@@ -106,7 +98,6 @@ export function UnifiedViewport({
     throttledPanUpdate,
     eventStateRef,
   ]);
-
 
   // Keyboard event handling
   const handleKeyDown = React.useMemo(() => createKeyboardHandler({
@@ -167,32 +158,24 @@ export function UnifiedViewport({
   }, [setOnNavigateToPage, setCurrentPage, currentPage]);
 
   // Attach keyboard and wheel event listeners to document/viewport
+  const wheelHandler = useWheelHandler(viewportRef);
+
   useEffect(() => {
     document.addEventListener('keydown', handleKeyDown);
     
-    // Add wheel event listener with passive: false to allow preventDefault
     const viewport = viewportRef.current;
     if (viewport) {
-      const wheelHandler = createWheelHandler({
-        viewportRef,
-        zoom,
-        pan,
-        setPan,
-        dispatch,
-      });
-      
       viewport.addEventListener('wheel', wheelHandler, { passive: false });
-      
       return () => {
         document.removeEventListener('keydown', handleKeyDown);
         viewport.removeEventListener('wheel', wheelHandler);
       };
     }
-    
+
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [handleKeyDown, zoom, pan, setPan, dispatch]);
+  }, [handleKeyDown, wheelHandler]);
 
   // Update viewport bounds reference
   useEffect(() => {

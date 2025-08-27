@@ -1,4 +1,6 @@
 import type React from 'react';
+import { useMemo } from 'react';
+import { useViewportState } from '@/components/features/document-viewer/providers/viewport-provider';
 import type { ViewportAction } from '../../../providers/viewport-provider';
 
 export interface WheelDeps {
@@ -40,6 +42,15 @@ export function createWheelHandler({ viewportRef, zoom, pan, setPan, dispatch }:
     dispatch({ type: 'SET_ZOOM', payload: newZoom });
     setPan({ x: newPanX, y: newPanY });
   };
+}
+
+// Adapter hook: returns a memoized wheel handler wired to viewport state
+export function useWheelHandler(viewportRef: React.RefObject<HTMLDivElement | null>) {
+  const { zoom, pan, setPan, dispatch } = useViewportState();
+  return useMemo(
+    () => createWheelHandler({ viewportRef, zoom, pan, setPan, dispatch }),
+    [viewportRef, zoom, pan, setPan, dispatch],
+  );
 }
 
 // Mouse button handlers scaffold
