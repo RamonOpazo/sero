@@ -24,9 +24,10 @@ SERO is built with security as a foundational principle, implementing multiple l
 
 ### File Download Security
 - **RSA-2048 Ephemeral Keys**: Generated fresh for each download
+- **Per-request Re-encryption**: Client re-encrypts the in-memory project password with a fresh ephemeral public key for every gated request
 - **Password Encryption**: Passwords never sent in URLs
 - **Key Destruction**: Private keys destroyed immediately after use
-- **No Key Reuse**: Each download uses unique key pair
+- **No Key Reuse**: Each download uses unique key pair (server rejects reuse)
 
 ## Authentication & Authorization
 
@@ -96,6 +97,12 @@ Authorization: Bearer your-api-key-here
 - Third-party security audits
 
 ## Technical Implementation
+
+### Project Trust Sessions
+- Projects require an "unlock" to perform sensitive actions (download originals, processing, etc.)
+- The password is held in memory for a short TTL and never persisted
+- For each request, the client fetches a fresh ephemeral public key and re-encrypts the password
+- If the TTL expires, the user is prompted again
 
 ### RSA Encryption Process
 1. **Key Generation**: Server generates ephemeral RSA-2048 key pair

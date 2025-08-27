@@ -34,6 +34,8 @@ Impacted areas
 - Providers already exist: src/frontend/src/providers/project-trust-provider.tsx
 
 Detailed changes
+- Providers updated to regenerate encrypted credentials per request using in-memory password cache.
+- Trust TTL aligned to server ephemeral key TTL minus a safety margin.
 1) Editor API
    - Add EditorAPI.loadOriginalFileEncrypted(documentId, { keyId, encryptedPassword }) that downloads the original file using encrypted credentials. No plaintext password parameter.
 
@@ -86,9 +88,20 @@ Task breakdown and status (Phase 1)
 - [x] Remove legacy files: dialogs/document-password-dialog.tsx and dialogs/index.ts
 - [x] Sweep codebase for legacy references (DocumentPasswordDialog, passwordDialog, onRetryPassword, onOpenPasswordDialog)
 
-Phase 2 (tracked, not started)
+Phase 2 (planned)
 
-- [ ] Bulk upload: switch plaintext password to { key_id, encrypted_password } (frontend + backend)
-- [ ] Project creation: optionally encrypt password-in-transit (frontend + backend)
-- [ ] Settings: lock/clear trust, TTL controls, and idle auto-lock
+- [ ] Bulk upload: switch plaintext password to { key_id, encrypted_password }
+  - Frontend: UploadDocumentsDialog prompt via ProjectTrustProvider and POST key_id + encrypted_password instead of password
+  - Backend: accept encrypted credentials on /documents/bulk-upload and verify per-file as needed
+  - Docs: update types/document.ts to remove plaintext password from request types (frontend)
+- [ ] Project creation: optionally encrypt password-in-transit
+  - Frontend: encrypt project password before POST
+  - Backend: still hash password server-side; accept encrypted payload and decrypt
+- [ ] Settings & UX
+  - Add “Lock Project(s)” action to clear trust
+  - Show unlocked indicator and optional TTL countdown
+  - Optional idle auto-lock (configurable)
+- [ ] Testing & Telemetry
+  - E2E tests for repeated document entries without 400s
+  - Non-sensitive telemetry for unlock/lock events (counts only)
 
