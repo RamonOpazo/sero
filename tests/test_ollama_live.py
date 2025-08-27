@@ -31,7 +31,23 @@ def test_ollama_health_and_generate_selections_live(test_session: Session):
         if p.name == "ollama":
             models = p.models
             break
-    selected_model = models[0] if models else None
+    # Prefer the smallest/fastest model heuristically
+    preferred_order = [
+        'qwen2.5:0.5b', 'qwen2.5:0.5b-instruct', 'phi3:mini', 'phi3:3.8b', 'tinyllama', 'llama3.2:1b', 'llama3.2:3b', 'mxbai-embed-large',
+    ]
+    def pick_fast_model(avail: list[str]) -> str | None:
+        low = [m for m in avail if any(pref in m.lower() for pref in [
+            '0.5b', 'mini', 'tiny', ':1b', ':2b', ':3b',
+        ])]
+        # strict preference order first
+        for pref in preferred_order:
+            for m in avail:
+                if pref in m.lower():
+                    return m
+        if low:
+            return low[0]
+        return avail[0] if avail else None
+    selected_model = pick_fast_model(models)
 
     # 3) Create project/document and attach a known PDF
     password = "$trongP455W0RD"

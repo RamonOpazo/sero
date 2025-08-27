@@ -39,11 +39,11 @@ fi
 OLLAMA_MODEL="llama2"
 echo_step "Checking for Ollama model: $OLLAMA_MODEL..."
 if ollama list | grep -q "$OLLAMA_MODEL"; then
-  echo "✅ Model '$OLLAMA_MODEL' is already available."
+  echo "ollama model '$OLLAMA_MODEL' is already available."
 else
   echo "Model not found. Pulling '$OLLAMA_MODEL' (this may take a while)..."
   ollama pull "$OLLAMA_MODEL"
-  echo "✅ Model '$OLLAMA_MODEL' pulled successfully."
+  echo "ollama model '$OLLAMA_MODEL' pulled successfully."
 fi
 
 
@@ -70,14 +70,12 @@ echo "Installing '$APP_NAME' from GitHub using 'uv tool install'..."
 uv tool install --from "$GITHUB_REPO_URL" "$APP_NAME"
 
 echo ""
-echo "-------------------------------------------------"
-echo "🎉 SERO installation complete!"
-echo "-------------------------------------------------"
+echo "SERO installation complete!"
 echo ""
 echo "'$APP_NAME' is now installed in an isolated environment."
 echo "You can now run it from anywhere by simply typing:"
 echo ""
 echo "   $APP_NAME"
 echo ""
-echo "NOTE: You may need to restart your terminal session for the $APP_NAME command to be available in your PATH."
+echo "NOTE: You may need to restart your terminal session for the '$APP_NAME' command to be available in your PATH."
 echo ""
