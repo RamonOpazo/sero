@@ -1,5 +1,5 @@
 import { useMemo, useCallback, useState } from 'react';
-import { Eye, Plus, Copy, Edit, Trash2, ArrowLeft } from 'lucide-react';
+import { Eye, Plus, Copy, Edit, Trash2, ArrowLeft, Flag } from 'lucide-react';
 import { toast } from 'sonner';
 import { DataTable } from '@/components/features/data-table';
 import { columns, adaptColumns } from '@/components/features/data-table/columns';
@@ -189,10 +189,17 @@ export function DocumentsDataTable({ onDocumentSelect }: DocumentsDataTableProps
           }
         },
         {
+          id: 'scope-to-project',
+          label: 'Scope to Project',
+          icon: Flag,
+          onClick: actionHandlers.onScopeToProject,
+          disabled: (row) => row.is_template === true,
+        },
+        {
           id: 'edit',
           label: 'Edit document',
           icon: Edit,
-          onClick: actionHandlers.onEditDocument
+          onClick: actionHandlers.onEditDocument,
         },
         {
           id: 'delete',

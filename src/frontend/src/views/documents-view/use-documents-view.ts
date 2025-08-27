@@ -155,6 +155,15 @@ export function useDocumentsView(onDocumentSelect?: (document: DocumentShallowTy
     });
   }, []);
 
+  const handleScopeToProject = useCallback(async (document: DocumentShallowType) => {
+    const result = await DocumentsAPI.setDocumentAsProjectTemplate(document.id);
+    if (result.ok) {
+      await refreshDocuments();
+    } else {
+      // error toast handled inside API
+    }
+  }, [refreshDocuments]);
+
   // Dialog state and handlers
   const dialogState = useMemo(() => ({
     upload: {
@@ -193,6 +202,7 @@ export function useDocumentsView(onDocumentSelect?: (document: DocumentShallowTy
     onEditDocument: handleEditDocument,
     onDeleteDocument: handleDeleteDocument,
     onCopyDocumentId: handleCopyDocumentId,
+    onScopeToProject: handleScopeToProject,
     onBackToProjects: handleBackToProjects,
   }), [
     handleSelectDocument,

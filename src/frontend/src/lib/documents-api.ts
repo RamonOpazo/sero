@@ -285,6 +285,28 @@ export const DocumentsAPI = {
   },
 
   /**
+   * Set this document as the project-scoped document (template)
+   */
+  async setDocumentAsProjectTemplate(documentId: string): Promise<Result<ApiResponse, unknown>> {
+    return AsyncResultWrapper
+      .from(api.safe.put(`/documents/id/${documentId}/template`) as Promise<Result<ApiResponse, unknown>>)
+      .tap(() => {
+        toast.success(
+          'Document scoped to project',
+          { description: 'This document is now the project-scoped template.' },
+        );
+      })
+      .catch((error: unknown) => {
+        toast.error(
+          'Failed to scope document to project',
+          { description: error instanceof Error ? error.message : 'Please try again.' },
+        );
+        throw error;
+      })
+      .toResult();
+  },
+
+  /**
    * Process an original document using already-encrypted credentials
    */
   async processDocumentEncrypted(
