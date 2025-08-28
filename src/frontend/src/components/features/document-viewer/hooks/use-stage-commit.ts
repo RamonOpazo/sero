@@ -39,7 +39,6 @@ export function useStageCommit(documentId: string | number): UseStageCommitResul
     uiSelections,
     saveLifecycle,
     commitLifecycle,
-    updateSelection,
     deleteSelection,
     reload,
   } = useSelections() as any;
@@ -144,41 +143,35 @@ export function useStageCommit(documentId: string | number): UseStageCommitResul
     const persisted = scoped.filter((s: any) => s.isPersisted);
     const drafts = scoped.filter((s: any) => !s.isPersisted);
 
-    // Phase 1: ensure persisted items are staged_edition on the server; remove drafts locally
+    // Step 0: remove drafts first (do not call saveLifecycle to avoid recreating them)
     try {
-      // Convert committed items via dedicated API (server authoritative)
+      for (const sel of drafts) {
+        deleteSelection(sel.id);
+      }
+    } catch {}
+
+    // Phase 1: stage editions for persisted using server APIs only, then reload
+    try {
       const committed = persisted.filter((s: any) => s.stage === UISelectionStage.Committed);
+      const nonCommitted = persisted.filter((s: any) => s.stage !== UISelectionStage.Committed);
+
       if (committed.length > 0) {
         await Promise.allSettled(committed.map((s: any) => DocumentViewerAPI.convertSelectionToStaged(s.id)));
       }
 
-      // For non-committed persisted but not staged_edition, mark locally to staged_edition and save
-      let needsSave = false;
-      const nonCommitted = persisted.filter((s: any) => s.stage !== UISelectionStage.Committed);
-      for (const sel of nonCommitted) {
-        if (sel.stage !== UISelectionStage.StagedEdition) {
-          updateSelection(sel.id, { state: 'staged_edition' } as any);
-          needsSave = true;
+      if (nonCommitted.length > 0) {
+        const needsEdition = nonCommitted.filter((s: any) => s.stage !== UISelectionStage.StagedEdition);
+        if (needsEdition.length > 0) {
+          await Promise.allSettled(needsEdition.map((s: any) => DocumentViewerAPI.updateSelection(s.id, { state: 'staged_edition' } as any)));
         }
       }
 
-      // Remove drafts locally
-      for (const sel of drafts) {
-        deleteSelection(sel.id);
-        needsSave = true; // reflect local deletion persistence of drafts (no server call needed, but lifecycle save clears local state)
-      }
-
-      if (needsSave) {
-        await saveLifecycle();
-      }
-
-      // Reload to sync authoritative state after conversions
       await reload();
     } catch (e) {
-      // proceed to phase 2
+      // continue
     }
 
-    // Phase 2: stage deletions for persisted; then persist staging and reload (server authoritative)
+    // Phase 2: stage deletions for persisted via server, then reload
     try {
       if (persisted.length > 0) {
         await Promise.allSettled(persisted.map((s: any) => DocumentViewerAPI.updateSelection(s.id, { state: 'staged_deletion' } as any)));
@@ -189,7 +182,7 @@ export function useStageCommit(documentId: string | number): UseStageCommitResul
     }
 
     return { persistedCount: persisted.length, draftCount: drafts.length };
-  }, [uiSelections, updateSelection, deleteSelection, saveLifecycle, reload]);
+  }, [uiSelections, deleteSelection, reload]);
 
   const commitAll = useCallback(async (autoStage: boolean = false) => {
     if (!canCommit) {
