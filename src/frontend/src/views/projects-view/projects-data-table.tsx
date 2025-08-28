@@ -1,5 +1,5 @@
 import { useMemo, useCallback, useState } from 'react';
-import { Eye, Plus, Copy, Edit, Trash2, Settings2, ArrowLeft, Bot } from 'lucide-react';
+import { Eye, Plus, Copy, Edit, Trash2, Settings2, ArrowLeft, Bot, Scissors } from 'lucide-react';
 import { toast } from 'sonner';
 import { DataTable } from '@/components/features/data-table';
 import { columns, adaptColumns } from '@/components/features/data-table/columns';
@@ -7,10 +7,12 @@ import { EmptyState } from '@/components/shared/empty-state';
 import { CreateProjectDialog, EditProjectDialog } from './dialogs';
 import { ProjectAiSettingsDialog } from './dialogs/project-ai-settings-dialog';
 import { TypedConfirmationDialog } from '@/components/shared/typed-confirmation-dialog';
+import { FormConfirmationDialog } from '@/components/shared';
 import { useProjectsView } from './use-projects-view';
 import { useAiProcessing } from '@/providers/ai-processing-provider';
 import { useProjectTrust } from '@/providers/project-trust-provider';
 import { startProjectRun } from '@/lib/ai-runner';
+import { DocumentsAPI } from '@/lib/documents-api';
 import type { ProjectShallowType } from '@/types';
 import type { ColumnConfig } from '@/components/features/data-table/columns';
 import type { ColumnOption, CustomButtonOption } from '@/components/features/data-table/types';
@@ -45,6 +47,9 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
 
   const aiProc = useAiProcessing();
   const { ensureProjectTrust } = useProjectTrust();
+
+  // Run Project Redaction dialog state
+  const [runRedaction, setRunRedaction] = useState<{ isOpen: boolean; project: ProjectShallowType | null }>({ isOpen: false, project: null });
 
   // Pure UI rendering functions
   const nameRenderer = useCallback((project: ProjectShallowType) => {
@@ -173,6 +178,12 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
               toast.info('Project AI run cancelled');
             }
           }
+        },
+        {
+          id: 'run-redaction',
+          label: 'Run Project Redaction',
+          icon: Scissors,
+          onClick: (project) => setRunRedaction({ isOpen: true, project })
         },
         {
           id: 'delete',
@@ -347,6 +358,50 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
         onClose={dialogState.edit.onClose}
         onSubmit={dialogState.edit.onSubmit}
         project={dialogState.edit.project}
+      />
+
+      {/* Run Project Redaction Dialog */}
+      <FormConfirmationDialog
+        isOpen={runRedaction.isOpen}
+        onClose={() => setRunRedaction({ isOpen: false, project: null })}
+        title="Run Project Redaction"
+        description="Generate redacted PDFs for every document in this project using committed selections."
+        confirmButtonText="Run"
+        cancelButtonText="Cancel"
+        variant="destructive"
+        messages={([
+          { variant: 'warning', title: 'Batch operation', description: 'This will start processing for all project documents. Existing redacted files will be replaced.' },
+        ] as any)}
+        initialValues={{ includeDocumentScoped: false }}
+        fields={[
+          { type: 'switch', name: 'includeDocumentScoped', label: 'Include document-scoped selections', tooltip: 'Off = only committed project-scoped selections' },
+        ]}
+        onSubmit={async (values) => {
+          const project = runRedaction.project;
+          if (!project) return;
+          try {
+            const { keyId, encryptedPassword } = await ensureProjectTrust(project.id);
+            // Fetch documents in this project
+            const docsRes = await DocumentsAPI.fetchDocumentsForProject(project.id, 0, 10_000);
+            if (!docsRes.ok) throw docsRes.error as any;
+            const docs = docsRes.value;
+            if (docs.length === 0) {
+              toast.info('No documents in this project');
+              return;
+            }
+            // Kick off processing for each document
+            const results = await Promise.allSettled(
+              docs.map(d => DocumentsAPI.processDocumentEncrypted(d.id, { keyId, encryptedPassword }))
+            );
+            const okCount = results.filter(r => r.status === 'fulfilled' && (r as any).value?.ok !== false).length;
+            const failCount = results.length - okCount;
+            toast.success('Project redaction triggered', { description: `${okCount} started, ${failCount} failed to start` });
+          } catch (e) {
+            toast.error('Failed to start project redaction');
+          } finally {
+            setRunRedaction({ isOpen: false, project: null });
+          }
+        }}
       />
 
       {/* Project Deletion Confirmation Dialog */}
