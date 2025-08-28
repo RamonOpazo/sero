@@ -33,7 +33,8 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
   // Column visibility state - exclude pinned columns from state management
   const [visibleColumns, setVisibleColumns] = useState<string[]>([
     'description', 'document_count', 'updated_at',
-    'contact_name', 'contact_email', 'created_at'
+    'contact_name', 'contact_email', 'created_at',
+    'has_template',
   ])
 
   // Extract all business logic to custom hook
@@ -97,12 +98,14 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
 
     // Scoped indicator - project has a project-scoped document (template)
     columns.custom<ProjectShallowType, boolean>('has_template', 'has_template', {
-      header: 'Scoped',
+      header: 'Template',
       width: '100px',
-      align: 'center',
+      align: 'left',
       render: (_value, row) => row.has_template ? (
-        <Badge variant="secondary" title="Project has a scoped document">Scoped</Badge>
-      ) : null,
+        <Badge variant="outline" status="success" title="Project has a scoped document">Present</Badge>
+      ) : (
+        <Badge variant="outline" status="muted" title="Project doesn't have a scoped document">Unavailable</Badge>
+      ),
     }),
 
     // Contact person - truncated
@@ -194,7 +197,8 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
           id: 'run-redaction',
           label: 'Run Project Redaction',
           icon: Scissors,
-          onClick: (project) => setRunRedaction({ isOpen: true, project })
+          onClick: (project) => setRunRedaction({ isOpen: true, project }),
+          hidden: (row) => !row.has_template,
         },
         {
           id: 'delete',
