@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, MousePointer2, Globe, Hash, Settings, Telescope, Bot } from "lucide-react";
+import { Trash2, MousePointer2, Globe, Hash, Settings, Telescope, Bot, RotateCcw } from "lucide-react";
 import { useSelections } from "../../providers/selection-provider";
 import { useViewportState } from "../../providers/viewport-provider";
 import { useMemo, useRef, useEffect, useState, useCallback } from "react";
@@ -23,7 +23,8 @@ export default function SelectionList() {
     setSelectionPage,
     setOnSelectionDoubleClick,
     convertSelectionToStagedEdition,
-  } = useSelections();
+    uiSelections,
+  } = useSelections() as any;
 
   const { setCurrentPage, currentPage, numPages } = useViewportState();
 
@@ -50,18 +51,18 @@ export default function SelectionList() {
     }
   }, [selectedSelection?.id]);
 
-  // Use all selections from the manager with type information and modification status
+  // Use lifecycle-aware UI selections with dirty/stage metadata
   const selectionsWithTypeInfo = useMemo(() => {
-    const ui = ((selectionState as any).persistedItems || []).concat((selectionState as any).draftItems || []) as Selection[];
-    return ui.map((sel: Selection) => {
+    const ui = (uiSelections || []) as any[];
+    return ui.map((sel: any) => {
       const stateNorm = getNormalizedState((sel as any).state);
-      const type = stateNorm === 'draft' ? 'new' : 'saved';
-      const isModified = stateNorm !== 'draft' && stateNorm !== 'committed';
+      const type = sel.isPersisted ? 'saved' : 'new';
+      const isModified = !!sel.dirty;
       const isAi = !!(sel as any).is_ai_generated;
       const confidence = (sel as any).confidence as number | null | undefined;
       return { ...sel, type, isModified, is_ai_generated: isAi, confidence, displayId: sel.id } as any;
     });
-  }, [selectionState]);
+  }, [uiSelections]);
 
   // Group selections by type for better organization
   // Filter: optionally hide AI-generated selections
@@ -84,6 +85,9 @@ export default function SelectionList() {
     const newOnes = filteredSelections.filter(sel => sel.type === 'new');
     return { saved, new: newOnes };
   }, [filteredSelections]);
+
+  // Stable initial values for dialog to avoid hook order changes
+  const initialDialogValues = useMemo(() => ({ isGlobal: false, page: currentPage + 1 }), [currentPage]);
 
   const handleRemoveSelection = (selectionId: string) => {
     // Use new system's deleteSelection method
@@ -169,19 +173,19 @@ export default function SelectionList() {
     const pageDisplay = isGlobal ? 'Global' : `Page ${(sel.page_number ?? 0) + 1}`;
     const isSelected = selectedSelection?.id === sel.id;
     const isNew = sel.type === 'new';
-    const isModified = sel.isModified;
+    const isModified = !!sel.dirty;
 
-    // Determine status indicator
+    // Determine status indicator using lifecycle metadata
     const getStatusIndicator = () => {
-      const norm = getNormalizedState((sel as any).state);
-      if (norm === 'draft') {
-        // Distinguish drafts vs saved but unmodified items visually
-        if (isNew) return { color: 'bg-emerald-500', title: 'Unstaged (local)', label: 'Unstaged' };
-        if (isModified) return { color: 'bg-amber-500', title: 'Modified', label: 'Modified' };
-        return { color: 'bg-gray-400', title: 'Saved', label: 'Saved' };
+      // Explicit staged states take precedence
+      if (sel.stage === 'staged_creation' || sel.stage === 'staged_edition' || sel.stage === 'staged_deletion' || sel.stage === 'committed') {
+        const lab = getStatusLabel(sel.stage as any);
+        return { color: lab.colorClass, title: lab.title, label: lab.label };
       }
-      const lab = getStatusLabel(norm);
-      return { color: lab.colorClass, title: lab.title, label: lab.label };
+      // Otherwise, reflect local state
+      if (!sel.isPersisted) return { color: 'bg-emerald-500', title: 'Unstaged (local)', label: 'Unstaged' };
+      if (isModified) return { color: 'bg-amber-500', title: 'Modified', label: 'Modified' };
+      return { color: 'bg-gray-400', title: 'Saved', label: 'Saved' };
     };
 
     const statusIndicator = getStatusIndicator();
@@ -264,6 +268,22 @@ export default function SelectionList() {
               <Settings className="h-3 w-3" />
             </Button>
 
+            {norm === 'staged_deletion' && (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  await convertSelectionToStagedEdition(sel.id);
+                }}
+                className="h-6 w-6 p-0 text-muted-foreground/60 hover:text-foreground hover:bg-muted/10 opacity-0 group-hover:opacity-100 transition-all duration-200"
+                title="Convert deletion to edition"
+                aria-label="Convert deletion to edition"
+              >
+                <RotateCcw className="h-3 w-3" />
+              </Button>
+            )}
+
             <Button
               size="sm"
               variant="ghost"
@@ -338,7 +358,7 @@ export default function SelectionList() {
         messages={([
           { variant: 'info', title: 'Usage', description: `Currently viewing page ${currentPage + 1} of ${numPages}. Toggle global to show on all pages, or pick a page number.` },
         ] as TypedMessage[])}
-        initialValues={{ isGlobal: false, page: currentPage + 1 }}
+        initialValues={initialDialogValues}
         fields={[
           { type: 'switch', name: 'isGlobal', label: 'Global Selection', tooltip: 'Appear on all pages' },
           { type: 'number', name: 'page', label: 'Target Page Number', placeholder: `Enter page number (1-${numPages})`, required: true, tooltip: `Range: 1 to ${numPages}`, min: 1, max: numPages, step: 1 },

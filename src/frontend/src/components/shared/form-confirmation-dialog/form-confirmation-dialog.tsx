@@ -72,16 +72,20 @@ export function FormConfirmationDialog(props: FormConfirmationDialogProps) {
   const isDeclarative = Array.isArray(fields) && fields.length > 0 && typeof onSubmit === 'function'
 
   // Build RHF context when declarative
+  // Stabilize initial values to avoid infinite reset loops when parent recreates objects
+  const stableInitialValues = useMemo(() => ({ ...(initialValues || {}) }), [JSON.stringify(initialValues || {})])
   const form = useForm<Record<string, any>>({
-    defaultValues: useMemo(() => ({ ...(initialValues || {}) }), [initialValues]),
+    defaultValues: stableInitialValues,
     mode: 'onSubmit',
     shouldUnregister: true,
   })
 
-  // Reset form values whenever the dialog opens/closes to avoid retaining sensitive inputs
+  // Reset form values when dialog opens or inputs change meaningfully
   useEffect(() => {
-    form.reset({ ...(initialValues || {}) })
-  }, [isOpen, initialValues, form])
+    if (isOpen) {
+      form.reset(stableInitialValues)
+    }
+  }, [isOpen, stableInitialValues, form])
 
   // Render a field based on descriptor
   const renderField = (fd: FieldDescriptor) => (
