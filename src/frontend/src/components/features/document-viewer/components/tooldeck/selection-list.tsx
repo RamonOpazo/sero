@@ -12,11 +12,13 @@ import { SimpleConfirmationDialog } from "@/components/shared/simple-confirmatio
 import { CONVERT_TO_STAGED_DIALOG } from "./dialog-text";
 import type { Selection } from "../../types/viewer";
 import { getNormalizedState, getStatusLabel } from "../../utils/selection-styles";
+import { useWorkspace } from "@/providers/workspace-provider";
 
 
 export default function SelectionList() {
   const {
     state: selectionState,
+    dispatch,
     selectedSelection,
     selectSelection,
     deleteSelection,
@@ -27,6 +29,8 @@ export default function SelectionList() {
   } = useSelections() as any;
 
   const { setCurrentPage, currentPage, numPages } = useViewportState();
+  const { state: workspace } = useWorkspace();
+  const isProjectScopedDocument = !!workspace.currentDocument?.is_template;
 
   // Dialog state for page selection
   const [dialogState, setDialogState] = useState<{
@@ -174,6 +178,7 @@ export default function SelectionList() {
     const isSelected = selectedSelection?.id === sel.id;
     const isNew = sel.type === 'new';
     const isModified = !!sel.dirty;
+    const isProjectScope = (sel as any).scope === 'project';
 
     // Determine status indicator using lifecycle metadata
     const getStatusIndicator = () => {
@@ -225,6 +230,15 @@ export default function SelectionList() {
                   AI{sel.confidence != null ? ` ${Math.round(sel.confidence * 100)}%` : ''}
                 </Badge>
               )}
+              <Badge
+                variant={isProjectScope ? "destructive" : "outline"}
+                title={isProjectScope ? "Project scope" : "Document scope"}
+                data-testid={`selection-scope-${sel.id}`}
+                className="ml-1"
+              >
+                <Telescope className="h-3 w-3 mr-1" />
+                {isProjectScope ? 'Project' : 'Document'}
+              </Badge>
             </div>
 
             <Badge
@@ -240,11 +254,18 @@ export default function SelectionList() {
           {/* Config and delete buttons */}
           <div className="flex items-center gap-1 mr-1">
             <Button
-              disabled
+              disabled={!isProjectScopedDocument || norm === 'committed' || norm === 'staged_deletion'}
               size="sm"
               variant="ghost"
-              className="h-6 w-6 p-0 text-muted-foreground/60 hover:text-foreground hover:bg-muted/10 opacity-0 group-hover:opacity-100 transition-all duration-200 disabled:opacity-0"
-              title="Change scope"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!isProjectScopedDocument || norm === 'committed' || norm === 'staged_deletion') return;
+                const nextScope = (sel as any).scope === 'project' ? 'document' : 'project';
+                // Update only the scope via domain manager dispatch to avoid leaking UI fields
+                dispatch('UPDATE_ITEM', { id: sel.id, updates: { scope: nextScope } });
+              }}
+              className="h-6 w-6 p-0 text-muted-foreground/60 hover:text-foreground hover:bg-muted/10 opacity-0 group-hover:opacity-100 transition-all duration-200 disabled:opacity-50"
+              title={isProjectScopedDocument ? "Toggle scope (project/document)" : "Scope change available only in project template documents"}
               aria-label="Change scope"
             >
               <Telescope className="h-3 w-3" />

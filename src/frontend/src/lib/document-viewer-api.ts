@@ -388,7 +388,7 @@ export const DocumentViewerAPI = {
   /**
    * Update an existing selection
    */
-  async updateSelection(selectionId: string, updates: Partial<Pick<SelectionType, 'x' | 'y' | 'width' | 'height' | 'page_number' | 'confidence' | 'state'>>): Promise<Result<void, unknown>> {
+  async updateSelection(selectionId: string, updates: Partial<Pick<SelectionType, 'x' | 'y' | 'width' | 'height' | 'page_number' | 'confidence' | 'state' | 'scope'>>): Promise<Result<void, unknown>> {
     return AsyncResultWrapper
       .from(api.safe.put(`/selections/id/${selectionId}`, updates))
       .tap(() => void 0)

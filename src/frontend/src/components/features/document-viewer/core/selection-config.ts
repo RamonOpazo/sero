@@ -68,6 +68,7 @@ const selectionApiAdapter: ApiAdapter<Selection, Omit<SelectionCreateType, 'docu
   update: async (id: string, data: Partial<Selection>) => {
     const updateData = {
       state: (data as any).state,
+      scope: (data as any).scope,
       x: data.x,
       y: data.y,
       width: data.width,
@@ -111,6 +112,7 @@ const selectionTransforms: ApiTransforms<Selection, Omit<SelectionCreateType, 'd
   forUpdate: (selection: Selection): Partial<Selection> => ({
     // Preserve staged_deletion; otherwise, edits move to STAGED_EDITION
     state: (selection as any).state === 'staged_deletion' ? 'staged_deletion' : 'staged_edition',
+    scope: selection.scope,
     x: selection.x,
     y: selection.y,
     width: selection.width,

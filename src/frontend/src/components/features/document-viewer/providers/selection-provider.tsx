@@ -403,6 +403,8 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
         }
         // Capture baseline after syncing
         dispatch('CAPTURE_BASELINE' as any, undefined as any);
+        // After staging (saveLifecycle), wipe undo/redo history to start clean
+        dispatch('CLEAR_HISTORY' as any, undefined as any);
       }
 
       return { ok: true, value: undefined } as Result<void, unknown>;
@@ -413,6 +415,8 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
   
   const commitChanges = useCallback(() => {
     dispatch('COMMIT_CHANGES');
+    // After committing locally, wipe undo/redo history so we start clean
+    dispatch('CLEAR_HISTORY' as any, undefined as any);
   }, [dispatch]);
 
   // Lifecycle-based COMMIT: commit all staged on backend and reload
@@ -428,6 +432,8 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
       if (fetched.ok) {
         dispatch('LOAD_ITEMS', fetched.value as any);
         dispatch('CAPTURE_BASELINE' as any, undefined as any);
+        // After a successful backend commit and reload, clear history for a clean slate
+        dispatch('CLEAR_HISTORY' as any, undefined as any);
       }
       return { ok: true, value: undefined } as Result<void, unknown>;
     } catch (e) {

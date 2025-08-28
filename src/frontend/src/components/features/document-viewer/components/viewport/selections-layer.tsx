@@ -350,7 +350,7 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     const ui = uiMetaById.get(selection.id);
     const isDirty = ui?.dirty === true;
     const isGlobal = selection.page_number === null;
-    const isProjectScope = false;  // NNOTE: need to be populated by the real value (document.scope)
+    const isProjectScope = (selection as any).scope === 'project';
 
     const isSelected = selectedSelection?.id === selection.id;
     const isHovered = hoveredId === selection.id;
