@@ -31,6 +31,7 @@ export const ProjectShallowSchema = z.object({
   // Metadata about next level without loading full data
   document_count: z.number().int(),
   has_documents: z.boolean(),
+  has_template: z.boolean(),
 });
 
 export const ProjectCreateSchema = z.object({

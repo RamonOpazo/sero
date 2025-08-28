@@ -2,6 +2,7 @@ import { useMemo, useCallback, useState } from 'react';
 import { Eye, Plus, Copy, Edit, Trash2, Settings2, ArrowLeft, Bot, Scissors } from 'lucide-react';
 import { toast } from 'sonner';
 import { DataTable } from '@/components/features/data-table';
+import { Badge } from '@/components/ui/badge';
 import { columns, adaptColumns } from '@/components/features/data-table/columns';
 import { EmptyState } from '@/components/shared/empty-state';
 import { CreateProjectDialog, EditProjectDialog } from './dialogs';
@@ -92,6 +93,16 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
       header: '# Documents',
       width: '150px',
       sortable: true
+    }),
+
+    // Scoped indicator - project has a project-scoped document (template)
+    columns.custom<ProjectShallowType, boolean>('has_template', 'has_template', {
+      header: 'Scoped',
+      width: '100px',
+      align: 'center',
+      render: (_value, row) => row.has_template ? (
+        <Badge variant="secondary" title="Project has a scoped document">Scoped</Badge>
+      ) : null,
     }),
 
     // Contact person - truncated
