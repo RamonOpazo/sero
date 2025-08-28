@@ -26,12 +26,10 @@ export default function SelectionManagement({ document }: SelectionControlsProps
   const {
     uiSelections,
     allSelections,
-    clearAll,
-    clearPage,
     discardAllChanges,
   } = useSelections() as any;
 
-  const { selectionStats: scSel, promptStats: prSel, canStage, canCommit, isStaging, isCommitting, stageAll, commitAll, stageMessages } = useStageCommit(document.id) as any;
+  const { selectionStats: scSel, promptStats: prSel, canStage, canCommit, isStaging, isCommitting, stageAll, commitAll, stageMessages, clearSelections } = useStageCommit(document.id) as any;
   const [showStageDialog, setShowStageDialog] = useState(false);
   const [showCommitDialog, setShowCommitDialog] = useState(false);
   const [commitAutoStage, setCommitAutoStage] = useState(false);
@@ -59,16 +57,15 @@ export default function SelectionManagement({ document }: SelectionControlsProps
   }, [uiSelections]);
 
 
-  // Clear all selections
+  // Stage deletion for all selections (opens confirmation)
+  const [showClearAllDialog, setShowClearAllDialog] = useState(false);
   const handleClearAll = useCallback(() => {
     if (allSelections.length === 0) {
       toast.info('No selections to clear');
       return;
     }
-
-    clearAll();
-    toast.success(`Cleared all ${allSelections.length} selections`);
-  }, [clearAll, allSelections.length]);
+    setShowClearAllDialog(true);
+  }, [allSelections.length]);
 
   // Discard all unsaved changes
   const handleDiscardAllChanges = useCallback(() => {
@@ -81,17 +78,16 @@ export default function SelectionManagement({ document }: SelectionControlsProps
     toast.success(`Discarded ${selectionStats.totalUnsavedChanges} unsaved change${selectionStats.totalUnsavedChanges === 1 ? '' : 's'}`);
   }, [discardAllChanges, selectionStats.totalUnsavedChanges]);
 
-  // Clear current page selections
+  // Stage deletion for current page selections (opens confirmation)
+  const [showClearPageDialog, setShowClearPageDialog] = useState(false);
   const handleClearPage = useCallback(() => {
-    const pageSelections = allSelections.filter((sel: any) => sel.page_number === currentPage);
+    const pageSelections = uiSelections.filter((sel: any) => sel.page_number === currentPage);
     if (pageSelections.length === 0) {
       toast.info(`No selections on page ${currentPage + 1}`);
       return;
     }
-
-    clearPage(currentPage);
-    toast.success(`Cleared ${pageSelections.length} selections from page ${currentPage + 1}`);
-  }, [clearPage, currentPage, allSelections]);
+    setShowClearPageDialog(true);
+  }, [currentPage, uiSelections]);
 
   // Build commit dialog messages with correct counts depending on auto-stage
   const commitDialogMessages = useMemo<TypedMessage[]>(() => {
@@ -256,6 +252,60 @@ export default function SelectionManagement({ document }: SelectionControlsProps
         cancelButtonText="Cancel"
         variant="default"
         messages={stageMessages}
+      />
+
+      {/* Stage deletions: Clear page */}
+      <TypedConfirmationDialog
+        isOpen={showClearPageDialog}
+        onClose={() => setShowClearPageDialog(false)}
+        onConfirm={async () => {
+          setShowClearPageDialog(false);
+          const { persistedCount, draftCount } = await clearSelections(currentPage);
+          toast.success(`Staged edition then deletion for ${persistedCount} committed selection${persistedCount === 1 ? '' : 's'} and removed ${draftCount} draft${draftCount === 1 ? '' : 's'} on page ${currentPage + 1}`);
+        }}
+        title={`Clear page ${currentPage + 1}`}
+        description={undefined}
+        confirmationText="stage"
+        confirmButtonText="Stage deletions"
+        cancelButtonText="Cancel"
+        variant="destructive"
+        messages={(() => {
+          const pageSelections = uiSelections.filter((sel: any) => sel.page_number === currentPage);
+          const persistedCount = pageSelections.filter((s: any) => s.isPersisted).length;
+          const draftCount = pageSelections.length - persistedCount;
+          return [
+            { variant: 'warning', title: 'Committed selections will be staged_deletion', description: 'Committed selections will be converted to staged_deletion and will require a Commit to be permanently removed.' },
+            { variant: 'warning', title: 'Draft selections will be removed', description: 'Draft (unsaved) selections will be removed immediately and will not be staged.' },
+            { variant: 'info', title: 'Scope', description: `Page ${currentPage + 1}: ${persistedCount} committed → staged_deletion, ${draftCount} drafts → removed.` },
+          ] as TypedMessage[];
+        })()}
+      />
+
+      {/* Stage deletions: Clear all */}
+      <TypedConfirmationDialog
+        isOpen={showClearAllDialog}
+        onClose={() => setShowClearAllDialog(false)}
+        onConfirm={async () => {
+          setShowClearAllDialog(false);
+          const { persistedCount, draftCount } = await clearSelections(undefined);
+          toast.success(`Staged edition then deletion for ${persistedCount} committed selection${persistedCount === 1 ? '' : 's'} and removed ${draftCount} draft${draftCount === 1 ? '' : 's'} across all pages`);
+        }}
+        title="Clear all selections"
+        description={undefined}
+        confirmationText="stage"
+        confirmButtonText="Stage deletions"
+        cancelButtonText="Cancel"
+        variant="destructive"
+        messages={(() => {
+          const total = uiSelections.length;
+          const persistedCount = uiSelections.filter((s: any) => s.isPersisted).length;
+          const draftCount = total - persistedCount;
+          return [
+            { variant: 'warning', title: 'Committed selections will be staged_deletion', description: 'Committed selections will be converted to staged_deletion and will require a Commit to be permanently removed.' },
+            { variant: 'warning', title: 'Draft selections will be removed', description: 'Draft (unsaved) selections will be removed immediately and will not be staged.' },
+            { variant: 'error', title: 'Destructive operation', description: `This will affect all pages: ${persistedCount} committed → staged_deletion, ${draftCount} drafts → removed.` },
+          ] as TypedMessage[];
+        })()}
       />
 
       <TypedConfirmationDialog

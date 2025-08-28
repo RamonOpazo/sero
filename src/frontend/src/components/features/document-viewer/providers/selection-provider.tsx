@@ -367,7 +367,7 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
         let updateState: 'staged_edition' | 'staged_deletion' | 'staged_creation' | undefined = undefined;
         if (sel.stage === UISelectionStage.StagedDeletion) updateState = 'staged_deletion';
         else if (sel.stage === UISelectionStage.StagedCreation) updateState = 'staged_creation';
-        else if (sel.stage === UISelectionStage.StagedEdition) updateState = 'staged_creation';
+        else if (sel.stage === UISelectionStage.StagedEdition) updateState = 'staged_edition';
         else if (sel.dirty) updateState = 'staged_edition';
 
         const payload: any = {};
@@ -517,12 +517,22 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
         ...((pending.updates || []).map((u: any) => u?.id).filter(Boolean)),
         ...((pending.deletes || []).map((d: any) => d?.id).filter(Boolean)),
       ] as string[]);
+      // Detect pending staged_deletion updates specifically
+      const stagedDeletionIds = new Set<string>(
+        ((pending.updates || []).filter((u: any) => (u?.state === 'staged_deletion')).map((u: any) => u?.id).filter(Boolean)) as string[],
+      );
 
       const persisted: UISelection[] = ((state as any).persistedItems || []).map((s: any) => {
         const ui = fromApiSelection(s);
-        const isDirty = dirtyIds.has((s as any).id);
-        // If a persisted selection is edited locally and not staged for deletion, reflect it as staged_edition in UI
-        const stage = (isDirty && ui.stage !== UISelectionStage.StagedDeletion) ? UISelectionStage.StagedEdition : ui.stage;
+        const id = (s as any).id as string;
+        const isDirty = dirtyIds.has(id);
+        let stage = ui.stage;
+        if (stagedDeletionIds.has(id)) {
+          stage = UISelectionStage.StagedDeletion;
+        } else if (isDirty && stage !== UISelectionStage.StagedDeletion) {
+          // If a persisted selection is edited locally and not staged for deletion, reflect it as staged_edition in UI
+          stage = UISelectionStage.StagedEdition;
+        }
         return { ...ui, dirty: isDirty, stage } as UISelection;
       });
       const drafts: UISelection[] = ((state as any).draftItems || []).map((s: any) => ({
