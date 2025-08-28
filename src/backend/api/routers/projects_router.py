@@ -1,5 +1,6 @@
 from uuid import UUID
 from fastapi import APIRouter, Depends, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from backend.core.database import get_db_session
@@ -132,3 +133,16 @@ async def summarize_project(
 ):
     """Get comprehensive summary of a project."""
     return projects_controller.summarize(db=db, project_id=project_id)
+
+
+@router.post("/id/{project_id}/redact/stream")
+async def redact_project_stream(
+    project_id: UUID,
+    payload: projects_schema.ProjectRedactionRequest,
+    db: Session = Depends(get_db_session),
+) -> StreamingResponse:
+    """Stream redaction progress for all documents within a project using SSE.
+
+    The request supplies encrypted credentials; project_id is taken from the path.
+    """
+    return await projects_controller.redact_stream(db=db, project_id=project_id, request=payload)

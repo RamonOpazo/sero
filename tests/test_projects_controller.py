@@ -11,9 +11,12 @@ from backend.api.schemas.projects_schema import ProjectCreate, ProjectUpdate
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 from backend.api.schemas.documents_schema import DocumentCreate
-from backend.api.enums import FileType, ProjectStatus
+from backend.api.schemas.selections_schema import SelectionCreate
+from backend.api.enums import FileType, ProjectStatus, ScopeType, CommitState
 from backend.core.security import security_manager
 from backend.db.models import Project as ProjectModel, Document as DocumentModel, File as FileModel
+from backend.core.pdf_redactor import generate_test_pdf
+from backend.crud import selections_crud
 
 
 class TestProjectsController:
@@ -215,4 +218,112 @@ class TestProjectsController:
         names = {i.name for i in res_name}
         assert p1.name in names
         assert p2.name not in names
+
+    @pytest.mark.integration
+    def test_redact_stream_happy_path_pan_scope(self, client, test_session: Session):
+        # Arrange: project created via controller with known password, doc with original, committed selections (both scopes)
+        proj_model = self._create_project(test_session)
+        doc = self._create_document(test_session, proj_model.id)
+        # Attach a valid PDF as original encrypted with default StrongPW!123
+        original_pdf = generate_test_pdf(text="TEST", pages=1)
+        _ = self._attach_original(test_session, doc, payload=original_pdf, password="StrongPW!123")
+
+        # Add committed selections: one document-scoped and one project-scoped
+        _ = selections_crud.create(db=test_session, data=SelectionCreate(
+            scope=ScopeType.DOCUMENT,
+            state=CommitState.COMMITTED,
+            page_number=0,
+            x=0.1, y=0.1, width=0.2, height=0.1,
+            confidence=None,
+            document_id=doc.id,
+        ))
+        _ = selections_crud.create(db=test_session, data=SelectionCreate(
+            scope=ScopeType.PROJECT,
+            state=CommitState.COMMITTED,
+            page_number=None,
+            x=0.3, y=0.3, width=0.2, height=0.1,
+            confidence=None,
+            document_id=doc.id,
+        ))
+
+        # Build encrypted credentials matching project password (StrongPW!123)
+        key_id, public_pem = security_manager.generate_ephemeral_rsa_keypair()
+        from cryptography.hazmat.primitives import serialization, hashes
+        from cryptography.hazmat.primitives.asymmetric import padding
+        pub = serialization.load_pem_public_key(public_pem.encode("utf-8"))
+        ciphertext = pub.encrypt(
+            b"StrongPW!123",
+            padding.OAEP(mgf=padding.MGF1(algorithm=hashes.SHA256()), algorithm=hashes.SHA256(), label=None),
+        )
+
+        # Act
+        res = client.post(f"/api/projects/id/{proj_model.id}/redact/stream", json={
+            "key_id": key_id,
+            "encrypted_password": base64.b64encode(ciphertext).decode("ascii"),
+            "scope": "pan",
+        })
+
+        # Assert SSE and persistence
+        assert res.status_code == 200
+        text = res.text
+        assert "event: project_init" in text
+        assert "event: project_doc_start" in text
+        assert "event: project_doc_summary" in text
+        assert "event: completed" in text
+
+        # Verify redacted file created
+        red = (
+            test_session.query(FileModel)
+            .filter(FileModel.document_id == doc.id, FileModel.file_type == FileType.REDACTED)
+            .first()
+        )
+        assert red is not None
+        assert isinstance(red.data, bytes) and len(red.data) > 0
+
+    @pytest.mark.integration
+    def test_redact_stream_scope_filtering_project_only(self, client, test_session: Session):
+        # Arrange: project via controller, doc with original, only document-scoped committed selection
+        proj_model = self._create_project(test_session)
+        doc = self._create_document(test_session, proj_model.id)
+        original_pdf = generate_test_pdf(text="TEST", pages=1)
+        _ = self._attach_original(test_session, doc, payload=original_pdf, password="StrongPW!123")
+
+        _ = selections_crud.create(db=test_session, data=SelectionCreate(
+            scope=ScopeType.DOCUMENT,
+            state=CommitState.COMMITTED,
+            page_number=0,
+            x=0.15, y=0.12, width=0.10, height=0.10,
+            confidence=None,
+            document_id=doc.id,
+        ))
+
+        # Encrypted credentials for StrongPW!123
+        key_id, public_pem = security_manager.generate_ephemeral_rsa_keypair()
+        from cryptography.hazmat.primitives import serialization, hashes
+        from cryptography.hazmat.primitives.asymmetric import padding
+        pub = serialization.load_pem_public_key(public_pem.encode("utf-8"))
+        ciphertext = pub.encrypt(
+            b"StrongPW!123",
+            padding.OAEP(mgf=padding.MGF1(algorithm=hashes.SHA256()), algorithm=hashes.SHA256(), label=None),
+        )
+
+        # Act: request scope=project which should filter out selections and skip
+        res = client.post(f"/api/projects/id/{proj_model.id}/redact/stream", json={
+            "key_id": key_id,
+            "encrypted_password": base64.b64encode(ciphertext).decode("ascii"),
+            "scope": "project",
+        })
+
+        assert res.status_code == 200
+        text = res.text
+        assert "event: project_doc_summary" in text
+        assert "no_committed_selections_for_scope" in text
+
+        # Verify no redacted file created
+        red = (
+            test_session.query(FileModel)
+            .filter(FileModel.document_id == doc.id, FileModel.file_type == FileType.REDACTED)
+            .first()
+        )
+        assert red is None
 

@@ -6,7 +6,7 @@ from backend.core.security import security_manager
 from backend.api.schemas.documents_schema import Document
 from backend.api.schemas.templates_schema import Template
 from backend.api.schemas.settings_schema import AiSettings, WatermarkSettings, AnnotationSettings
-from backend.api.enums import ProjectStatus
+from backend.api.enums import ProjectStatus, RedactionScope
 
 
 class Project(BaseModel):
@@ -114,3 +114,12 @@ class ProjectSummary(BaseModel):
     newest_document_date: AwareDatetime | None
     
     model_config = ConfigDict(from_attributes=True)
+
+
+class ProjectRedactionRequest(BaseModel):
+    """Request payload to authorize redaction operations for a project.
+    The project_id is taken from the path parameter.
+    """
+    key_id: str
+    encrypted_password: str
+    scope: RedactionScope

@@ -13,7 +13,7 @@ import { useProjectsView } from './use-projects-view';
 import { useAiProcessing } from '@/providers/ai-processing-provider';
 import { useProjectTrust } from '@/providers/project-trust-provider';
 import { startProjectRun } from '@/lib/ai-runner';
-import { DocumentsAPI } from '@/lib/documents-api';
+import { ProjectsAPI } from '@/lib/projects-api';
 import type { ProjectShallowType } from '@/types';
 import type { ColumnConfig } from '@/components/features/data-table/columns';
 import type { ColumnOption, CustomButtonOption } from '@/components/features/data-table/types';
@@ -387,30 +387,46 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
         messages={([
           { variant: 'warning', title: 'Batch operation', description: 'This will start processing for all project documents. Existing redacted files will be replaced.' },
         ] as any)}
-        initialValues={{ includeDocumentScoped: false }}
+        initialValues={{ scope: 'project' }}
         fields={[
-          { type: 'switch', name: 'includeDocumentScoped', label: 'Include document-scoped selections', tooltip: 'Off = only committed project-scoped selections' },
+          { type: 'select', name: 'scope', label: 'Scope', tooltip: 'Redact using selections of this scope', options: [
+            { value: 'project', label: 'Project' },
+            { value: 'document', label: 'Document' },
+            { value: 'pan', label: 'Pan (both)' },
+          ] },
         ]}
         onSubmit={async (values) => {
           const project = runRedaction.project;
           if (!project) return;
           try {
             const { keyId, encryptedPassword } = await ensureProjectTrust(project.id);
-            // Fetch documents in this project
-            const docsRes = await DocumentsAPI.fetchDocumentsForProject(project.id, 0, 10_000);
-            if (!docsRes.ok) throw docsRes.error as any;
-            const docs = docsRes.value;
-            if (docs.length === 0) {
-              toast.info('No documents in this project');
-              return;
-            }
-            // Kick off processing for each document
-            const results = await Promise.allSettled(
-              docs.map(d => DocumentsAPI.processDocumentEncrypted(d.id, { keyId, encryptedPassword }))
-            );
-            const okCount = results.filter(r => r.status === 'fulfilled' && (r as any).value?.ok !== false).length;
-            const failCount = results.length - okCount;
-            toast.success('Project redaction triggered', { description: `${okCount} started, ${failCount} failed to start` });
+            const scope = String(values.scope || 'project') as 'project' | 'document' | 'pan';
+            const handle = ProjectsAPI.redactProjectStream(project.id, {
+              scope,
+              keyId,
+              encryptedPassword,
+              onProjectInit: ({ total_documents }) => {
+                toast.message('Redaction started', { description: `${total_documents} documents` });
+              },
+              onProjectProgress: ({ processed, total }) => {
+                // Lightweight progress note
+                if (processed === total) return;
+              },
+              onDocSummary: ({ document_id, ok, reason }) => {
+                if (!ok) {
+                  toast.error('Redaction skipped for a document', { description: reason || document_id });
+                }
+              },
+              onCompleted: ({ ok }) => {
+                if (ok) toast.success('Project redaction completed');
+                else toast.error('Project redaction ended with errors');
+              },
+              onError: ({ message }) => {
+                toast.error('Project redaction error', { description: message });
+              }
+            });
+            // We could store handle.cancel in state to allow cancel via UI later
+            void handle;
           } catch (e) {
             toast.error('Failed to start project redaction');
           } finally {

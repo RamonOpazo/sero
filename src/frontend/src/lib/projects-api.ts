@@ -266,5 +266,80 @@ export const ProjectsAPI = {
     } else {
       return { ok: false, error: result.error };
     }
-  }
+  },
+
+  /**
+   * Stream Project Redaction via POST + SSE parser. Returns a cancel handle.
+   */
+  redactProjectStream(
+    projectId: string,
+    params: {
+      scope: 'document' | 'project' | 'pan';
+      keyId: string;
+      encryptedPassword: string;
+      onProjectInit?: (data: { total_documents: number }) => void;
+      onProjectProgress?: (data: { processed: number; total: number }) => void;
+      onDocStart?: (data: { index: number; document_id: string }) => void;
+      onDocSummary?: (data: { document_id: string; ok: boolean; reason?: string; redacted_file_id?: string; original_file_size?: number; redacted_file_size?: number; selections_applied?: number }) => void;
+      onStatus?: (data: { stage: string; document_id?: string; message?: string }) => void;
+      onCompleted?: (data: { ok: boolean }) => void;
+      onError?: (data: { message: string }) => void;
+    }
+  ): { cancel: () => void } {
+    const controller = new AbortController();
+    const signal = controller.signal;
+
+    const parseStream = async () => {
+      try {
+        const resp = await fetch(`/api/projects/id/${projectId}/redact/stream`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key_id: params.keyId, encrypted_password: params.encryptedPassword, scope: params.scope }),
+          signal,
+        });
+        if (!resp.ok || !resp.body) throw new Error(`Stream failed: ${resp.status}`);
+        const reader = resp.body.getReader();
+        const decoder = new TextDecoder();
+        let buf = '';
+        let currentEvent: string | null = null;
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buf += decoder.decode(value, { stream: true });
+          let idx;
+          while ((idx = buf.indexOf('\n\n')) !== -1) {
+            const chunk = buf.slice(0, idx);
+            buf = buf.slice(idx + 2);
+            const lines = chunk.split('\n');
+            currentEvent = null;
+            let dataLine = '';
+            for (const ln of lines) {
+              if (ln.startsWith('event: ')) currentEvent = ln.slice(7).trim();
+              if (ln.startsWith('data: ')) dataLine = ln.slice(6).trim();
+            }
+            if (!currentEvent || !dataLine) continue;
+            try {
+              const payload = JSON.parse(dataLine);
+              switch (currentEvent) {
+                case 'project_init': params.onProjectInit?.(payload); break;
+                case 'project_progress': params.onProjectProgress?.(payload); break;
+                case 'project_doc_start': params.onDocStart?.(payload); break;
+                case 'project_doc_summary': params.onDocSummary?.(payload); break;
+                case 'status': params.onStatus?.(payload); break;
+                case 'completed': params.onCompleted?.(payload); break;
+                case 'error': params.onError?.(payload); break;
+              }
+            } catch {
+              // swallow parse errors
+            }
+          }
+        }
+      } catch (err: any) {
+        params.onError?.({ message: err?.message ?? 'stream-error' });
+      }
+    };
+
+    void parseStream();
+    return { cancel: () => controller.abort() };
+  },
 };
