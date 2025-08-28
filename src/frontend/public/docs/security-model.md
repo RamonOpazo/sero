@@ -1,4 +1,4 @@
-# Security in SERO
+# Security Model
 
 Security is not an afterthought in SERO; it is the foundational principle upon which the entire system is built. Our primary goal is to ensure that sensitive documents are protected with strong, modern cryptography at every stage of their lifecycle. This document provides a comprehensive overview of SERO's security architecture, from project creation to document processing.
 

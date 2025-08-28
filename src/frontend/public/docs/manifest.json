@@ -15,10 +15,10 @@
     },
     {
       "slug": "redaction-workflow",
-      "next": "security"
+      "next": "security-model"
     },
     {
-      "slug": "security",
+      "slug": "security-model",
       "next": null
     }
   ]

@@ -84,9 +84,9 @@ export function HomePage() {
           </TypographyMuted>
 
           <TypographyUnorderedList>
-            <li>Start with <TypographyLink to="/documentation/getting-started">Getting Started</TypographyLink> to set up your first redaction project.</li>
-            <li>Read about the <TypographyLink to="/documentation/security-model">Security Model</TypographyLink>, SERO's cryptographic backbone.</li>
-            <li>Dive into the <TypographyLink to="/documentation/redaction-workflow">Redaction Workflow</TypographyLink> for an overview on how documents are processed step by step.</li>
+            <li>Start with <TypographyLink to="/docs/getting-started">Getting Started</TypographyLink> to set up your first redaction project.</li>
+            <li>Read about the <TypographyLink to="/docs/security-model">Security Model</TypographyLink>, SERO's cryptographic backbone.</li>
+            <li>Dive into the <TypographyLink to="/docs/redaction-workflow">Redaction Workflow</TypographyLink> for an overview on how documents are processed step by step.</li>
           </TypographyUnorderedList>
         </TypographyContent>
       </ScrollArea >
