@@ -1,5 +1,5 @@
 import { useMemo, useCallback, useState } from 'react';
-import { Eye, Plus, Copy, Edit, Trash2, ArrowLeft, Flag } from 'lucide-react';
+import { FileInput, Plus, Copy, Edit, Trash2, ArrowLeft, Flag } from 'lucide-react';
 import { toast } from 'sonner';
 import { DataTable } from '@/components/features/data-table';
 import { columns, adaptColumns } from '@/components/features/data-table/columns';
@@ -179,7 +179,7 @@ export function DocumentsDataTable({ onDocumentSelect }: DocumentsDataTableProps
         {
           id: 'select',
           label: 'Select Document',
-          icon: Eye,
+          icon: FileInput,
           onClick: (document) => {
             actionHandlers.onSelectDocument(document)
             toast.success('Document selected', {

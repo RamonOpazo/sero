@@ -1,5 +1,5 @@
 import { useMemo, useCallback, useState } from 'react';
-import { Eye, Plus, Copy, Edit, Trash2, Settings2, ArrowLeft, Bot, Scissors } from 'lucide-react';
+import { FolderInput, Plus, Copy, Edit, Trash2, Settings2, ArrowLeft, Bot, Scissors } from 'lucide-react';
 import { toast } from 'sonner';
 import { DataTable } from '@/components/features/data-table';
 import { Badge } from '@/components/ui/badge';
@@ -50,8 +50,11 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
   const aiProc = useAiProcessing();
   const { ensureProjectTrust } = useProjectTrust();
 
+  // Run Project AI Detection dialog state
+  const [runProjectDetection, setRunProjectDetection] = useState<{ isOpen: boolean; project: ProjectShallowType | null }>({ isOpen: false, project: null, });
+
   // Run Project Redaction dialog state
-  const [runRedaction, setRunRedaction] = useState<{ isOpen: boolean; project: ProjectShallowType | null }>({ isOpen: false, project: null });
+  const [runProjectRedaction, setRunProjectRedaction] = useState<{ isOpen: boolean; project: ProjectShallowType | null }>({ isOpen: false, project: null, });
 
   // Pure UI rendering functions
   const nameRenderer = useCallback((project: ProjectShallowType) => {
@@ -158,7 +161,7 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
         {
           id: 'select',
           label: 'Select project',
-          icon: Eye,
+          icon: FolderInput,
           onClick: (project) => {
             actionHandlers.onSelectProject(project)
             toast.success('Project selected', {
@@ -179,26 +182,19 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
           onClick: actionHandlers.onOpenAiSettings
         },
         {
-          id: 'run-ai',
-          label: 'Run AI (project)',
+          id: 'run-ai-detection',
+          label: 'Run AI Detection',
           icon: Bot,
-          onClick: async (project) => {
-            try {
-              const { keyId, encryptedPassword } = await ensureProjectTrust(project.id);
-              startProjectRun(aiProc as any, project.id, { keyId, encryptedPassword });
-              toast.success('Project AI run started', { description: project.name });
-            } catch (e) {
-              // User cancelled or encryption failed
-              toast.info('Project AI run cancelled');
-            }
-          }
+          onClick: (project) => {
+            setRunProjectDetection({ isOpen: true, project, });
+          },
         },
         {
           id: 'run-redaction',
-          label: 'Run Project Redaction',
+          label: 'Run Redaction',
           icon: Scissors,
-          onClick: (project) => setRunRedaction({ isOpen: true, project }),
-          hidden: (row) => !row.has_template,
+          onClick: (project) => setRunProjectRedaction({ isOpen: true, project, }),
+          disabled: (row) => !row.has_template,
         },
         {
           id: 'delete',
@@ -375,28 +371,55 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
         project={dialogState.edit.project}
       />
 
+      {/* Run Project AI Detection Dialog */}
+      <FormConfirmationDialog
+        isOpen={runProjectDetection.isOpen}
+        onClose={() => setRunProjectDetection({ isOpen: false, project: null, })}
+        title="Run Project AI Detection"
+        description="Run AI detection across all documents in this project to stage new selections based on current AI settings."
+        confirmButtonText="Run"
+        cancelButtonText="Cancel"
+        variant="default"
+        messages={([
+          { variant: 'warning', title: 'Batch operation', description: 'This will iterate over every document and may take a while depending on size and model.', },
+        ] as any)}
+        onSubmit={async () => {
+          const project = runProjectDetection.project;
+          if (!project) return;
+          try {
+            const { keyId, encryptedPassword } = await ensureProjectTrust(project.id);
+            startProjectRun(aiProc as any, project.id, { keyId, encryptedPassword, });
+            toast.success('Project AI run started', { description: project.name, });
+          } catch (e) {
+            toast.info('Project AI run cancelled');
+          } finally {
+            setRunProjectDetection({ isOpen: false, project: null, });
+          }
+        }}
+      />
+
       {/* Run Project Redaction Dialog */}
       <FormConfirmationDialog
-        isOpen={runRedaction.isOpen}
-        onClose={() => setRunRedaction({ isOpen: false, project: null })}
+        isOpen={runProjectRedaction.isOpen}
+        onClose={() => setRunProjectRedaction({ isOpen: false, project: null, })}
         title="Run Project Redaction"
         description="Generate redacted PDFs for every document in this project using committed selections."
         confirmButtonText="Run"
         cancelButtonText="Cancel"
         variant="destructive"
         messages={([
-          { variant: 'warning', title: 'Batch operation', description: 'This will start processing for all project documents. Existing redacted files will be replaced.' },
+          { variant: 'warning', title: 'Batch operation', description: 'This will start processing for all project documents. Existing redacted files will be replaced.', },
         ] as any)}
-        initialValues={{ scope: 'project' }}
+        initialValues={{ scope: 'project', }}
         fields={[
           { type: 'select', name: 'scope', label: 'Scope', tooltip: 'Redact using selections of this scope', options: [
-            { value: 'project', label: 'Project' },
-            { value: 'document', label: 'Document' },
-            { value: 'pan', label: 'Pan (both)' },
-          ] },
+            { value: 'project', label: 'Project', },
+            { value: 'document', label: 'Document', },
+            { value: 'pan', label: 'Pan (both)', },
+          ], },
         ]}
         onSubmit={async (values) => {
-          const project = runRedaction.project;
+          const project = runProjectRedaction.project;
           if (!project) return;
           try {
             const { keyId, encryptedPassword } = await ensureProjectTrust(project.id);
@@ -406,7 +429,7 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
               keyId,
               encryptedPassword,
               onProjectInit: ({ total_documents }) => {
-                toast.message('Redaction started', { description: `${total_documents} documents` });
+                toast.message('Redaction started', { description: `${total_documents} documents`, });
               },
               onProjectProgress: ({ processed, total }) => {
                 // Lightweight progress note
@@ -414,7 +437,7 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
               },
               onDocSummary: ({ document_id, ok, reason }) => {
                 if (!ok) {
-                  toast.error('Redaction skipped for a document', { description: reason || document_id });
+                  toast.error('Redaction skipped for a document', { description: reason || document_id, });
                 }
               },
               onCompleted: ({ ok }) => {
@@ -422,15 +445,15 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
                 else toast.error('Project redaction ended with errors');
               },
               onError: ({ message }) => {
-                toast.error('Project redaction error', { description: message });
-              }
+                toast.error('Project redaction error', { description: message, });
+              },
             });
             // We could store handle.cancel in state to allow cancel via UI later
             void handle;
           } catch (e) {
             toast.error('Failed to start project redaction');
           } finally {
-            setRunRedaction({ isOpen: false, project: null });
+            setRunProjectRedaction({ isOpen: false, project: null, });
           }
         }}
       />

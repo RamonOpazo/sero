@@ -2,12 +2,11 @@ from uuid import UUID
 from fastapi import HTTPException, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
-import json
 from loguru import logger
 
 from backend.crud import projects_crud, support_crud, ai_settings_crud, documents_crud, templates_crud, files_crud
 from backend.api.schemas import projects_schema, generics_schema, settings_schema, templates_schema, files_schema
-from backend.api.enums import ProjectStatus, CommitState, ScopeType
+from backend.api.enums import ProjectStatus
 from backend.core.security import security_manager
 from backend.api.enums import FileType
 from backend.service.redactor_service import get_redactor_service
@@ -199,21 +198,6 @@ async def redact_stream(
     - error: { message }
     """
 
-    def _ev(event: str, data: dict) -> str:
-        return f"event: {event}\ndata: {json.dumps(data)}\n\n"
-
-    def _filter_scope(scope_required: projects_schema.RedactionScope, selections: list) -> list:
-        # selections are SQLAlchemy models; compare via string value of enums
-        match scope_required.name if hasattr(scope_required, 'name') else str(scope_required):
-            case 'DOCUMENT' | 'document':
-                return [s for s in selections if str(getattr(s, 'scope', 'document')).lower() == str(ScopeType.DOCUMENT).lower()]
-            case 'PROJECT' | 'project':
-                return [s for s in selections if str(getattr(s, 'scope', 'document')).lower() == str(ScopeType.PROJECT).lower()]
-            case 'PAN' | 'pan':
-                return list(selections)
-            case _:
-                return list(selections)
-
     def _to_area(sel) -> AreaSelection:
         return AreaSelection(
             x=float(sel.x),
@@ -222,14 +206,15 @@ async def redact_stream(
             height=float(sel.height),
             page_number=(int(sel.page_number) if sel.page_number is not None else None),
         )
-
-    async def sse_gen():
+    
+    async def _sse_gen():
         try:
             # Verify project exists
-            _ = support_crud.apply_or_404(projects_crud.read, db=db, id=project_id)
+            support_crud.apply_or_404(projects_crud.read, db=db, id=project_id)
 
             # Collect documents for project with needed relationships
-            docs = documents_crud.search(
+            docs = support_crud.apply_or_404(
+                documents_crud.search,
                 db=db,
                 skip=0,
                 limit=10_000,
@@ -237,111 +222,94 @@ async def redact_stream(
                 join_with=["files", "selections"],
                 order_by=[("created_at", "asc")],
             )
+
             total_docs = len(docs)
-            yield _ev("project_init", {"total_documents": total_docs})
-            processed = 0
-
-            for idx, doc in enumerate(docs, start=1):
-                did = str(doc.id)
-                yield _ev("project_doc_start", {"index": idx, "document_id": did})
-
-                # Filter COMMITTED selections respecting required scope
-                committed = [s for s in (doc.selections or []) if str(getattr(s, 'state', '')).lower() == str(CommitState.COMMITTED).lower()]
-                scoped = _filter_scope(request.scope, committed)
-                if not scoped:
-                    yield _ev("project_doc_summary", {
-                        "document_id": did,
-                        "ok": False,
-                        "reason": "no_committed_selections_for_scope",
-                        "selections_applied": 0,
-                    })
-                    processed += 1
-                    yield _ev("project_progress", {"processed": processed, "total": total_docs})
-                    continue
-
-                # Decrypt original
-                try:
-                    yield _ev("status", {"stage": "decrypting", "document_id": did})
-                    _doc_model, original_file, decrypted = support_crud.get_original_file_data_or_400_401_404_500(
-                        db=db,
-                        document_or_id=doc,
-                        encrypted_password_b64=request.encrypted_password,
-                        key_id=request.key_id,
-                        join_with=["files"],
-                    )
-                except Exception as e:
-                    yield _ev("project_doc_summary", {
-                        "document_id": did,
-                        "ok": False,
-                        "reason": f"decrypt_failed: {str(e)}",
-                        "selections_applied": 0,
-                    })
-                    processed += 1
-                    yield _ev("project_progress", {"processed": processed, "total": total_docs})
-                    continue
-
-                # Run redaction
-                try:
-                    yield _ev("status", {"stage": "redacting", "document_id": did})
-                    redacted_bytes = get_redactor_service().redact(
-                        pdf_data=decrypted,
-                        selections=[_to_area(s) for s in scoped],
-                    )
-                except Exception as e:
-                    logger.exception("redaction failed")
-                    yield _ev("project_doc_summary", {
-                        "document_id": did,
-                        "ok": False,
-                        "reason": f"redaction_failed: {str(e)}",
-                        "selections_applied": len(scoped),
-                    })
-                    processed += 1
-                    yield _ev("project_progress", {"processed": processed, "total": total_docs})
-                    continue
-
-                # Replace existing redacted file if present
-                try:
-                    yield _ev("status", {"stage": "saving", "document_id": did})
-                    # Delete existing redacted file if any
-                    existing_red = next((f for f in (doc.files or []) if str(f.file_type).lower() == str(FileType.REDACTED).lower()), None)
-                    if existing_red is not None:
-                        support_crud.apply_or_404(files_crud.delete, db=db, id=existing_red.id)
-                        db.expire(doc, ["files"])  # ensure relationship reloads
-
-                    # Create new redacted file
-                    red_hash = security_manager.generate_file_hash(redacted_bytes)
-                    file_data = files_schema.FileCreate(
-                        file_hash=red_hash,
-                        file_type=FileType.REDACTED,
-                        mime_type=(getattr(original_file, 'mime_type', 'application/pdf') or 'application/pdf'),
-                        data=redacted_bytes,
-                        document_id=doc.id,
-                    )
-                    created = files_crud.create(db=db, data=file_data)
-
-                    yield _ev("project_doc_summary", {
-                        "document_id": did,
-                        "ok": True,
-                        "redacted_file_id": str(created.id),
-                        "original_file_size": getattr(original_file, 'file_size', None),
-                        "redacted_file_size": len(redacted_bytes),
-                        "selections_applied": len(scoped),
-                    })
-                except Exception as e:
-                    logger.exception("saving redacted file failed")
-                    yield _ev("project_doc_summary", {
-                        "document_id": did,
-                        "ok": False,
-                        "reason": f"save_failed: {str(e)}",
-                        "selections_applied": len(scoped),
-                    })
-
-                processed += 1
-                yield _ev("project_progress", {"processed": processed, "total": total_docs})
-
-            yield _ev("completed", {"ok": True})
-        except Exception as e:
+            yield projects_schema.ProjectInitEvent(total_documents=total_docs).res
+        
+        except Exception as err:
             logger.exception("redact_stream failed")
-            yield _ev("error", {"message": str(e)})
+            yield projects_schema.ErrorEvent(message=str(err)).res
+            return
 
-    return StreamingResponse(sse_gen(), media_type="text/event-stream")
+        processed = 0
+
+        for idx, doc in enumerate(docs, start=1):
+            did = str(doc.id)
+            yield projects_schema.ProjectDocStartEvent(index=idx, document_id=did).res
+
+            try:
+                selections_to_apply = list(support_crud.get_selections_to_apply_or_404(db=db, project_id=project_id, scope=request.scope, selections=doc.selections))
+            except HTTPException:
+                yield projects_schema.ProjectDocSummaryEvent(document_id=did, ok=False, reason="no_committed_selections_for_scope", selections_applied=0).res
+                processed += 1
+                yield projects_schema.ProjectProgressEvent(processed=processed, total=total_docs).res
+                continue
+
+            # Decrypt original
+            try:
+                yield projects_schema.StatusEvent(stage="decrypting", document_id=did).res
+                _, original_file, decrypted = support_crud.get_original_file_data_or_400_401_404_500(
+                    db=db,
+                    document_or_id=doc,
+                    encrypted_password_b64=request.encrypted_password,
+                    key_id=request.key_id,
+                    join_with=["files"],
+                )
+            except HTTPException as err:
+                yield projects_schema.ProjectDocSummaryEvent(document_id=did, ok=False, reason=f"decrypt_failed: {err}", selections_applied=0).res
+                processed += 1
+                yield projects_schema.ProjectProgressEvent(processed=processed, total=total_docs).res
+                continue
+
+            # Run redaction
+            try:
+                yield projects_schema.StatusEvent(stage="redacting", document_id=did).res
+                redacted_bytes = get_redactor_service().redact(
+                    pdf_data=decrypted,
+                    selections=[_to_area(s) for s in selections_to_apply],
+                )
+            except Exception as err:
+                logger.exception("redaction failed")
+                yield projects_schema.ProjectDocSummaryEvent(document_id=did, ok=False, reason=f"redaction_failed: {err}", selections_applied=len(selections_to_apply)).res
+                processed += 1
+                yield projects_schema.ProjectProgressEvent(processed=processed, total=total_docs).res
+                continue
+
+            # Replace existing redacted file if present
+            try:
+                yield projects_schema.StatusEvent(stage="saving", document_id=did).res
+                # Delete existing redacted file if any
+                existing_red = next((f for f in (doc.files or []) if f.file_type == FileType.REDACTED), None)
+                if existing_red is not None:
+                    support_crud.apply_or_404(files_crud.delete, db=db, id=existing_red.id)
+                    db.expire(doc, ["files"])  # ensure relationship reloads
+
+                # Create new redacted file
+                red_hash = security_manager.generate_file_hash(redacted_bytes)
+                file_data = files_schema.FileCreate(
+                    file_hash=red_hash,
+                    file_type=FileType.REDACTED,
+                    mime_type=original_file.mime_type,
+                    data=redacted_bytes,
+                    document_id=doc.id,
+                )
+                created = files_crud.create(db=db, data=file_data)
+
+                yield projects_schema.ProjectDocSummaryEvent(
+                    document_id=did,
+                    ok=True,
+                    redacted_file_id=str(created.id),
+                    original_file_size=original_file.file_size,
+                    redacted_file_size=len(redacted_bytes),
+                    selections_applied=len(selections_to_apply),
+                ).res
+            except Exception as err:
+                logger.exception("saving redacted file failed")
+                yield projects_schema.ProjectDocSummaryEvent(document_id=did, ok=False, reason=f"save_failed: {err}", selections_applied=len(selections_to_apply)).res
+
+            processed += 1
+            yield projects_schema.ProjectProgressEvent(processed=processed, total=total_docs).res
+
+        yield projects_schema.CompletedEvent(ok=True).res
+
+    return StreamingResponse(_sse_gen(), media_type="text/event-stream")

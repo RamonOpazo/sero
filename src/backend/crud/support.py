@@ -1,20 +1,21 @@
 from __future__ import annotations
 from uuid import UUID
 from base64 import b64decode
-from typing import Callable
+from typing import Callable, Iterator
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from backend.core.config import settings as app_settings
-from backend.db.models import Selection as SelectionModel, Project as ProjectModel, Document as DocumentModel, File as FileModel, AiSettings as AiSettingsModel
+from backend.db.models import Selection as SelectionModel, Project as ProjectModel, Document as DocumentModel, File as FileModel, AiSettings as AiSettingsModel, Template as TemplateModel
 from backend.api.schemas import documents_schema, files_schema
 from backend.service.crypto_service import get_security_service
 from backend.core.security import security_manager
-from backend.api.enums import FileType, CommitState
+from backend.api.enums import FileType, CommitState, RedactionScope, ScopeType
 from backend.crud.projects import ProjectCrud
 from backend.crud.documents import DocumentCrud
 from backend.crud.selections import SelectionCrud
 from backend.crud.ai_settings import AiSettingsCrud
+from backend.crud.templates import TemplateCrud
 
 
 class SupportCrud:
@@ -25,12 +26,12 @@ class SupportCrud:
         self.documents_crud = DocumentCrud(DocumentModel)
         self.selections_crud = SelectionCrud(SelectionModel)
         self.ai_settings_crud = AiSettingsCrud(AiSettingsModel)
+        self.templates_crud = TemplateCrud(TemplateModel)
 
 
-    def apply_or_404[T](self, crud_method: Callable[..., T], *, db: Session, id: UUID, **kwargs) -> T:
-        """Call the given CRUD method with db and id; if it returns None, raise 404."""
+    def apply_or_404[T](self, crud_method: Callable[..., T], *, db: Session, **kwargs) -> T:
+        """Call the given CRUD method with db and kwargs; if it returns None, raise 404 with helpful criteria."""
         kwargs.setdefault("db", db)
-        kwargs.setdefault("id", id)
         result = crud_method(**kwargs)
         if result is None:
             # Infer entity name from bound CRUD instance's model
@@ -39,7 +40,7 @@ class SupportCrud:
             entity_name = getattr(model, "__name__", None) or "Entity"
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"{entity_name} with ID {str(id)!r} not found",
+                detail=f"{entity_name} not found)",
             )
         return result
 
@@ -330,3 +331,46 @@ class SupportCrud:
             db.commit()
         staged = [s for s in self.selections_crud.read_list_by_document(db=db, document_id=document_id) if getattr(s, "state", None) == target_state]
         return staged
+
+
+    def _get_committed_selections_by_scope(self, selections: list[SelectionModel], scope: ScopeType) -> Iterator[SelectionModel]:
+        return filter(lambda x: x.state == CommitState.COMMITTED and x.scope == scope, selections)
+
+    def _get_template_committed_project_selections_or_404(self, db: Session, project_id: UUID) -> list[SelectionModel]:
+        # Fail early if template is not set for the project (404 cascades to caller)
+        tpl = self.apply_or_404(
+            lambda *, db, id: self.templates_crud.read_by_project(db=db, project_id=id),
+            db=db,
+            id=project_id,
+        )
+        tpl_doc = self.apply_or_404(
+            self.documents_crud.read,
+            db=db,
+            id=tpl.document_id,
+            join_with=["selections"]
+        )
+        return [
+            i for i in tpl_doc.selections
+            if i.state == CommitState.COMMITTED
+            and i.scope == ScopeType.PROJECT
+        ]
+
+    def get_selections_to_apply_or_404(self, *, db: Session, project_id: UUID, scope: RedactionScope, selections: list[SelectionModel]) -> Iterator[SelectionModel]:
+        yielded: dict[str, bool] = {}
+
+        # Document-scoped selections always included for DOCUMENT and PAN
+        if scope in (RedactionScope.DOCUMENT, RedactionScope.PAN):
+            for i in self._get_committed_selections_by_scope(selections, ScopeType.DOCUMENT):
+                yielded["document_selections"] = True
+                yield i
+
+        # Project-scoped selections: prefer template's committed selections if present; fallback to document's
+        if scope in (RedactionScope.PROJECT, RedactionScope.PAN):
+            template_project = self._get_template_committed_project_selections_or_404(db=db, project_id=project_id)
+            source = template_project if len(template_project) > 0 else list(self._get_committed_selections_by_scope(selections, ScopeType.PROJECT))
+            for i in source:
+                yielded["project_selections"] = True
+                yield i
+
+        if not any(yielded.values()):
+            raise HTTPException(status_code=404, detail="No selections to apply")

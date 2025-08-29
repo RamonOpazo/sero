@@ -2,7 +2,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Play, Download, Trash2, FileText, Eye, Calendar, Clock } from "lucide-react";
+import { Scissors, Download, Trash2, FileText, Eye, Calendar, Clock } from "lucide-react";
 import { useViewportState } from "../../providers/viewport-provider";
 import { useSelections } from "../../providers/selection-provider";
 import { UISelectionStage } from "../../types/selection-lifecycle";
@@ -256,23 +256,10 @@ export default function DocumentControls({ document }: DocumentControlsProps) {
           {isProcessing ? (
             <span className="mr-2 h-3 w-3 animate-spin" />
           ) : (
-            <Play className="mr-2 h-3 w-3" />
+            <Scissors className="mr-2 h-3 w-3" />
           )}
           {isProcessing ? 'Processing...' : 'Process Document'}
         </Button>
-        {/* Commit state summary */}
-        {(() => {
-          const ui = (uiSelections || []) as any[];
-          const stagedCount = ui.filter((s: any) => [UISelectionStage.StagedCreation, UISelectionStage.StagedEdition, UISelectionStage.StagedDeletion].includes(s.stage)).length;
-          const committedCount = ui.filter((s: any) => s.stage === UISelectionStage.Committed).length;
-          return (
-            <div className="flex items-center gap-2 mt-1 text-xs">
-              <Badge variant="secondary" className="px-1.5 py-0.5">Committed: {committedCount}</Badge>
-              <Badge variant="outline" className="px-1.5 py-0.5">Staged: {stagedCount}</Badge>
-            </div>
-          );
-        })()}
-
 
         <Button
           variant="outline"

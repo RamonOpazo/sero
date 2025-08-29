@@ -1,8 +1,8 @@
+import re
 import base64
 from typing import Annotated
-from pydantic import BaseModel, Field, field_validator, field_serializer, UUID4, AwareDatetime, BeforeValidator, computed_field, ConfigDict
+from pydantic import BaseModel, Field, field_serializer, UUID4, AwareDatetime, BeforeValidator, computed_field, ConfigDict
 
-from backend.core.security import security_manager
 from backend.api.schemas.documents_schema import Document
 from backend.api.schemas.templates_schema import Template
 from backend.api.schemas.settings_schema import AiSettings, WatermarkSettings, AnnotationSettings
@@ -123,3 +123,54 @@ class ProjectRedactionRequest(BaseModel):
     key_id: str
     encrypted_password: str
     scope: RedactionScope
+
+
+# ===== SSE Event Payload Schemas =====
+class BaseEvent(BaseModel):
+    
+    @property
+    def __event_name__(self) -> str:
+        class_name = self.__repr_name__().rstrip("Event")
+        return re.sub(r'(?<!^)(?=[A-Z])', '_', class_name).lower()
+
+    @property
+    def res(self) -> str:
+        return f"event: {self.__event_name__}\ndata: {self.model_dump_json()}\n\n"
+
+
+class ProjectInitEvent(BaseEvent):
+    total_documents: int
+
+
+class ProjectDocStartEvent(BaseEvent):
+    index: int
+    document_id: str
+
+
+class StatusEvent(BaseEvent):
+    stage: str
+    document_id: str | None = None
+    message: str | None = None
+
+
+class ProjectDocSummaryEvent(BaseEvent):
+    document_id: str
+    ok: bool
+    reason: str | None = None
+    redacted_file_id: str | None = None
+    original_file_size: int | None = None
+    redacted_file_size: int | None = None
+    selections_applied: int
+
+
+class ProjectProgressEvent(BaseEvent):
+    processed: int
+    total: int
+
+
+class CompletedEvent(BaseEvent):
+    ok: bool
+
+
+class ErrorEvent(BaseEvent):
+    message: str
