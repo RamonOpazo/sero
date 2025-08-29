@@ -333,10 +333,7 @@ class SupportCrud:
         return staged
 
 
-    def _get_committed_selections_by_scope(self, selections: list[SelectionModel], scope: ScopeType) -> Iterator[SelectionModel]:
-        return filter(lambda x: x.state == CommitState.COMMITTED and x.scope == scope, selections)
-
-    def _get_template_committed_project_selections_or_404(self, db: Session, project_id: UUID) -> list[SelectionModel]:
+    def _get_template_committed_selections_or_404(self, db: Session, project_id: UUID) -> list[SelectionModel]:
         # Fail early if template is not set for the project (404 cascades to caller)
         tpl = self.apply_or_404(
             lambda *, db, id: self.templates_crud.read_by_project(db=db, project_id=id),
@@ -355,22 +352,19 @@ class SupportCrud:
             and i.scope == ScopeType.PROJECT
         ]
 
+
     def get_selections_to_apply_or_404(self, *, db: Session, project_id: UUID, scope: RedactionScope, selections: list[SelectionModel]) -> Iterator[SelectionModel]:
-        yielded: dict[str, bool] = {}
+        match scope:
+            case RedactionScope.DOCUMENT:
+                yield from filter(lambda x: x.state == CommitState.COMMITTED and x.scope == scope, selections)
 
-        # Document-scoped selections always included for DOCUMENT and PAN
-        if scope in (RedactionScope.DOCUMENT, RedactionScope.PAN):
-            for i in self._get_committed_selections_by_scope(selections, ScopeType.DOCUMENT):
-                yielded["document_selections"] = True
-                yield i
+            case RedactionScope.PROJECT:
+                yield from self._get_template_committed_selections_or_404(db=db, project_id=project_id)
 
-        # Project-scoped selections: prefer template's committed selections if present; fallback to document's
-        if scope in (RedactionScope.PROJECT, RedactionScope.PAN):
-            template_project = self._get_template_committed_project_selections_or_404(db=db, project_id=project_id)
-            source = template_project if len(template_project) > 0 else list(self._get_committed_selections_by_scope(selections, ScopeType.PROJECT))
-            for i in source:
-                yielded["project_selections"] = True
-                yield i
-
-        if not any(yielded.values()):
-            raise HTTPException(status_code=404, detail="No selections to apply")
+            case RedactionScope.PAN:
+                try:
+                    yield from self._get_template_committed_selections_or_404(db=db, project_id=project_id)
+                except HTTPException:
+                    pass
+                yield from filter(lambda x: x.state == CommitState.COMMITTED and x.scope == scope, selections)
+    

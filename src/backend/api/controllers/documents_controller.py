@@ -410,22 +410,15 @@ def process(
     )
 
 
-def download_original_file(
-    db: Session, 
-    document_id: UUID, 
-    request: files_schema.EncryptedFileDownloadRequest
-) -> StreamingResponse:
+def download_original_file(db: Session, document_id: UUID, request: files_schema.EncryptedFileDownloadRequest) -> StreamingResponse:
     # Centralized retrieval + decryption of original file data
-    document, original_file, decrypted_data = support_crud.get_original_file_data_or_400_401_404_500(
+    _, original_file, decrypted_data = support_crud.get_original_file_data_or_400_401_404_500(
         db=db,
         document_or_id=document_id,
         encrypted_password_b64=request.encrypted_password,
         key_id=request.key_id,
         join_with=["files"],
     )
-
-    # Generate filename
-    safe_filename = f"{document.name}_original.pdf"
 
     # Determine headers based on stream parameter
     if request.stream:
@@ -437,7 +430,7 @@ def download_original_file(
         }
     else:
         headers = {
-            "Content-Disposition": f'attachment; filename="{safe_filename}"'
+            "Content-Disposition": f'attachment; filename="{original_file.id}.pdf"'
         }
 
     return StreamingResponse(
@@ -447,19 +440,13 @@ def download_original_file(
     )
 
 
-def download_redacted_file(
-    db: Session, 
-    document_id: UUID
-) -> StreamingResponse:
+def download_redacted_file(db: Session, document_id: UUID) -> StreamingResponse:
     # Use helpers to fetch document and validated redacted file data
-    document, redacted_file, file_data = support_crud.get_redacted_file_data_or_404_500(db=db, document_id=document_id, join_with=["files"])
-
-    # Generate filename: use document ID to avoid leaking names
-    safe_filename = f"{document.id}.pdf"
+    _, redacted_file, file_data = support_crud.get_redacted_file_data_or_404_500(db=db, document_id=document_id, join_with=["files"])
 
     # Always download as attachment for redacted files and disable caching
     headers = {
-        "Content-Disposition": f'attachment; filename=\"{safe_filename}\"',
+        "Content-Disposition": f'attachment; filename=\"{redacted_file.id}.pdf\"',
         "Cache-Control": "no-cache, no-store, must-revalidate",
         "Pragma": "no-cache",
         "Expires": "0",

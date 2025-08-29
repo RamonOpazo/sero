@@ -130,8 +130,9 @@ class BaseEvent(BaseModel):
     
     @property
     def __event_name__(self) -> str:
-        class_name = self.__repr_name__().rstrip("Event")
-        return re.sub(r'(?<!^)(?=[A-Z])', '_', class_name).lower()
+        class_name = self.__repr_name__()
+        event_name = class_name[: -len("Event")] if class_name.endswith("Event") else class_name
+        return re.sub(r'(?<!^)(?=[A-Z])', '_', event_name).lower()
 
     @property
     def res(self) -> str:
