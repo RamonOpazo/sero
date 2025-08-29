@@ -418,44 +418,21 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
             { value: 'pan', label: 'Pan (both)', },
           ], },
         ]}
-        onSubmit={async (values) => {
-          const project = runProjectRedaction.project;
-          if (!project) return;
-          try {
-            const { keyId, encryptedPassword } = await ensureProjectTrust(project.id);
-            const scope = String(values.scope || 'project') as 'project' | 'document' | 'pan';
-            const handle = ProjectsAPI.redactProjectStream(project.id, {
-              scope,
-              keyId,
-              encryptedPassword,
-              onProjectInit: ({ total_documents }) => {
-                toast.message('Redaction started', { description: `${total_documents} documents`, });
-              },
-              onProjectProgress: ({ processed, total }) => {
-                // Lightweight progress note
-                if (processed === total) return;
-              },
-              onDocSummary: ({ document_id, ok, reason }) => {
-                if (!ok) {
-                  toast.error('Redaction skipped for a document', { description: reason || document_id, });
-                }
-              },
-              onCompleted: ({ ok }) => {
-                if (ok) toast.success('Project redaction completed');
-                else toast.error('Project redaction ended with errors');
-              },
-              onError: ({ message }) => {
-                toast.error('Project redaction error', { description: message, });
-              },
-            });
-            // We could store handle.cancel in state to allow cancel via UI later
-            void handle;
-          } catch (e) {
-            toast.error('Failed to start project redaction');
-          } finally {
-            setRunProjectRedaction({ isOpen: false, project: null, });
-          }
-        }}
+          onSubmit={async (values) => {
+            const project = runProjectRedaction.project;
+            if (!project) return;
+            try {
+              const { keyId, encryptedPassword } = await ensureProjectTrust(project.id);
+              const scope = String(values.scope || 'project') as 'project' | 'document' | 'pan';
+              // Stream into global processing chin
+              const { startProjectRedaction } = await import('@/lib/ai-runner');
+              startProjectRedaction(aiProc as any, project.id, { keyId, encryptedPassword, scope });
+            } catch (e) {
+              toast.error('Failed to start project redaction');
+            } finally {
+              setRunProjectRedaction({ isOpen: false, project: null, });
+            }
+          }}
       />
 
       {/* Project Deletion Confirmation Dialog */}

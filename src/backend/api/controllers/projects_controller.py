@@ -212,6 +212,12 @@ async def redact_stream(
             # Verify project exists
             support_crud.apply_or_404(projects_crud.read, db=db, id=project_id)
 
+            # Decrypt project password once using ephemeral key
+            plaintext_password = support_crud._decrypt_password_or_400(
+                encrypted_password_b64=request.encrypted_password,
+                key_id=request.key_id,
+            )
+
             # Collect documents for project with needed relationships
             docs = support_crud.apply_or_404(
                 documents_crud.search,
@@ -248,11 +254,10 @@ async def redact_stream(
             # Decrypt original
             try:
                 yield projects_schema.StatusEvent(stage="decrypting", document_id=did).res
-                _, original_file, decrypted = support_crud.get_original_file_data_or_400_401_404_500(
+                _, original_file, decrypted = support_crud.get_original_file_data_with_password_or_401_404_500(
                     db=db,
                     document_or_id=doc,
-                    encrypted_password_b64=request.encrypted_password,
-                    key_id=request.key_id,
+                    password=plaintext_password,
                     join_with=["files"],
                 )
             except HTTPException as err:

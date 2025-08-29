@@ -86,3 +86,67 @@ export function startProjectRun(aiProc: AiProcessingApi, projectId: string, opts
   return { cancel: ctrl.cancel };
 }
 
+/**
+ * Start a project-level redaction run and stream progress into AiProcessingProvider.
+ */
+export function startProjectRedaction(
+  aiProc: AiProcessingApi,
+  projectId: string,
+  opts: { keyId: string; encryptedPassword: string; scope: 'project' | 'document' | 'pan' },
+) {
+  const jobId = `redact:${projectId}`;
+
+  aiProc.startJob({
+    id: jobId,
+    kind: 'project',
+    title: `Redaction ${projectId}`,
+    stage: 'initializing',
+    stageIndex: 0,
+    stageTotal: 3,
+    percent: 0,
+    hints: [],
+    batchProcessed: 0,
+    batchTotal: 0,
+    meta: { projectId },
+  });
+
+  // Dynamically import to avoid circular deps; ProjectsAPI is the source for redaction SSE
+  const { ProjectsAPI } = require('@/lib/projects-api');
+  const handle = ProjectsAPI.redactProjectStream(projectId, {
+    scope: opts.scope,
+    keyId: opts.keyId,
+    encryptedPassword: opts.encryptedPassword,
+    onProjectInit: ({ total_documents }: { total_documents: number }) => {
+      aiProc.updateJob({ id: jobId, batchTotal: total_documents, stage: 'queued', stageIndex: 0 });
+    },
+    onProjectProgress: ({ processed, total }: { processed: number; total: number }) => {
+      const pct = total > 0 ? Math.round((processed / total) * 100) : 0;
+      aiProc.updateJob({ id: jobId, batchProcessed: processed, batchTotal: total, percent: pct });
+    },
+    onDocStart: ({ index, document_id }: { index: number; document_id: string }) => {
+      aiProc.updateJob({ id: jobId, hints: [`doc ${index}${document_id ? `: ${document_id}` : ''}`], stage: 'decrypting', stageIndex: 1 });
+    },
+    onStatus: ({ stage, document_id }: { stage: string; document_id?: string }) => {
+      // Map server stages directly when present
+      aiProc.updateJob({ id: jobId, stage, hints: [document_id ? `${stage} (${document_id})` : stage] });
+    },
+    onDocSummary: ({ ok, document_id, reason, selections_applied }: { ok: boolean; document_id: string; reason?: string; selections_applied?: number }) => {
+      const status = ok ? 'saved' : `skipped${reason ? `: ${reason}` : ''}`;
+      const hint = `doc ${document_id}: ${status}${typeof selections_applied === 'number' ? ` (${selections_applied})` : ''}`;
+      aiProc.updateJob({ id: jobId, hints: [hint], stage: 'saving', stageIndex: 2 });
+    },
+    onCompleted: ({ ok }: { ok: boolean }) => {
+      if (ok) aiProc.completeJob(jobId);
+      else aiProc.failJob(jobId, { message: 'redaction-completed-with-errors' });
+      aiProc.clearJob(jobId);
+    },
+    onError: ({ message }: { message: string }) => {
+      aiProc.failJob(jobId, { message: message ?? 'redaction-error' });
+      aiProc.clearJob(jobId);
+    },
+  });
+
+  aiProc.registerCancel(jobId, handle.cancel);
+  return { cancel: handle.cancel };
+}
+

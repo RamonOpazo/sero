@@ -154,6 +154,26 @@ class SupportCrud:
         file_data = self._read_redacted_file_or_500(redacted_file=redacted_file)
         return document, redacted_file, file_data
 
+    def get_original_file_data_with_password_or_401_404_500(
+        self,
+        db: Session,
+        *,
+        document_or_id: DocumentModel | UUID,
+        password: str,
+        join_with: list[str] | None = None,
+    ) -> tuple[DocumentModel, FileModel, bytes]:
+        """Same as get_original_file_data_or_400_401_404_500 but accepts a plaintext password (no ephemeral decrypt)."""
+        doc = document_or_id if isinstance(document_or_id, DocumentModel) else self.apply_or_404(
+            self.documents_crud.read,
+            db=db,
+            id=document_or_id,
+            join_with=join_with or ["files"],
+        )
+        original_file = self._get_original_file_or_404(doc)
+        self.verify_project_password_or_401(db=db, project_id=doc.project_id, password=password)
+        decrypted_data = self._decrypt_original_file_or_500(original_file=original_file, password=password)
+        return doc, original_file, decrypted_data
+
 
     def build_shallow_list(self, records, *, schema_cls, transforms: dict, model_index: int = 0):
         """Build shallow schema instances from search_shallow results."""
