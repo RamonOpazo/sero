@@ -2,6 +2,21 @@ import { DocumentViewerAPI } from '@/lib/document-viewer-api';
 import type { AiProcessingWarning } from '@/providers/ai-processing-provider';
 import { toast } from 'sonner';
 
+function humanReason(reason?: string): string {
+  switch (reason) {
+    case 'no_committed_selections_for_scope':
+      return 'No selections for chosen scope; try a different scope';
+    case 'decrypt_failed':
+      return 'Could not decrypt original; verify password';
+    case 'redaction_failed':
+      return 'Redaction engine error; see logs';
+    case 'save_failed':
+      return 'Failed to persist file';
+    default:
+      return reason || 'unknown';
+  }
+}
+
 export interface AiProcessingApi {
   state: { jobs: Record<string, any> };
   startJob: (job: any) => void;
@@ -137,7 +152,7 @@ export function startProjectRedaction(
       aiProc.updateJob({ id: jobId, stage, hints: [document_id ? `${stage} (${document_id})` : stage] });
     },
     onDocSummary: ({ ok, document_id, reason, selections_applied }: { ok: boolean; document_id: string; reason?: string; selections_applied?: number }) => {
-      const status = ok ? 'saved' : `skipped${reason ? `: ${reason}` : ''}`;
+      const status = ok ? 'saved' : `skipped: ${humanReason(reason)}`;
       const hint = `doc ${document_id}: ${status}${typeof selections_applied === 'number' ? ` (${selections_applied})` : ''}`;
       aiProc.updateJob({ id: jobId, hints: [hint], stage: 'saving', stageIndex: 2 });
     },

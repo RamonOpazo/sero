@@ -210,7 +210,7 @@ Progress tracker (update as we land changes)
 - [x] B3 Frontend completion summary UX
 - [x] B4 Frontend trust expiry retry
 - [ ] B5 Frontend debug SSE logs
-- [ ] B6 Frontend reason→hint mapping
+- [x] B6 Frontend reason→hint mapping
 - [ ] C1+C2 Docs updates
 - [ ] D1+D2 Test/coverage validation
 
