@@ -149,7 +149,13 @@ export const DocumentViewerAPI = {
       try {
         const resp = await fetch(`/api/ai/apply/stream`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache',
+          },
+          cache: 'no-store',
           body: JSON.stringify({ document_id: documentId, key_id: (handlers as any)?.keyId ?? null, encrypted_password: (handlers as any)?.encryptedPassword ?? null }),
           signal,
         });
@@ -248,7 +254,13 @@ export const DocumentViewerAPI = {
       try {
         const resp = await fetch(`/api/ai/apply/project/stream`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache',
+          },
+          cache: 'no-store',
           body: JSON.stringify({ project_id: projectId, key_id: (handlers as any)?.keyId ?? null, encrypted_password: (handlers as any)?.encryptedPassword ?? null }),
           signal,
         });

@@ -35,6 +35,7 @@ export interface AiProcessingApi {
  */
 export function startProjectRun(aiProc: AiProcessingApi, projectId: string, opts?: { keyId?: string; encryptedPassword?: string }) {
   const jobId = `project:${projectId}`;
+  let totalDocs = 0;
 
   // Initialize job early so users see feedback immediately
   aiProc.startJob({
@@ -53,14 +54,15 @@ export function startProjectRun(aiProc: AiProcessingApi, projectId: string, opts
 
   const ctrl = DocumentViewerAPI.applyAiProjectStream(projectId, {
     onProjectInit: ({ total_documents }: { total_documents: number }) => {
-      aiProc.updateJob({ id: jobId, batchTotal: total_documents });
+      totalDocs = total_documents || 0;
+      aiProc.updateJob({ id: jobId, batchTotal: totalDocs, meta: { projectId, currentDocIndex: 0, totalDocs } });
     },
     onProjectProgress: ({ processed, total }: { processed: number; total: number }) => {
       const pct = total > 0 ? Math.round((processed / total) * 100) : 0;
       aiProc.updateJob({ id: jobId, batchProcessed: processed, batchTotal: total, percent: pct });
     },
     onProjectDocStart: ({ index, document_id }: { index: number; document_id: string }) => {
-      aiProc.updateJob({ id: jobId, hints: [`doc ${index + 1}${document_id ? `: ${document_id}` : ''}`] });
+      aiProc.updateJob({ id: jobId, hints: [`doc ${index + 1}${document_id ? `: ${document_id}` : ''}`], meta: { projectId, currentDocIndex: index + 1, totalDocs } });
     },
     onStatus: (d: {
       stage: string;

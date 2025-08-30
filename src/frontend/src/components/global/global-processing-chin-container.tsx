@@ -18,9 +18,12 @@ export function GlobalProcessingChinContainer() {
 
   const job = jobs[activeId];
   const hasBatch = job.kind === 'project' && typeof job.batchProcessed === 'number' && typeof job.batchTotal === 'number';
+  const m = job.meta || {};
+  const curIdx = typeof m.currentDocIndex === 'number' ? m.currentDocIndex : (hasBatch ? job.batchProcessed : null);
+  const total = typeof m.totalDocs === 'number' && m.totalDocs > 0 ? m.totalDocs : (hasBatch ? job.batchTotal : null);
   const batchText = hasBatch ? `Documents ${job.batchProcessed} of ${job.batchTotal}` : null;
-  const docProgressPercent = hasBatch && job.batchTotal > 0 ? Math.round((job.batchProcessed / job.batchTotal) * 100) : null;
-  const docProgressLabel = hasBatch ? `Document ${job.batchProcessed} of ${job.batchTotal}` : null;
+  const docProgressPercent = total && curIdx !== null && total > 0 ? Math.round((curIdx / total) * 100) : null;
+  const docProgressLabel = total && curIdx !== null ? `Document ${curIdx} of ${total}` : null;
 
   // Compose a short subtask from hints (last hint)
   const lastHint = job.hints.length > 0 ? job.hints[job.hints.length - 1] : null;
