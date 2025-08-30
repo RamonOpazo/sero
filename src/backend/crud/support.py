@@ -382,9 +382,10 @@ class SupportCrud:
                 yield from self._get_template_committed_selections_or_404(db=db, project_id=project_id)
 
             case RedactionScope.PAN:
+                # Include template (project-scoped, if available) and document-scoped committed selections
                 try:
                     yield from self._get_template_committed_selections_or_404(db=db, project_id=project_id)
                 except HTTPException:
                     pass
-                yield from filter(lambda x: x.state == CommitState.COMMITTED and x.scope == scope, selections)
+                yield from filter(lambda x: x.state == CommitState.COMMITTED and x.scope == ScopeType.DOCUMENT, selections)
     

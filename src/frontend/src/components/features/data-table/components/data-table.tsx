@@ -17,11 +17,7 @@ export function DataTable<T extends Record<string, any>>({
   showActions = false,
   searchValue,
   selectedRows,
-  actions = [
-    { label: 'Edit', value: 'edit' },
-    { label: 'View', value: 'view' },
-    { label: 'Delete', value: 'delete', variant: 'destructive' as const }
-  ],
+  actions,
   filters,
   onAddNew,
   addNewLabel,

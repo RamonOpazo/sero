@@ -194,7 +194,7 @@ async def redact_stream(
     - status: { stage, document_id?, message? }
     - project_doc_summary: { document_id, ok, reason?, redacted_file_id?, original_file_size?, redacted_file_size?, selections_applied }
     - project_progress: { processed, total }
-    - completed: { ok }
+    - completed: { ok, total, succeeded, failed }
     - error: { message }
     """
 
@@ -231,6 +231,15 @@ async def redact_stream(
 
             total_docs = len(docs)
             yield projects_schema.ProjectInitEvent(total_documents=total_docs).res
+            # Log start
+            logger.info(
+                f"project_redact_start project_id={project_id} total={total_docs} scope={request.scope}",
+            )
+            # Early NOOP when there are no documents
+            if total_docs == 0:
+                yield projects_schema.StatusEvent(stage="noop", message="no_documents").res
+                yield projects_schema.CompletedEvent(ok=True, total=0, succeeded=0, failed=0).res
+                return
         
         except Exception as err:
             logger.exception("redact_stream failed")
@@ -238,15 +247,46 @@ async def redact_stream(
             return
 
         processed = 0
+        succeeded = 0
+        failed = 0
+        docs_with_applicable = 0
 
         for idx, doc in enumerate(docs, start=1):
             did = str(doc.id)
             yield projects_schema.ProjectDocStartEvent(index=idx, document_id=did).res
+            logger.info(f"project_redact_doc_start index={idx} document_id={did}")
 
             try:
-                selections_to_apply = list(support_crud.get_selections_to_apply_or_404(db=db, project_id=project_id, scope=request.scope, selections=doc.selections))
+                selections_to_apply = list(
+                    support_crud.get_selections_to_apply_or_404(
+                        db=db,
+                        project_id=project_id,
+                        scope=request.scope,
+                        selections=doc.selections,
+                    ),
+                )
+                # Handle empty selections (no exception but nothing to apply)
+                if len(selections_to_apply) == 0:
+                    yield projects_schema.ProjectDocSummaryEvent(
+                        document_id=did,
+                        ok=False,
+                        reason="no_committed_selections_for_scope",
+                        selections_applied=0,
+                    ).res
+                    failed += 1
+                    processed += 1
+                    yield projects_schema.ProjectProgressEvent(processed=processed, total=total_docs).res
+                    continue
+                else:
+                    docs_with_applicable += 1
             except HTTPException:
-                yield projects_schema.ProjectDocSummaryEvent(document_id=did, ok=False, reason="no_committed_selections_for_scope", selections_applied=0).res
+                yield projects_schema.ProjectDocSummaryEvent(
+                    document_id=did,
+                    ok=False,
+                    reason="no_committed_selections_for_scope",
+                    selections_applied=0,
+                ).res
+                failed += 1
                 processed += 1
                 yield projects_schema.ProjectProgressEvent(processed=processed, total=total_docs).res
                 continue
@@ -261,7 +301,13 @@ async def redact_stream(
                     join_with=["files"],
                 )
             except HTTPException as err:
-                yield projects_schema.ProjectDocSummaryEvent(document_id=did, ok=False, reason=f"decrypt_failed: {err}", selections_applied=0).res
+                yield projects_schema.ProjectDocSummaryEvent(
+                    document_id=did,
+                    ok=False,
+                    reason="decrypt_failed",
+                    selections_applied=0,
+                ).res
+                failed += 1
                 processed += 1
                 yield projects_schema.ProjectProgressEvent(processed=processed, total=total_docs).res
                 continue
@@ -275,7 +321,13 @@ async def redact_stream(
                 )
             except Exception as err:
                 logger.exception("redaction failed")
-                yield projects_schema.ProjectDocSummaryEvent(document_id=did, ok=False, reason=f"redaction_failed: {err}", selections_applied=len(selections_to_apply)).res
+                yield projects_schema.ProjectDocSummaryEvent(
+                    document_id=did,
+                    ok=False,
+                    reason="redaction_failed",
+                    selections_applied=len(selections_to_apply),
+                ).res
+                failed += 1
                 processed += 1
                 yield projects_schema.ProjectProgressEvent(processed=processed, total=total_docs).res
                 continue
@@ -308,13 +360,38 @@ async def redact_stream(
                     redacted_file_size=len(redacted_bytes),
                     selections_applied=len(selections_to_apply),
                 ).res
+                logger.info(
+                    f"project_redact_doc_summary ok=True document_id={did} redacted_file_id={created.id} selections_applied={len(selections_to_apply)} original_size={original_file.file_size} redacted_size={len(redacted_bytes)}",
+                )
+                succeeded += 1
             except Exception as err:
                 logger.exception("saving redacted file failed")
-                yield projects_schema.ProjectDocSummaryEvent(document_id=did, ok=False, reason=f"save_failed: {err}", selections_applied=len(selections_to_apply)).res
+                yield projects_schema.ProjectDocSummaryEvent(
+                    document_id=did,
+                    ok=False,
+                    reason="save_failed",
+                    selections_applied=len(selections_to_apply),
+                ).res
+                logger.info(
+                    f"project_redact_doc_summary ok=False document_id={did} reason=save_failed selections_applied={len(selections_to_apply)}",
+                )
+                failed += 1
 
             processed += 1
             yield projects_schema.ProjectProgressEvent(processed=processed, total=total_docs).res
 
-        yield projects_schema.CompletedEvent(ok=True).res
+        # Emit NOOP status if none of the documents had applicable selections for the chosen scope
+        if docs_with_applicable == 0:
+            yield projects_schema.StatusEvent(stage="noop", message="no_applicable_selections").res
+
+        yield projects_schema.CompletedEvent(
+            ok=(failed == 0),
+            total=total_docs,
+            succeeded=succeeded,
+            failed=failed,
+        ).res
+        logger.info(
+            f"project_redact_completed project_id={project_id} total={total_docs} succeeded={succeeded} failed={failed}",
+        )
 
     return StreamingResponse(_sse_gen(), media_type="text/event-stream")

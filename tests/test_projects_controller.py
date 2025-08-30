@@ -280,6 +280,130 @@ class TestProjectsController:
         assert red is not None
         assert isinstance(red.data, bytes) and len(red.data) > 0
 
+    def test_redact_stream_rerun_replaces_redacted(self, client, test_session: Session):
+        # Arrange
+        proj = self._create_project(test_session)
+        doc = self._create_document(test_session, proj.id)
+        # attach original
+        original_pdf = generate_test_pdf(text="RERUN", pages=1)
+        _ = self._attach_original(test_session, doc, payload=original_pdf)
+        # add a committed document-scoped selection
+        from backend.api.enums import CommitState, ScopeType
+        from backend.db.models import Selection as SelectionModel
+        sel = SelectionModel(document_id=doc.id, x=0.05, y=0.05, width=0.2, height=0.2, page_number=0, scope=ScopeType.DOCUMENT, state=CommitState.COMMITTED)
+        test_session.add(sel)
+        test_session.commit()
+
+        # Encrypt credentials for known password (StrongPW!123)
+        key_id, public_pem = security_manager.generate_ephemeral_rsa_keypair()
+        from cryptography.hazmat.primitives import serialization, hashes
+        from cryptography.hazmat.primitives.asymmetric import padding
+        pub = serialization.load_pem_public_key(public_pem.encode("utf-8"))
+        ciphertext = pub.encrypt(
+            b"StrongPW!123",
+            padding.OAEP(mgf=padding.MGF1(algorithm=hashes.SHA256()), algorithm=hashes.SHA256(), label=None),
+        )
+        enc_b64 = base64.b64encode(ciphertext).decode("ascii")
+
+        # First run
+        res1 = client.post(f"/api/projects/id/{proj.id}/redact/stream", json={
+            "key_id": key_id,
+            "encrypted_password": enc_b64,
+            "scope": "pan",
+        })
+        assert res1.status_code == 200
+
+        # Confirm exactly one redacted file exists
+        from backend.db.models import File as FileModel
+        from backend.api.enums import FileType as FT
+        reds1 = (
+            test_session.query(FileModel)
+            .filter(FileModel.document_id == doc.id, FileModel.file_type == FT.REDACTED)
+            .all()
+        )
+        assert len(reds1) == 1
+        first_red_id = reds1[0].id
+
+        # Second run (should replace) – refresh ephemeral credentials
+        key_id2, public_pem2 = security_manager.generate_ephemeral_rsa_keypair()
+        pub2 = serialization.load_pem_public_key(public_pem2.encode("utf-8"))
+        ciphertext2 = pub2.encrypt(
+            b"StrongPW!123",
+            padding.OAEP(mgf=padding.MGF1(algorithm=hashes.SHA256()), algorithm=hashes.SHA256(), label=None),
+        )
+        enc_b64_2 = base64.b64encode(ciphertext2).decode("ascii")
+
+        res2 = client.post(f"/api/projects/id/{proj.id}/redact/stream", json={
+            "key_id": key_id2,
+            "encrypted_password": enc_b64_2,
+            "scope": "pan",
+        })
+        assert res2.status_code == 200
+
+        reds2 = (
+            test_session.query(FileModel)
+            .filter(FileModel.document_id == doc.id, FileModel.file_type == FT.REDACTED)
+            .all()
+        )
+        assert len(reds2) == 1  # still one, replaced
+        assert str(reds2[0].id) != str(first_red_id)
+
+    def test_redact_stream_empty_project_noop(self, client, test_session: Session):
+        # Arrange: project with no documents
+        proj = self._create_project(test_session)
+        # Encrypt credentials for known password (StrongPW!123)
+        key_id, public_pem = security_manager.generate_ephemeral_rsa_keypair()
+        from cryptography.hazmat.primitives import serialization, hashes
+        from cryptography.hazmat.primitives.asymmetric import padding
+        pub = serialization.load_pem_public_key(public_pem.encode("utf-8"))
+        ciphertext = pub.encrypt(
+            b"StrongPW!123",
+            padding.OAEP(mgf=padding.MGF1(algorithm=hashes.SHA256()), algorithm=hashes.SHA256(), label=None),
+        )
+        enc_b64 = base64.b64encode(ciphertext).decode("ascii")
+
+        res = client.post(f"/api/projects/id/{proj.id}/redact/stream", json={
+            "key_id": key_id,
+            "encrypted_password": enc_b64,
+            "scope": "pan",
+        })
+        assert res.status_code == 200
+        body = res.text
+        assert "event: project_init" in body
+        assert '"total_documents":0' in body
+        assert "event: status" in body and '"stage":"noop"' in body and '"message":"no_documents"' in body
+        assert "event: completed" in body
+
+    def test_redact_stream_project_scope_without_template(self, client, test_session: Session):
+        # Arrange: project with doc but no template set
+        proj = self._create_project(test_session)
+        doc = self._create_document(test_session, proj.id)
+        # attach original
+        original_pdf = generate_test_pdf(text="NO-TPL", pages=1)
+        _ = self._attach_original(test_session, doc, payload=original_pdf)
+        # Encrypt credentials for known password (StrongPW!123)
+        key_id, public_pem = security_manager.generate_ephemeral_rsa_keypair()
+        from cryptography.hazmat.primitives import serialization, hashes
+        from cryptography.hazmat.primitives.asymmetric import padding
+        pub = serialization.load_pem_public_key(public_pem.encode("utf-8"))
+        ciphertext = pub.encrypt(
+            b"StrongPW!123",
+            padding.OAEP(mgf=padding.MGF1(algorithm=hashes.SHA256()), algorithm=hashes.SHA256(), label=None),
+        )
+        enc_b64 = base64.b64encode(ciphertext).decode("ascii")
+
+        res = client.post(f"/api/projects/id/{proj.id}/redact/stream", json={
+            "key_id": key_id,
+            "encrypted_password": enc_b64,
+            "scope": "project",
+        })
+        assert res.status_code == 200
+        body = res.text
+        # Expect summaries with reason no_committed_selections_for_scope and final completed
+        assert "event: project_doc_summary" in body
+        assert '"reason":"no_committed_selections_for_scope"' in body
+        assert "event: completed" in body
+
     @pytest.mark.integration
     def test_redact_stream_scope_filtering_project_only(self, client, test_session: Session):
         # Arrange: project via controller, doc with original, only document-scoped committed selection

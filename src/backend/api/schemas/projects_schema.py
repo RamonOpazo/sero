@@ -171,6 +171,9 @@ class ProjectProgressEvent(BaseEvent):
 
 class CompletedEvent(BaseEvent):
     ok: bool
+    total: int = 0
+    succeeded: int = 0
+    failed: int = 0
 
 
 class ErrorEvent(BaseEvent):
