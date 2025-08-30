@@ -410,7 +410,7 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
         messages={([
           { variant: 'warning', title: 'Batch operation', description: 'This will start processing for all project documents. Existing redacted files will be replaced.', },
         ] as any)}
-        initialValues={{ scope: 'project', }}
+        initialValues={{ scope: (typeof window !== 'undefined' && (window.localStorage.getItem('sero.redaction.scope') as any)) || 'pan', }}
         fields={[
           { type: 'select', name: 'scope', label: 'Scope', tooltip: 'Redact using selections of this scope', options: [
             { value: 'project', label: 'Project', },
@@ -423,7 +423,9 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
             if (!project) return;
             try {
               const { keyId, encryptedPassword } = await ensureProjectTrust(project.id);
-              const scope = String(values.scope || 'project') as 'project' | 'document' | 'pan';
+              const scope = String(values.scope || 'pan') as 'project' | 'document' | 'pan';
+              // Persist last chosen scope
+              try { if (typeof window !== 'undefined') window.localStorage.setItem('sero.redaction.scope', scope); } catch {}
               // Stream into global processing chin
               const { startProjectRedaction } = await import('@/lib/ai-runner');
               startProjectRedaction(aiProc as any, project.id, { keyId, encryptedPassword, scope });

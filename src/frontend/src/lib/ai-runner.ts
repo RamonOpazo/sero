@@ -1,5 +1,6 @@
 import { DocumentViewerAPI } from '@/lib/document-viewer-api';
 import type { AiProcessingWarning } from '@/providers/ai-processing-provider';
+import { toast } from 'sonner';
 
 export interface AiProcessingApi {
   state: { jobs: Record<string, any> };
@@ -96,6 +97,10 @@ export function startProjectRedaction(
 ) {
   const jobId = `redact:${projectId}`;
 
+  // Cancel any previous job for this project to avoid stale UI state and ensure a single active stream
+  try { aiProc.cancelJob(jobId); } catch { /* ignore */ }
+  try { aiProc.clearJob(jobId); } catch { /* ignore */ }
+
   aiProc.startJob({
     id: jobId,
     kind: 'project',
@@ -135,9 +140,29 @@ export function startProjectRedaction(
       const hint = `doc ${document_id}: ${status}${typeof selections_applied === 'number' ? ` (${selections_applied})` : ''}`;
       aiProc.updateJob({ id: jobId, hints: [hint], stage: 'saving', stageIndex: 2 });
     },
-    onCompleted: ({ ok }: { ok: boolean }) => {
-      if (ok) aiProc.completeJob(jobId);
-      else aiProc.failJob(jobId, { message: 'redaction-completed-with-errors' });
+    onCompleted: ({ ok, total, succeeded, failed }: { ok: boolean; total?: number; succeeded?: number; failed?: number }) => {
+      const hasCounts = typeof total === 'number' && typeof succeeded === 'number' && typeof failed === 'number';
+      if (ok) {
+        aiProc.completeJob(jobId);
+        if (hasCounts) {
+          toast.success(
+            'Redaction completed',
+            { description: `${succeeded}/${total} succeeded, ${failed} failed`, },
+          );
+        } else {
+          toast.success('Redaction completed');
+        }
+      } else {
+        aiProc.failJob(jobId, { message: 'redaction-completed-with-errors' });
+        if (hasCounts) {
+          toast.error(
+            'Redaction completed with errors',
+            { description: `${succeeded}/${total} succeeded, ${failed} failed`, },
+          );
+        } else {
+          toast.error('Redaction completed with errors');
+        }
+      }
       aiProc.clearJob(jobId);
     },
     onError: ({ message }: { message: string }) => {

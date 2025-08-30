@@ -205,9 +205,9 @@ Progress tracker (update as we land changes)
 - [x] A4 Backend NOOP status
 - [ ] A5 Backend structured logs
 - [ ] A6 Backend tests: re-run, empty project, scope mismatch, pan
-- [ ] B1 Frontend cancel stale job
-- [ ] B2 Frontend default=pan and persist
-- [ ] B3 Frontend completion summary UX
+- [x] B1 Frontend cancel stale job
+- [x] B2 Frontend default=pan and persist
+- [x] B3 Frontend completion summary UX
 - [ ] B4 Frontend trust expiry retry
 - [ ] B5 Frontend debug SSE logs
 - [ ] B6 Frontend reason→hint mapping

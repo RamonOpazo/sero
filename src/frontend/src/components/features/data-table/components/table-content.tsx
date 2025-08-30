@@ -111,20 +111,20 @@ export function TableContent<T extends Record<string, any>>({
   const hasActionsColumn = columns.some((col: Column<T>) => col.type === 'actions')
   const actionsColumn = showActions && !hasActionsColumn // Only show legacy actions if no actions column exists
 
-  // Helper function to get CSS class based on column type
-  const getColumnHeaderClass = (column: Column<T>) => {
-    switch (column.type) {
-      case 'actions': return 'data-table-col-actions'
-      default: return '' // Use inline Tailwind classes instead
-    }
-  }
+  // // Helper function to get CSS class based on column type
+  // const getColumnHeaderClass = (column: Column<T>) => {
+  //   switch (column.type) {
+  //     case 'actions': return 'data-table-col-actions'
+  //     default: return '' // Use inline Tailwind classes instead
+  //   }
+  // }
 
-  const getColumnCellClass = (column: Column<T>) => {
-    switch (column.type) {
-      case 'actions': return 'data-table-cell-actions'
-      default: return '' // Use inline Tailwind classes instead
-    }
-  }
+  // const getColumnCellClass = (column: Column<T>) => {
+  //   switch (column.type) {
+  //     case 'actions': return 'data-table-cell-actions'
+  //     default: return '' // Use inline Tailwind classes instead
+  //   }
+  // }
 
   // Helper function to get the width for a column
   const getColumnWidth = (column: Column<T>) => {
@@ -179,7 +179,7 @@ export function TableContent<T extends Record<string, any>>({
             {scrollableColumns.map((column: Column<T>) => (
               <TableHead
                 key={column.key}
-                className={getColumnHeaderClass(column)}
+                // className={getColumnHeaderClass(column)}
                 style={{ width: getColumnWidth(column), minWidth: column.minWidth || getColumnWidth(column) }}
               >
                 {column.header}
@@ -228,7 +228,7 @@ export function TableContent<T extends Record<string, any>>({
                 {scrollableColumns.map((column: Column<T>) => (
                   <TableCell
                     key={column.key}
-                    className={getColumnCellClass(column)}
+                    // className={getColumnCellClass(column)}
                     style={{ width: getColumnWidth(column), minWidth: column.minWidth || getColumnWidth(column) }}
                   >
                     {getCellValue(row, column)}
