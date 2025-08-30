@@ -208,7 +208,7 @@ Progress tracker (update as we land changes)
 - [x] B1 Frontend cancel stale job
 - [x] B2 Frontend default=pan and persist
 - [x] B3 Frontend completion summary UX
-- [ ] B4 Frontend trust expiry retry
+- [x] B4 Frontend trust expiry retry
 - [ ] B5 Frontend debug SSE logs
 - [ ] B6 Frontend reason→hint mapping
 - [ ] C1+C2 Docs updates

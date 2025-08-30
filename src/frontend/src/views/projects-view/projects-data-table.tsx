@@ -428,7 +428,7 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
               try { if (typeof window !== 'undefined') window.localStorage.setItem('sero.redaction.scope', scope); } catch {}
               // Stream into global processing chin
               const { startProjectRedaction } = await import('@/lib/ai-runner');
-              startProjectRedaction(aiProc as any, project.id, { keyId, encryptedPassword, scope });
+              startProjectRedaction(aiProc as any, project.id, { keyId, encryptedPassword, scope, getFreshCreds: async () => ensureProjectTrust(project.id), });
             } catch (e) {
               toast.error('Failed to start project redaction');
             } finally {

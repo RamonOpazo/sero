@@ -93,7 +93,7 @@ export function startProjectRun(aiProc: AiProcessingApi, projectId: string, opts
 export function startProjectRedaction(
   aiProc: AiProcessingApi,
   projectId: string,
-  opts: { keyId: string; encryptedPassword: string; scope: 'project' | 'document' | 'pan' },
+  opts: { keyId: string; encryptedPassword: string; scope: 'project' | 'document' | 'pan'; getFreshCreds?: () => Promise<{ keyId: string; encryptedPassword: string }> },
 ) {
   const jobId = `redact:${projectId}`;
 
@@ -121,6 +121,7 @@ export function startProjectRedaction(
     scope: opts.scope,
     keyId: opts.keyId,
     encryptedPassword: opts.encryptedPassword,
+    getFreshCreds: opts.getFreshCreds,
     onProjectInit: ({ total_documents }: { total_documents: number }) => {
       aiProc.updateJob({ id: jobId, batchTotal: total_documents, stage: 'queued', stageIndex: 0 });
     },

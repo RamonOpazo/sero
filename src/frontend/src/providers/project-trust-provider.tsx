@@ -70,10 +70,11 @@ export function ProjectTrustProvider({ children }: { children: React.ReactNode }
       setIsEncrypting(false);
       setDialogOpen(false);
       const projectId = pendingProjectId.current!;
-      const ttlMs = Math.max(0, (encrypted.expiresInSeconds ?? 0) * 1000 - SAFETY_MARGIN_MS);
+      // Extend trust period to 30 minutes regardless of ephemeral key TTL
+      const TTL_MS = 30 * 60 * 1000;
       const secret: TrustSecret = {
         password,
-        expiresAt: Date.now() + ttlMs,
+        expiresAt: Date.now() + TTL_MS,
       };
       cacheRef.current.set(projectId, secret);
       resolverRef.current?.({ keyId: encrypted.keyId, encryptedPassword: encrypted.encryptedPassword });

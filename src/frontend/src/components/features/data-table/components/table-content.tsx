@@ -34,19 +34,19 @@ export function TableContent<T extends Record<string, any>>({
   columnWidths
 }: TableContentProps<T>) {
   const [allSelected, setAllSelected] = useState(false)
-
+  
   // Merge user-provided column widths with defaults
   const widthConfig = mergeColumnWidths(columnWidths)
-
+  
   // Separate columns by type first (needed for width calculations)
   const pinnedColumns = columns.filter((col: Column<T>) => col.pinFirstColumn === true)
-
+  
   // CSS variables for consistent sticky positioning
   // Calculate combined width for checkbox + first column when both are present
   const getCombinedLeftColWidth = () => {
     const checkboxWidth = typeof widthConfig.checkbox === 'number' ? widthConfig.checkbox : parseInt(widthConfig.checkbox.replace(/[^\d]/g, ''))
     const pinnedWidth = typeof widthConfig.pinned === 'number' ? widthConfig.pinned : parseInt(widthConfig.pinned.replace(/[^\d]/g, ''))
-
+    
     if (showCheckboxes && pinnedColumns.length > 0) {
       return `${checkboxWidth + pinnedWidth}px`
     } else if (showCheckboxes) {
@@ -65,19 +65,19 @@ export function TableContent<T extends Record<string, any>>({
 
   // Helper function to get cell value
   const getCellValue = (row: T, column: Column<T>) => {
-
+    
     if (column.cell) {
       return column.cell(row[column.key], row, data.indexOf(row))
     }
-
+    
     if (typeof column.accessor === 'function') {
       return column.accessor(row)
     }
-
+    
     if (column.accessor) {
       return row[column.accessor]
     }
-
+    
     return row[column.key]
   }
 
@@ -91,11 +91,11 @@ export function TableContent<T extends Record<string, any>>({
 
   const handleRowSelect = (row: T, checked: boolean) => {
     if (!onRowSelect) return
-
+    
     const newSelection = checked
       ? [...selectedRows, row]
       : selectedRows.filter((r: T) => r !== row)
-
+    
     onRowSelect(newSelection)
     setAllSelected(newSelection.length === data.length)
   }
@@ -104,27 +104,27 @@ export function TableContent<T extends Record<string, any>>({
 
   // Separate columns by type and apply CSS classes  
   const checkboxColumn = showCheckboxes
-  const scrollableColumns = columns.filter((col: Column<T>) =>
+  const scrollableColumns = columns.filter((col: Column<T>) => 
     !col.pinFirstColumn && (col.type === 'scrollable' || col.type === 'actions' || !col.type)
   )
   // Check if we have any actions columns in our column definitions
   const hasActionsColumn = columns.some((col: Column<T>) => col.type === 'actions')
   const actionsColumn = showActions && !hasActionsColumn // Only show legacy actions if no actions column exists
 
-  // // Helper function to get CSS class based on column type
-  // const getColumnHeaderClass = (column: Column<T>) => {
-  //   switch (column.type) {
-  //     case 'actions': return 'data-table-col-actions'
-  //     default: return '' // Use inline Tailwind classes instead
-  //   }
-  // }
+  // Helper function to get CSS class based on column type
+  const getColumnHeaderClass = (column: Column<T>) => {
+    switch (column.type) {
+      case 'actions': return 'data-table-col-actions'
+      default: return '' // Use inline Tailwind classes instead
+    }
+  }
 
-  // const getColumnCellClass = (column: Column<T>) => {
-  //   switch (column.type) {
-  //     case 'actions': return 'data-table-cell-actions'
-  //     default: return '' // Use inline Tailwind classes instead
-  //   }
-  // }
+  const getColumnCellClass = (column: Column<T>) => {
+    switch (column.type) {
+      case 'actions': return 'data-table-cell-actions'
+      default: return '' // Use inline Tailwind classes instead
+    }
+  }
 
   // Helper function to get the width for a column
   const getColumnWidth = (column: Column<T>) => {
@@ -132,12 +132,12 @@ export function TableContent<T extends Record<string, any>>({
     if (column.width) {
       return typeof column.width === 'number' ? `${column.width}px` : column.width
     }
-
+    
     // Otherwise use width config based on column type
     if (column.pinFirstColumn) {
       return typeof widthConfig.pinned === 'number' ? `${widthConfig.pinned}px` : widthConfig.pinned
     }
-
+    
     switch (column.type) {
       case 'checkbox':
         return typeof widthConfig.checkbox === 'number' ? `${widthConfig.checkbox}px` : widthConfig.checkbox
@@ -151,24 +151,25 @@ export function TableContent<T extends Record<string, any>>({
 
   return (
     <div className="data-table-scroll-area" style={stickyVars}>
-      <Table>
-        <TableHeader>
+      <Table className="data-table-table">
+        <TableHeader className="data-table-header">
           <TableRow>
             {/* Combined checkbox + first column */}
             {(checkboxColumn || pinnedColumns.length > 0) && (
-              <TableHead role="checkbox" className="sticky left-0 z-40">
+              <TableHead className="sticky left-0 z-40 bg-muted w-[var(--combined-left-col)] min-w-[var(--combined-left-col)]">
                 <div className="flex items-center gap-2">
                   {checkboxColumn && (
-                    <Checkbox
-                      checked={allSelected}
-                      onCheckedChange={handleSelectAll}
-                      aria-label="Select all"
-                      className="mx-2"
-                    />
+                    <div className="flex-shrink-0 px-4">
+                      <Checkbox
+                        checked={allSelected}
+                        onCheckedChange={handleSelectAll}
+                        aria-label="Select all"
+                      />
+                    </div>
                   )}
                   {pinnedColumns.length > 0 && (
                     <div className="flex-1 font-medium">
-                      {pinnedColumns[0]?.header}
+                      {pinnedColumns[0]?.header || 'Name'}
                     </div>
                   )}
                 </div>
@@ -179,7 +180,7 @@ export function TableContent<T extends Record<string, any>>({
             {scrollableColumns.map((column: Column<T>) => (
               <TableHead
                 key={column.key}
-                // className={getColumnHeaderClass(column)}
+                className={getColumnHeaderClass(column)}
                 style={{ width: getColumnWidth(column), minWidth: column.minWidth || getColumnWidth(column) }}
               >
                 {column.header}
@@ -208,12 +209,13 @@ export function TableContent<T extends Record<string, any>>({
                   <TableCell className="sticky left-0 z-30 w-[var(--combined-left-col)] min-w-[var(--combined-left-col)] data-table-cell-pinned">
                     <div className="flex items-center gap-2">
                       {checkboxColumn && (
-                        <Checkbox
-                          checked={isRowSelected(row)}
-                          onCheckedChange={(checked) => handleRowSelect(row, checked as boolean)}
-                          aria-label={`Select row ${index + 1}`}
-                          className="mx-2"
-                        />
+                        <div className="flex-shrink-0 px-4">
+                          <Checkbox
+                            checked={isRowSelected(row)}
+                            onCheckedChange={(checked) => handleRowSelect(row, checked as boolean)}
+                            aria-label={`Select row ${index + 1}`}
+                          />
+                        </div>
                       )}
                       {pinnedColumns.length > 0 && (
                         <div className="flex-1 font-medium">
@@ -228,7 +230,7 @@ export function TableContent<T extends Record<string, any>>({
                 {scrollableColumns.map((column: Column<T>) => (
                   <TableCell
                     key={column.key}
-                    // className={getColumnCellClass(column)}
+                    className={getColumnCellClass(column)}
                     style={{ width: getColumnWidth(column), minWidth: column.minWidth || getColumnWidth(column) }}
                   >
                     {getCellValue(row, column)}

@@ -277,12 +277,13 @@ export const ProjectsAPI = {
       scope: 'document' | 'project' | 'pan';
       keyId: string;
       encryptedPassword: string;
+      getFreshCreds?: () => Promise<{ keyId: string; encryptedPassword: string }>; // optional single auto-retry supplier
       onProjectInit?: (data: { total_documents: number }) => void;
       onProjectProgress?: (data: { processed: number; total: number }) => void;
       onDocStart?: (data: { index: number; document_id: string }) => void;
       onDocSummary?: (data: { document_id: string; ok: boolean; reason?: string; redacted_file_id?: string; original_file_size?: number; redacted_file_size?: number; selections_applied?: number }) => void;
       onStatus?: (data: { stage: string; document_id?: string; message?: string }) => void;
-      onCompleted?: (data: { ok: boolean }) => void;
+      onCompleted?: (data: { ok: boolean; total?: number; succeeded?: number; failed?: number }) => void;
       onError?: (data: { message: string }) => void;
     }
   ): { cancel: () => void } {
@@ -290,13 +291,23 @@ export const ProjectsAPI = {
     const signal = controller.signal;
 
     const parseStream = async () => {
+      const doFetch = async (keyId: string, enc: string) => fetch(`/api/projects/id/${projectId}/redact/stream`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key_id: keyId, encrypted_password: enc, scope: params.scope }),
+        signal,
+      });
       try {
-        const resp = await fetch(`/api/projects/id/${projectId}/redact/stream`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ key_id: params.keyId, encrypted_password: params.encryptedPassword, scope: params.scope }),
-          signal,
-        });
+        let resp = await doFetch(params.keyId, params.encryptedPassword);
+        if (!resp.ok && typeof params.getFreshCreds === 'function') {
+          // one-shot retry with fresh credentials (trust refresh)
+          try {
+            const fresh = await params.getFreshCreds();
+            resp = await doFetch(fresh.keyId, fresh.encryptedPassword);
+          } catch (e) {
+            // fall through to onError below
+          }
+        }
         if (!resp.ok || !resp.body) throw new Error(`Stream failed: ${resp.status}`);
         const reader = resp.body.getReader();
         const decoder = new TextDecoder();
