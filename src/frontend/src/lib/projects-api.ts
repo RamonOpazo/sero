@@ -293,7 +293,13 @@ export const ProjectsAPI = {
     const parseStream = async () => {
       const doFetch = async (keyId: string, enc: string) => fetch(`/api/projects/id/${projectId}/redact/stream`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache',
+        },
+        cache: 'no-store',
         body: JSON.stringify({ key_id: keyId, encrypted_password: enc, scope: params.scope }),
         signal,
       });

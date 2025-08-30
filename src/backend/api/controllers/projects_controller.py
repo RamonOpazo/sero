@@ -3,6 +3,7 @@ from fastapi import HTTPException, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from loguru import logger
+import asyncio
 
 from backend.crud import projects_crud, support_crud, ai_settings_crud, documents_crud, templates_crud, files_crud
 from backend.api.schemas import projects_schema, generics_schema, settings_schema, templates_schema, files_schema
@@ -218,6 +219,10 @@ async def redact_stream(
                 key_id=request.key_id,
             )
 
+            # SSE: reconnection hint and initial heartbeat
+            yield "retry: 5000\n\n"
+            yield ": ping\n\n"
+
             # Collect documents for project with needed relationships
             docs = support_crud.apply_or_404(
                 documents_crud.search,
@@ -254,6 +259,8 @@ async def redact_stream(
         for idx, doc in enumerate(docs, start=1):
             did = str(doc.id)
             yield projects_schema.ProjectDocStartEvent(index=idx, document_id=did).res
+            # Heartbeat to encourage flush right after doc start
+            yield ": ping\n\n"
             logger.info(f"project_redact_doc_start index={idx} document_id={did}")
 
             try:
@@ -276,6 +283,7 @@ async def redact_stream(
                     failed += 1
                     processed += 1
                     yield projects_schema.ProjectProgressEvent(processed=processed, total=total_docs).res
+                    yield ": ping\n\n"
                     continue
                 else:
                     docs_with_applicable += 1
@@ -289,6 +297,7 @@ async def redact_stream(
                 failed += 1
                 processed += 1
                 yield projects_schema.ProjectProgressEvent(processed=processed, total=total_docs).res
+                yield ": ping\n\n"
                 continue
 
             # Decrypt original
@@ -310,12 +319,15 @@ async def redact_stream(
                 failed += 1
                 processed += 1
                 yield projects_schema.ProjectProgressEvent(processed=processed, total=total_docs).res
+                yield ": ping\n\n"
                 continue
 
             # Run redaction
             try:
                 yield projects_schema.StatusEvent(stage="redacting", document_id=did).res
-                redacted_bytes = get_redactor_service().redact(
+                # Offload CPU-bound redaction to a thread so the event loop can flush SSE events
+                redacted_bytes = await asyncio.to_thread(
+                    get_redactor_service().redact,
                     pdf_data=decrypted,
                     selections=[_to_area(s) for s in selections_to_apply],
                 )
@@ -330,6 +342,7 @@ async def redact_stream(
                 failed += 1
                 processed += 1
                 yield projects_schema.ProjectProgressEvent(processed=processed, total=total_docs).res
+                yield ": ping\n\n"
                 continue
 
             # Replace existing redacted file if present
@@ -342,7 +355,8 @@ async def redact_stream(
                     db.expire(doc, ["files"])  # ensure relationship reloads
 
                 # Create new redacted file
-                red_hash = security_manager.generate_file_hash(redacted_bytes)
+                # Offload hashing to a thread as it can be CPU-bound for large files
+                red_hash = await asyncio.to_thread(security_manager.generate_file_hash, redacted_bytes)
                 file_data = files_schema.FileCreate(
                     file_hash=red_hash,
                     file_type=FileType.REDACTED,
@@ -379,6 +393,7 @@ async def redact_stream(
 
             processed += 1
             yield projects_schema.ProjectProgressEvent(processed=processed, total=total_docs).res
+            yield ": ping\n\n"
 
         # Emit NOOP status if none of the documents had applicable selections for the chosen scope
         if docs_with_applicable == 0:
@@ -394,4 +409,13 @@ async def redact_stream(
             f"project_redact_completed project_id={project_id} total={total_docs} succeeded={succeeded} failed={failed}",
         )
 
-    return StreamingResponse(_sse_gen(), media_type="text/event-stream")
+    return StreamingResponse(
+        _sse_gen(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            # If behind Nginx, this disables proxy buffering for streaming responses
+            "X-Accel-Buffering": "no",
+        },
+    )

@@ -13,7 +13,6 @@ import { useProjectsView } from './use-projects-view';
 import { useAiProcessing } from '@/providers/ai-processing-provider';
 import { useProjectTrust } from '@/providers/project-trust-provider';
 import { startProjectRun } from '@/lib/ai-runner';
-import { ProjectsAPI } from '@/lib/projects-api';
 import type { ProjectShallowType } from '@/types';
 import type { ColumnConfig } from '@/components/features/data-table/columns';
 import type { ColumnOption, CustomButtonOption } from '@/components/features/data-table/types';
@@ -429,8 +428,13 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
               // Stream into global processing chin
               const { startProjectRedaction } = await import('@/lib/ai-runner');
               startProjectRedaction(aiProc as any, project.id, { keyId, encryptedPassword, scope, getFreshCreds: async () => ensureProjectTrust(project.id), });
-            } catch (e) {
-              toast.error('Failed to start project redaction');
+            } catch (e: any) {
+              if (e instanceof Error && e.message === 'cancelled') {
+                toast.message('Project unlock cancelled');
+              } else {
+                toast.error('Failed to start project redaction', { description: (e?.message || 'Please try again.') as any });
+                try { console.error('startProjectRedaction failed:', e); } catch {}
+              }
             } finally {
               setRunProjectRedaction({ isOpen: false, project: null, });
             }

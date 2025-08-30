@@ -1,6 +1,7 @@
 import { DocumentViewerAPI } from '@/lib/document-viewer-api';
 import type { AiProcessingWarning } from '@/providers/ai-processing-provider';
 import { toast } from 'sonner';
+import { ProjectsAPI } from '@/lib/projects-api';
 
 function humanReason(reason?: string): string {
   switch (reason) {
@@ -111,6 +112,7 @@ export function startProjectRedaction(
   opts: { keyId: string; encryptedPassword: string; scope: 'project' | 'document' | 'pan'; getFreshCreds?: () => Promise<{ keyId: string; encryptedPassword: string }> },
 ) {
   const jobId = `redact:${projectId}`;
+  let totalDocs = 0;
 
   // Cancel any previous job for this project to avoid stale UI state and ensure a single active stream
   try { aiProc.cancelJob(jobId); } catch { /* ignore */ }
@@ -127,25 +129,37 @@ export function startProjectRedaction(
     hints: [],
     batchProcessed: 0,
     batchTotal: 0,
-    meta: { projectId },
+    meta: { projectId, currentDocIndex: 0, totalDocs: 0 },
   });
 
-  // Dynamically import to avoid circular deps; ProjectsAPI is the source for redaction SSE
-  const { ProjectsAPI } = require('@/lib/projects-api');
   const handle = ProjectsAPI.redactProjectStream(projectId, {
     scope: opts.scope,
     keyId: opts.keyId,
     encryptedPassword: opts.encryptedPassword,
     getFreshCreds: opts.getFreshCreds,
     onProjectInit: ({ total_documents }: { total_documents: number }) => {
-      aiProc.updateJob({ id: jobId, batchTotal: total_documents, stage: 'queued', stageIndex: 0 });
+      totalDocs = total_documents || 0;
+      aiProc.updateJob({
+        id: jobId,
+        batchTotal: totalDocs,
+        stage: 'queued',
+        stageIndex: 0,
+        meta: { projectId, currentDocIndex: 0, totalDocs },
+      });
     },
     onProjectProgress: ({ processed, total }: { processed: number; total: number }) => {
       const pct = total > 0 ? Math.round((processed / total) * 100) : 0;
       aiProc.updateJob({ id: jobId, batchProcessed: processed, batchTotal: total, percent: pct });
     },
     onDocStart: ({ index, document_id }: { index: number; document_id: string }) => {
-      aiProc.updateJob({ id: jobId, hints: [`doc ${index}${document_id ? `: ${document_id}` : ''}`], stage: 'decrypting', stageIndex: 1 });
+      // Update current document context (index is 1-based)
+      aiProc.updateJob({
+        id: jobId,
+        hints: [`doc ${index}${document_id ? `: ${document_id}` : ''}`],
+        stage: 'decrypting',
+        stageIndex: 1,
+        meta: { projectId, currentDocIndex: index, totalDocs },
+      });
     },
     onStatus: ({ stage, document_id }: { stage: string; document_id?: string }) => {
       // Map server stages directly when present

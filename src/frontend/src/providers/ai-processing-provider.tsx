@@ -6,6 +6,11 @@ export interface AiProcessingMeta {
   documentId?: string;
   projectId?: string;
   runId?: string;
+  // Project batch progress context
+  currentDocIndex?: number; // 1-based index of current document being processed
+  totalDocs?: number; // total documents in batch
+  currentDocumentId?: string;
+  currentDocumentName?: string;
 }
 
 export interface AiProcessingWarning {

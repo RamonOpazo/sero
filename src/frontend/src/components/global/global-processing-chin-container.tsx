@@ -17,10 +17,10 @@ export function GlobalProcessingChinContainer() {
   if (!activeId) return null;
 
   const job = jobs[activeId];
-  const batchText =
-    job.kind === 'project' && typeof job.batchProcessed === 'number' && typeof job.batchTotal === 'number'
-      ? `Documents ${job.batchProcessed} of ${job.batchTotal}`
-      : null;
+  const hasBatch = job.kind === 'project' && typeof job.batchProcessed === 'number' && typeof job.batchTotal === 'number';
+  const batchText = hasBatch ? `Documents ${job.batchProcessed} of ${job.batchTotal}` : null;
+  const docProgressPercent = hasBatch && job.batchTotal > 0 ? Math.round((job.batchProcessed / job.batchTotal) * 100) : null;
+  const docProgressLabel = hasBatch ? `Document ${job.batchProcessed} of ${job.batchTotal}` : null;
 
   // Compose a short subtask from hints (last hint)
   const lastHint = job.hints.length > 0 ? job.hints[job.hints.length - 1] : null;
@@ -39,6 +39,8 @@ export function GlobalProcessingChinContainer() {
       warning={job.warning ?? null}
       percent={job.percent}
       batchText={batchText}
+      docProgressPercent={docProgressPercent}
+      docProgressLabel={docProgressLabel}
       link={job.link ?? null}
       onCancel={handleCancel}
       cancelLabel={job.kind === 'project' ? 'Cancel project' : 'Cancel'}
