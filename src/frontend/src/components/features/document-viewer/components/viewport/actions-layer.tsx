@@ -229,161 +229,85 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
         (visible && showBar) ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4 pointer-events-none",
       )}>
         <Menubar>
-          <MenubarMenu>
-            <MenubarTrigger>View</MenubarTrigger>
-            <MenubarContent align="start">
-              <MenubarLabel>Zoom & Pan</MenubarLabel>
-              <MenubarItem onClick={handleZoomIn}>
-                <ZoomIn /> Zoom In
-                <MenubarShortcut>Ctrl+=</MenubarShortcut>
-              </MenubarItem>
-              <MenubarItem onClick={handleZoomOut}>
-                <ZoomOut /> Zoom Out
-                <MenubarShortcut>Ctrl+-</MenubarShortcut>
-              </MenubarItem>
-              <MenubarItem onClick={handleResetView}>
-                <Scan /> Reset View
-                <MenubarShortcut>Ctrl+0</MenubarShortcut>
-              </MenubarItem>
-              <MenubarItem onClick={handleModeToggle}>
-                {mode === 'pan' ? <MousePointerClick /> : <Hand />} {mode === 'pan' ? 'Switch to Select' : 'Switch to Pan'}
-              </MenubarItem>
-              <MenubarSeparator />
-              <MenubarItem onClick={toggleSelections}>
-                {showSelections ? <PenOff /> : <Pen />} {showSelections ? 'Hide selections' : 'Show selections'}
-                <MenubarShortcut>V</MenubarShortcut>
-              </MenubarItem>
-              {onToggleInfo && (
-                <MenubarItem onClick={onToggleInfo}>
-                  <Info /> {isInfoVisible ? 'Hide info' : 'Show info'}
-                  <MenubarShortcut>I</MenubarShortcut>
+          {(() => {
+            const ctx = {
+              view: {
+                zoomIn: handleZoomIn,
+                zoomOut: handleZoomOut,
+                resetView: handleResetView,
+                toggleMode: handleModeToggle,
+                toggleSelections,
+                toggleProcessedView: actions.toggleProcessedView,
+                gotoPrevPage: actions.gotoPrevPage,
+                gotoNextPage: actions.gotoNextPage,
+                onToggleInfo,
+                isInfoVisible,
+                showSelections,
+                mode,
+              },
+              selections: {
+                openCommitDialog: () => setShowCommitDialog(true),
+                openStageDialog: () => setShowStageDialog(true),
+                discardAllUnsaved: actions.discardAllUnsaved,
+                openClearPageDialog: () => setShowClearPageDialog(true),
+                openClearAllDialog: () => setShowClearAllDialog(true),
+                openWorkbenchSelections: actions.openWorkbenchSelections,
+                canStage,
+                canCommit,
+                isStaging,
+                isCommitting,
+                clearPageDisabled: allSelections.filter((s: any) => s.page_number === currentPage).length === 0,
+                clearAllDisabled: (allSelections || []).length === 0,
+              },
+              rules: {
+                runAi: actions.runAi,
+                isApplyingAI: actions.isApplyingAI,
+                openAddRuleDialog: () => setShowAddPromptDialog(true),
+                openClearAllRulesDialog: () => setShowClearAllPromptsDialog(true),
+                openWorkbenchPrompts: actions.openWorkbenchPrompts,
+              },
+              document: {
+                processDocument: actions.processDocument,
+                isProcessingDoc: actions.isProcessingDoc,
+                downloadCurrentView: actions.downloadCurrentView,
+                isDownloadAvailable: actions.isDownloadAvailable,
+              },
+            } as const;
+            const menus = buildActionsMenuConfig(ctx);
+
+            const renderNode = (c: MenuNode): React.ReactNode => {
+              if (c.type === 'separator') return <MenubarSeparator key={c.key} />;
+              if (c.type === 'label') return <MenubarLabel key={c.key}>{c.label}</MenubarLabel>;
+              if (c.type === 'submenu') {
+                return (
+                  <MenubarSub key={c.key}>
+                    <MenubarSubTrigger>{c.label}</MenubarSubTrigger>
+                    <MenubarSubContent>
+                      {c.children.map(renderNode)}
+                    </MenubarSubContent>
+                  </MenubarSub>
+                );
+              }
+              const item = c as MenuItem;
+              const Icon = item.icon;
+              return (
+                <MenubarItem key={item.key} onClick={item.onSelect} disabled={item.disabled}>
+                  {Icon ? <Icon className="mr-2 h-4 w-4" /> : null}
+                  {item.label}
+                  {item.shortcut ? <MenubarShortcut>{item.shortcut}</MenubarShortcut> : null}
                 </MenubarItem>
-              )}
-              <MenubarSeparator />
-              <MenubarSub>
-                <MenubarSubTrigger>Page</MenubarSubTrigger>
-                <MenubarSubContent>
-                  <MenubarItem onClick={() => setCurrentPage(Math.max(0, currentPage - 1))}>
-                    <ChevronLeft /> Previous
-                    <MenubarShortcut>Alt+Left</MenubarShortcut>
-                  </MenubarItem>
-                  <MenubarItem onClick={() => setCurrentPage(Math.min(numPages - 1, currentPage + 1))}>
-                    <ChevronRight /> Next
-                    <MenubarShortcut>Alt+Right</MenubarShortcut>
-                  </MenubarItem>
-                </MenubarSubContent>
-              </MenubarSub>
-              <MenubarItem onClick={actions.toggleProcessedView}>
-                Toggle View (Original/Redacted)
-                <MenubarShortcut>R</MenubarShortcut>
-              </MenubarItem>
-            </MenubarContent>
-          </MenubarMenu>
+              );
+            };
 
-          <MenubarMenu>
-            <MenubarTrigger>Selections</MenubarTrigger>
-            <MenubarContent align="start">
-              <MenubarItem disabled={!canCommit || isCommitting} onClick={() => setShowCommitDialog(true)}>
-                <CheckCheck /> {isCommitting ? 'Committing…' : 'Commit staged'}
-                <MenubarShortcut>C</MenubarShortcut>
-              </MenubarItem>
-              <MenubarItem disabled={!canStage || isStaging} onClick={() => setShowStageDialog(true)}>
-                <Save /> {isStaging ? 'Staging…' : 'Stage all changes'}
-                <MenubarShortcut>S</MenubarShortcut>
-              </MenubarItem>
-              <MenubarItem onClick={actions.discardAllUnsaved}>
-                <Undo2 /> Discard all unsaved
-              </MenubarItem>
-              <MenubarSeparator />
-              <MenubarSub>
-                <MenubarSubTrigger>Clear</MenubarSubTrigger>
-                <MenubarSubContent>
-                  <MenubarItem disabled={allSelections.filter((s: any) => s.page_number === currentPage).length === 0} onClick={() => setShowClearPageDialog(true)}>
-                    <FileX /> Current page
-                  </MenubarItem>
-                  <MenubarItem disabled={(allSelections || []).length === 0} onClick={() => setShowClearAllDialog(true)}>
-                    <FileX /> All pages
-                  </MenubarItem>
-                </MenubarSubContent>
-              </MenubarSub>
-              <MenubarSeparator />
-              <MenubarItem onClick={actions.openWorkbenchSelections}>
-                Open Workbench • Selections
-              </MenubarItem>
-            </MenubarContent>
-          </MenubarMenu>
-
-
-          <MenubarMenu>
-            <MenubarTrigger>Rules</MenubarTrigger>
-            <MenubarContent align="start">
-              <MenubarItem onClick={actions.runAi} disabled={actions.isApplyingAI}>
-                <Bot /> {actions.isApplyingAI ? 'Running AI…' : 'Run AI detection'}
-                <MenubarShortcut>Ctrl+Alt+A</MenubarShortcut>
-              </MenubarItem>
-              <MenubarItem onClick={() => setShowAddPromptDialog(true)}>
-                <Plus /> Add Rule…
-                <MenubarShortcut>Ctrl+N</MenubarShortcut>
-              </MenubarItem>
-              <MenubarItem onClick={() => setShowClearAllPromptsDialog(true)}>
-                <FileX /> Clear all rules…
-                <MenubarShortcut>Shift+Del</MenubarShortcut>
-              </MenubarItem>
-              <MenubarSeparator />
-              <MenubarItem onClick={actions.openWorkbenchPrompts}>
-                Open Workbench • AI Rules
-              </MenubarItem>
-            </MenubarContent>
-          </MenubarMenu>
-
-          <MenubarMenu>
-            <MenubarTrigger>Document</MenubarTrigger>
-            <MenubarContent align="start">
-              {(() => {
-                const [docMenu] = buildActionsMenuConfig({ actions });
-                const renderChild = (c: MenuNode): React.ReactNode => {
-                  if (c.type === 'separator') return <MenubarSeparator key={c.key} />;
-                  if (c.type === 'label') return <MenubarLabel key={c.key}>{c.label}</MenubarLabel>;
-                  if (c.type === 'submenu') {
-                    return (
-                      <MenubarSub key={c.key}>
-                        <MenubarSubTrigger>{c.label}</MenubarSubTrigger>
-                        <MenubarSubContent>
-                          {c.children.map(renderChild)}
-                        </MenubarSubContent>
-                      </MenubarSub>
-                    );
-                  }
-                  const item = c as MenuItem;
-                  return (
-                    <MenubarItem key={item.key} onClick={item.onSelect} disabled={item.disabled}>
-                      {item.label}
-                    </MenubarItem>
-                  );
-                };
-                return docMenu.entries.map((node) => {
-                  if (node.type === 'separator') return <MenubarSeparator key={node.key} />;
-                  if (node.type === 'label') return <MenubarLabel key={node.key}>{node.label}</MenubarLabel>;
-                  if (node.type === 'submenu') {
-                    return (
-                      <MenubarSub key={node.key}>
-                        <MenubarSubTrigger>{node.label}</MenubarSubTrigger>
-                        <MenubarSubContent>
-                          {node.children.map(renderChild)}
-                        </MenubarSubContent>
-                      </MenubarSub>
-                    );
-                  }
-                  const item = node as MenuItem;
-                  return (
-                    <MenubarItem key={item.key} onClick={item.onSelect} disabled={item.disabled}>
-                      {item.label}
-                    </MenubarItem>
-                  );
-                });
-              })()}
-            </MenubarContent>
-          </MenubarMenu>
+            return menus.map((menu) => (
+              <MenubarMenu key={menu.key}>
+                <MenubarTrigger>{menu.title}</MenubarTrigger>
+                <MenubarContent align={menu.align ?? 'start'}>
+                  {menu.entries.map(renderNode)}
+                </MenubarContent>
+              </MenubarMenu>
+            ));
+          })()}
 
           <Separator orientation="vertical" />
 

@@ -72,12 +72,12 @@ export default function ControlsLayout({ document, className, ...props }: Contro
             className="border-0 bg-transparent hover:underline"
             value="prompts">AI Rules</TabsTrigger>
         </TabsList>
-        <TabsContent value="selections" className="flex flex-col gap-4">
+        <TabsContent value="selections">
           <div className="flex-1 min-h-0">
             <SelectionList />
           </div>
         </TabsContent>
-        <TabsContent value="prompts" className="flex flex-col gap-4">
+        <TabsContent value="prompts">
           <div className="flex-1 min-h-0">
             <PromptsList documentId={document.id} />
           </div>
