@@ -4,11 +4,7 @@ import { useEffect } from "react";
 import type { MinimalDocumentType } from "@/types";
 import { useSelections } from "../../providers/selection-provider";
 import { useViewportState } from "../../providers/viewport-provider";
-import {
-  SelectionCommander,
-  PromptCommander,
-  PromptsList,
-} from "../tooldeck";
+import { PromptsList } from "../tooldeck";
 import SelectionList from "../tooldeck/selection-list";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
