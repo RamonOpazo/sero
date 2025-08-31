@@ -346,16 +346,13 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
                 </MenubarItem>
               </MenubarContent>
             </MenubarMenu>
-          </Menubar>
 
 
-          {/* AI Rules menu */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm">AI Rules</Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              <DropdownMenuItem onClick={async () => {
+          {/* AI Rules menubar (migrated) */}
+          <MenubarMenu>
+            <MenubarTrigger>AI Rules</MenubarTrigger>
+            <MenubarContent align="start">
+              <MenubarItem onClick={async () => {
                 try {
                   setIsApplyingAI(true);
                   const { keyId, encryptedPassword } = await ensureProjectTrust(document.project_id);
@@ -374,13 +371,25 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
                 } catch (e) {
                   setIsApplyingAI(false);
                 }
-              }} disabled={isApplyingAI}><Bot /> {isApplyingAI ? 'Running AI…' : 'Run AI detection'}</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setShowAddPromptDialog(true)}><Plus /> Add Rule…</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setShowClearAllPromptsDialog(true)}><FileX /> Clear all rules…</DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => { setActiveControlsPanel('workbench'); setActiveWorkbenchTab('prompts'); }}>Open Workbench • AI Rules</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+              }} disabled={isApplyingAI}>
+                <Bot /> {isApplyingAI ? 'Running AI…' : 'Run AI detection'}
+                <MenubarShortcut>Ctrl+Alt+A</MenubarShortcut>
+              </MenubarItem>
+              <MenubarItem onClick={() => setShowAddPromptDialog(true)}>
+                <Plus /> Add Rule…
+                <MenubarShortcut>Ctrl+N</MenubarShortcut>
+              </MenubarItem>
+              <MenubarItem onClick={() => setShowClearAllPromptsDialog(true)}>
+                <FileX /> Clear all rules…
+                <MenubarShortcut>Shift+Del</MenubarShortcut>
+              </MenubarItem>
+              <MenubarSeparator />
+              <MenubarItem onClick={() => { setActiveControlsPanel('workbench'); setActiveWorkbenchTab('prompts'); }}>
+                Open Workbench • AI Rules
+              </MenubarItem>
+            </MenubarContent>
+          </MenubarMenu>
+          </Menubar>
 
           {/* Document menu */}
           <DropdownMenu>
