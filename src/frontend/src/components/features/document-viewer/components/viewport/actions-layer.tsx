@@ -16,7 +16,8 @@ import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { useActions } from "./hooks/use-actions";
 import { DocumentViewerAPI } from "@/lib/document-viewer-api";
-import { buildActionsMenuConfig, type MenuConfig, type MenuNode } from "./actions-config";
+import { buildActionsMenuConfig } from "./actions-config";
+import { MiniPager } from "./mini-pager";
 
 interface ActionsLayerProps {
   document: MinimalDocumentType;
@@ -388,29 +389,12 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
         "transition-all duration-300 ease-in-out",
         (visible && showBar) ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none",
       )}>
-        <Menubar>
-          <Button
-            variant="ghost"
-            size="icon"
-            disabled={currentPage <= 0}
-            onClick={() => setCurrentPage(currentPage - 1)}
-            title="Previous page"
-          >
-            <ChevronLeft />
-          </Button>
-          <span className="text-sm font-medium w-28 text-center">
-            Page {Math.min(currentPage + 1, Math.max(numPages, 1))} of {Math.max(numPages, 1)}
-          </span>
-          <Button
-            variant="ghost"
-            size="icon"
-            disabled={currentPage + 1 >= numPages}
-            onClick={() => setCurrentPage(currentPage + 1)}
-            title="Next page"
-          >
-            <ChevronRight />
-          </Button>
-        </Menubar>
+        <MiniPager
+          currentPage={currentPage}
+          numPages={numPages}
+          onPrev={() => setCurrentPage(currentPage - 1)}
+          onNext={() => setCurrentPage(currentPage + 1)}
+        />
       </div>
 
       {/* Dialogs for selections actions */}
