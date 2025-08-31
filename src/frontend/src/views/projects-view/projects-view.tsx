@@ -10,6 +10,8 @@ import { useAiProcessing } from '@/providers/ai-processing-provider';
 import { useProjectTrust } from '@/providers/project-trust-provider';
 import { startProjectRun } from '@/lib/ai-runner';
 import { toast } from 'sonner';
+import { startProjectRedaction } from '@/lib/ai-runner';
+
 import type { ProjectShallowType } from '@/types';
 
 export function ProjectsView() {
@@ -157,7 +159,6 @@ export function ProjectsView() {
             const { keyId, encryptedPassword } = await ensureProjectTrust(project.id);
             const scope = String(values.scope || 'pan') as 'project' | 'document' | 'pan';
             try { if (typeof window !== 'undefined') window.localStorage.setItem('sero.redaction.scope', scope); } catch {}
-            const { startProjectRedaction } = await import('@/lib/ai-runner');
             startProjectRedaction(aiProc as any, project.id, { keyId, encryptedPassword, scope, getFreshCreds: async () => ensureProjectTrust(project.id) });
           } catch (e: any) {
             if (e instanceof Error && e.message === 'cancelled') {

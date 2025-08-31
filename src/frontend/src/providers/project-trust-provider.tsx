@@ -16,9 +16,6 @@ interface ProjectTrustContextValue {
 
 const ProjectTrustContext = createContext<ProjectTrustContextValue | null>(null);
 
-// We align token TTL to the backend ephemeral key TTL minus a safety margin
-const SAFETY_MARGIN_MS = 5_000;
-
 export function ProjectTrustProvider({ children }: { children: React.ReactNode }) {
   const cacheRef = useRef<Map<string, TrustSecret>>(new Map());
 

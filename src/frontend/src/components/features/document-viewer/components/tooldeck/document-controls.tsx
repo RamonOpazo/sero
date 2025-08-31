@@ -5,7 +5,6 @@ import { Separator } from "@/components/ui/separator";
 import { Scissors, Download, Trash2, FileText, Eye, Calendar, Clock } from "lucide-react";
 import { useViewportState } from "../../providers/viewport-provider";
 import { useSelections } from "../../providers/selection-provider";
-import { UISelectionStage } from "../../types/selection-lifecycle";
 import type { MinimalDocumentType } from "@/types";
 import { DocumentsAPI } from "@/lib/documents-api";
 import { EditorAPI } from "@/lib/editor-api";
@@ -22,7 +21,7 @@ interface DocumentControlsProps {
  */
 export default function DocumentControls({ document }: DocumentControlsProps) {
   const { isViewingProcessedDocument, dispatch } = useViewportState();
-  const { selectionCount, hasUnsavedChanges, saveLifecycle, uiSelections } = useSelections() as any;
+  const { selectionCount, hasUnsavedChanges, saveLifecycle } = useSelections() as any;
   const [isProcessing, setIsProcessing] = React.useState(false);
   const { ensureProjectTrust } = useProjectTrust();
 

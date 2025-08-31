@@ -22,7 +22,7 @@ export function GlobalProcessingChinContainer() {
   const curIdx = typeof m.currentDocIndex === 'number' ? m.currentDocIndex : (hasBatch ? job.batchProcessed : null);
   const total = typeof m.totalDocs === 'number' && m.totalDocs > 0 ? m.totalDocs : (hasBatch ? job.batchTotal : null);
   const batchText = hasBatch ? `Documents ${job.batchProcessed} of ${job.batchTotal}` : null;
-  const docProgressPercent = total && curIdx !== null && total > 0 ? Math.round((curIdx / total) * 100) : null;
+  const docProgressPercent = total && curIdx !== null && curIdx !== undefined && total > 0 ? Math.round((curIdx / total) * 100) : null;
   const docProgressLabel = total && curIdx !== null ? `Document ${curIdx} of ${total}` : null;
 
   // Compose a short subtask from hints (last hint)

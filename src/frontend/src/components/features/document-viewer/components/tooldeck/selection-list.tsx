@@ -17,7 +17,6 @@ import { useWorkspace } from "@/providers/workspace-provider";
 
 export default function SelectionList() {
   const {
-    state: selectionState,
     dispatch,
     selectedSelection,
     selectSelection,
@@ -59,7 +58,6 @@ export default function SelectionList() {
   const selectionsWithTypeInfo = useMemo(() => {
     const ui = (uiSelections || []) as any[];
     return ui.map((sel: any) => {
-      const stateNorm = getNormalizedState((sel as any).state);
       const type = sel.isPersisted ? 'saved' : 'new';
       const isModified = !!sel.dirty;
       const isAi = !!(sel as any).is_ai_generated;
@@ -176,7 +174,6 @@ export default function SelectionList() {
     const norm = getNormalizedState((sel as any).state);
     const pageDisplay = isGlobal ? 'Global' : `Page ${(sel.page_number ?? 0) + 1}`;
     const isSelected = selectedSelection?.id === sel.id;
-    const isNew = sel.type === 'new';
     const isModified = !!sel.dirty;
     const isProjectScope = (sel as any).scope === 'project';
 
