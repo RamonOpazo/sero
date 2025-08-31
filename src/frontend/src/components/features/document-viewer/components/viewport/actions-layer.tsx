@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Hand, MousePointerClick, Scan, Info, Pen, PenOff, Keyboard, Bot, Save, CheckCheck, Undo2, FileX, Plus, Download, Scissors } from "lucide-react";
+import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Hand, MousePointerClick, Scan, Info, Pen, PenOff, Bot, Save, CheckCheck, Undo2, FileX, Plus, Download, Scissors } from "lucide-react";
 import { useViewportState, useViewportActions } from '../../providers/viewport-provider';
 import type { MinimalDocumentType } from "@/types";
 import { Menubar, MenubarMenu, MenubarTrigger, MenubarContent, MenubarItem, MenubarSeparator, MenubarSub, MenubarSubTrigger, MenubarSubContent, MenubarLabel, MenubarShortcut } from "@/components/ui/menubar";
@@ -48,9 +48,6 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
   const {
     toggleSelections,
     resetView,
-    toggleSelectionsPanel,
-    togglePromptPanel,
-    toggleHelpOverlay,
   } = useViewportActions();
 
   // Selection and lifecycle hooks
@@ -66,11 +63,10 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
     commitAll,
     clearSelections,
     stageMessages,
-    commitMessages,
   } = useStageCommit(document.id) as any;
 
   // Prompts and AI hooks
-  const { state: promptState, load, save, createPrompt, allPrompts, deletePrompt, pendingChanges } = usePrompts() as any;
+  const { load, save, createPrompt } = usePrompts() as any;
   const aiProc = useAiProcessing();
   const { ensureProjectTrust } = useProjectTrust();
 
@@ -197,7 +193,6 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
   // State for auto-hide behavior
   const [visible, setVisible] = useState(false); // Start hidden, show on hover
   const [showBar, setShowBar] = useState(true); // Controls if bar appears at all
-  const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isMouseOverRenderArea = useRef(false); // Track if mouse is currently over render area
 
   // Handle mouse enter/leave in render layer to show/hide UI based on hover
@@ -208,11 +203,6 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
         setVisible(true);
       }
 
-      // Clear any existing timeout
-      if (hideTimeoutRef.current) {
-        clearTimeout(hideTimeoutRef.current);
-        hideTimeoutRef.current = null;
-      }
     };
 
     const handleRenderLayerMouseLeave = () => {
@@ -231,19 +221,10 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
       return () => {
         renderLayer.removeEventListener('mouseenter', handleRenderLayerMouseEnter);
         renderLayer.removeEventListener('mouseleave', handleRenderLayerMouseLeave);
-        if (hideTimeoutRef.current) {
-          clearTimeout(hideTimeoutRef.current);
-          hideTimeoutRef.current = null;
-        }
       };
     }
 
-    return () => {
-      if (hideTimeoutRef.current) {
-        clearTimeout(hideTimeoutRef.current);
-        hideTimeoutRef.current = null;
-      }
-    };
+    return () => {};
   }, []); // Remove showBar dependency to avoid recreating handlers
 
   return (

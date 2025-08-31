@@ -84,14 +84,12 @@ export default function ControlsLayout({ document, className, ...props }: Contro
           </TabsList>
 
           <TabsContent value="selections" className="flex flex-col gap-4">
-            <SelectionCommander document={document} />
             <div className="flex-1 min-h-0">
               <SelectionList />
             </div>
           </TabsContent>
 
           <TabsContent value="prompts" className="flex flex-col gap-4">
-            <PromptCommander document={document} />
             <div className="flex-1 min-h-0">
               <PromptsList documentId={document.id} />
             </div>
