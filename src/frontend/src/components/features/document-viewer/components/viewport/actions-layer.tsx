@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { useActions } from "./hooks/use-actions";
 import { DocumentViewerAPI } from "@/lib/document-viewer-api";
-import { buildActionsMenuConfig } from "./actions-config";
+import { buildActionsMenuConfig, type MenuItem, type MenuNode } from "./actions-config";
 import { MiniPager } from "./mini-pager";
 
 interface ActionsLayerProps {
@@ -341,6 +341,26 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
             <MenubarContent align="start">
               {(() => {
                 const [docMenu] = buildActionsMenuConfig({ actions });
+                const renderChild = (c: MenuNode): React.ReactNode => {
+                  if (c.type === 'separator') return <MenubarSeparator key={c.key} />;
+                  if (c.type === 'label') return <MenubarLabel key={c.key}>{c.label}</MenubarLabel>;
+                  if (c.type === 'submenu') {
+                    return (
+                      <MenubarSub key={c.key}>
+                        <MenubarSubTrigger>{c.label}</MenubarSubTrigger>
+                        <MenubarSubContent>
+                          {c.children.map(renderChild)}
+                        </MenubarSubContent>
+                      </MenubarSub>
+                    );
+                  }
+                  const item = c as MenuItem;
+                  return (
+                    <MenubarItem key={item.key} onClick={item.onSelect} disabled={item.disabled}>
+                      {item.label}
+                    </MenubarItem>
+                  );
+                };
                 return docMenu.entries.map((node) => {
                   if (node.type === 'separator') return <MenubarSeparator key={node.key} />;
                   if (node.type === 'label') return <MenubarLabel key={node.key}>{node.label}</MenubarLabel>;
@@ -349,20 +369,15 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
                       <MenubarSub key={node.key}>
                         <MenubarSubTrigger>{node.label}</MenubarSubTrigger>
                         <MenubarSubContent>
-                          {node.children.map((c) => c.type === 'separator'
-                            ? <MenubarSeparator key={c.key} />
-                            : c.type === 'label'
-                              ? <MenubarLabel key={c.key}>{c.label}</MenubarLabel>
-                              : <MenubarItem key={c.key} onClick={c.onSelect} disabled={c.disabled}>{c.label}</MenubarItem>
-                          )}
+                          {node.children.map(renderChild)}
                         </MenubarSubContent>
                       </MenubarSub>
                     );
                   }
-                  // item
+                  const item = node as MenuItem;
                   return (
-                    <MenubarItem key={node.key} onClick={node.onSelect} disabled={node.disabled}>
-                      {node.label}
+                    <MenubarItem key={item.key} onClick={item.onSelect} disabled={item.disabled}>
+                      {item.label}
                     </MenubarItem>
                   );
                 });

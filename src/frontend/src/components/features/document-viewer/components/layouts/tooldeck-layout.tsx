@@ -64,11 +64,13 @@ export default function ControlsLayout({ document, className, ...props }: Contro
       className="w-[350px]"
     >
       <Tabs value={activeWorkbenchTab} onValueChange={setActiveWorkbenchTab}>
-        <TabsList className="bg-transparent">
+        <TabsList className="bg-transparent p-0">
           <TabsTrigger
-            className="border-0 bg-transparent"
+            className="border-0 bg-transparent hover:underline"
             value="selections">Selections</TabsTrigger>
-          <TabsTrigger value="prompts">AI Rules</TabsTrigger>
+          <TabsTrigger
+            className="border-0 bg-transparent hover:underline"
+            value="prompts">AI Rules</TabsTrigger>
         </TabsList>
         <TabsContent value="selections" className="flex flex-col gap-4">
           <div className="flex-1 min-h-0">
