@@ -9,6 +9,7 @@ export * from './renderers'
 
 // Re-export adapter functions
 export * from './adapter'
+export * from './simple'
 
 // Re-export all presets
 export * from './presets'

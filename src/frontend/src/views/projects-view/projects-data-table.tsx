@@ -3,25 +3,32 @@ import { FolderInput, Plus, Copy, Edit, Trash2, Settings2, ArrowLeft, Bot, Sciss
 import { toast } from 'sonner';
 import { DataTable } from '@/components/features/data-table';
 import { Badge } from '@/components/ui/badge';
-import { columns, adaptColumns } from '@/components/features/data-table/columns';
+import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/shared/empty-state';
-import { CreateProjectDialog, EditProjectDialog } from './dialogs';
-import { ProjectAiSettingsDialog } from './dialogs/project-ai-settings-dialog';
-import { TypedConfirmationDialog } from '@/components/shared/typed-confirmation-dialog';
-import { FormConfirmationDialog } from '@/components/shared';
-import { useProjectsView } from './use-projects-view';
-import { useAiProcessing } from '@/providers/ai-processing-provider';
-import { useProjectTrust } from '@/providers/project-trust-provider';
-import { startProjectRun } from '@/lib/ai-runner';
 import type { ProjectShallowType } from '@/types';
-import type { ColumnConfig } from '@/components/features/data-table/columns';
 import type { ColumnOption, CustomButtonOption } from '@/components/features/data-table/types';
 
 interface ProjectsDataTableProps {
-  onProjectSelect?: (project: ProjectShallowType) => void;
+  // Parent-provided data and handlers (table-focused)
+  projects: ProjectShallowType[]
+  selectedProjects: ProjectShallowType[]
+  isLoading: boolean
+  error: string | null
+  actionHandlers: {
+    onSelectProject: (p: ProjectShallowType) => void
+    onCreateProject: () => void
+    onEditProject: (p: ProjectShallowType) => void
+    onDeleteProject: (p: ProjectShallowType) => void
+    onOpenAiSettings: (p: ProjectShallowType) => void
+    onRunAiDetection?: (p: ProjectShallowType) => void
+    onRunRedaction?: (p: ProjectShallowType) => void
+    onRowSelectionChange: (rows: ProjectShallowType[]) => void
+    onBulkDelete: () => void
+    onBackHome?: () => void
+  }
 }
 
-export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
+export function ProjectsDataTable({ projects, selectedProjects, isLoading, error, actionHandlers }: ProjectsDataTableProps) {
   // Pagination state
   const [pageIndex, setPageIndex] = useState(0)
   const [pageSize, setPageSize] = useState(10)
@@ -36,186 +43,170 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
     'has_template',
   ])
 
-  // Extract all business logic to custom hook
-  const {
-    projects,
-    selectedProjects,
-    isLoading,
-    error,
-    dialogState,
-    actionHandlers,
-  } = useProjectsView(onProjectSelect);
-
-  const aiProc = useAiProcessing();
-  const { ensureProjectTrust } = useProjectTrust();
-
-  // Run Project AI Detection dialog state
-  const [runProjectDetection, setRunProjectDetection] = useState<{ isOpen: boolean; project: ProjectShallowType | null }>({ isOpen: false, project: null, });
-
-  // Run Project Redaction dialog state
-  const [runProjectRedaction, setRunProjectRedaction] = useState<{ isOpen: boolean; project: ProjectShallowType | null }>({ isOpen: false, project: null, });
+  // All dialogs lifted to ProjectsView
 
   // Pure UI rendering functions
   const nameRenderer = useCallback((project: ProjectShallowType) => {
     return (
-      <button
+      <Button
+        variant="link"
         onClick={() => actionHandlers.onSelectProject(project)}
-        className="text-left font-medium text-primary hover:text-primary/80 hover:underline focus:outline-none focus:underline transition-colors"
         title={`Select project: ${project.name}`}
+        className="p-0"
       >
         {project.name.length > 30 ? `${project.name.slice(0, 30)}...` : project.name}
-      </button>
+      </Button>
     );
   }, [actionHandlers.onSelectProject]);
 
-  // Define columns using the new modern column system
-  const projectColumns: ColumnConfig<ProjectShallowType>[] = useMemo(() => [
-    // Project name - pinned, clickable, and custom renderer
-    columns.custom<ProjectShallowType, string>(
-      'name',
-      'name',
-      {
-        header: 'Project Name',
-        pinned: true,
-        sortable: true,
-        width: '150px',
-        render: (_value, row) => nameRenderer(row)
-      }
-    ),
-
-    // Description - truncated for readability
-    columns.text<ProjectShallowType>('description', {
+  // Define columns using the simple declarative system
+  const projectColumnDefs = useMemo(() => [
+    // Project name - pinned, clickable, custom renderer
+    {
+      id: 'name',
+      type: 'select',
+      header: 'Project Name',
+      accessor: 'name',
+      pinned: true,
+      sortable: true,
+      width: '150px',
+      render: (_value: string, row: ProjectShallowType) => nameRenderer(row),
+    },
+    {
+      id: 'description',
+      type: 'text',
       header: 'Description',
+      accessor: 'description',
       maxLength: 40,
       width: '200px',
-      placeholder: 'No description'
-    }),
-
-    // Document count - displayed as badge
-    columns.number<ProjectShallowType>('document_count', {
+      placeholder: 'No description',
+    },
+    {
+      id: 'document_count',
+      type: 'number',
       header: '# Documents',
+      accessor: 'document_count',
       width: '150px',
-      sortable: true
-    }),
-
-    // Scoped indicator - project has a project-scoped document (template)
-    columns.custom<ProjectShallowType, boolean>('has_template', 'has_template', {
+      sortable: true,
+    },
+    {
+      id: 'has_template',
+      type: 'custom',
       header: 'Template',
+      accessor: 'has_template',
       width: '100px',
       align: 'left',
-      render: (_value, row) => row.has_template ? (
+      render: (_value: boolean, row: ProjectShallowType) => row.has_template ? (
         <Badge variant="outline" status="success" title="Project has a scoped document">Present</Badge>
       ) : (
         <Badge variant="outline" status="muted" title="Project doesn't have a scoped document">Unavailable</Badge>
       ),
-    }),
-
-    // Contact person - truncated
-    columns.text<ProjectShallowType>('contact_name', {
+    },
+    {
+      id: 'contact_name',
+      type: 'text',
       header: 'Contact Person',
+      accessor: 'contact_name',
       maxLength: 20,
-      width: '200px'
-    }),
-
-    // Contact email - truncated with monospace font
-    columns.text<ProjectShallowType>('contact_email', {
+      width: '200px',
+    },
+    {
+      id: 'contact_email',
+      type: 'text',
       header: 'Contact Email',
+      accessor: 'contact_email',
       maxLength: 25,
-      width: '200px'
-    }),
-
-    // Created date - relative formatting
-    columns.date<ProjectShallowType>('created_at', {
+      width: '200px',
+    },
+    {
+      id: 'created_at',
+      type: 'date',
       header: 'Created',
+      accessor: 'created_at',
       width: '150px',
       sortable: true,
-      format: { style: 'relative' }
-    }),
-
-    // Last updated - relative date formatting
-    columns.date<ProjectShallowType>('updated_at', {
+      format: { style: 'relative' },
+    },
+    {
+      id: 'updated_at',
+      type: 'date',
       header: 'Last Updated',
+      accessor: 'updated_at',
       width: '150px',
       sortable: true,
-      format: { style: 'relative' }
-    }),
-
-    // Actions column - modern action definitions
-    columns.actions<ProjectShallowType>('actions', {
+      format: { style: 'relative' },
+    },
+    {
+      id: 'actions',
+      type: 'actions',
       header: 'Actions',
       width: '5rem',
-      align: 'center',
+      align: 'right',
       actions: [
         {
           id: 'copy',
           label: 'Copy ID',
           icon: Copy,
-          onClick: (project) => {
+          onClick: (project: ProjectShallowType) => {
             navigator.clipboard.writeText(project.id)
             toast.success('Project ID copied to clipboard', {
               description: `ID: ${project.id}`,
             })
-          }
+          },
         },
         {
           id: 'select',
           label: 'Select project',
           icon: FolderInput,
-          onClick: (project) => {
+          onClick: (project: ProjectShallowType) => {
             actionHandlers.onSelectProject(project)
             toast.success('Project selected', {
               description: `Switched to project: ${project.name}`,
             })
-          }
+          },
         },
         {
           id: 'edit',
           label: 'Edit project',
           icon: Edit,
-          onClick: actionHandlers.onEditProject
+          onClick: actionHandlers.onEditProject,
         },
         {
           id: 'ai-settings',
           label: 'AI Settings',
           icon: Settings2,
-          onClick: actionHandlers.onOpenAiSettings
+          onClick: actionHandlers.onOpenAiSettings,
         },
         {
           id: 'run-ai-detection',
           label: 'Run AI Detection',
           icon: Bot,
-          onClick: (project) => {
-            setRunProjectDetection({ isOpen: true, project, });
-          },
+          onClick: (project: ProjectShallowType) => actionHandlers.onRunAiDetection?.(project),
         },
         {
           id: 'run-redaction',
           label: 'Run Redaction',
           icon: Scissors,
-          onClick: (project) => setRunProjectRedaction({ isOpen: true, project, }),
-          disabled: (row) => !row.has_template,
+          onClick: (project: ProjectShallowType) => actionHandlers.onRunRedaction?.(project),
+          disabled: (row: ProjectShallowType) => !row.has_template,
         },
         {
           id: 'delete',
           label: 'Delete project',
           icon: Trash2,
           variant: 'destructive',
-          onClick: actionHandlers.onDeleteProject
-        }
-      ]
-    })
-  ], [nameRenderer, actionHandlers]);
+          onClick: actionHandlers.onDeleteProject,
+        },
+      ],
+    },
+  ], [nameRenderer, actionHandlers])
 
-
-  // Column options for visibility toggle - exclude pinned columns
-  const tableColumns: ColumnOption[] = useMemo(() => [
-    { key: 'description', header: 'Description' },
-    { key: 'document_count', header: 'Documents' },
-    { key: 'updated_at', header: 'Last Updated' },
-    { key: 'contact_name', header: 'Contact Person' },
-    { key: 'contact_email', header: 'Email Address' },
-    { key: 'created_at', header: 'Created' }
-  ], []);
+  // Column options for visibility toggle - derive from column defs (exclude pinned/actions)
+  const tableColumns: ColumnOption[] = useMemo(() => {
+    return projectColumnDefs
+      .filter((col) => col.id !== 'name' && col.id !== 'actions')
+      .map((col) => ({ key: col.id, header: String(col.header ?? col.id) }))
+  }, [projectColumnDefs])
 
   // Custom buttons for the toolbar - delete button always visible
   const customButtons: CustomButtonOption[] = useMemo(() => [
@@ -245,19 +236,15 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
   }, [projects, searchValue]);
 
   // Filter columns based on visibility - always include pinned and actions columns
-  const visibleProjectColumns = useMemo(() => {
-    return projectColumns.filter(col => {
-      // Always include actions column and pinned columns (name)
+  const visibleProjectColumnDefs = useMemo(() => {
+    return projectColumnDefs.filter(col => {
       if (col.id === 'actions' || col.id === 'name') {
-        return true;
+        return true
       }
-      // Include other columns based on visibility state
-      return visibleColumns.includes(col.id);
-    });
-  }, [projectColumns, visibleColumns]);
+      return visibleColumns.includes(col.id)
+    })
+  }, [projectColumnDefs, visibleColumns])
 
-  // Convert new column configs to legacy format for DataTable compatibility
-  const legacyColumns = useMemo(() => adaptColumns(visibleProjectColumns), [visibleProjectColumns]);
 
   // Handle column visibility changes
   const handleColumnVisibilityChange = useCallback((columnKey: string, visible: boolean) => {
@@ -302,7 +289,7 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
     if (projects.length > 0) {
       return (
         <DataTable
-          columns={legacyColumns}
+          columnDefs={visibleProjectColumnDefs as any}
           data={paginatedProjects}
           selectedRows={selectedProjects}
           onRowSelect={actionHandlers.onRowSelectionChange}
@@ -346,132 +333,6 @@ export function ProjectsDataTable({ onProjectSelect }: ProjectsDataTableProps) {
   return (
     <>
       {content}
-
-      {/* Project AI Settings Dialog */}
-      <ProjectAiSettingsDialog
-        isOpen={dialogState.ai.isOpen}
-        onClose={dialogState.ai.onClose}
-        onSubmit={dialogState.ai.onSubmit}
-        initial={undefined}
-      />
-
-      {/* Project Creation Dialog */}
-      <CreateProjectDialog
-        isOpen={dialogState.create.isOpen}
-        onClose={dialogState.create.onClose}
-        onSubmit={dialogState.create.onSubmit}
-      />
-
-      {/* Project Edit Dialog */}
-      <EditProjectDialog
-        isOpen={dialogState.edit.isOpen}
-        onClose={dialogState.edit.onClose}
-        onSubmit={dialogState.edit.onSubmit}
-        project={dialogState.edit.project}
-      />
-
-      {/* Run Project AI Detection Dialog */}
-      <FormConfirmationDialog
-        isOpen={runProjectDetection.isOpen}
-        onClose={() => setRunProjectDetection({ isOpen: false, project: null, })}
-        title="Run Project AI Detection"
-        description="Run AI detection across all documents in this project to stage new selections based on current AI settings."
-        confirmButtonText="Run"
-        cancelButtonText="Cancel"
-        variant="default"
-        messages={([
-          { variant: 'warning', title: 'Batch operation', description: 'This will iterate over every document and may take a while depending on size and model.', },
-        ] as any)}
-        onSubmit={async () => {
-          const project = runProjectDetection.project;
-          if (!project) return;
-          try {
-            const { keyId, encryptedPassword } = await ensureProjectTrust(project.id);
-            startProjectRun(aiProc as any, project.id, { keyId, encryptedPassword, });
-            toast.success('Project AI run started', { description: project.name, });
-          } catch (e) {
-            toast.info('Project AI run cancelled');
-          } finally {
-            setRunProjectDetection({ isOpen: false, project: null, });
-          }
-        }}
-      />
-
-      {/* Run Project Redaction Dialog */}
-      <FormConfirmationDialog
-        isOpen={runProjectRedaction.isOpen}
-        onClose={() => setRunProjectRedaction({ isOpen: false, project: null, })}
-        title="Run Project Redaction"
-        description="Generate redacted PDFs for every document in this project using committed selections."
-        confirmButtonText="Run"
-        cancelButtonText="Cancel"
-        variant="destructive"
-        messages={([
-          { variant: 'warning', title: 'Batch operation', description: 'This will start processing for all project documents. Existing redacted files will be replaced.', },
-        ] as any)}
-        initialValues={{ scope: (typeof window !== 'undefined' && (window.localStorage.getItem('sero.redaction.scope') as any)) || 'pan', }}
-        fields={[
-          { type: 'select', name: 'scope', label: 'Scope', tooltip: 'Redact using selections of this scope', options: [
-            { value: 'project', label: 'Project', },
-            { value: 'document', label: 'Document', },
-            { value: 'pan', label: 'Pan (both)', },
-          ], },
-        ]}
-          onSubmit={async (values) => {
-            const project = runProjectRedaction.project;
-            if (!project) return;
-            try {
-              const { keyId, encryptedPassword } = await ensureProjectTrust(project.id);
-              const scope = String(values.scope || 'pan') as 'project' | 'document' | 'pan';
-              // Persist last chosen scope
-              try { if (typeof window !== 'undefined') window.localStorage.setItem('sero.redaction.scope', scope); } catch {}
-              // Stream into global processing chin
-              const { startProjectRedaction } = await import('@/lib/ai-runner');
-              startProjectRedaction(aiProc as any, project.id, { keyId, encryptedPassword, scope, getFreshCreds: async () => ensureProjectTrust(project.id), });
-            } catch (e: any) {
-              if (e instanceof Error && e.message === 'cancelled') {
-                toast.message('Project unlock cancelled');
-              } else {
-                toast.error('Failed to start project redaction', { description: (e?.message || 'Please try again.') as any });
-                try { console.error('startProjectRedaction failed:', e); } catch {}
-              }
-            } finally {
-              setRunProjectRedaction({ isOpen: false, project: null, });
-            }
-          }}
-      />
-
-      {/* Project Deletion Confirmation Dialog */}
-      <TypedConfirmationDialog
-        isOpen={dialogState.delete.isOpen}
-        onClose={dialogState.delete.onClose}
-        onConfirm={dialogState.delete.onConfirm}
-        title="Delete Project"
-        description={`Are you sure you want to delete the project "${dialogState.delete.selectedProject?.name}"?`}
-        confirmationText="delete"
-        confirmButtonText="Delete Project"
-        variant="destructive"
-        messages={[
-          { variant: 'warning', title: 'Irreversible', description: 'This action cannot be undone.' },
-          { variant: 'error', title: 'Data loss', description: 'All associated documents and files will be permanently deleted.' },
-        ]}
-      />
-
-      {/* Bulk Deletion Confirmation Dialog */}
-      <TypedConfirmationDialog
-        isOpen={dialogState.bulkDelete.isOpen}
-        onClose={dialogState.bulkDelete.onClose}
-        onConfirm={dialogState.bulkDelete.onConfirm}
-        title={`Delete ${selectedProjects.length} Project${selectedProjects.length === 1 ? '' : 's'}`}
-        description={`Are you sure you want to delete ${selectedProjects.length} selected project${selectedProjects.length === 1 ? '' : 's'}?`}
-        confirmationText="delete"
-        confirmButtonText={`Delete ${selectedProjects.length} Project${selectedProjects.length === 1 ? '' : 's'}`}
-        variant="destructive"
-        messages={[
-          { variant: 'warning', title: 'Irreversible', description: 'This action cannot be undone.' },
-          { variant: 'error', title: 'Data loss', description: 'All associated documents and files will be permanently deleted.' },
-        ]}
-      />
     </>
   );
 }

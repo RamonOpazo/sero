@@ -1,13 +1,15 @@
-import { cn } from '@/lib/utils'
 import { TableToolbar } from './table-toolbar'
 import { TableContent } from './table-content'
 import { TablePagination } from './table-pagination'
-import type { DataTableProps } from '../types'
+import { adaptColumns } from '../columns/adapter'
+import { defineColumnsConfig } from '../columns/simple'
+import type { DataTableProps, Column } from '../types'
 import '../data-table.css'
 
 export function DataTable<T extends Record<string, any>>({
   data,
   columns,
+  columnDefs,
   title,
   searchPlaceholder,
   onSearch,
@@ -36,8 +38,22 @@ export function DataTable<T extends Record<string, any>>({
   const showPagination = pagination?.showPagination ?? false
   const selectedCount = selectedRows?.length ?? 0
 
+  // Normalize columns: prefer legacy if provided, otherwise adapt from simple column defs
+  const effectiveColumns: Column<T>[] = (() => {
+    if (columns && columns.length) return columns
+    if (columnDefs && columnDefs.length) {
+      const configs = defineColumnsConfig<T>(columnDefs)
+      return adaptColumns<T>(configs)
+    }
+    return []
+  })()
+
   return (
-    <div className={cn('data-table-container', className)}>
+    <div
+      data-table="container"
+      className={className}
+    >
+
       {/* Toolbar */}
       {(title || onSearch || filters || onAddNew || searchColumns || tableColumns || customButtons) && (
         <TableToolbar
@@ -59,19 +75,17 @@ export function DataTable<T extends Record<string, any>>({
       )}
 
       {/* Table Content */}
-      <div className="data-table-content">
-        <TableContent
-          data={data}
-          columns={columns}
-          selectedRows={selectedRows}
-          onRowSelect={onRowSelect}
-          onRowAction={onRowAction}
-          showCheckboxes={showCheckboxes}
-          showActions={showActions}
-          actions={actions}
-          columnWidths={columnWidths}
-        />
-      </div>
+      <TableContent
+        data={data}
+        columns={effectiveColumns}
+        selectedRows={selectedRows}
+        onRowSelect={onRowSelect}
+        onRowAction={onRowAction}
+        showCheckboxes={showCheckboxes}
+        showActions={showActions}
+        actions={actions}
+        columnWidths={columnWidths}
+      />
       
       {/* Pagination */}
       {pagination && (
@@ -87,6 +101,7 @@ export function DataTable<T extends Record<string, any>>({
           showPagination={showPagination}
         />
       )}
+
     </div>
   )
 }

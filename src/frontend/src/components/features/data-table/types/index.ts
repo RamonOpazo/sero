@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import type { SimpleColumn } from '../columns/simple'
 
 export interface ColumnWidthConfig {
   /** Default width for checkbox columns */
@@ -26,7 +27,10 @@ export interface Column<T = any> {
 
 export interface DataTableProps<T = any> {
   data: T[]
-  columns: Column<T>[]
+  /** Legacy column model (will be used as-is if provided) */
+  columns?: Column<T>[]
+  /** New simple declarative model (preferred). If provided, it will be adapted internally. */
+  columnDefs?: SimpleColumn<T>[]
   title?: string
   searchPlaceholder?: string
   onSearch?: (query: string) => void

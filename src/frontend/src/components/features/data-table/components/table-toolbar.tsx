@@ -25,13 +25,11 @@ export function TableToolbar({
   customButtons = []
 }: TableToolbarProps) {
   return (
-    <div className="data-table-toolbar">
+    <div data-table="toolbar">
       {title && (
-        <h2 className="data-table-toolbar-title">
-          {title}
-        </h2>
+        <h2>{title}</h2>
       )}
-      <div className="data-table-toolbar-controls">
+      <div data-table="controls">
         {/* Left side - Search and Filters */}
         <div className="flex items-center gap-2">
           {onSearch && (

@@ -309,7 +309,7 @@ async def redact_stream(
                     password=plaintext_password,
                     join_with=["files"],
                 )
-            except HTTPException as err:
+            except HTTPException:
                 yield projects_schema.ProjectDocSummaryEvent(
                     document_id=did,
                     ok=False,
@@ -331,7 +331,7 @@ async def redact_stream(
                     pdf_data=decrypted,
                     selections=[_to_area(s) for s in selections_to_apply],
                 )
-            except Exception as err:
+            except Exception:
                 logger.exception("redaction failed")
                 yield projects_schema.ProjectDocSummaryEvent(
                     document_id=did,
@@ -378,7 +378,7 @@ async def redact_stream(
                     f"project_redact_doc_summary ok=True document_id={did} redacted_file_id={created.id} selections_applied={len(selections_to_apply)} original_size={original_file.file_size} redacted_size={len(redacted_bytes)}",
                 )
                 succeeded += 1
-            except Exception as err:
+            except Exception:
                 logger.exception("saving redacted file failed")
                 yield projects_schema.ProjectDocSummaryEvent(
                     document_id=did,

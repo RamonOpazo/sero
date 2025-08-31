@@ -191,15 +191,17 @@ export function actionsColumn<TData>(
 
 // Select Column Factory
 export interface SelectColumnOptions<TData> extends Omit<BaseColumnOptions<TData, boolean>, 'cell'> {
-  onSelectionChange?: (selectedRows: TData[]) => void
+  onSelectionChange?: (selectedRows: TData[]) => void,
+  /** Optional custom render next to the checkbox */
+  render?: CellRenderer<TData, boolean>,
 }
 
 export function selectColumn<TData>(
   id: string = 'select',
-  options: SelectColumnOptions<TData> = {}
+  options: SelectColumnOptions<TData> = {},
 ): SelectColumnConfig<TData> {
   return {
-    ...createBaseColumn(id, () => false, options),
+    ...createBaseColumn<TData, boolean>(id, () => false, { ...options, cell: options.render }),
     type: 'select',
     onSelectionChange: options.onSelectionChange,
   } as any
