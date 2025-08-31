@@ -123,6 +123,7 @@ function InfoContainer({ children, className, isVisible }: InfoProps & { isVisib
         "absolute top-0 left-0 bottom-0",
         "flex flex-col gap-2 max-w-full p-4",
         "text-xs transition-all duration-200 ease-out",
+        "text-white",
         isVisible
           ? 'opacity-100 translate-x-0 pointer-events-auto'
           : 'opacity-0 -translate-x-2 pointer-events-none',
@@ -137,7 +138,7 @@ function InfoTitle({ children, className }: InfoProps) {
   return (
     <h1 className={cn(
       "text-base sm:text-2xl",
-      "bg-background/90 w-fit p-1",
+      "bg-black/90 w-fit p-1",
       className,
     )}>{children}</h1>
   )
@@ -147,7 +148,7 @@ function InfoSubtitle({ children, className }: InfoProps) {
   return (
     <h2 className={cn(
       "text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap",
-      "bg-background/90 w-fit p-1",
+      "bg-black/90 w-fit p-1",
       className,
     )}>{children}</h2>
   )
@@ -158,7 +159,7 @@ function InfoSection({ children, className, name, variant }: InfoProps & { name:
     <section>
       <h3 className={cn(
         "uppercase tracking-wider text-muted-foreground",
-        "bg-background/90 w-fit p-1",
+        "bg-black/90 w-fit p-1",
         variant === "list" && "text-foreground",
         className,
       )}>{name}</h3>
@@ -173,7 +174,7 @@ function InfoSection({ children, className, name, variant }: InfoProps & { name:
 function InfoDetail({ children, className, name, variant }: InfoProps & { name: string, variant?: "text" | "numeric" }) {
   return (
     <div className={cn(
-      "bg-background/90 w-fit p-1",
+      "bg-black/90 w-fit p-1",
       className,
     )}>
       <span className="text-muted-foreground">{name}: </span>
@@ -186,7 +187,7 @@ function InfoEmpty({ children, className }: InfoProps) {
   return (
     <span className={cn(
       "inline-block text-muted-foreground",
-      "bg-background/90 w-fit p-1",
+      "bg-black/90 w-fit p-1",
       className,
     )}>{children}</span>
   )

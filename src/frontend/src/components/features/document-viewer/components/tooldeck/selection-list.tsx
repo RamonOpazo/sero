@@ -1,10 +1,11 @@
+import { cn } from "@/lib/utils";
+import type { ClassName } from "react-pdf/dist/shared/types.js"
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Trash2, MousePointer2, Globe, Hash, Settings, Telescope, Bot, RotateCcw } from "lucide-react";
 import { useSelections } from "../../providers/selection-provider";
 import { useViewportState } from "../../providers/viewport-provider";
 import { useMemo, useRef, useEffect, useState, useCallback } from "react";
-import { cn } from "@/lib/utils";
 import { FormConfirmationDialog } from "@/components/shared";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import type { TypedMessage } from "@/components/shared/typed-confirmation-dialog";
@@ -13,6 +14,7 @@ import { CONVERT_TO_STAGED_DIALOG } from "./dialog-text";
 import type { Selection } from "../../types/viewer";
 import { getNormalizedState, getStatusLabel } from "../../utils/selection-styles";
 import { useWorkspace } from "@/providers/workspace-provider";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 
 export default function SelectionList() {
@@ -248,73 +250,71 @@ export default function SelectionList() {
             </Badge>
           </div>
 
-          {/* Config and delete buttons */}
+          {/* Row actions menu */}
           <div className="flex items-center gap-1 mr-1">
-            <Button
-              disabled={!isProjectScopedDocument || norm === 'committed' || norm === 'staged_deletion'}
-              size="sm"
-              variant="ghost"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (!isProjectScopedDocument || norm === 'committed' || norm === 'staged_deletion') return;
-                const nextScope = (sel as any).scope === 'project' ? 'document' : 'project';
-                // Update only the scope via domain manager dispatch to avoid leaking UI fields
-                dispatch('UPDATE_ITEM', { id: sel.id, updates: { scope: nextScope } });
-              }}
-              className="h-6 w-6 p-0 text-muted-foreground/60 hover:text-foreground hover:bg-muted/10 opacity-0 group-hover:opacity-100 transition-all duration-200 disabled:opacity-50"
-              title={isProjectScopedDocument ? "Toggle scope (project/document)" : "Scope change available only in project template documents"}
-              aria-label="Change scope"
-            >
-              <Telescope className="h-3 w-3" />
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={(e) => e.stopPropagation()}
+                  className="h-6 w-6 p-0 text-muted-foreground/60 hover:text-foreground hover:bg-muted/10 opacity-0 group-hover:opacity-100 transition-all duration-200"
+                  title="Row actions"
+                  aria-label="Row actions"
+                >
+                  <Settings className="h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" sideOffset={4} onClick={(e) => e.stopPropagation()}>
+                <DropdownMenuItem
+                  disabled={!isProjectScopedDocument || norm === 'committed' || norm === 'staged_deletion'}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (!isProjectScopedDocument || norm === 'committed' || norm === 'staged_deletion') return;
+                    const nextScope = (sel as any).scope === 'project' ? 'document' : 'project';
+                    dispatch('UPDATE_ITEM', { id: sel.id, updates: { scope: nextScope } });
+                  }}
+                >
+                  <Telescope className="h-3 w-3 mr-2" /> Toggle scope (project/document)
+                </DropdownMenuItem>
 
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (norm === 'committed' || norm === 'staged_deletion') {
-                  setConvertDialog({ open: true, selectionId: sel.id });
-                } else {
-                  setDialogState({ isOpen: true, selectionId: sel.id });
-                }
-              }}
-              className="h-6 w-6 p-0 text-muted-foreground/60 hover:text-foreground hover:bg-muted/10 opacity-0 group-hover:opacity-100 transition-all duration-200"
-              title="Configure selection"
-              aria-label="Configure selection"
-            >
-              <Settings className="h-3 w-3" />
-            </Button>
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (norm === 'committed' || norm === 'staged_deletion') {
+                      setConvertDialog({ open: true, selectionId: sel.id });
+                    } else {
+                      setDialogState({ isOpen: true, selectionId: sel.id });
+                    }
+                  }}
+                >
+                  <Settings className="h-3 w-3 mr-2" /> Configure selection…
+                </DropdownMenuItem>
 
-            {norm === 'staged_deletion' && (
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={async (e) => {
-                  e.stopPropagation();
-                  await convertSelectionToStagedEdition(sel.id);
-                }}
-                className="h-6 w-6 p-0 text-muted-foreground/60 hover:text-foreground hover:bg-muted/10 opacity-0 group-hover:opacity-100 transition-all duration-200"
-                title="Convert deletion to edition"
-                aria-label="Convert deletion to edition"
-              >
-                <RotateCcw className="h-3 w-3" />
-              </Button>
-            )}
+                {norm === 'staged_deletion' && (
+                  <DropdownMenuItem
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      await convertSelectionToStagedEdition(sel.id);
+                    }}
+                  >
+                    <RotateCcw className="h-3 w-3 mr-2" /> Convert deletion to edition
+                  </DropdownMenuItem>
+                )}
 
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleRemoveSelection(sel.id);
-              }}
-              className="h-6 w-6 p-0 text-muted-foreground/60 hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-all duration-200"
-              title="Delete selection"
-              aria-label="Delete selection"
-            >
-              <Trash2 className="h-3 w-3" />
-            </Button>
+                <DropdownMenuSeparator />
+
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRemoveSelection(sel.id);
+                  }}
+                >
+                  <Trash2 className="h-3 w-3 mr-2" /> Delete selection
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
@@ -336,22 +336,20 @@ export default function SelectionList() {
   return (
     <>
       {/* Filter controls */}
-      <div className="flex items-center justify-between mb-2 px-1">
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Select value={filterMode} onValueChange={(v) => setFilterMode(v as any)}>
-            <SelectTrigger className="h-7 w-[12rem] text-xs">
-              <SelectValue placeholder="All selections" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All selections</SelectItem>
-              <SelectItem value="ai">AI-generated</SelectItem>
-              <SelectItem value="global">Document-spannig</SelectItem>
-              <SelectItem value="project">Project-scoped</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+      <div className="flex items-center justify-between mb-2">
+        <Select value={filterMode} onValueChange={(v) => setFilterMode(v as any)}>
+          <SelectTrigger className="h-7 w-[12rem] text-xs">
+            <SelectValue placeholder="All selections" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All selections</SelectItem>
+            <SelectItem value="global">This document</SelectItem>
+            <SelectItem value="ai">AI-generated</SelectItem>
+            <SelectItem value="template">Template</SelectItem>
+          </SelectContent>
+        </Select>
         <div className="text-xs text-muted-foreground">
-          <span className="font-mono">{filteredSelections.length}</span> / <span className="font-mono">{selectionsWithTypeInfo.length}</span>
+          <span className="font-mono">{filteredSelections.length}</span> of <span className="font-mono">{selectionsWithTypeInfo.length}</span>
         </div>
       </div>
 
@@ -394,6 +392,7 @@ export default function SelectionList() {
           handleDialogConfirm(pageNum - 1);
         }}
       />
+
       {/* Convert committed to staged dialog */}
       <SimpleConfirmationDialog
         isOpen={convertDialog.open}
@@ -409,4 +408,13 @@ export default function SelectionList() {
       />
     </>
   );
+}
+
+interface ItemProps {
+  children: React.ReactNode
+  className?: ClassName
+}
+
+function SelectionItem({ children, className }: ItemProps) {
+  return (null)
 }

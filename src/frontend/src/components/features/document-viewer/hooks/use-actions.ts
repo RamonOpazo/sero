@@ -1,8 +1,8 @@
 import { useCallback, useMemo, useState } from "react";
 import type { MinimalDocumentType } from "@/types";
 import { toast } from "sonner";
-import { useViewportState } from "../../../providers/viewport-provider";
-import { useSelections } from "../../../providers/selection-provider";
+import { useViewportState } from "../providers/viewport-provider";
+import { useSelections } from "../providers/selection-provider";
 import { useAiProcessing } from "@/providers/ai-processing-provider";
 import { useProjectTrust } from "@/providers/project-trust-provider";
 import { DocumentViewerAPI } from "@/lib/document-viewer-api";

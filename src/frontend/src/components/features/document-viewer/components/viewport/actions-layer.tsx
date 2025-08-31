@@ -14,11 +14,11 @@ import { FormConfirmationDialog } from "@/components/shared";
 import { usePrompts } from "../../providers/prompt-provider";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
-import { useActions } from "./hooks/use-actions";
+import { useActions } from "../../hooks/use-actions";
 import { DocumentViewerAPI } from "@/lib/document-viewer-api";
-import { buildActionsMenuConfig, type MenuItem, type MenuNode } from "./actions-config";
+import { buildActionsMenuConfig, type MenuItem, type MenuNode } from "../../core/actions-config";
 import { MiniPager } from "./mini-pager";
-import { useZoomControls } from "./hooks/use-zoom-controls";
+import { useZoomControls } from "../../hooks/use-zoom-controls";
 
 interface ActionsLayerProps {
   document: MinimalDocumentType;

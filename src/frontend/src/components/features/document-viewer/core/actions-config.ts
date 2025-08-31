@@ -1,5 +1,5 @@
 import type React from "react";
-import { ZoomIn as ZoomInIcon, ZoomOut as ZoomOutIcon, Scan as ScanIcon, MousePointerClick as SelectIcon, Hand as PanIcon, Pen as PenIcon, PenOff as PenOffIcon, Info as InfoIcon, ChevronLeft as PrevIcon, ChevronRight as NextIcon, Bot as BotIcon, Save as SaveIcon, CheckCheck as CheckIcon, Undo2 as UndoIcon, FileX as FileXIcon, Scissors as ScissorsIcon, Download as DownloadIcon } from "lucide-react";
+import { ZoomIn as ZoomInIcon, ZoomOut as ZoomOutIcon, Scan as ScanIcon, MousePointerClick as SelectIcon, Hand as PanIcon, Pen as PenIcon, PenOff as PenOffIcon, Info as InfoIcon, ChevronLeft as PrevIcon, ChevronRight as NextIcon, Bot as BotIcon, Save as SaveIcon, CheckCheck as CheckIcon, Undo2 as UndoIcon, FileX as FileXIcon, Scissors as ScissorsIcon, Download as DownloadIcon, Plus as PlusIcon } from "lucide-react";
 
 // Icon component type (e.g., lucide-react icons)
 export type IconComp = React.ComponentType<{ className?: string }>;
@@ -162,7 +162,7 @@ export function buildActionsMenuConfig(ctx: ActionsContext): MenuConfig[] {
     align: 'start',
     entries: [
       { type: 'item', key: 'run-ai', label: rules.isApplyingAI ? 'Running AI…' : 'Run AI detection', icon: BotIcon, onSelect: rules.runAi, disabled: rules.isApplyingAI, shortcut: 'Ctrl+Alt+A' },
-      { type: 'item', key: 'add-rule', label: 'Add Rule…', onSelect: rules.openAddRuleDialog, shortcut: 'Ctrl+N' },
+      { type: 'item', key: 'add-rule', label: 'Add Rule…', icon: PlusIcon, onSelect: rules.openAddRuleDialog, shortcut: 'Ctrl+N' },
       { type: 'item', key: 'clear-rules', label: 'Clear all rules…', icon: FileXIcon, onSelect: rules.openClearAllRulesDialog, shortcut: 'Shift+Del' },
       { type: 'separator', key: 'sep1' },
       { type: 'item', key: 'open-wb-rules', label: 'Open Workbench • AI Rules', onSelect: rules.openWorkbenchPrompts },

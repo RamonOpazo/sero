@@ -1,4 +1,3 @@
-import React from "react";
 import { Button } from "@/components/ui/button";
 import { Menubar } from "@/components/ui/menubar";
 import { ChevronLeft, ChevronRight } from "lucide-react";

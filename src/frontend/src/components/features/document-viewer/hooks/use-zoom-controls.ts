@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from "react";
-import { useViewportState } from "../../../providers/viewport-provider";
+import { useViewportState } from "../providers/viewport-provider";
 
 export function useZoomControls() {
   const { zoom, pan, setPan, dispatch } = useViewportState();
