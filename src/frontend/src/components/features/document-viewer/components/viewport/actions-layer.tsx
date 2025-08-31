@@ -17,6 +17,8 @@ import { useAiProcessing } from "@/providers/ai-processing-provider";
 import { useProjectTrust } from "@/providers/project-trust-provider";
 import { DocumentsAPI } from "@/lib/documents-api";
 import { EditorAPI } from "@/lib/editor-api";
+import { cn } from "@/lib/utils";
+import { Separator } from "@/components/ui/separator";
 
 interface ActionsLayerProps {
   document: MinimalDocumentType;
@@ -40,16 +42,17 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
     setActiveControlsPanel,
     activeWorkbenchTab,
     setActiveWorkbenchTab,
+    isViewingProcessedDocument,
   } = useViewportState();
-  
-  const { 
+
+  const {
     toggleSelections,
     resetView,
     toggleSelectionsPanel,
     togglePromptPanel,
     toggleHelpOverlay,
   } = useViewportActions();
-  
+
   // Selection and lifecycle hooks
   const { uiSelections, allSelections, discardAllChanges } = useSelections() as any;
   const {
@@ -204,7 +207,7 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
       if (showBar) {
         setVisible(true);
       }
-      
+
       // Clear any existing timeout
       if (hideTimeoutRef.current) {
         clearTimeout(hideTimeoutRef.current);
@@ -224,7 +227,7 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
     if (renderLayer) {
       renderLayer.addEventListener('mouseenter', handleRenderLayerMouseEnter);
       renderLayer.addEventListener('mouseleave', handleRenderLayerMouseLeave);
-      
+
       return () => {
         renderLayer.removeEventListener('mouseenter', handleRenderLayerMouseEnter);
         renderLayer.removeEventListener('mouseleave', handleRenderLayerMouseLeave);
@@ -244,112 +247,107 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
   }, []); // Remove showBar dependency to avoid recreating handlers
 
   return (
-    <div id="__actions_layer__">
+    <div id="__actions_layer__" className="w-fit">
 
       {/* Main Control Bar - Center (Top) */}
-      <div className={`
-        absolute top-4 left-1/2 -translate-x-1/2 z-1001 bg-background/90 rounded-md
-        transition-all duration-300 ease-in-out
-        ${(visible && showBar) ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4 pointer-events-none"}
-      `}>
-        <div className="shadow-md flex items-center gap-2 px-2 py-1 rounded-md">
-          {/* View menubar (step 1) */}
-          <Menubar className="mr-2">
-            {/* View */}
-            <MenubarMenu>
-              <MenubarTrigger>View</MenubarTrigger>
-              <MenubarContent align="start">
-                <MenubarLabel>Zoom & Pan</MenubarLabel>
-                <MenubarItem onClick={handleZoomIn}>
-                  <ZoomIn /> Zoom In
-                  <MenubarShortcut>Ctrl+=</MenubarShortcut>
-                </MenubarItem>
-                <MenubarItem onClick={handleZoomOut}>
-                  <ZoomOut /> Zoom Out
-                  <MenubarShortcut>Ctrl+-</MenubarShortcut>
-                </MenubarItem>
-                <MenubarItem onClick={handleResetView}>
-                  <Scan /> Reset View
-                  <MenubarShortcut>Ctrl+0</MenubarShortcut>
-                </MenubarItem>
-                <MenubarItem onClick={handleModeToggle}>
-                  {mode === 'pan' ? <MousePointerClick /> : <Hand />} {mode === 'pan' ? 'Switch to Select' : 'Switch to Pan'}
-                </MenubarItem>
-                <MenubarSeparator />
-                <MenubarItem onClick={toggleSelections}>
-                  {showSelections ? <PenOff /> : <Pen />} {showSelections ? 'Hide selections' : 'Show selections'}
-                  <MenubarShortcut>V</MenubarShortcut>
-                </MenubarItem>
-                {onToggleInfo && (
-                  <MenubarItem onClick={onToggleInfo}>
-                    <Info /> {isInfoVisible ? 'Hide info' : 'Show info'}
-                    <MenubarShortcut>I</MenubarShortcut>
-                  </MenubarItem>
-                )}
-                <MenubarSeparator />
-                <MenubarSub>
-                  <MenubarSubTrigger>Page</MenubarSubTrigger>
-                  <MenubarSubContent>
-                    <MenubarItem onClick={() => setCurrentPage(Math.max(0, currentPage - 1))}>
-                      <ChevronLeft /> Previous
-                      <MenubarShortcut>Alt+Left</MenubarShortcut>
-                    </MenubarItem>
-                    <MenubarItem onClick={() => setCurrentPage(Math.min(numPages - 1, currentPage + 1))}>
-                      <ChevronRight /> Next
-                      <MenubarShortcut>Alt+Right</MenubarShortcut>
-                    </MenubarItem>
-                  </MenubarSubContent>
-                </MenubarSub>
-                <MenubarItem onClick={() => dispatch({ type: 'SET_VIEWING_PROCESSED', payload: !useViewportState().isViewingProcessedDocument })}>
-                  Toggle View (Original/Redacted)
-                  <MenubarShortcut>R</MenubarShortcut>
-                </MenubarItem>
-              </MenubarContent>
-            </MenubarMenu>
-
-            {/* Selections (migrated) */}
-            <MenubarMenu>
-              <MenubarTrigger>Selections</MenubarTrigger>
-              <MenubarContent align="start">
-                <MenubarItem disabled={!canCommit || isCommitting} onClick={() => setShowCommitDialog(true)}>
-                  <CheckCheck /> {isCommitting ? 'Committing…' : 'Commit staged'}
-                  <MenubarShortcut>C</MenubarShortcut>
-                </MenubarItem>
-                <MenubarItem disabled={!canStage || isStaging} onClick={() => setShowStageDialog(true)}>
-                  <Save /> {isStaging ? 'Staging…' : 'Stage all changes'}
-                  <MenubarShortcut>S</MenubarShortcut>
-                </MenubarItem>
-                <MenubarItem onClick={() => {
-                  const totalUnsaved = (uiSelections || []).filter((s: any) => s.dirty === true).length;
-                  if (totalUnsaved === 0) { toast.info('No unsaved changes to discard'); return; }
-                  discardAllChanges();
-                  toast.success(`Discarded ${totalUnsaved} unsaved change${totalUnsaved === 1 ? '' : 's'}`);
-                }}>
-                  <Undo2 /> Discard all unsaved
-                </MenubarItem>
-                <MenubarSeparator />
-                <MenubarSub>
-                  <MenubarSubTrigger>Clear</MenubarSubTrigger>
-                  <MenubarSubContent>
-                    <MenubarItem disabled={allSelections.filter((s: any) => s.page_number === currentPage).length === 0} onClick={() => setShowClearPageDialog(true)}>
-                      <FileX /> Current page
-                    </MenubarItem>
-                    <MenubarItem disabled={(allSelections || []).length === 0} onClick={() => setShowClearAllDialog(true)}>
-                      <FileX /> All pages
-                    </MenubarItem>
-                  </MenubarSubContent>
-                </MenubarSub>
-                <MenubarSeparator />
-                <MenubarItem onClick={() => { setActiveControlsPanel('workbench'); setActiveWorkbenchTab('selections'); }}>
-                  Open Workbench • Selections
-                </MenubarItem>
-              </MenubarContent>
-            </MenubarMenu>
-
-
-          {/* AI Rules menubar (migrated) */}
+      <div className={cn(
+        "absolute top-2 left-1/2 -translate-x-1/2 z-1001 transition-all duration-300 ease-in-out",
+        "flex flex-row gap-0",
+        (visible && showBar) ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4 pointer-events-none",
+      )}>
+        <Menubar>
           <MenubarMenu>
-            <MenubarTrigger>AI Rules</MenubarTrigger>
+            <MenubarTrigger>View</MenubarTrigger>
+            <MenubarContent align="start">
+              <MenubarLabel>Zoom & Pan</MenubarLabel>
+              <MenubarItem onClick={handleZoomIn}>
+                <ZoomIn /> Zoom In
+                <MenubarShortcut>Ctrl+=</MenubarShortcut>
+              </MenubarItem>
+              <MenubarItem onClick={handleZoomOut}>
+                <ZoomOut /> Zoom Out
+                <MenubarShortcut>Ctrl+-</MenubarShortcut>
+              </MenubarItem>
+              <MenubarItem onClick={handleResetView}>
+                <Scan /> Reset View
+                <MenubarShortcut>Ctrl+0</MenubarShortcut>
+              </MenubarItem>
+              <MenubarItem onClick={handleModeToggle}>
+                {mode === 'pan' ? <MousePointerClick /> : <Hand />} {mode === 'pan' ? 'Switch to Select' : 'Switch to Pan'}
+              </MenubarItem>
+              <MenubarSeparator />
+              <MenubarItem onClick={toggleSelections}>
+                {showSelections ? <PenOff /> : <Pen />} {showSelections ? 'Hide selections' : 'Show selections'}
+                <MenubarShortcut>V</MenubarShortcut>
+              </MenubarItem>
+              {onToggleInfo && (
+                <MenubarItem onClick={onToggleInfo}>
+                  <Info /> {isInfoVisible ? 'Hide info' : 'Show info'}
+                  <MenubarShortcut>I</MenubarShortcut>
+                </MenubarItem>
+              )}
+              <MenubarSeparator />
+              <MenubarSub>
+                <MenubarSubTrigger>Page</MenubarSubTrigger>
+                <MenubarSubContent>
+                  <MenubarItem onClick={() => setCurrentPage(Math.max(0, currentPage - 1))}>
+                    <ChevronLeft /> Previous
+                    <MenubarShortcut>Alt+Left</MenubarShortcut>
+                  </MenubarItem>
+                  <MenubarItem onClick={() => setCurrentPage(Math.min(numPages - 1, currentPage + 1))}>
+                    <ChevronRight /> Next
+                    <MenubarShortcut>Alt+Right</MenubarShortcut>
+                  </MenubarItem>
+                </MenubarSubContent>
+              </MenubarSub>
+              <MenubarItem onClick={() => dispatch({ type: 'SET_VIEWING_PROCESSED', payload: !isViewingProcessedDocument })}>
+                Toggle View (Original/Redacted)
+                <MenubarShortcut>R</MenubarShortcut>
+              </MenubarItem>
+            </MenubarContent>
+          </MenubarMenu>
+
+          <MenubarMenu>
+            <MenubarTrigger>Selections</MenubarTrigger>
+            <MenubarContent align="start">
+              <MenubarItem disabled={!canCommit || isCommitting} onClick={() => setShowCommitDialog(true)}>
+                <CheckCheck /> {isCommitting ? 'Committing…' : 'Commit staged'}
+                <MenubarShortcut>C</MenubarShortcut>
+              </MenubarItem>
+              <MenubarItem disabled={!canStage || isStaging} onClick={() => setShowStageDialog(true)}>
+                <Save /> {isStaging ? 'Staging…' : 'Stage all changes'}
+                <MenubarShortcut>S</MenubarShortcut>
+              </MenubarItem>
+              <MenubarItem onClick={() => {
+                const totalUnsaved = (uiSelections || []).filter((s: any) => s.dirty === true).length;
+                if (totalUnsaved === 0) { toast.info('No unsaved changes to discard'); return; }
+                discardAllChanges();
+                toast.success(`Discarded ${totalUnsaved} unsaved change${totalUnsaved === 1 ? '' : 's'}`);
+              }}>
+                <Undo2 /> Discard all unsaved
+              </MenubarItem>
+              <MenubarSeparator />
+              <MenubarSub>
+                <MenubarSubTrigger>Clear</MenubarSubTrigger>
+                <MenubarSubContent>
+                  <MenubarItem disabled={allSelections.filter((s: any) => s.page_number === currentPage).length === 0} onClick={() => setShowClearPageDialog(true)}>
+                    <FileX /> Current page
+                  </MenubarItem>
+                  <MenubarItem disabled={(allSelections || []).length === 0} onClick={() => setShowClearAllDialog(true)}>
+                    <FileX /> All pages
+                  </MenubarItem>
+                </MenubarSubContent>
+              </MenubarSub>
+              <MenubarSeparator />
+              <MenubarItem onClick={() => { setActiveControlsPanel('workbench'); setActiveWorkbenchTab('selections'); }}>
+                Open Workbench • Selections
+              </MenubarItem>
+            </MenubarContent>
+          </MenubarMenu>
+
+
+          <MenubarMenu>
+            <MenubarTrigger>Rules</MenubarTrigger>
             <MenubarContent align="start">
               <MenubarItem onClick={async () => {
                 try {
@@ -389,7 +387,6 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
             </MenubarContent>
           </MenubarMenu>
 
-          {/* Document menubar (migrated) */}
           <MenubarMenu>
             <MenubarTrigger>Document</MenubarTrigger>
             <MenubarContent align="start">
@@ -433,15 +430,14 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
                 <MenubarShortcut>Ctrl+P</MenubarShortcut>
               </MenubarItem>
               <MenubarItem onClick={() => {
-                const isViewingProcessed = useViewportState().isViewingProcessedDocument;
-                const currentFile = isViewingProcessed ? document.redacted_file : document.original_file;
+                const currentFile = isViewingProcessedDocument ? document.redacted_file : document.original_file;
                 if (currentFile && document.files) {
                   const fileWithBlob = document.files.find((f: any) => f.id === currentFile.id);
                   if (fileWithBlob && 'blob' in fileWithBlob && fileWithBlob.blob instanceof Blob) {
                     const url = URL.createObjectURL(fileWithBlob.blob);
                     const link = globalThis.document.createElement('a');
                     link.href = url;
-                    const fname = isViewingProcessed ? `${document.id}.pdf` : `${document.name}_original.pdf`;
+                    const fname = isViewingProcessedDocument ? `${document.id}.pdf` : `${document.name}_original.pdf`;
                     link.download = fname;
                     link.click();
                     URL.revokeObjectURL(url);
@@ -453,41 +449,27 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
               </MenubarItem>
             </MenubarContent>
           </MenubarMenu>
-          </Menubar>
 
-          {/* Quick zoom controls */}
-          <Button variant="ghost" size="icon" onClick={handleZoomOut}><ZoomOut /></Button>
-          <Button variant="ghost" size="icon" onClick={handleResetView}><Scan /></Button>
-          <Button variant="ghost" size="icon" onClick={handleZoomIn}><ZoomIn /></Button>
+          <Separator orientation="vertical" />
 
-          {/* Selections visibility toggle */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={toggleSelections}
-            className={showSelections ? 'bg-accent text-accent-foreground' : ''}
-            title={showSelections ? "Hide selections" : "Show selections"}
-          >
-            {showSelections ? <Pen /> : <PenOff />}
-          </Button>
-
-          {/* Info toggle quick */}
-          {onToggleInfo && (
+          <div className="flex flex-row gap-0">
+            <Button variant="ghost" size="icon" onClick={handleZoomOut}><ZoomOut /></Button>
+            <Button variant="ghost" size="icon" onClick={handleZoomIn}><ZoomIn /></Button>
+            <Button variant="ghost" size="icon" onClick={handleResetView}><Scan /></Button>
+            <Button variant="ghost" size="icon" onClick={toggleSelections} title={showSelections ? "Hide selections" : "Show selections"}>{showSelections ? <Pen /> : <PenOff />}</Button>
             <Button variant="ghost" size="icon" onClick={onToggleInfo} className={isInfoVisible ? 'bg-accent text-accent-foreground' : ''} title="Toggle info"><Info /></Button>
-          )}
+          </div>
 
-          {/* Keyboard shortcuts dialog toggle */}
-          <Button variant="ghost" size="icon" onClick={toggleHelpOverlay} title="Keyboard shortcuts (H)"><Keyboard /></Button>
-        </div>
+        </Menubar>
       </div>
 
       {/* Bottom mini-pager (visible on hover) */}
-      <div className={`
-        absolute bottom-4 left-1/2 -translate-x-1/2 z-1001 bg-background/90 rounded-md
-        transition-all duration-300 ease-in-out
-        ${(visible && showBar) ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"}
-      `}>
-        <div className="shadow-md flex items-center gap-2 px-2 py-1 rounded-md">
+      <div className={cn(
+        "absolute bottom-2 left-1/2 -translate-x-1/2 z-1001 bg-background/90 rounded-md",
+        "transition-all duration-300 ease-in-out",
+        (visible && showBar) ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none",
+      )}>
+        <Menubar>
           <Button
             variant="ghost"
             size="icon"
@@ -509,7 +491,7 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
           >
             <ChevronRight />
           </Button>
-        </div>
+        </Menubar>
       </div>
 
       {/* Dialogs for selections actions */}
@@ -541,10 +523,10 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
           const msgs: TypedMessage[] = totalToCommit === 0
             ? [{ variant: 'warning', title: 'Nothing to commit', description: 'There are no changes to commit.' }]
             : [
-                { variant: 'warning', title: 'Irreversible operation', description: 'Once committed, changes cannot be undone from here.' },
-                ...(scSel.stagedPersisted + scSel.created + scSel.updated > 0 ? [{ variant: 'info', title: 'Selections to commit', description: `${scSel.stagedPersisted + scSel.created + scSel.updated} selection change(s) will be committed` }] : [] as any),
-                ...(prSel.stagedPersisted + prSel.created + prSel.updated > 0 ? [{ variant: 'info', title: 'Prompts to commit', description: `${prSel.stagedPersisted + prSel.created + prSel.updated} prompt change(s) will be committed` }] : [] as any),
-              ];
+              { variant: 'warning', title: 'Irreversible operation', description: 'Once committed, changes cannot be undone from here.' },
+              ...(scSel.stagedPersisted + scSel.created + scSel.updated > 0 ? [{ variant: 'info', title: 'Selections to commit', description: `${scSel.stagedPersisted + scSel.created + scSel.updated} selection change(s) will be committed` }] : [] as any),
+              ...(prSel.stagedPersisted + prSel.created + prSel.updated > 0 ? [{ variant: 'info', title: 'Prompts to commit', description: `${prSel.stagedPersisted + prSel.created + prSel.updated} prompt change(s) will be committed` }] : [] as any),
+            ];
           const autoMsg: TypedMessage = commitAutoStage
             ? { variant: 'warning', title: 'Auto-stage is ON', description: 'Pending changes will be staged and committed in one step.' }
             : { variant: 'info', title: 'Optional: auto-stage before commit', description: 'If enabled, any unstaged changes will be staged first, then committed.' };

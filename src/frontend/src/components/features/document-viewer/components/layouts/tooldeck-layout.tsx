@@ -5,7 +5,6 @@ import type { MinimalDocumentType } from "@/types";
 import { useSelections } from "../../providers/selection-provider";
 import { useViewportState } from "../../providers/viewport-provider";
 import {
-  DocumentControls,
   SelectionCommander,
   PromptCommander,
   PromptsList,
@@ -63,7 +62,7 @@ export default function ControlsLayout({ document, className, ...props }: Contro
     handleActivePanelChange(activeControlsPanel);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  
+
   return (
     <WidgetContainer
       data-slot="document-viewer-controller"
@@ -71,18 +70,9 @@ export default function ControlsLayout({ document, className, ...props }: Contro
       accordion
       value={activeControlsPanel}
       onValueChange={handleActivePanelChange}
-      className={cn(className)} 
+      className={cn(className)}
       {...props}
     >
-      {/* Document Controls */}
-      <Widget
-        value="document-controls"
-        title="Document Controls"
-      >
-        <DocumentControls document={document} />
-      </Widget>
-
-      {/* Workbench: Selections and AI Prompts in tabs */}
       <Widget
         value="workbench"
         title="Workbench"
