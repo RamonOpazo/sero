@@ -372,8 +372,22 @@ export const DocumentViewerAPI = {
       .catch((error: unknown) => {
         toast.error(
           "Failed to load selections",
-          { description: "Please try again." }
+          { description: "Please try again." },
         );
+        throw error;
+      })
+      .toResult();
+  },
+
+  /**
+   * Fetch project-scoped (template) selections for a document's project
+   * These are read-only overlays in the viewer.
+   */
+  async fetchDocumentTemplateSelections(documentId: string): Promise<Result<SelectionType[], unknown>> {
+    return AsyncResultWrapper
+      .from(api.safe.get<SelectionType[]>(`/documents/id/${documentId}/template-selections`))
+      .catch((error: unknown) => {
+        // Soft failure: do not toast; just propagate to Result
         throw error;
       })
       .toResult();

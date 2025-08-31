@@ -27,6 +27,7 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     mode,
     isViewingProcessedDocument,
     document: currentDocument,
+    numPages,
   } = useViewportState();
 
   // New selection system
@@ -44,6 +45,8 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     onSelectionDoubleClick,
     getCurrentDraw,
     beginBatchOperation,
+    // Template overlays API
+    getTemplateSelectionsForPage,
   } = useSelections() as any;
   
   // Touch selectionState to avoid TS unused variable during builds
@@ -339,6 +342,35 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     return map;
   }, [uiSelections]);
 
+  // Render read-only template selection box (non-interactive)
+  const renderTemplateSelectionBox = useCallback((selection: Selection) => {
+    const left = selection.x * documentSize.width;
+    const top = selection.y * documentSize.height;
+    const width = Math.abs(selection.width) * documentSize.width;
+    const height = Math.abs(selection.height) * documentSize.height;
+
+    const visualNorm = getNormalizedState((selection as any).state);
+    const visualState = visualNorm === "draft" ? "unstaged" : visualNorm;
+
+    return (
+      <SelectionBox
+        key={`tpl-${selection.id}`}
+        id={`tpl-${selection.id}`}
+        left={left}
+        top={top}
+        width={width}
+        height={height}
+        state={visualState}
+        flag={"project_scope"}
+        isHovered={false}
+        isSelected={false}
+        activityContrast={0.3}
+        handlerSize={8}
+        className="pointer-events-none"
+      />
+    );
+  }, [documentSize]);
+
   // Render selection box
   const renderSelectionBox = useCallback((selection: Selection) => {
     // Convert normalized coordinates to pixel coordinates
@@ -397,6 +429,9 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     (s: any) => s.page_number === null || s.page_number === currentPage,
   );
 
+  // Template project-scoped overlays for current page (read-only)
+  const templateSelectionsForPage = getTemplateSelectionsForPage?.(currentPage, numPages) ?? [];
+
   // Show current drawing if any
   const currentDraw = getCurrentDraw();
   const drawingThisPage = currentDraw && 
@@ -428,6 +463,9 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
           }
         }}
       >
+        {/* Render template overlays first (beneath interactive selections) */}
+        {templateSelectionsForPage.map(renderTemplateSelectionBox)}
+
         {/* Render all selections for this page */}
         {pageSelections.map(renderSelectionBox)}
         

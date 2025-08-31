@@ -187,10 +187,21 @@ async def get_document_selections(
     document_id: UUID,
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_db_session)
+    db: Session = Depends(get_db_session),
 ):
     """Get selections for a document."""
     return documents_controller.get_selections(db=db, document_id=document_id, skip=skip, limit=limit)
+
+
+@router.get("/id/{document_id}/template-selections", response_model=list[selections_schema.Selection])
+async def get_document_template_selections(
+    document_id: UUID,
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db_session),
+):
+    """Get committed project-scoped selections from the project's template document for this document's project."""
+    return documents_controller.get_template_selections(db=db, document_id=document_id, skip=skip, limit=limit)
 
 
 @router.post("/id/{document_id}/selections", response_model=selections_schema.Selection)

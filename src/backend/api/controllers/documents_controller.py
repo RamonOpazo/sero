@@ -245,6 +245,18 @@ def get_selections(db: Session, document_id: UUID, skip: int = 0, limit: int = 1
     return [selections_schema.Selection.model_validate(selection) for selection in selections]
 
 
+def get_template_selections(db: Session, document_id: UUID, skip: int = 0, limit: int = 100) -> list[selections_schema.Selection]:
+    # Load document to determine project
+    doc = get_shallow(db=db, document_id=document_id)
+    # Fetch committed PROJECT-scoped selections from the project's template document (404 if no template)
+    tpl_selections = support_crud._get_template_committed_selections_or_404(db=db, project_id=doc.project_id)
+    # Sort by created_at desc for consistency with other list endpoints
+    ordered = sorted(tpl_selections, key=lambda x: x.created_at, reverse=True)
+    # Apply pagination
+    window = ordered[skip: skip + limit if limit is not None else None]
+    return [selections_schema.Selection.model_validate(i) for i in window]
+
+
 def add_selection(db: Session, document_id: UUID, selection_data: selections_schema.SelectionCreate) -> selections_schema.Selection:
     # Verify document exists
     support_crud.apply_or_404(documents_crud.read, db=db, id=document_id)
@@ -323,7 +335,6 @@ def summarize(db: Session, document_id: UUID) -> documents_schema.DocumentSummar
             "is_template": lambda ctx: bool(getattr(ctx["model"], "template", None)),
             "ai_selections_count": lambda ctx: sum(1 for s in ctx["model"].selections if s.is_ai_generated),
             "manual_selections_count": lambda ctx: sum(1 for s in ctx["model"].selections if not s.is_ai_generated),
-            "prompt_languages": lambda ctx: [],
         },
     )
 

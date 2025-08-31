@@ -59,7 +59,7 @@ interface SelectionContextValue {
   save: () => Promise<Result<void, unknown>>;
   commitChanges: () => void;
   discardAllChanges: () => void;
-
+  
   // Lifecycle-based operations (new)
   saveLifecycle: () => Promise<Result<void, unknown>>;
   commitLifecycle: () => Promise<Result<void, unknown>>;
@@ -87,6 +87,11 @@ interface SelectionContextValue {
   allSelections: readonly Selection[];
   uiSelections: readonly UISelection[];
   hasUnsavedChanges: boolean;
+  
+  // Template (project-scoped) selections
+  templateSelections: readonly Selection[];
+  getTemplateSelectionsForPage: (page: number | null, numPages: number) => readonly Selection[];
+  reloadTemplateSelections: () => Promise<void>;
   
   // Utility methods
   hasSelections: boolean;
@@ -132,6 +137,7 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
   
   // Subscribe to state changes
   const [state, setState] = useState(manager.getState());
+  const [templateSelections, setTemplateSelections] = useState<Selection[]>([]);
   
   // Double-click callback management
   const [onSelectionDoubleClick, setOnSelectionDoubleClickState] = useState<((selection: Selection) => void) | undefined>();
@@ -486,15 +492,65 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
     try {
       const docId = (state as any)?.contextId as string | undefined;
       if (!docId) return;
-      const fetched = await DocumentViewerAPI.fetchDocumentSelections(docId);
-      if (fetched.ok) {
-        dispatch('LOAD_ITEMS', fetched.value as any);
+      const [selRes, tplRes] = await Promise.all([
+        DocumentViewerAPI.fetchDocumentSelections(docId),
+        DocumentViewerAPI.fetchDocumentTemplateSelections(docId),
+      ]);
+      if (selRes.ok) {
+        dispatch('LOAD_ITEMS', selRes.value as any);
         dispatch('CAPTURE_BASELINE' as any, undefined as any);
+      }
+      if (tplRes.ok) {
+        setTemplateSelections((tplRes.value as unknown as Selection[]) ?? []);
+      } else {
+        setTemplateSelections([]);
       }
     } catch {
       // noop
     }
   }, [state, dispatch]);
+  
+  // Placeholder implementations (Phase 1): template selections loading/filtering
+  const reloadTemplateSelections = useCallback(async (): Promise<void> => {
+    try {
+      const docId = (state as any)?.contextId as string | undefined;
+      if (!docId) {
+        setTemplateSelections([]);
+        return;
+      }
+      const res = await DocumentViewerAPI.fetchDocumentTemplateSelections(docId);
+      if (res.ok) {
+        setTemplateSelections((res.value as unknown as Selection[]) ?? []);
+      } else {
+        setTemplateSelections([]);
+      }
+    } catch {
+      setTemplateSelections([]);
+    }
+  }, [state]);
+  
+  const getTemplateSelectionsForPage = useCallback((page: number | null, numPages: number) => {
+    // Include only in-range selections; allow globals (null) always
+    const inRange = (s: Selection) => (
+      s.page_number == null || (
+        Number.isInteger(s.page_number) && (s.page_number as number) >= 0 && (s.page_number as number) < numPages
+      )
+    );
+
+    const filtered = (templateSelections || []).filter(inRange);
+
+    if (page == null) {
+      // When no specific page (global view), show only global template selections
+      return filtered.filter(s => s.page_number == null) as readonly Selection[];
+    }
+    // On a concrete page, show globals and selections targeted to this page
+    return filtered.filter(s => s.page_number == null || s.page_number === page) as readonly Selection[];
+  }, [templateSelections]);
+  
+  // Auto-load template selections on mount and when document changes
+  useEffect(() => {
+    void reloadTemplateSelections();
+  }, [documentId, reloadTemplateSelections]);
   
   // ========================================
   // EVENT CALLBACKS
@@ -653,6 +709,11 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
     uiSelections,
     hasUnsavedChanges,
     
+    // Template (project-scoped) selections
+    templateSelections,
+    getTemplateSelectionsForPage,
+    reloadTemplateSelections,
+    
     // Utility methods
     hasSelections,
     selectionCount,
@@ -669,8 +730,11 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
     selectSelection, selectedSelection, toggleSelectionGlobal, setSelectionPage,
     loadSavedSelections, reload, onSelectionDoubleClick, setOnSelectionDoubleClick,
     allSelections, uiSelections, hasUnsavedChanges,
+    
+    templateSelections, getTemplateSelectionsForPage, reloadTemplateSelections,
+    
     hasSelections, selectionCount, getCurrentDraw, isCurrentlyDrawing,
-    getSelectionsForPage, getGlobalSelections, getPageSelections
+    getSelectionsForPage, getGlobalSelections, getPageSelections,
   ]);
   
   return (
