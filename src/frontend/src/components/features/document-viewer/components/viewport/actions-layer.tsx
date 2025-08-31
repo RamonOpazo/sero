@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { useActions } from "./hooks/use-actions";
 import { DocumentViewerAPI } from "@/lib/document-viewer-api";
+import { buildActionsMenuConfig, type MenuConfig, type MenuNode } from "./actions-config";
 
 interface ActionsLayerProps {
   document: MinimalDocumentType;
@@ -337,14 +338,34 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
           <MenubarMenu>
             <MenubarTrigger>Document</MenubarTrigger>
             <MenubarContent align="start">
-              <MenubarItem onClick={actions.processDocument} disabled={actions.isProcessingDoc}>
-                <Scissors /> {actions.isProcessingDoc ? 'Processing…' : 'Process document'}
-                <MenubarShortcut>Ctrl+P</MenubarShortcut>
-              </MenubarItem>
-              <MenubarItem onClick={actions.downloadCurrentView} disabled={!actions.isDownloadAvailable}>
-                <Download /> Download current view
-                <MenubarShortcut>Ctrl+D</MenubarShortcut>
-              </MenubarItem>
+              {(() => {
+                const [docMenu] = buildActionsMenuConfig({ actions });
+                return docMenu.entries.map((node) => {
+                  if (node.type === 'separator') return <MenubarSeparator key={node.key} />;
+                  if (node.type === 'label') return <MenubarLabel key={node.key}>{node.label}</MenubarLabel>;
+                  if (node.type === 'submenu') {
+                    return (
+                      <MenubarSub key={node.key}>
+                        <MenubarSubTrigger>{node.label}</MenubarSubTrigger>
+                        <MenubarSubContent>
+                          {node.children.map((c) => c.type === 'separator'
+                            ? <MenubarSeparator key={c.key} />
+                            : c.type === 'label'
+                              ? <MenubarLabel key={c.key}>{c.label}</MenubarLabel>
+                              : <MenubarItem key={c.key} onClick={c.onSelect} disabled={c.disabled}>{c.label}</MenubarItem>
+                          )}
+                        </MenubarSubContent>
+                      </MenubarSub>
+                    );
+                  }
+                  // item
+                  return (
+                    <MenubarItem key={node.key} onClick={node.onSelect} disabled={node.disabled}>
+                      {node.label}
+                    </MenubarItem>
+                  );
+                });
+              })()}
             </MenubarContent>
           </MenubarMenu>
 

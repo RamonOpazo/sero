@@ -45,13 +45,42 @@ export interface MenuConfig {
 // Loose actions/state context for building the menu config. This will be
 // refined in subsequent steps as we extract concrete action hooks.
 export interface ActionsContext {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [key: string]: any;
+  actions: {
+    processDocument: () => Promise<void> | void;
+    isProcessingDoc: boolean;
+    downloadCurrentView: () => void;
+    isDownloadAvailable: boolean;
+  };
 }
 
 // Factory to build the full ActionsLayer menu configuration
-export function buildActionsMenuConfig(_ctx: ActionsContext): MenuConfig[] {
-  // Step 1: scaffold. We'll populate entries in step 3 after extracting actions (step 2).
-  return [];
+export function buildActionsMenuConfig(ctx: ActionsContext): MenuConfig[] {
+  const { actions } = ctx;
+
+  const documentMenu: MenuConfig = {
+    key: 'document',
+    title: 'Document',
+    align: 'start',
+    entries: [
+      {
+        key: 'process',
+        type: 'item',
+        label: actions.isProcessingDoc ? 'Processing…' : 'Process document',
+        onSelect: actions.processDocument,
+        disabled: actions.isProcessingDoc,
+      },
+      { key: 'sep1', type: 'separator' },
+      {
+        key: 'download',
+        type: 'item',
+        label: 'Download current view',
+        onSelect: actions.downloadCurrentView,
+        disabled: !actions.isDownloadAvailable,
+      },
+    ],
+  };
+
+  // For now, we only return the Document menu. Other menus will be added in subsequent steps.
+  return [documentMenu];
 }
 
