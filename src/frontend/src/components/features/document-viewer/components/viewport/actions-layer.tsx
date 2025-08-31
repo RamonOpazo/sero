@@ -256,6 +256,7 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
         <div className="shadow-md flex items-center gap-2 px-2 py-1 rounded-md">
           {/* View menubar (step 1) */}
           <Menubar className="mr-2">
+            {/* View */}
             <MenubarMenu>
               <MenubarTrigger>View</MenubarTrigger>
               <MenubarContent align="start">
@@ -306,38 +307,47 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
                 </MenubarItem>
               </MenubarContent>
             </MenubarMenu>
+
+            {/* Selections (migrated) */}
+            <MenubarMenu>
+              <MenubarTrigger>Selections</MenubarTrigger>
+              <MenubarContent align="start">
+                <MenubarItem disabled={!canCommit || isCommitting} onClick={() => setShowCommitDialog(true)}>
+                  <CheckCheck /> {isCommitting ? 'Committing…' : 'Commit staged'}
+                  <MenubarShortcut>C</MenubarShortcut>
+                </MenubarItem>
+                <MenubarItem disabled={!canStage || isStaging} onClick={() => setShowStageDialog(true)}>
+                  <Save /> {isStaging ? 'Staging…' : 'Stage all changes'}
+                  <MenubarShortcut>S</MenubarShortcut>
+                </MenubarItem>
+                <MenubarItem onClick={() => {
+                  const totalUnsaved = (uiSelections || []).filter((s: any) => s.dirty === true).length;
+                  if (totalUnsaved === 0) { toast.info('No unsaved changes to discard'); return; }
+                  discardAllChanges();
+                  toast.success(`Discarded ${totalUnsaved} unsaved change${totalUnsaved === 1 ? '' : 's'}`);
+                }}>
+                  <Undo2 /> Discard all unsaved
+                </MenubarItem>
+                <MenubarSeparator />
+                <MenubarSub>
+                  <MenubarSubTrigger>Clear</MenubarSubTrigger>
+                  <MenubarSubContent>
+                    <MenubarItem disabled={allSelections.filter((s: any) => s.page_number === currentPage).length === 0} onClick={() => setShowClearPageDialog(true)}>
+                      <FileX /> Current page
+                    </MenubarItem>
+                    <MenubarItem disabled={(allSelections || []).length === 0} onClick={() => setShowClearAllDialog(true)}>
+                      <FileX /> All pages
+                    </MenubarItem>
+                  </MenubarSubContent>
+                </MenubarSub>
+                <MenubarSeparator />
+                <MenubarItem onClick={() => { setActiveControlsPanel('workbench'); setActiveWorkbenchTab('selections'); }}>
+                  Open Workbench • Selections
+                </MenubarItem>
+              </MenubarContent>
+            </MenubarMenu>
           </Menubar>
 
-          {/* Selections menu */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm">Selections</Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              <DropdownMenuItem disabled={!canStage || isStaging} onClick={() => setShowStageDialog(true)}><Save /> {isStaging ? 'Staging…' : 'Stage all changes'}</DropdownMenuItem>
-              <DropdownMenuItem disabled={!canCommit || isCommitting} onClick={() => setShowCommitDialog(true)}><CheckCheck /> {isCommitting ? 'Committing…' : 'Commit staged'}</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => {
-                const totalUnsaved = (uiSelections || []).filter((s: any) => s.dirty === true).length;
-                if (totalUnsaved === 0) { toast.info('No unsaved changes to discard'); return; }
-                discardAllChanges();
-                toast.success(`Discarded ${totalUnsaved} unsaved change${totalUnsaved === 1 ? '' : 's'}`);
-              }}><Undo2 /> Discard all unsaved</DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger>Clear</DropdownMenuSubTrigger>
-                <DropdownMenuSubContent>
-                  <DropdownMenuItem disabled={allSelections.filter((s: any) => s.page_number === currentPage).length === 0} onClick={() => setShowClearPageDialog(true)}>
-                    <FileX /> Current page
-                  </DropdownMenuItem>
-                  <DropdownMenuItem disabled={(allSelections || []).length === 0} onClick={() => setShowClearAllDialog(true)}>
-                    <FileX /> All pages
-                  </DropdownMenuItem>
-                </DropdownMenuSubContent>
-              </DropdownMenuSub>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => { setActiveControlsPanel('workbench'); setActiveWorkbenchTab('selections'); }}>Open Workbench • Selections</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
 
           {/* AI Rules menu */}
           <DropdownMenu>
