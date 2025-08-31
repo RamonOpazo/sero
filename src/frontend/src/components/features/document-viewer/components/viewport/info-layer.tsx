@@ -1,10 +1,9 @@
 import { useCallback, useMemo } from 'react';
+import type { ClassName } from "react-pdf/dist/shared/types.js"
 import { type MinimalDocumentType } from "@/types";
 import { useViewportState } from '../../providers/viewport-provider';
 import { useSelections } from '../../providers/selection-provider';
 import { usePrompts } from '../../providers/prompt-provider';
-import { X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { UISelectionStage } from '../../types/selection-lifecycle';
 
@@ -25,17 +24,17 @@ type FileDetailsProps = {
 function FileDetails({ file, formatFileSize, formatDate }: FileDetailsProps) {
   if (!file) return null;
   return (
-    <div className="ml-4 space-y-1">
-      <div><span className="text-muted-foreground">ID:</span> <span className="font-mono break-all">{file.id}</span></div>
-      <div><span className="text-muted-foreground">Created:</span> <span>{formatDate(file.created_at)}</span></div>
-      {file.updated_at && (<div><span className="text-muted-foreground">Updated:</span> <span>{formatDate(file.updated_at)}</span></div>)}
-      <div><span className="text-muted-foreground">MIME:</span> <span>{file.mime_type}</span></div>
-      <div><span className="text-muted-foreground">Size:</span> <span>{formatFileSize(file.file_size)} ({file.file_size} B)</span></div>
-    </div>
+    <>
+      <InfoDetail name="ID" variant="numeric">{file.id}</InfoDetail>
+      <InfoDetail name="Created">{formatDate(file.created_at)}</InfoDetail>
+      {file.updated_at && (<InfoDetail name="Updated">{formatDate(file.updated_at)}</InfoDetail>)}
+      <InfoDetail name="MIME">{file.mime_type}</InfoDetail>
+      <InfoDetail name="Size" variant="numeric">{formatFileSize(file.file_size)} ({file.file_size} B)</InfoDetail>
+    </>
   );
 }
 
-export default function InfoLayer({ document, documentSize, isVisible, onToggleVisibility }: Props) {
+export default function InfoLayer({ document, documentSize, isVisible }: Props) {
   const { currentPage, numPages, zoom } = useViewportState();
   const { selectionCount, allSelections, getPageSelections, uiSelections, hasUnsavedChanges: selUnsaved } = useSelections() as any;
   const { allPrompts, pendingChanges: promptPending, pendingChangesCount: promptPendingCount } = usePrompts();
@@ -68,110 +67,149 @@ export default function InfoLayer({ document, documentSize, isVisible, onToggleV
     });
   }, []);
 
-  // Simple appear/disappear transition via CSS classes
-  // Keep the layer mounted to allow exit transitions; disable interactions when hidden
-  const visibilityClasses = isVisible
-    ? 'opacity-100 translate-x-0 pointer-events-auto'
-    : 'opacity-0 -translate-x-2 pointer-events-none';
+  return (
+    <InfoContainer isVisible={isVisible}>
+      <InfoSection name="Document">
+        <InfoTitle>{document.name}</InfoTitle>
+        <InfoSubtitle>{document.description}</InfoSubtitle>
+      </InfoSection>
 
+      <InfoSection name="Core" variant="list">
+        <InfoDetail name="Project ID" variant="numeric">{document.project_id}</InfoDetail>
+        <InfoDetail name="Document ID" variant="numeric">{document.id}</InfoDetail>
+        <InfoDetail name="Created">{formatDate(document.created_at)}</InfoDetail>
+        {document.updated_at && (
+          <InfoDetail name="Updated">{formatDate(document.updated_at)}</InfoDetail>
+        )}
+        <InfoDetail name="Status">{document.files?.length > 1 ? "processed" : "pending"}</InfoDetail>
+      </InfoSection>
+
+      <InfoSection name="Viewport" variant="list">
+        <InfoDetail name="Page">{currentPage + 1} of {numPages}</InfoDetail>
+        <InfoDetail name="Zoom">{Math.round(zoom * 100)}%</InfoDetail>
+        <InfoDetail name="Size">{Math.round(documentSize.width)} × {Math.round(documentSize.height)}px</InfoDetail>
+        <InfoDetail name="Scaled">{Math.round(documentSize.width * zoom)} × {Math.round(documentSize.height * zoom)}px</InfoDetail>
+      </InfoSection>
+
+      <InfoSection name="Selections" variant="list">
+        <InfoDetail name="Total" variant="numeric">{selectionCount}</InfoDetail>
+        <InfoDetail name="Global" variant="numeric">{(allSelections || []).filter((s: any) => s.page_number == null).length}</InfoDetail>
+        <InfoDetail name="On page" variant="numeric">{getPageSelections(currentPage).length}</InfoDetail>
+        <InfoDetail name="Unstaged" variant="numeric">{selLifecycle.unstaged}</InfoDetail>
+        <InfoDetail name="Staged" variant="numeric">[C{selLifecycle.stagedCreation}] [U{selLifecycle.stagedEdition}] [D{selLifecycle.stagedDeletion}]</InfoDetail>
+        <InfoDetail name="Committed" variant="numeric">{selLifecycle.committed}</InfoDetail>
+        <InfoDetail name="Unsaved" variant="numeric">{selUnsaved ? 'yes' : 'no'}</InfoDetail>
+      </InfoSection>
+
+      <InfoSection name="AI Prompts" variant="list">
+        <InfoDetail name="Total">{allPrompts.length}</InfoDetail>
+        <div>
+          <InfoDetail name="Pending">
+            {promptPendingCount > 0 ? (
+              <>c:{promptPending.creates.length}, u:{promptPending.updates.length}, d:{promptPending.deletes.length}</>
+            ) : (
+              <>{promptPendingCount}</>
+            )}
+          </InfoDetail>
+        </div>
+      </InfoSection>
+
+      <InfoSection name="Original file" variant="list">
+        {document.original_file ? (
+          <FileDetails file={document.original_file} formatFileSize={formatFileSize} formatDate={formatDate} />
+        ) : (
+          <InfoEmpty>No original file</InfoEmpty>
+        )}
+      </InfoSection>
+
+      <InfoSection name="Redacted file" variant="list">
+        {document.redacted_file ? (
+          <FileDetails file={document.redacted_file} formatFileSize={formatFileSize} formatDate={formatDate} />
+        ) : (
+          <InfoEmpty>No redacted file</InfoEmpty>
+        )}
+      </InfoSection>
+      /</InfoContainer>
+  );
+}
+
+interface InfoProps {
+  children: React.ReactNode
+  className?: ClassName
+}
+
+function InfoContainer({ children, className, isVisible }: InfoProps & { isVisible: boolean }) {
   return (
     <div
       className={cn(
         "absolute top-0 left-0 bottom-0",
-        "flex flex-col gap-4 w-[60ch] max-w-[60ch] p-4",
-        "rounded-l-md border border-r-0 bg-background/90 backdrop-blur-xs backdrop-saturate-0",
+        "flex flex-col gap-2 max-w-full p-4",
         "text-xs transition-all duration-200 ease-out",
-        `${visibilityClasses}`
+        isVisible
+          ? 'opacity-100 translate-x-0 pointer-events-auto'
+          : 'opacity-0 -translate-x-2 pointer-events-none',
+        className,
       )}
       aria-hidden={!isVisible}
-    >
-      {/* Full-area content container */}
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={onToggleVisibility}
-        className="absolute top-4 right-4"
-        aria-label="Close info"
-      >
-        <X />
-      </Button>
-      {/* <div className="flex items-center gap-2 mt-[5rem] mb-2">
-        <Info className="h-5 w-5" />
-        <h1 className="text-lg font-semibold">Info</h1>
-      </div> */}
-      <div className='mt-[4rem]'>
-        <h2 className="uppercase tracking-wider text-muted-foreground">Document</h2>
-        <h1 className="text-base sm:text-lg">{document.name}</h1>
-        <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">{document.description}</p>
-      </div>
+    >{children}</div>
+  )
+}
 
-      <div>
-        <h2 className="uppercase tracking-wider text-muted-foreground mb-2">Core</h2>
-        <div className="ml-4 space-y-1">
-          <div><span className="text-muted-foreground">Project ID:</span> <span className="font-mono break-all">{document.project_id}</span></div>
-          <div><span className="text-muted-foreground">Document ID:</span> <span className="font-mono break-all">{document.id}</span></div>
-          <div><span className="text-muted-foreground">Created:</span> <span>{formatDate(document.created_at)}</span></div>
-          {document.updated_at && (
-            <div><span className="text-muted-foreground">Updated:</span> <span>{formatDate(document.updated_at)}</span></div>
-          )}
-          <div><span className="text-muted-foreground">Status:</span> <span>{document.files?.length > 1 ? "processed" : "pending"}</span></div>
-        </div>
-      </div>
+function InfoTitle({ children, className }: InfoProps) {
+  return (
+    <h1 className={cn(
+      "text-base sm:text-2xl",
+      "bg-background/90 w-fit p-1",
+      className,
+    )}>{children}</h1>
+  )
+}
 
-      <div>
-        <h2 className="uppercase tracking-wider text-muted-foreground mb-2">Viewport</h2>
-        <div className="ml-4 space-y-1">
-          <div><span className="text-muted-foreground">Page:</span> <span className="font-medium">{currentPage + 1} of {numPages}</span></div>
-          <div><span className="text-muted-foreground">Zoom:</span> <span>{Math.round(zoom * 100)}%</span></div>
-          <div><span className="text-muted-foreground">Size:</span> <span>{Math.round(documentSize.width)} × {Math.round(documentSize.height)}px</span></div>
-          <div><span className="text-muted-foreground">Scaled:</span> <span>{Math.round(documentSize.width * zoom)} × {Math.round(documentSize.height * zoom)}px</span></div>
-        </div>
-      </div>
+function InfoSubtitle({ children, className }: InfoProps) {
+  return (
+    <h2 className={cn(
+      "text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap",
+      "bg-background/90 w-fit p-1",
+      className,
+    )}>{children}</h2>
+  )
+}
 
-      <div>
-        <h2 className="uppercase tracking-wider text-muted-foreground mb-2">Selections</h2>
-        <div className="ml-4 space-y-1">
-          <div><span className="text-muted-foreground">Total:</span> <span className="font-medium">{selectionCount}</span></div>
-          <div><span className="text-muted-foreground">Global:</span> <span>{(allSelections || []).filter((s: any) => s.page_number == null).length}</span></div>
-          <div><span className="text-muted-foreground">On page:</span> <span>{getPageSelections(currentPage).length}</span></div>
-          <div><span className="text-muted-foreground">Unstaged:</span> <span className="font-medium">{selLifecycle.unstaged}</span></div>
-          <div><span className="text-muted-foreground">Staged:</span> <span>c:{selLifecycle.stagedCreation}, u:{selLifecycle.stagedEdition}, d:{selLifecycle.stagedDeletion}</span></div>
-          <div><span className="text-muted-foreground">Committed:</span> <span>{selLifecycle.committed}</span></div>
-          <div><span className="text-muted-foreground">Unsaved:</span> <span>{selUnsaved ? 'yes' : 'no'}</span></div>
-        </div>
+function InfoSection({ children, className, name, variant }: InfoProps & { name: string, variant?: "title" | "list" }) {
+  return (
+    <section>
+      <h3 className={cn(
+        "uppercase tracking-wider text-muted-foreground",
+        "bg-background/90 w-fit p-1",
+        variant === "list" && "text-foreground",
+        className,
+      )}>{name}</h3>
+      <div className={cn(
+        variant === "list" && "ml-4",
+      )}>{children}
       </div>
+    </section>
+  )
+}
 
-      <div>
-        <h2 className="uppercase tracking-wider text-muted-foreground mb-2">AI Prompts</h2>
-        <div className="ml-4 space-y-1">
-          <div><span className="text-muted-foreground">Total:</span> <span className="font-medium">{allPrompts.length}</span></div>
-          <div>
-            <span className="text-muted-foreground">Pending:</span>{' '}
-            <span>{promptPendingCount}</span>
-            {promptPendingCount > 0 && (
-              <span className="text-muted-foreground"> (c:{promptPending.creates.length}, u:{promptPending.updates.length}, d:{promptPending.deletes.length})</span>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div>
-        <h2 className="uppercase tracking-wider text-muted-foreground mb-2">Original file</h2>
-        {document.original_file ? (
-          <FileDetails file={document.original_file} formatFileSize={formatFileSize} formatDate={formatDate} />
-        ) : (
-          <div className="text-muted-foreground ml-4">No original file</div>
-        )}
-      </div>
-
-      <div>
-        <h2 className="uppercase tracking-wider text-muted-foreground mb-2">Redacted file</h2>
-        {document.redacted_file ? (
-          <FileDetails file={document.redacted_file} formatFileSize={formatFileSize} formatDate={formatDate} />
-        ) : (
-          <div className="text-muted-foreground ml-4">No redacted file</div>
-        )}
-      </div>
+function InfoDetail({ children, className, name, variant }: InfoProps & { name: string, variant?: "text" | "numeric" }) {
+  return (
+    <div className={cn(
+      "bg-background/90 w-fit p-1",
+      className,
+    )}>
+      <span className="text-muted-foreground">{name}: </span>
+      <span className={cn(variant === "numeric" && "font-mono",)}>{children}</span>
     </div>
-  );
+  )
+}
+
+function InfoEmpty({ children, className }: InfoProps) {
+  return (
+    <span className={cn(
+      "inline-block text-muted-foreground",
+      "bg-background/90 w-fit p-1",
+      className,
+    )}>{children}</span>
+  )
 }

@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import { WidgetContainer, Widget } from "@/components/shared/Widget";
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import type { MinimalDocumentType } from "@/types";
 import { useSelections } from "../../providers/selection-provider";
 import { useViewportState } from "../../providers/viewport-provider";
@@ -8,7 +8,10 @@ import {
   DocumentControls,
   SelectionCommander,
   PromptCommander,
+  PromptsList,
 } from "../tooldeck";
+import SelectionList from "../tooldeck/selection-list";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 interface ControlsLayoutProps {
   document: MinimalDocumentType;
@@ -22,33 +25,42 @@ interface ControlsLayoutProps {
  */
 export default function ControlsLayout({ document, className, ...props }: ControlsLayoutProps & React.ComponentProps<"div">) {
   const { selectedSelection } = useSelections();
-  const [activePanel, setActivePanel] = useState<string>("document-controls");
 
-  // Viewport panel state setters
-  const { setShowInfoPanel, setShowSelections, setShowSelectionsPanel, setShowPromptPanel } = (useViewportState() as any);
+  // Viewport state for orchestration
+  const {
+    setShowInfoPanel,
+    setShowSelections,
+    setShowSelectionsPanel,
+    setShowPromptPanel,
+    activeControlsPanel,
+    setActiveControlsPanel,
+    activeWorkbenchTab,
+    setActiveWorkbenchTab,
+  } = (useViewportState() as any);
 
-  // Handle panel changes explicitly to avoid fighting user toggles (ESC)
   const handleActivePanelChange = (value: string) => {
-    setActivePanel(value);
+    setActiveControlsPanel(value);
     setShowInfoPanel(value === 'document-controls');
-    setShowSelectionsPanel(value === 'selections');
-    setShowPromptPanel(value === 'prompts');
-    if (value === 'selections') {
+    // Hide legacy overlay panels when using the new tabbed widget
+    setShowSelectionsPanel(false);
+    setShowPromptPanel(false);
+    if (value === 'workbench') {
       // Ensure visual selections on the canvas when managing them
       setShowSelections((prev: boolean) => prev || true);
     }
   };
 
-  // Auto-switch to selections tool when a selection is made (one-shot)
+  // Auto-switch to Selections tab when a selection is made (one-shot)
   useEffect(() => {
-    if (selectedSelection && activePanel !== 'selections') {
-      handleActivePanelChange('selections');
+    if (selectedSelection) {
+      if (activeControlsPanel !== 'workbench') setActiveControlsPanel('workbench');
+      if (activeWorkbenchTab !== 'selections') setActiveWorkbenchTab('selections');
     }
-  }, [selectedSelection]);
-  
+  }, [selectedSelection, activeControlsPanel, activeWorkbenchTab, setActiveControlsPanel, setActiveWorkbenchTab]);
+
   // Initialize default panel state on mount
   useEffect(() => {
-    handleActivePanelChange(activePanel);
+    handleActivePanelChange(activeControlsPanel);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   
@@ -57,7 +69,7 @@ export default function ControlsLayout({ document, className, ...props }: Contro
       data-slot="document-viewer-controller"
       expanded
       accordion
-      value={activePanel}
+      value={activeControlsPanel}
       onValueChange={handleActivePanelChange}
       className={cn(className)} 
       {...props}
@@ -70,20 +82,31 @@ export default function ControlsLayout({ document, className, ...props }: Contro
         <DocumentControls document={document} />
       </Widget>
 
-      {/* Selection Management */}
+      {/* Workbench: Selections and AI Prompts in tabs */}
       <Widget
-        value="selections"
-        title="Selection Management"
+        value="workbench"
+        title="Workbench"
       >
-        <SelectionCommander document={document} />
-      </Widget>
+        <Tabs value={activeWorkbenchTab} onValueChange={setActiveWorkbenchTab}>
+          <TabsList>
+            <TabsTrigger value="selections">Selections</TabsTrigger>
+            <TabsTrigger value="prompts">AI Rules</TabsTrigger>
+          </TabsList>
 
-      {/* AI Prompts */}
-      <Widget
-        value="prompts"
-        title="AI Prompts"
-      >
-        <PromptCommander document={document} />
+          <TabsContent value="selections" className="flex flex-col gap-4">
+            <SelectionCommander document={document} />
+            <div className="flex-1 min-h-0">
+              <SelectionList />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="prompts" className="flex flex-col gap-4">
+            <PromptCommander document={document} />
+            <div className="flex-1 min-h-0">
+              <PromptsList documentId={document.id} />
+            </div>
+          </TabsContent>
+        </Tabs>
       </Widget>
 
     </WidgetContainer>
