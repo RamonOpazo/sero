@@ -12,13 +12,10 @@ import { toast } from "sonner";
 import { SimpleConfirmationDialog } from "@/components/shared/simple-confirmation-dialog/simple-confirmation-dialog";
 import { FormConfirmationDialog } from "@/components/shared";
 import { usePrompts } from "../../providers/prompt-provider";
-import { DocumentViewerAPI } from "@/lib/document-viewer-api";
-import { useAiProcessing } from "@/providers/ai-processing-provider";
-import { useProjectTrust } from "@/providers/project-trust-provider";
-import { DocumentsAPI } from "@/lib/documents-api";
-import { EditorAPI } from "@/lib/editor-api";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
+import { useActions } from "./hooks/use-actions";
+import { DocumentViewerAPI } from "@/lib/document-viewer-api";
 
 interface ActionsLayerProps {
   document: MinimalDocumentType;
@@ -38,10 +35,6 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
     setMode,
     showSelections,
     dispatch,
-    activeControlsPanel,
-    setActiveControlsPanel,
-    activeWorkbenchTab,
-    setActiveWorkbenchTab,
     isViewingProcessedDocument,
   } = useViewportState();
 
@@ -67,8 +60,7 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
 
   // Prompts and AI hooks
   const { load, save, createPrompt } = usePrompts() as any;
-  const aiProc = useAiProcessing();
-  const { ensureProjectTrust } = useProjectTrust();
+  const actions = useActions(document);
 
   // Dialog state
   const [showStageDialog, setShowStageDialog] = useState(false);
@@ -78,8 +70,6 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
   const [showClearAllDialog, setShowClearAllDialog] = useState(false);
   const [showAddPromptDialog, setShowAddPromptDialog] = useState(false);
   const [showClearAllPromptsDialog, setShowClearAllPromptsDialog] = useState(false);
-  const [isProcessingDoc, setIsProcessingDoc] = useState(false);
-  const [isApplyingAI, setIsApplyingAI] = useState(false);
 
   // Compatibility function for setShowSelections
   const setShowSelections = (show: boolean) => {
@@ -281,7 +271,7 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
                   </MenubarItem>
                 </MenubarSubContent>
               </MenubarSub>
-              <MenubarItem onClick={() => dispatch({ type: 'SET_VIEWING_PROCESSED', payload: !isViewingProcessedDocument })}>
+              <MenubarItem onClick={actions.toggleProcessedView}>
                 Toggle View (Original/Redacted)
                 <MenubarShortcut>R</MenubarShortcut>
               </MenubarItem>
@@ -299,12 +289,7 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
                 <Save /> {isStaging ? 'Staging…' : 'Stage all changes'}
                 <MenubarShortcut>S</MenubarShortcut>
               </MenubarItem>
-              <MenubarItem onClick={() => {
-                const totalUnsaved = (uiSelections || []).filter((s: any) => s.dirty === true).length;
-                if (totalUnsaved === 0) { toast.info('No unsaved changes to discard'); return; }
-                discardAllChanges();
-                toast.success(`Discarded ${totalUnsaved} unsaved change${totalUnsaved === 1 ? '' : 's'}`);
-              }}>
+              <MenubarItem onClick={actions.discardAllUnsaved}>
                 <Undo2 /> Discard all unsaved
               </MenubarItem>
               <MenubarSeparator />
@@ -320,7 +305,7 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
                 </MenubarSubContent>
               </MenubarSub>
               <MenubarSeparator />
-              <MenubarItem onClick={() => { setActiveControlsPanel('workbench'); setActiveWorkbenchTab('selections'); }}>
+              <MenubarItem onClick={actions.openWorkbenchSelections}>
                 Open Workbench • Selections
               </MenubarItem>
             </MenubarContent>
@@ -330,27 +315,8 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
           <MenubarMenu>
             <MenubarTrigger>Rules</MenubarTrigger>
             <MenubarContent align="start">
-              <MenubarItem onClick={async () => {
-                try {
-                  setIsApplyingAI(true);
-                  const { keyId, encryptedPassword } = await ensureProjectTrust(document.project_id);
-                  const ctrl = DocumentViewerAPI.applyAiStream(document.id, {
-                    onStatus: (d: any) => { aiProc.updateJob({ id: document.id, stage: d.stage, stageIndex: d.stage_index ?? 0, stageTotal: d.stage_total ?? (aiProc.state.jobs[document.id]?.stageTotal ?? 1), percent: d.percent ?? (aiProc.state.jobs[document.id]?.percent ?? 0), hints: d.subtask ? [d.subtask] : [] }); },
-                    onModel: (m: any) => { aiProc.updateJob({ id: document.id, hints: [`model: ${m.name}`] }); },
-                    onTokens: () => { aiProc.updateJob({ id: document.id, stage: 'generating' }); },
-                    onStagingProgress: (sp: any) => { aiProc.updateJob({ id: document.id, percent: typeof sp.percent === 'number' ? sp.percent : undefined as any }); },
-                    onSummary: async (s: any) => { aiProc.updateJob({ id: document.id, hints: [`staged: ${s.staged}`] }); await (useSelections() as any).state.reload?.(); },
-                    onCompleted: () => { setIsApplyingAI(false); aiProc.completeJob(document.id); aiProc.clearJob(document.id); toast.success('AI completed'); },
-                    onError: (e: any) => { setIsApplyingAI(false); aiProc.failJob(document.id, { message: e.message ?? 'unknown' }); aiProc.clearJob(document.id); toast.error(`AI error: ${e.message ?? 'unknown'}`); },
-                    keyId,
-                    encryptedPassword,
-                  } as any);
-                  aiProc.registerCancel(document.id, ctrl.cancel);
-                } catch (e) {
-                  setIsApplyingAI(false);
-                }
-              }} disabled={isApplyingAI}>
-                <Bot /> {isApplyingAI ? 'Running AI…' : 'Run AI detection'}
+              <MenubarItem onClick={actions.runAi} disabled={actions.isApplyingAI}>
+                <Bot /> {actions.isApplyingAI ? 'Running AI…' : 'Run AI detection'}
                 <MenubarShortcut>Ctrl+Alt+A</MenubarShortcut>
               </MenubarItem>
               <MenubarItem onClick={() => setShowAddPromptDialog(true)}>
@@ -362,7 +328,7 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
                 <MenubarShortcut>Shift+Del</MenubarShortcut>
               </MenubarItem>
               <MenubarSeparator />
-              <MenubarItem onClick={() => { setActiveControlsPanel('workbench'); setActiveWorkbenchTab('prompts'); }}>
+              <MenubarItem onClick={actions.openWorkbenchPrompts}>
                 Open Workbench • AI Rules
               </MenubarItem>
             </MenubarContent>
@@ -371,60 +337,11 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
           <MenubarMenu>
             <MenubarTrigger>Document</MenubarTrigger>
             <MenubarContent align="start">
-              <MenubarItem onClick={async () => {
-                try {
-                  setIsProcessingDoc(true);
-                  // Require at least one selection
-                  if ((useSelections() as any).selectionCount === 0) {
-                    toast.info('Add a selection first', { description: 'Create at least one redaction area to enable processing.' });
-                    setIsProcessingDoc(false);
-                    return;
-                  }
-                  const { keyId, encryptedPassword } = await ensureProjectTrust(document.project_id);
-                  const result = await DocumentsAPI.processDocumentEncrypted(document.id, { keyId, encryptedPassword });
-                  if (!result.ok) { setIsProcessingDoc(false); return; }
-                  const redacted = await EditorAPI.loadRedactedFile(document.id);
-                  if (!redacted.ok) {
-                    setIsProcessingDoc(false);
-                    toast.warning('Processed, but failed to fetch redacted file', { description: 'Try toggling to Redacted view or downloading again.' });
-                    dispatch({ type: 'SET_VIEWING_PROCESSED', payload: true });
-                    return;
-                  }
-                  const redFile = redacted.value.file as any;
-                  const redBlob = redacted.value.blob;
-                  dispatch({ type: 'SET_VOLATILE_BLOB', payload: { blob: redBlob, forProcessed: true } });
-                  const nextFiles = Array.isArray((document as any).files) ? [...(document as any).files] : [];
-                  const filtered = nextFiles.filter((f: any) => f.file_type !== 'redacted');
-                  filtered.push({ ...redFile, blob: redBlob });
-                  const nextDoc: MinimalDocumentType = { ...(document as any), redacted_file: redFile, files: filtered } as any;
-                  dispatch({ type: 'SET_DOCUMENT', payload: nextDoc });
-                  dispatch({ type: 'SET_VIEWING_PROCESSED', payload: true });
-                  setIsProcessingDoc(false);
-                  toast.success('Document processed successfully');
-                } catch (err: any) {
-                  setIsProcessingDoc(false);
-                  if (err instanceof Error && err.message === 'cancelled') { toast.message('Project unlock cancelled'); return; }
-                  toast.error('Processing failed');
-                }
-              }} disabled={isProcessingDoc}>
-                <Scissors /> {isProcessingDoc ? 'Processing…' : 'Process document'}
+              <MenubarItem onClick={actions.processDocument} disabled={actions.isProcessingDoc}>
+                <Scissors /> {actions.isProcessingDoc ? 'Processing…' : 'Process document'}
                 <MenubarShortcut>Ctrl+P</MenubarShortcut>
               </MenubarItem>
-              <MenubarItem onClick={() => {
-                const currentFile = isViewingProcessedDocument ? document.redacted_file : document.original_file;
-                if (currentFile && document.files) {
-                  const fileWithBlob = document.files.find((f: any) => f.id === currentFile.id);
-                  if (fileWithBlob && 'blob' in fileWithBlob && fileWithBlob.blob instanceof Blob) {
-                    const url = URL.createObjectURL(fileWithBlob.blob);
-                    const link = globalThis.document.createElement('a');
-                    link.href = url;
-                    const fname = isViewingProcessedDocument ? `${document.id}.pdf` : `${document.name}_original.pdf`;
-                    link.download = fname;
-                    link.click();
-                    URL.revokeObjectURL(url);
-                  }
-                }
-              }} disabled={!document.original_file && !document.redacted_file}>
+              <MenubarItem onClick={actions.downloadCurrentView} disabled={!actions.isDownloadAvailable}>
                 <Download /> Download current view
                 <MenubarShortcut>Ctrl+D</MenubarShortcut>
               </MenubarItem>

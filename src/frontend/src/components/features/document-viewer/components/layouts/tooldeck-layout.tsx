@@ -60,39 +60,59 @@ export default function ControlsLayout({ document, className, ...props }: Contro
   }, []);
 
   return (
-    <WidgetContainer
-      data-slot="document-viewer-controller"
-      expanded
-      accordion
-      value={activeControlsPanel}
-      onValueChange={handleActivePanelChange}
-      className={cn(className)}
-      {...props}
+    <div
+      className="w-[350px]"
     >
-      <Widget
-        value="workbench"
-        title="Workbench"
-      >
-        <Tabs value={activeWorkbenchTab} onValueChange={setActiveWorkbenchTab}>
-          <TabsList>
-            <TabsTrigger value="selections">Selections</TabsTrigger>
-            <TabsTrigger value="prompts">AI Rules</TabsTrigger>
-          </TabsList>
+      <Tabs value={activeWorkbenchTab} onValueChange={setActiveWorkbenchTab}>
+        <TabsList>
+          <TabsTrigger value="selections">Selections</TabsTrigger>
+          <TabsTrigger value="prompts">AI Rules</TabsTrigger>
+        </TabsList>
+        <TabsContent value="selections" className="flex flex-col gap-4">
+          <div className="flex-1 min-h-0">
+            <SelectionList />
+          </div>
+        </TabsContent>
+        <TabsContent value="prompts" className="flex flex-col gap-4">
+          <div className="flex-1 min-h-0">
+            <PromptsList documentId={document.id} />
+          </div>
+        </TabsContent>
+      </Tabs>
+    </div>
+    // <WidgetContainer
+    //   data-slot="document-viewer-controller"
+    //   expanded
+    //   accordion
+    //   value={activeControlsPanel}
+    //   onValueChange={handleActivePanelChange}
+    //   className={cn(className)}
+    //   {...props}
+    // >
+    //   <Widget
+    //     value="workbench"
+    //     title="Workbench"
+    //   >
+    //     <Tabs value={activeWorkbenchTab} onValueChange={setActiveWorkbenchTab}>
+    //       <TabsList>
+    //         <TabsTrigger value="selections">Selections</TabsTrigger>
+    //         <TabsTrigger value="prompts">AI Rules</TabsTrigger>
+    //       </TabsList>
 
-          <TabsContent value="selections" className="flex flex-col gap-4">
-            <div className="flex-1 min-h-0">
-              <SelectionList />
-            </div>
-          </TabsContent>
+    //       <TabsContent value="selections" className="flex flex-col gap-4">
+    //         <div className="flex-1 min-h-0">
+    //           <SelectionList />
+    //         </div>
+    //       </TabsContent>
 
-          <TabsContent value="prompts" className="flex flex-col gap-4">
-            <div className="flex-1 min-h-0">
-              <PromptsList documentId={document.id} />
-            </div>
-          </TabsContent>
-        </Tabs>
-      </Widget>
+    //       <TabsContent value="prompts" className="flex flex-col gap-4">
+    //         <div className="flex-1 min-h-0">
+    //           <PromptsList documentId={document.id} />
+    //         </div>
+    //       </TabsContent>
+    //     </Tabs>
+    //   </Widget>
 
-    </WidgetContainer>
+    // </WidgetContainer>
   );
 }
