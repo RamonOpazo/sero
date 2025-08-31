@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Hand, MousePointerClick, Sc
 import { useViewportState, useViewportActions } from '../../providers/viewport-provider';
 import type { MinimalDocumentType } from "@/types";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
+import { Menubar, MenubarMenu, MenubarTrigger, MenubarContent, MenubarItem, MenubarSeparator, MenubarSub, MenubarSubTrigger, MenubarSubContent, MenubarLabel, MenubarShortcut } from "@/components/ui/menubar";
 import { TypedConfirmationDialog } from "@/components/shared/typed-confirmation-dialog";
 import type { TypedMessage } from "@/components/shared/typed-confirmation-dialog";
 import { useSelections } from "../../providers/selection-provider";
@@ -253,37 +254,59 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
         ${(visible && showBar) ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4 pointer-events-none"}
       `}>
         <div className="shadow-md flex items-center gap-2 px-2 py-1 rounded-md">
-          {/* View menu */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm">View</Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              <DropdownMenuLabel>Zoom & Pan</DropdownMenuLabel>
-              <DropdownMenuItem onClick={handleZoomIn}><ZoomIn /> Zoom In</DropdownMenuItem>
-              <DropdownMenuItem onClick={handleZoomOut}><ZoomOut /> Zoom Out</DropdownMenuItem>
-              <DropdownMenuItem onClick={handleResetView}><Scan /> Reset View</DropdownMenuItem>
-              <DropdownMenuItem onClick={handleModeToggle}>
-                {mode === 'pan' ? <MousePointerClick /> : <Hand />} {mode === 'pan' ? 'Switch to Select' : 'Switch to Pan'}
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={toggleSelections}>{showSelections ? <PenOff /> : <Pen />} {showSelections ? 'Hide selections' : 'Show selections'}</DropdownMenuItem>
-              {onToggleInfo && (
-                <DropdownMenuItem onClick={onToggleInfo}><Info /> {isInfoVisible ? 'Hide info' : 'Show info'}</DropdownMenuItem>
-              )}
-              <DropdownMenuSeparator />
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger>Page</DropdownMenuSubTrigger>
-                <DropdownMenuSubContent>
-                  <DropdownMenuItem onClick={() => setCurrentPage(Math.max(0, currentPage - 1))}><ChevronLeft /> Previous</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setCurrentPage(Math.min(numPages - 1, currentPage + 1))}><ChevronRight /> Next</DropdownMenuItem>
-                </DropdownMenuSubContent>
-              </DropdownMenuSub>
-              <DropdownMenuItem onClick={() => dispatch({ type: 'SET_VIEWING_PROCESSED', payload: !useViewportState().isViewingProcessedDocument })}>
-                <FileX className="opacity-0" /> Toggle View (Original/Redacted)
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {/* View menubar (step 1) */}
+          <Menubar className="mr-2">
+            <MenubarMenu>
+              <MenubarTrigger>View</MenubarTrigger>
+              <MenubarContent align="start">
+                <MenubarLabel>Zoom & Pan</MenubarLabel>
+                <MenubarItem onClick={handleZoomIn}>
+                  <ZoomIn /> Zoom In
+                  <MenubarShortcut>Ctrl+=</MenubarShortcut>
+                </MenubarItem>
+                <MenubarItem onClick={handleZoomOut}>
+                  <ZoomOut /> Zoom Out
+                  <MenubarShortcut>Ctrl+-</MenubarShortcut>
+                </MenubarItem>
+                <MenubarItem onClick={handleResetView}>
+                  <Scan /> Reset View
+                  <MenubarShortcut>Ctrl+0</MenubarShortcut>
+                </MenubarItem>
+                <MenubarItem onClick={handleModeToggle}>
+                  {mode === 'pan' ? <MousePointerClick /> : <Hand />} {mode === 'pan' ? 'Switch to Select' : 'Switch to Pan'}
+                </MenubarItem>
+                <MenubarSeparator />
+                <MenubarItem onClick={toggleSelections}>
+                  {showSelections ? <PenOff /> : <Pen />} {showSelections ? 'Hide selections' : 'Show selections'}
+                  <MenubarShortcut>V</MenubarShortcut>
+                </MenubarItem>
+                {onToggleInfo && (
+                  <MenubarItem onClick={onToggleInfo}>
+                    <Info /> {isInfoVisible ? 'Hide info' : 'Show info'}
+                    <MenubarShortcut>I</MenubarShortcut>
+                  </MenubarItem>
+                )}
+                <MenubarSeparator />
+                <MenubarSub>
+                  <MenubarSubTrigger>Page</MenubarSubTrigger>
+                  <MenubarSubContent>
+                    <MenubarItem onClick={() => setCurrentPage(Math.max(0, currentPage - 1))}>
+                      <ChevronLeft /> Previous
+                      <MenubarShortcut>Alt+Left</MenubarShortcut>
+                    </MenubarItem>
+                    <MenubarItem onClick={() => setCurrentPage(Math.min(numPages - 1, currentPage + 1))}>
+                      <ChevronRight /> Next
+                      <MenubarShortcut>Alt+Right</MenubarShortcut>
+                    </MenubarItem>
+                  </MenubarSubContent>
+                </MenubarSub>
+                <MenubarItem onClick={() => dispatch({ type: 'SET_VIEWING_PROCESSED', payload: !useViewportState().isViewingProcessedDocument })}>
+                  Toggle View (Original/Redacted)
+                  <MenubarShortcut>R</MenubarShortcut>
+                </MenubarItem>
+              </MenubarContent>
+            </MenubarMenu>
+          </Menubar>
 
           {/* Selections menu */}
           <DropdownMenu>

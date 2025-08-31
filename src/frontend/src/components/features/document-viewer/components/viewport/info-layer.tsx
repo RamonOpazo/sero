@@ -14,26 +14,6 @@ type Props = {
   onToggleVisibility: () => void;
 };
 
-
-type FileDetailsProps = {
-  file: MinimalDocumentType['original_file'],
-  formatFileSize: (n: number) => string,
-  formatDate: (s: string) => string,
-};
-
-function FileDetails({ file, formatFileSize, formatDate }: FileDetailsProps) {
-  if (!file) return null;
-  return (
-    <>
-      <InfoDetail name="ID" variant="numeric">{file.id}</InfoDetail>
-      <InfoDetail name="Created">{formatDate(file.created_at)}</InfoDetail>
-      {file.updated_at && (<InfoDetail name="Updated">{formatDate(file.updated_at)}</InfoDetail>)}
-      <InfoDetail name="MIME">{file.mime_type}</InfoDetail>
-      <InfoDetail name="Size" variant="numeric">{formatFileSize(file.file_size)} ({file.file_size} B)</InfoDetail>
-    </>
-  );
-}
-
 export default function InfoLayer({ document, documentSize, isVisible }: Props) {
   const { currentPage, numPages, zoom } = useViewportState();
   const { selectionCount, allSelections, getPageSelections, uiSelections, hasUnsavedChanges: selUnsaved } = useSelections() as any;
@@ -103,7 +83,6 @@ export default function InfoLayer({ document, documentSize, isVisible }: Props) 
 
       <InfoSection name="AI Prompts" variant="list">
         <InfoDetail name="Total">{allPrompts.length}</InfoDetail>
-        <div>
           <InfoDetail name="Pending">
             {promptPendingCount > 0 ? (
               <>c:{promptPending.creates.length}, u:{promptPending.updates.length}, d:{promptPending.deletes.length}</>
@@ -111,7 +90,6 @@ export default function InfoLayer({ document, documentSize, isVisible }: Props) 
               <>{promptPendingCount}</>
             )}
           </InfoDetail>
-        </div>
       </InfoSection>
 
       <InfoSection name="Original file" variant="list">
@@ -129,7 +107,7 @@ export default function InfoLayer({ document, documentSize, isVisible }: Props) 
           <InfoEmpty>No redacted file</InfoEmpty>
         )}
       </InfoSection>
-      /</InfoContainer>
+    </InfoContainer>
   );
 }
 
@@ -185,7 +163,7 @@ function InfoSection({ children, className, name, variant }: InfoProps & { name:
         className,
       )}>{name}</h3>
       <div className={cn(
-        variant === "list" && "ml-4",
+        variant === "list" && "[&>*]:pl-4",
       )}>{children}
       </div>
     </section>
@@ -212,4 +190,23 @@ function InfoEmpty({ children, className }: InfoProps) {
       className,
     )}>{children}</span>
   )
+}
+
+type FileDetailsProps = {
+  file: MinimalDocumentType['original_file'],
+  formatFileSize: (n: number) => string,
+  formatDate: (s: string) => string,
+};
+
+function FileDetails({ file, formatFileSize, formatDate }: FileDetailsProps) {
+  if (!file) return null;
+  return (
+    <>
+      <InfoDetail name="ID" variant="numeric">{file.id}</InfoDetail>
+      <InfoDetail name="Created">{formatDate(file.created_at)}</InfoDetail>
+      {file.updated_at && (<InfoDetail name="Updated">{formatDate(file.updated_at)}</InfoDetail>)}
+      <InfoDetail name="MIME">{file.mime_type}</InfoDetail>
+      <InfoDetail name="Size" variant="numeric">{formatFileSize(file.file_size)} ({file.file_size} B)</InfoDetail>
+    </>
+  );
 }
