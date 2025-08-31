@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Hand, MousePointerClick, Scan, Info, Pen, PenOff, Keyboard, Bot, Save, CheckCheck, Undo2, FileX, Plus, Download, Scissors } from "lucide-react";
 import { useViewportState, useViewportActions } from '../../providers/viewport-provider';
 import type { MinimalDocumentType } from "@/types";
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
 import { Menubar, MenubarMenu, MenubarTrigger, MenubarContent, MenubarItem, MenubarSeparator, MenubarSub, MenubarSubTrigger, MenubarSubContent, MenubarLabel, MenubarShortcut } from "@/components/ui/menubar";
 import { TypedConfirmationDialog } from "@/components/shared/typed-confirmation-dialog";
 import type { TypedMessage } from "@/components/shared/typed-confirmation-dialog";
@@ -389,15 +388,12 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
               </MenubarItem>
             </MenubarContent>
           </MenubarMenu>
-          </Menubar>
 
-          {/* Document menu */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm">Document</Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              <DropdownMenuItem onClick={async () => {
+          {/* Document menubar (migrated) */}
+          <MenubarMenu>
+            <MenubarTrigger>Document</MenubarTrigger>
+            <MenubarContent align="start">
+              <MenubarItem onClick={async () => {
                 try {
                   setIsProcessingDoc(true);
                   // Require at least one selection
@@ -406,8 +402,6 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
                     setIsProcessingDoc(false);
                     return;
                   }
-                  // Stage pending if any (optional): useStageCommit handles via stageAll when needed elsewhere
-                  // Unlock project and process
                   const { keyId, encryptedPassword } = await ensureProjectTrust(document.project_id);
                   const result = await DocumentsAPI.processDocumentEncrypted(document.id, { keyId, encryptedPassword });
                   if (!result.ok) { setIsProcessingDoc(false); return; }
@@ -434,8 +428,11 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
                   if (err instanceof Error && err.message === 'cancelled') { toast.message('Project unlock cancelled'); return; }
                   toast.error('Processing failed');
                 }
-              }} disabled={isProcessingDoc}><Scissors /> {isProcessingDoc ? 'Processing…' : 'Process document'}</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => {
+              }} disabled={isProcessingDoc}>
+                <Scissors /> {isProcessingDoc ? 'Processing…' : 'Process document'}
+                <MenubarShortcut>Ctrl+P</MenubarShortcut>
+              </MenubarItem>
+              <MenubarItem onClick={() => {
                 const isViewingProcessed = useViewportState().isViewingProcessedDocument;
                 const currentFile = isViewingProcessed ? document.redacted_file : document.original_file;
                 if (currentFile && document.files) {
@@ -450,9 +447,13 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
                     URL.revokeObjectURL(url);
                   }
                 }
-              }} disabled={!document.original_file && !document.redacted_file}><Download /> Download current view</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+              }} disabled={!document.original_file && !document.redacted_file}>
+                <Download /> Download current view
+                <MenubarShortcut>Ctrl+D</MenubarShortcut>
+              </MenubarItem>
+            </MenubarContent>
+          </MenubarMenu>
+          </Menubar>
 
           {/* Quick zoom controls */}
           <Button variant="ghost" size="icon" onClick={handleZoomOut}><ZoomOut /></Button>
