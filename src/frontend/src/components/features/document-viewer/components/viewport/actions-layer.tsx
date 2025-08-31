@@ -1,6 +1,6 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Hand, MousePointerClick, Scan, Info, Pen, PenOff, Bot, Save, CheckCheck, Undo2, FileX, Plus, Download, Scissors } from "lucide-react";
+import { ZoomIn, ZoomOut, Scan, Info, Pen, PenOff } from "lucide-react";
 import { useViewportState, useViewportActions } from '../../providers/viewport-provider';
 import type { MinimalDocumentType } from "@/types";
 import { Menubar, MenubarMenu, MenubarTrigger, MenubarContent, MenubarItem, MenubarSeparator, MenubarSub, MenubarSubTrigger, MenubarSubContent, MenubarLabel, MenubarShortcut } from "@/components/ui/menubar";
@@ -31,14 +31,10 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
     currentPage,
     numPages,
     mode,
-    zoom,
-    pan,
-    setPan,
     setCurrentPage,
     setMode,
     showSelections,
     dispatch,
-    isViewingProcessedDocument,
   } = useViewportState();
 
   const {
@@ -47,7 +43,7 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
   } = useViewportActions();
 
   // Selection and lifecycle hooks
-  const { uiSelections, allSelections, discardAllChanges } = useSelections() as any;
+  const { uiSelections, allSelections } = useSelections() as any;
   const {
     selectionStats: scSel,
     promptStats: prSel,
@@ -79,7 +75,6 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
     dispatch({ type: 'SET_SHOW_SELECTIONS', payload: show });
   };
 
-
   const handleModeToggle = () => {
     if (mode === "pan") {
       setMode("select");
@@ -100,27 +95,17 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
   const handleZoomIn = useCallback(() => { zoomIn(); }, [zoomIn]);
   const handleZoomOut = useCallback(() => { zoomOut(); }, [zoomOut]);
 
-
   // State for auto-hide behavior
   const [visible, setVisible] = useState(false); // Start hidden, show on hover
-  const [showBar, setShowBar] = useState(true); // Controls if bar appears at all
-  const isMouseOverRenderArea = useRef(false); // Track if mouse is currently over render area
 
   // Handle mouse enter/leave in render layer to show/hide UI based on hover
   useEffect(() => {
     const handleRenderLayerMouseEnter = () => {
-      isMouseOverRenderArea.current = true;
-      if (showBar) {
-        setVisible(true);
-      }
-
+      setVisible(true);
     };
 
     const handleRenderLayerMouseLeave = () => {
-      isMouseOverRenderArea.current = false;
-      if (showBar) {
-        setVisible(false);
-      }
+      setVisible(false);
     };
 
     // Find the render layer element and add mouse enter/leave listeners
@@ -136,7 +121,7 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
     }
 
     return () => {};
-  }, []); // Remove showBar dependency to avoid recreating handlers
+  }, []);
 
   return (
     <div id="__actions_layer__" className="w-fit">
@@ -145,7 +130,7 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
       <div className={cn(
         "absolute top-2 left-1/2 -translate-x-1/2 z-1001 transition-all duration-300 ease-in-out",
         "flex flex-row gap-0",
-        (visible && showBar) ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4 pointer-events-none",
+        visible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4 pointer-events-none",
       )}>
         <Menubar>
           {(() => {
@@ -235,7 +220,9 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
             <Button variant="ghost" size="icon" onClick={handleZoomIn}><ZoomIn /></Button>
             <Button variant="ghost" size="icon" onClick={handleResetView}><Scan /></Button>
             <Button variant="ghost" size="icon" onClick={toggleSelections} title={showSelections ? "Hide selections" : "Show selections"}>{showSelections ? <Pen /> : <PenOff />}</Button>
-            <Button variant="ghost" size="icon" onClick={onToggleInfo} className={isInfoVisible ? 'bg-accent text-accent-foreground' : ''} title="Toggle info"><Info /></Button>
+            {onToggleInfo && (
+              <Button variant="ghost" size="icon" onClick={onToggleInfo} className={isInfoVisible ? 'bg-accent text-accent-foreground' : ''} title="Toggle info"><Info /></Button>
+            )}
           </div>
 
         </Menubar>
@@ -245,7 +232,7 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
       <div className={cn(
         "absolute bottom-2 left-1/2 -translate-x-1/2 z-1001 bg-background/90 rounded-md",
         "transition-all duration-300 ease-in-out",
-        (visible && showBar) ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none",
+        visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none",
       )}>
         <MiniPager
           currentPage={currentPage}

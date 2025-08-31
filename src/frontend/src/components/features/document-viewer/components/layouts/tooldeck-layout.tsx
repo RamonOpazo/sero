@@ -1,5 +1,5 @@
-import { cn } from "@/lib/utils";
-import { WidgetContainer, Widget } from "@/components/shared/Widget";
+// import { cn } from "@/lib/utils";
+// import { WidgetContainer, Widget } from "@/components/shared/Widget";
 import { useEffect } from "react";
 import type { MinimalDocumentType } from "@/types";
 import { useSelections } from "../../providers/selection-provider";
@@ -18,7 +18,7 @@ interface ControlsLayoutProps {
  * Orchestrates all control widgets and manages their layout
  * This replaces the old Controls.tsx with better separation of concerns
  */
-export default function ControlsLayout({ document, className, ...props }: ControlsLayoutProps & React.ComponentProps<"div">) {
+export default function ControlsLayout({ document }: ControlsLayoutProps) {
   const { selectedSelection } = useSelections();
 
   // Viewport state for orchestration
