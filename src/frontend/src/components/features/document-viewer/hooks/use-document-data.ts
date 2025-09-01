@@ -5,48 +5,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { EditorAPI } from '@/lib/editor-api';
-import type { PromptType, SelectionType } from '@/types';
+import type { SelectionType } from '@/types';
 
-export function useDocumentPrompts(documentId: string) {
-  const [prompts, setPrompts] = useState<PromptType[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!documentId) {
-      setPrompts([]);
-      setLoading(false);
-      return;
-    }
-
-    const fetchPrompts = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        const result = await EditorAPI.fetchDocumentPrompts(documentId);
-        
-        if (result.ok) {
-          setPrompts(result.value);
-        } else {
-          console.error('Failed to fetch prompts:', result.error);
-          setError('Failed to load prompts');
-          setPrompts([]);
-        }
-      } catch (err) {
-        console.error('Error fetching prompts:', err);
-        setError('Failed to load prompts');
-        setPrompts([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPrompts();
-  }, [documentId]);
-
-  return { prompts, loading, error };
-}
 
 export function useDocumentSelections(documentId: string) {
   const [selections, setSelections] = useState<SelectionType[]>([]);

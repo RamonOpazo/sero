@@ -1,6 +1,9 @@
 /**
  * Hook to load selections from API directly into the new SelectionManager system
  * This replaces useSelectionsIntegration and maintains proper separation of concerns
+ *
+ * @deprecated This hook will be folded into SelectionProvider (initial load on mount).
+ *             Prefer relying on SelectionProvider with documentId to perform initial load.
  */
 
 import { useEffect } from 'react';
