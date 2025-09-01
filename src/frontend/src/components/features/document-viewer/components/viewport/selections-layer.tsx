@@ -9,7 +9,7 @@ import React, { useState, useCallback, useRef } from "react";
 import { useSelections } from '../../providers/selections-provider';
 import { useViewportState } from '../../providers/viewport-provider';
 import type { Selection, SelectionCreateDraft } from '../../types/viewer';
-import { getNormalizedState } from '../../utils/selection-styles';
+import { getNormalizedSelectionState } from '../../utils';
 import SelectionBox from '@/components/shared/selection-box';
 
 type Corner = 'nw' | 'ne' | 'sw' | 'se';
@@ -266,7 +266,7 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     e.preventDefault();
     
     // Prevent editing for committed or staged_deletion selections
-    const norm = getNormalizedState((selection as any).state);
+    const norm = getNormalizedSelectionState((selection as any).state);
     if (norm === 'committed' || norm === 'staged_deletion') {
       return;
     }
@@ -291,7 +291,7 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     e.preventDefault();
     
     // Prevent editing for committed or staged_deletion selections
-    const norm = getNormalizedState((selection as any).state);
+    const norm = getNormalizedSelectionState((selection as any).state);
     if (norm === 'committed' || norm === 'staged_deletion') {
       return;
     }
@@ -349,7 +349,7 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     const width = Math.abs(selection.width) * documentSize.width;
     const height = Math.abs(selection.height) * documentSize.height;
 
-    const visualNorm = getNormalizedState((selection as any).state);
+    const visualNorm = getNormalizedSelectionState((selection as any).state);
     const visualState = visualNorm === "draft" ? "unstaged" : visualNorm;
 
     return (
@@ -387,7 +387,7 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     const isSelected = selectedSelection?.id === selection.id;
     const isHovered = hoveredId === selection.id;
     
-    const visualNorm = getNormalizedState((selection as any).state);
+    const visualNorm = getNormalizedSelectionState((selection as any).state);
     const visualState = visualNorm === "draft" ? "unstaged" : visualNorm;
 
     const visualFlag = 

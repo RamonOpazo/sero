@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ZoomIn, ZoomOut, Scan, Info, Pen, PenOff } from "lucide-react";
+import { ZoomIn, ZoomOut, Scan, Info, Pen, PenOff, ChevronLeft, ChevronRight } from "lucide-react";
 import { useViewportState, useViewportActions } from '../../providers/viewport-provider';
 import type { MinimalDocumentType } from "@/types";
 import { Menubar, MenubarMenu, MenubarTrigger, MenubarContent, MenubarItem, MenubarSeparator, MenubarSub, MenubarSubTrigger, MenubarSubContent, MenubarLabel, MenubarShortcut } from "@/components/ui/menubar";
@@ -17,7 +17,6 @@ import { Separator } from "@/components/ui/separator";
 import { useDocumentActions } from "../../hooks/use-document-actions";
 import { DocumentViewerAPI } from "@/lib/document-viewer-api";
 import { buildActionsMenuConfig, type MenuItem, type MenuNode } from "../../core/actions-config";
-import { MiniPager } from "./mini-pager";
 import { useZoomControls } from "../../hooks/use-zoom-controls";
 
 interface ActionsLayerProps {
@@ -413,5 +412,43 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
         messages={[{ variant: 'warning', title: 'Irreversible operation', description: 'All prompts will be permanently removed from this document.' }]}
       />
     </div>
+  );
+}
+
+export interface MiniPagerProps {
+  currentPage: number;
+  numPages: number;
+  onPrev: () => void;
+  onNext: () => void;
+}
+
+export function MiniPager({ currentPage, numPages, onPrev, onNext }: MiniPagerProps) {
+  const canPrev = currentPage > 0;
+  const canNext = currentPage + 1 < numPages;
+
+  return (
+    <Menubar>
+      <Button
+        variant="ghost"
+        size="icon"
+        disabled={!canPrev}
+        onClick={onPrev}
+        title="Previous page"
+      >
+        <ChevronLeft />
+      </Button>
+      <span className="text-sm font-medium w-28 text-center">
+        Page {Math.min(currentPage + 1, Math.max(numPages, 1))} of {Math.max(numPages, 1)}
+      </span>
+      <Button
+        variant="ghost"
+        size="icon"
+        disabled={!canNext}
+        onClick={onNext}
+        title="Next page"
+      >
+        <ChevronRight />
+      </Button>
+    </Menubar>
   );
 }

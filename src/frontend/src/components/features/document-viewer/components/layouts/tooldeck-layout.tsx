@@ -21,43 +21,18 @@ export default function ControlsLayout({ document }: ControlsLayoutProps) {
 
   // Viewport state for orchestration
   const {
-    setShowInfoPanel,
-    setShowSelections,
-    setShowSelectionsPanel,
-    setShowPromptPanel,
-    activeControlsPanel,
-    setActiveControlsPanel,
     activeWorkbenchTab,
     setActiveWorkbenchTab,
   } = (useViewportState() as any);
-
-  const handleActivePanelChange = (value: string) => {
-    setActiveControlsPanel(value);
-    setShowInfoPanel(value === 'document-controls');
-    // Hide legacy overlay panels when using the new tabbed widget
-    setShowSelectionsPanel(false);
-    setShowPromptPanel(false);
-    if (value === 'workbench') {
-      // Ensure visual selections on the canvas when managing them
-      setShowSelections((prev: boolean) => prev || true);
-    }
-  };
 
   // Auto-switch to Selections tab when a selection is made (one-shot)
   // Important: only run when the selected selection changes, not when tabs change
   useEffect(() => {
     if (selectedSelection) {
-      setActiveControlsPanel('workbench');
       setActiveWorkbenchTab('selections');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedSelection?.id]);
-
-  // Initialize default panel state on mount
-  useEffect(() => {
-    handleActivePanelChange(activeControlsPanel);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   return (
     <div className="w-[300px]">

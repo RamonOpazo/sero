@@ -11,27 +11,33 @@ import type { TypedMessage } from "@/components/shared/typed-confirmation-dialog
 import { SimpleConfirmationDialog } from "@/components/shared/simple-confirmation-dialog";
 import { CONVERT_TO_STAGED_DIALOG } from "./dialog-text";
 import type { Selection } from "../../types/viewer";
-import { getNormalizedState, getStatusLabel } from "../../utils/selection-styles";
+import { getNormalizedSelectionState } from "../../utils";
 import { useWorkspace } from "@/providers/workspace-provider";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
-// ---- Internal helpers/components ----
-
 type StatusIndicator = { color: string; title: string; label: string };
+
+const STATUS_META: Record<string, { color: string; title: string; label: string }> = {
+  committed: { color: 'text-zinc-500', title: 'Committed', label: 'Committed' },
+  staged_deletion: { color: 'text-red-500', title: 'Staged deletion', label: 'Deletion' },
+  staged_edition: { color: 'text-violet-500', title: 'Staged edition', label: 'Edition' },
+  staged_creation: { color: 'text-blue-500', title: 'Staged creation', label: 'Creation' },
+  draft: { color: 'text-emerald-500', title: 'Unstaged (local)', label: 'Unstaged' },
+};
 
 function computeSelectionItemState(sel: any) {
   const isGlobal = sel.page_number === null;
-  const norm = getNormalizedState((sel as any).state);
+  const norm = getNormalizedSelectionState((sel as any).state);
   const pageDisplay = isGlobal ? 'Global' : `Page ${(sel.page_number ?? 0) + 1}`;
   const isProjectScope = (sel as any).scope === 'project';
   const isModified = !!sel.dirty;
 
   const statusIndicator: StatusIndicator = (() => {
     if (sel.stage === 'staged_creation' || sel.stage === 'staged_edition' || sel.stage === 'staged_deletion' || sel.stage === 'committed') {
-      const lab = getStatusLabel(sel.stage as any);
-      return { color: lab.colorClass, title: lab.title, label: lab.label };
+      const lab = STATUS_META[sel.stage] ?? STATUS_META.draft;
+      return { color: lab.color, title: lab.title, label: lab.label };
     }
-    if (!sel.isPersisted) return { color: 'text-emerald-500', title: 'Unstaged (local)', label: 'Unstaged' };
+    if (!sel.isPersisted) return STATUS_META.draft;
     if (isModified) return { color: 'text-amber-500', title: 'Modified', label: 'Modified' };
     return { color: 'text-gray-400', title: 'Saved', label: 'Saved' };
   })();
@@ -354,7 +360,7 @@ export default function SelectionList() {
 
     // Only non-committed selections can change page/global
     const selection = selectionsWithTypeInfo.find(sel => sel.id === selectionId);
-    const norm = getNormalizedState((selection as any)?.state);
+    const norm = getNormalizedSelectionState((selection as any)?.state);
     const isCommitted = norm === 'committed';
     const isStagedDeletion = norm === 'staged_deletion';
     if (isCommitted || isStagedDeletion) return;
@@ -378,7 +384,7 @@ export default function SelectionList() {
   const [convertDialog, setConvertDialog] = useState<{ open: boolean; selectionId: string | null }>({ open: false, selectionId: null });
 
   const handleSelectionDoubleClick = useCallback((selection: Selection) => {
-    const norm = getNormalizedState((selection as any).state);
+    const norm = getNormalizedSelectionState((selection as any).state);
     const isCommitted = norm === 'committed';
     const isStagedDeletion = norm === 'staged_deletion';
     if (isCommitted || isStagedDeletion) {

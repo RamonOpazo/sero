@@ -1,8 +1,2 @@
-// Coordinate system utilities
-export { 
-  screenToViewport, 
-  screenToDocument, 
-  documentToViewport, 
-  clampPan, 
-  calculateCenterFit 
-} from './coordinate-system';
+export * from './coordinate-system';
+export * from './selection-normalization';

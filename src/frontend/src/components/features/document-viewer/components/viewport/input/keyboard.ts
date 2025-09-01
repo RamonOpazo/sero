@@ -9,11 +9,9 @@ export interface KeyboardDeps {
   isPanning: boolean,
   setIsPanning: (v: boolean) => void,
   cancelDraw: () => void,
-  showHelpOverlay: boolean,
   showInfoPanel: boolean,
   showSelectionsPanel: boolean,
   showPromptPanel: boolean,
-  toggleHelpOverlay: () => void,
   toggleInfoPanel: () => void,
   toggleSelectionsPanel: () => void,
   togglePromptPanel: () => void,
@@ -34,11 +32,9 @@ export function createKeyboardHandler(deps: KeyboardDeps) {
     isPanning,
     setIsPanning,
     cancelDraw,
-    showHelpOverlay,
     showInfoPanel,
     showSelectionsPanel,
     showPromptPanel,
-    toggleHelpOverlay,
     toggleInfoPanel,
     toggleSelectionsPanel,
     togglePromptPanel,
@@ -71,16 +67,10 @@ export function createKeyboardHandler(deps: KeyboardDeps) {
         // Cancel current operation
         if (isPanning) {
           setIsPanning(false);
-          // panStart is internal to mouse logic; keyboard only cancels panning flag
         }
         // Cancel any current selection drawing
         cancelDraw();
-        // Close overlays/panels if open
-        if (showHelpOverlay) {
-          toggleHelpOverlay();
-          event.preventDefault();
-          break;
-        }
+
         if (showInfoPanel) {
           toggleInfoPanel();
           event.preventDefault();
@@ -231,15 +221,6 @@ export function createKeyboardHandler(deps: KeyboardDeps) {
         }
         break;
 
-      // Help overlay toggle
-      case 'h':
-      case 'H':
-        if (!isModifierPressed) {
-          toggleHelpOverlay();
-          event.preventDefault();
-        }
-        break;
-
       // Toggle between original and redacted (T)
       case 't':
       case 'T':
@@ -337,7 +318,6 @@ export function useKeyboardHandler() {
     numPages,
     setCurrentPage,
     setMode,
-    showHelpOverlay,
     showInfoPanel,
     showSelectionsPanel,
     showPromptPanel,
@@ -345,7 +325,6 @@ export function useKeyboardHandler() {
   } = useViewportState();
 
   const {
-    toggleHelpOverlay,
     toggleInfoPanel,
     toggleSelectionsPanel,
     togglePromptPanel,
@@ -361,11 +340,9 @@ export function useKeyboardHandler() {
       isPanning,
       setIsPanning,
       cancelDraw,
-      showHelpOverlay,
       showInfoPanel,
       showSelectionsPanel,
       showPromptPanel,
-      toggleHelpOverlay,
       toggleInfoPanel,
       toggleSelectionsPanel,
       togglePromptPanel,
@@ -384,11 +361,9 @@ export function useKeyboardHandler() {
     isPanning,
     setIsPanning,
     cancelDraw,
-    showHelpOverlay,
     showInfoPanel,
     showSelectionsPanel,
     showPromptPanel,
-    toggleHelpOverlay,
     toggleInfoPanel,
     toggleSelectionsPanel,
     togglePromptPanel,
