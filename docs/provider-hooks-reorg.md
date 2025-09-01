@@ -20,9 +20,9 @@ Phase 1 — Non-breaking cleanup (this PR)
 - [x] Build to verify; commit
 
 Phase 2 — Fold selection loading into SelectionProvider
-- [ ] Move initial selections load (currently in useSelectionLoader) into SelectionProvider mount effect
-- [ ] Remove useSelectionLoader and useDocumentSelections (no longer needed)
-- [ ] Adjust DocumentViewer entry (index.tsx) to stop calling useSelectionLoader
+- [x] Move initial selections load (currently in useSelectionLoader) into SelectionProvider mount effect
+- [x] Remove useSelectionLoader and useDocumentSelections (no longer needed)
+- [x] Adjust DocumentViewer entry (index.tsx) to stop calling useSelectionLoader
 
 Phase 3 — Dialog access (optional, recommended)
 - [ ] Centralize dialogs within a single owner/provider (or Actions Layer)

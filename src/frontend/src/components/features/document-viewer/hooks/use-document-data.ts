@@ -1,4 +1,4 @@
-/**
+/*
  * Hooks for fetching document-specific data on-demand
  * Used by document-viewer components for prompts and selections
  */

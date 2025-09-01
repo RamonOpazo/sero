@@ -1,4 +1,4 @@
-/**
+/*
  * Hook to load selections from API directly into the new SelectionManager system
  * This replaces useSelectionsIntegration and maintains proper separation of concerns
  *

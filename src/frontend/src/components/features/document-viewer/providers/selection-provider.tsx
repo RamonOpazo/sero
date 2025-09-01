@@ -562,10 +562,10 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
     return filtered.filter(s => s.page_number == null || s.page_number === page) as readonly Selection[];
   }, [templateSelections]);
   
-  // Auto-load template selections on mount and when document changes
+  // Auto-load selections and template selections on mount and when document changes
   useEffect(() => {
-    void reloadTemplateSelections();
-  }, [documentId, reloadTemplateSelections]);
+    void (async () => { await reload(); await reloadTemplateSelections(); })();
+  }, [documentId, reload, reloadTemplateSelections]);
   
   // ========================================
   // EVENT CALLBACKS

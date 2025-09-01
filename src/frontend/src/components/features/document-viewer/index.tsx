@@ -1,7 +1,6 @@
 import { UnifiedDocumentViewerProvider } from "./providers";
 import DocumentViewerLayout from "./components/layouts/main-layout";
 import { type MinimalDocumentType } from "@/types";
-import { useSelectionLoader } from "./hooks/useSelectionLoader";
 
 type DocumentViewerProps = {
   document: MinimalDocumentType;
@@ -9,9 +8,7 @@ type DocumentViewerProps = {
 
 // Internal component that loads selections and renders the layout
 function DocumentViewerContent({ document }: { document: MinimalDocumentType }) {
-  // Load selections from API directly into SelectionManager system
-  useSelectionLoader(document.id);
-  
+  // SelectionProvider now loads selections on mount (no explicit loader hook needed)
   return <DocumentViewerLayout document={document} />;
 }
 
