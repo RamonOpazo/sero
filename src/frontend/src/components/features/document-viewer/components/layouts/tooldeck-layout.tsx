@@ -44,12 +44,14 @@ export default function ControlsLayout({ document }: ControlsLayoutProps) {
   };
 
   // Auto-switch to Selections tab when a selection is made (one-shot)
+  // Important: only run when the selected selection changes, not when tabs change
   useEffect(() => {
     if (selectedSelection) {
-      if (activeControlsPanel !== 'workbench') setActiveControlsPanel('workbench');
-      if (activeWorkbenchTab !== 'selections') setActiveWorkbenchTab('selections');
+      setActiveControlsPanel('workbench');
+      setActiveWorkbenchTab('selections');
     }
-  }, [selectedSelection, activeControlsPanel, activeWorkbenchTab, setActiveControlsPanel, setActiveWorkbenchTab]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedSelection?.id]);
 
   // Initialize default panel state on mount
   useEffect(() => {

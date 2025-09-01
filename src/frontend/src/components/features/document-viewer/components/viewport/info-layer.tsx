@@ -72,13 +72,14 @@ export default function InfoLayer({ document, documentSize, isVisible }: Props) 
       </InfoSection>
 
       <InfoSection name="Selections" variant="list">
-        <InfoDetail name="Total" variant="numeric">{selectionCount}</InfoDetail>
-        <InfoDetail name="Global" variant="numeric">{(allSelections || []).filter((s: any) => s.page_number == null).length}</InfoDetail>
-        <InfoDetail name="On page" variant="numeric">{getPageSelections(currentPage).length}</InfoDetail>
-        <InfoDetail name="Unstaged" variant="numeric">{selLifecycle.unstaged}</InfoDetail>
-        <InfoDetail name="Staged" variant="numeric">[C{selLifecycle.stagedCreation}] [U{selLifecycle.stagedEdition}] [D{selLifecycle.stagedDeletion}]</InfoDetail>
-        <InfoDetail name="Committed" variant="numeric">{selLifecycle.committed}</InfoDetail>
-        <InfoDetail name="Unsaved" variant="numeric">{selUnsaved ? 'yes' : 'no'}</InfoDetail>
+        <InfoDetail name="Total" variant="numeric">
+          [ALL {selectionCount}] [GLOBAL {(allSelections || []).filter((s: any) => s.page_number == null).length}] [ON PAGE {getPageSelections(currentPage).length}]</InfoDetail>
+        <InfoDetail name="Saved" variant="numeric">
+          [{selUnsaved ? <span className="text-red-600">NO</span> : <span className="text-emerald-600">YES</span>}] [UNSTAGED {selLifecycle.unstaged}] [COMMITTED {selLifecycle.committed} of {selectionCount}]
+        </InfoDetail>
+        <InfoDetail name="Staged" variant="numeric">
+          [CREATE {selLifecycle.stagedCreation}] [UPDATE {selLifecycle.stagedEdition}] [DELETE {selLifecycle.stagedDeletion}]
+        </InfoDetail>
       </InfoSection>
 
       <InfoSection name="AI Prompts" variant="list">
@@ -178,7 +179,7 @@ function InfoDetail({ children, className, name, variant }: InfoProps & { name: 
       "bg-black/90 w-fit p-1",
       className,
     )}>
-      <span className="text-muted-foreground">{name}: </span>
+      <span className="text-muted-foreground mr-[1ch]">{name}:</span>
       <span className={cn(variant === "numeric" && "font-mono",)}>{children}</span>
     </div>
   )
