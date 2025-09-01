@@ -1,5 +1,3 @@
-// import { cn } from "@/lib/utils";
-// import { WidgetContainer, Widget } from "@/components/shared/Widget";
 import { useEffect } from "react";
 import type { MinimalDocumentType } from "@/types";
 import { useSelections } from "../../providers/selection-provider";
@@ -60,9 +58,7 @@ export default function ControlsLayout({ document }: ControlsLayoutProps) {
   }, []);
 
   return (
-    <div
-      className="w-[350px]"
-    >
+    <div className="w-[300px]">
       <Tabs value={activeWorkbenchTab} onValueChange={setActiveWorkbenchTab}>
         <TabsList className="bg-transparent p-0">
           <TabsTrigger
@@ -84,39 +80,5 @@ export default function ControlsLayout({ document }: ControlsLayoutProps) {
         </TabsContent>
       </Tabs>
     </div>
-    // <WidgetContainer
-    //   data-slot="document-viewer-controller"
-    //   expanded
-    //   accordion
-    //   value={activeControlsPanel}
-    //   onValueChange={handleActivePanelChange}
-    //   className={cn(className)}
-    //   {...props}
-    // >
-    //   <Widget
-    //     value="workbench"
-    //     title="Workbench"
-    //   >
-    //     <Tabs value={activeWorkbenchTab} onValueChange={setActiveWorkbenchTab}>
-    //       <TabsList>
-    //         <TabsTrigger value="selections">Selections</TabsTrigger>
-    //         <TabsTrigger value="prompts">AI Rules</TabsTrigger>
-    //       </TabsList>
-
-    //       <TabsContent value="selections" className="flex flex-col gap-4">
-    //         <div className="flex-1 min-h-0">
-    //           <SelectionList />
-    //         </div>
-    //       </TabsContent>
-
-    //       <TabsContent value="prompts" className="flex flex-col gap-4">
-    //         <div className="flex-1 min-h-0">
-    //           <PromptsList documentId={document.id} />
-    //         </div>
-    //       </TabsContent>
-    //     </Tabs>
-    //   </Widget>
-
-    // </WidgetContainer>
   );
 }

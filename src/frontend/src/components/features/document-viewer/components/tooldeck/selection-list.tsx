@@ -1,8 +1,7 @@
 import { cn } from "@/lib/utils";
-import type { ClassName } from "react-pdf/dist/shared/types.js"
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, MousePointer2, Globe, Hash, Settings, Telescope, Bot, RotateCcw } from "lucide-react";
+import { MoreVertical, Trash2, MousePointer2, Globe, Hash, Settings, Telescope, Bot, RotateCcw, GitCommitVertical, GitPullRequestCreateArrow } from "lucide-react";
 import { useSelections } from "../../providers/selection-provider";
 import { useViewportState } from "../../providers/viewport-provider";
 import { useMemo, useRef, useEffect, useState, useCallback } from "react";
@@ -16,10 +15,239 @@ import { getNormalizedState, getStatusLabel } from "../../utils/selection-styles
 import { useWorkspace } from "@/providers/workspace-provider";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
+// ---- Internal helpers/components ----
+
+type StatusIndicator = { color: string; title: string; label: string };
+
+function computeSelectionItemState(sel: any) {
+  const isGlobal = sel.page_number === null;
+  const norm = getNormalizedState((sel as any).state);
+  const pageDisplay = isGlobal ? 'Global' : `Page ${(sel.page_number ?? 0) + 1}`;
+  const isProjectScope = (sel as any).scope === 'project';
+  const isModified = !!sel.dirty;
+
+  const statusIndicator: StatusIndicator = (() => {
+    if (sel.stage === 'staged_creation' || sel.stage === 'staged_edition' || sel.stage === 'staged_deletion' || sel.stage === 'committed') {
+      const lab = getStatusLabel(sel.stage as any);
+      return { color: lab.colorClass, title: lab.title, label: lab.label };
+    }
+    if (!sel.isPersisted) return { color: 'text-emerald-500', title: 'Unstaged (local)', label: 'Unstaged' };
+    if (isModified) return { color: 'text-amber-500', title: 'Modified', label: 'Modified' };
+    return { color: 'text-gray-400', title: 'Saved', label: 'Saved' };
+  })();
+
+  return { isGlobal, norm, pageDisplay, isProjectScope, statusIndicator } as const;
+}
+
+function SelectionItemInfo({
+  sel,
+  isProjectScope,
+  statusIndicator,
+  pageDisplay,
+}: {
+  sel: any;
+  isProjectScope: boolean;
+  statusIndicator: StatusIndicator;
+  pageDisplay: string;
+  onToggleGlobal: (id: string, e: React.MouseEvent) => void;
+}) {
+  const formatValue = (value: number): string => value.toFixed(2);
+  const isAI = !!sel.is_ai_generated;
+  const confidence = sel.confidence as number | null | undefined;
+  const isGlobal = sel.page_number === null;
+
+  return (
+    <div className="flex flex-col py-2">
+      <div className="text-xs mb-2">
+        <span className="text-muted-foreground">Coords: </span>
+        <span className="font-mono">{formatValue(sel.x)}, {formatValue(sel.y)} • {formatValue(sel.width)} × {formatValue(sel.height)}</span>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2  [&>*]:w-full [&>*]:justify-start">
+        <Badge
+          title="Selection page"
+          variant="outline"
+          icon={isGlobal ? Globe : Hash}
+          data-testid={`selection-toggle-${sel.id}`}
+        >{pageDisplay}</Badge>
+
+        <Badge
+          title={statusIndicator.title}
+          variant="outline"
+          icon={statusIndicator.label.toLowerCase() === "committed" ? GitCommitVertical : GitPullRequestCreateArrow}
+          status="custom"
+          customStatusColor={statusIndicator.color}
+        >{statusIndicator.label}</Badge>
+
+        <Badge
+          title="Selection scope"
+          variant="outline"
+          icon={Telescope}
+          status={isProjectScope ? "error" : "muted"}
+          data-testid={`selection-scope-${sel.id}`}
+        >{isProjectScope ? 'Project' : 'Document'}</Badge>
+
+        {isAI && (
+          <Badge
+            title={`AI confidence (AIC) ${confidence}`}
+            variant="outline"
+            icon={Bot}
+            status={
+              typeof confidence === "number"
+                ? (confidence > 0.9 ? "success" : confidence > 0.7 ? "warning" : "error")
+                : undefined
+            }
+          >AIC {confidence}</Badge>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function SelectionItemMenu({
+  sel,
+  norm,
+  isProjectScopedDocument,
+  onToggleScope,
+  onOpenConfigDialog,
+  onOpenConvertDialog,
+  onConvertDeletionToEdition,
+  onDelete,
+}: {
+  sel: any;
+  norm: string;
+  isProjectScopedDocument: boolean;
+  onToggleScope: (id: string) => void;
+  onOpenConfigDialog: (id: string) => void;
+  onOpenConvertDialog: (id: string) => void;
+  onConvertDeletionToEdition: (id: string) => Promise<void> | void;
+  onDelete: (id: string) => void;
+}) {
+  return (
+    <div className="absolute top-2 right-2">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-6 w-6 p-0 hover:text-foreground hover:bg-muted/10 opacity-0 group-hover:opacity-100 transition-all duration-200"
+            title="Row actions"
+            aria-label="Row actions"
+          >
+            <MoreVertical />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" sideOffset={4}>
+          <DropdownMenuItem
+            disabled={!isProjectScopedDocument || norm === 'committed' || norm === 'staged_deletion'}
+            onClick={(e) => { e.stopPropagation(); onToggleScope(sel.id); }}
+          >
+            <Telescope /> Toggle scope (project/document)
+          </DropdownMenuItem>
+
+          <DropdownMenuItem
+            onClick={(e) => {
+              e.stopPropagation();
+              if (norm === 'committed' || norm === 'staged_deletion') {
+                onOpenConvertDialog(sel.id);
+              } else {
+                onOpenConfigDialog(sel.id);
+              }
+            }}
+          >
+            <Settings /> Configure selection…
+          </DropdownMenuItem>
+
+          {norm === 'staged_deletion' && (
+            <DropdownMenuItem
+              onClick={async (e) => { e.stopPropagation(); await onConvertDeletionToEdition(sel.id); }}
+            >
+              <RotateCcw /> Convert deletion to edition
+            </DropdownMenuItem>
+          )}
+
+          <DropdownMenuSeparator />
+
+          <DropdownMenuItem
+            className="text-destructive focus:text-destructive"
+            onClick={(e) => { e.stopPropagation(); onDelete(sel.id); }}
+          >
+            <Trash2 /> Delete selection
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
+}
+
+function SelectionItem({
+  sel,
+  isSelected,
+  isProjectScopedDocument,
+  setItemRef,
+  onSelect,
+  onToggleGlobal,
+  onToggleScope,
+  onOpenConfigDialog,
+  onOpenConvertDialog,
+  onConvertDeletionToEdition,
+  onDelete,
+}: {
+  sel: any;
+  isSelected: boolean;
+  isProjectScopedDocument: boolean;
+  setItemRef: (id: string, el: HTMLDivElement | null) => void;
+  onSelect: (id: string) => void;
+  onToggleGlobal: (id: string, e: React.MouseEvent) => void;
+  onToggleScope: (sel: any) => void;
+  onOpenConfigDialog: (id: string) => void;
+  onOpenConvertDialog: (id: string) => void;
+  onConvertDeletionToEdition: (id: string) => Promise<void> | void;
+  onDelete: (id: string) => void;
+}) {
+  const { norm, pageDisplay, isProjectScope, statusIndicator } = computeSelectionItemState(sel);
+  return (
+    <div
+      key={sel.displayId}
+      ref={(el) => { setItemRef(sel.id, el); }}
+      className={cn(
+        "relative",
+        "group p-2 text-xs cursor-pointer focus:outline-none focus:ring-0",
+        "border-l-2 border-transparent",
+        "bg-muted/30",
+        "transition-all duration-200",
+        "hover:border-l-muted-foreground/30 hover:pl-3 hover:bg-muted/30",
+        "focus:border-l-primary/50 focus:pl-3 focus:bg-muted/70",
+        isSelected && "border-l-2 border-l-primary pl-5 bg-primary/5"
+      )}
+      onClick={() => onSelect(sel.id)}
+      tabIndex={0}
+    >
+      <div>
+        <SelectionItemMenu
+          sel={sel}
+          norm={norm}
+          isProjectScopedDocument={isProjectScopedDocument}
+          onToggleScope={() => onToggleScope(sel)}
+          onOpenConfigDialog={onOpenConfigDialog}
+          onOpenConvertDialog={onOpenConvertDialog}
+          onConvertDeletionToEdition={onConvertDeletionToEdition}
+          onDelete={onDelete}
+        />
+        <SelectionItemInfo
+          sel={sel}
+          isProjectScope={isProjectScope}
+          statusIndicator={statusIndicator}
+          pageDisplay={pageDisplay}
+          onToggleGlobal={onToggleGlobal}
+        />
+      </div>
+    </div>
+  );
+}
 
 export default function SelectionList() {
   const {
-    dispatch,
     selectedSelection,
     selectSelection,
     deleteSelection,
@@ -27,6 +255,7 @@ export default function SelectionList() {
     setOnSelectionDoubleClick,
     convertSelectionToStagedEdition,
     uiSelections,
+    toggleSelectionScope,
   } = useSelections() as any;
 
   const { setCurrentPage, currentPage, numPages } = useViewportState();
@@ -167,161 +396,9 @@ export default function SelectionList() {
     };
   }, [setOnSelectionDoubleClick, handleSelectionDoubleClick]);
 
-  const formatValue = (value: number): string => {
-    return value.toFixed(2);
-  };
-
-  const renderSelectionItem = (sel: typeof selectionsWithTypeInfo[0]) => {
-    const isGlobal = sel.page_number === null;
-    const norm = getNormalizedState((sel as any).state);
-    const pageDisplay = isGlobal ? 'Global' : `Page ${(sel.page_number ?? 0) + 1}`;
-    const isSelected = selectedSelection?.id === sel.id;
-    const isModified = !!sel.dirty;
-    const isProjectScope = (sel as any).scope === 'project';
-
-    // Determine status indicator using lifecycle metadata
-    const getStatusIndicator = () => {
-      // Explicit staged states take precedence
-      if (sel.stage === 'staged_creation' || sel.stage === 'staged_edition' || sel.stage === 'staged_deletion' || sel.stage === 'committed') {
-        const lab = getStatusLabel(sel.stage as any);
-        return { color: lab.colorClass, title: lab.title, label: lab.label };
-      }
-      // Otherwise, reflect local state
-      if (!sel.isPersisted) return { color: 'bg-emerald-500', title: 'Unstaged (local)', label: 'Unstaged' };
-      if (isModified) return { color: 'bg-amber-500', title: 'Modified', label: 'Modified' };
-      return { color: 'bg-gray-400', title: 'Saved', label: 'Saved' };
-    };
-
-    const statusIndicator = getStatusIndicator();
-
-    return (
-      <div
-        key={sel.displayId}
-        ref={(el) => { itemRefs.current[sel.id] = el }}
-        className={cn(
-          "group p-2 text-xs cursor-pointer focus:outline-none focus:ring-0",
-          "border-l-2 border-transparent",
-          "bg-muted/30 pl-3",
-          "transition-all duration-200",
-          "hover:border-l-muted-foreground/30 hover:pl-5 hover:bg-muted/30",
-          "focus:border-l-primary/50 focus:pl-5 focus:bg-muted/70",
-          isSelected && "border-l-2 border-l-primary pl-5 bg-primary/5"
-        )}
-        onClick={() => handleSelectSelection(sel.id)}
-        tabIndex={0}
-      >
-        {/* Top row: Simple coordinates */}
-        <div className="text-sm mt-1">
-          <span className="text-muted-foreground">Coords:</span> {formatValue(sel.x)}, {formatValue(sel.y)} • {formatValue(sel.width)} × {formatValue(sel.height)}
-        </div>
-
-        {/* Bottom row: Page badge, status, and delete button */}
-        <div className="flex items-center justify-between">
-          <div className="flex justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1">
-                <span className="text-muted-foreground text-sm">{statusIndicator.label}</span>
-                <div className={cn("w-1.5 h-1.5 rounded-full", statusIndicator.color)} title={statusIndicator.title} />
-              </div>
-              {sel.is_ai_generated && (
-                <Badge variant="secondary" title={`AI${sel.confidence != null ? ` (${Math.round(sel.confidence * 100)}%)` : ''}`}>
-                  <Bot className="h-3 w-3 mr-1" />
-                  AI{sel.confidence != null ? ` ${Math.round(sel.confidence * 100)}%` : ''}
-                </Badge>
-              )}
-              <Badge
-                variant={isProjectScope ? "destructive" : "outline"}
-                title={isProjectScope ? "Project scope" : "Document scope"}
-                data-testid={`selection-scope-${sel.id}`}
-                className="ml-1"
-              >
-                <Telescope className="h-3 w-3 mr-1" />
-                {isProjectScope ? 'Project' : 'Document'}
-              </Badge>
-            </div>
-
-            <Badge
-              variant="outline"
-              data-testid={`selection-toggle-${sel.id}`}
-              onClick={(e) => handleToggleGlobal(sel.id, e)}
-            >
-              {isGlobal ? <Globe className="h-3 w-3" /> : <Hash className="h-3 w-3" />}
-              {pageDisplay}
-            </Badge>
-          </div>
-
-          {/* Row actions menu */}
-          <div className="flex items-center gap-1 mr-1">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={(e) => e.stopPropagation()}
-                  className="h-6 w-6 p-0 text-muted-foreground/60 hover:text-foreground hover:bg-muted/10 opacity-0 group-hover:opacity-100 transition-all duration-200"
-                  title="Row actions"
-                  aria-label="Row actions"
-                >
-                  <Settings className="h-3 w-3" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" sideOffset={4} onClick={(e) => e.stopPropagation()}>
-                <DropdownMenuItem
-                  disabled={!isProjectScopedDocument || norm === 'committed' || norm === 'staged_deletion'}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (!isProjectScopedDocument || norm === 'committed' || norm === 'staged_deletion') return;
-                    const nextScope = (sel as any).scope === 'project' ? 'document' : 'project';
-                    dispatch('UPDATE_ITEM', { id: sel.id, updates: { scope: nextScope } });
-                  }}
-                >
-                  <Telescope className="h-3 w-3 mr-2" /> Toggle scope (project/document)
-                </DropdownMenuItem>
-
-                <DropdownMenuItem
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (norm === 'committed' || norm === 'staged_deletion') {
-                      setConvertDialog({ open: true, selectionId: sel.id });
-                    } else {
-                      setDialogState({ isOpen: true, selectionId: sel.id });
-                    }
-                  }}
-                >
-                  <Settings className="h-3 w-3 mr-2" /> Configure selection…
-                </DropdownMenuItem>
-
-                {norm === 'staged_deletion' && (
-                  <DropdownMenuItem
-                    onClick={async (e) => {
-                      e.stopPropagation();
-                      await convertSelectionToStagedEdition(sel.id);
-                    }}
-                  >
-                    <RotateCcw className="h-3 w-3 mr-2" /> Convert deletion to edition
-                  </DropdownMenuItem>
-                )}
-
-                <DropdownMenuSeparator />
-
-                <DropdownMenuItem
-                  className="text-destructive focus:text-destructive"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleRemoveSelection(sel.id);
-                  }}
-                >
-                  <Trash2 className="h-3 w-3 mr-2" /> Delete selection
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-
-
-      </div>
-    );
-  };
+  // Render one selection via component
+  const setItemRef = (id: string, el: HTMLDivElement | null) => { itemRefs.current[id] = el; };
+  // no-op placeholder retained for diff context
 
   if (selectionsWithTypeInfo.length === 0) {
     return (
@@ -337,27 +414,46 @@ export default function SelectionList() {
     <>
       {/* Filter controls */}
       <div className="flex items-center justify-between mb-2">
-        <Select value={filterMode} onValueChange={(v) => setFilterMode(v as any)}>
-          <SelectTrigger className="h-7 w-[12rem] text-xs">
-            <SelectValue placeholder="All selections" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All selections</SelectItem>
-            <SelectItem value="global">This document</SelectItem>
-            <SelectItem value="ai">AI-generated</SelectItem>
-            <SelectItem value="template">Template</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Select value={filterMode} onValueChange={(v) => setFilterMode(v as any)}>
+            <SelectTrigger className="h-7 w-[12rem] text-xs">
+              <SelectValue placeholder="All selections" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All selections</SelectItem>
+              <SelectItem value="ai">AI-generated</SelectItem>
+              <SelectItem value="global">Document-spannig</SelectItem>
+              <SelectItem value="project">Project-scoped</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         <div className="text-xs text-muted-foreground">
-          <span className="font-mono">{filteredSelections.length}</span> of <span className="font-mono">{selectionsWithTypeInfo.length}</span>
+          <span className="font-mono">{filteredSelections.length}</span> / <span className="font-mono">{selectionsWithTypeInfo.length}</span>
         </div>
       </div>
 
-      <div className="h-full overflow-auto">
+      <div className="flex-1 min-h-0 overflow-auto h-[80vh]">
         <div className="space-y-1">
           {/* Show all selections in order: new first, then saved */}
           {[...groupedSelections.new, ...groupedSelections.saved].map((sel) => (
-            renderSelectionItem(sel)
+            <SelectionItem
+              key={sel.displayId}
+              sel={sel}
+              isSelected={selectedSelection?.id === sel.id}
+              isProjectScopedDocument={isProjectScopedDocument}
+              setItemRef={setItemRef}
+              onSelect={handleSelectSelection}
+              onToggleGlobal={handleToggleGlobal}
+              onToggleScope={(targetSel: any) => {
+                const { norm } = computeSelectionItemState(targetSel);
+                if (!isProjectScopedDocument || norm === 'committed' || norm === 'staged_deletion') return;
+                toggleSelectionScope(targetSel.id);
+              }}
+              onOpenConfigDialog={(id) => setDialogState({ isOpen: true, selectionId: id })}
+              onOpenConvertDialog={(id) => setConvertDialog({ open: true, selectionId: id })}
+              onConvertDeletionToEdition={convertSelectionToStagedEdition}
+              onDelete={handleRemoveSelection}
+            />
           ))}
         </div>
       </div>
@@ -408,13 +504,4 @@ export default function SelectionList() {
       />
     </>
   );
-}
-
-interface ItemProps {
-  children: React.ReactNode
-  className?: ClassName
-}
-
-function SelectionItem({ children, className }: ItemProps) {
-  return (null)
 }

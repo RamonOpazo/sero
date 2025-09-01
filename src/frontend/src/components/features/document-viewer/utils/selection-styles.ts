@@ -9,16 +9,16 @@ export function getNormalizedState(raw: unknown): SelectionStateNorm {
 export function getStatusLabel(state: SelectionStateNorm): { colorClass: string; title: string; label: string } {
   switch (state) {
     case 'committed':
-      return { colorClass: 'bg-zinc-500', title: 'Committed', label: 'Committed' };
+      return { colorClass: 'text-zinc-500', title: 'Committed', label: 'Committed' };
     case 'staged_deletion':
-      return { colorClass: 'bg-red-500', title: 'Staged deletion', label: 'Deletion' };
+      return { colorClass: 'text-red-500', title: 'Staged deletion', label: 'Deletion' };
     case 'staged_edition':
-      return { colorClass: 'bg-violet-500', title: 'Staged edition', label: 'Edition' };
+      return { colorClass: 'text-violet-500', title: 'Staged edition', label: 'Edition' };
     case 'staged_creation':
-      return { colorClass: 'bg-blue-500', title: 'Staged creation', label: 'Creation' };
+      return { colorClass: 'text-blue-500', title: 'Staged creation', label: 'Creation' };
     case 'draft':
     default:
-      return { colorClass: 'bg-emerald-500', title: 'Unstaged (local)', label: 'Unstaged' };
+      return { colorClass: 'text-emerald-500', title: 'Unstaged (local)', label: 'Unstaged' };
   }
 }
 

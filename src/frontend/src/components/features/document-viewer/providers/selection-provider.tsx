@@ -34,6 +34,8 @@ interface SelectionContextValue {
   
   // *** EDIT NEW/SAVED SELECTIONS ***
   updateSelection: (id: string, selection: Selection) => void;
+  // Partial field update convenience
+  updateSelectionFields: (id: string, updates: Partial<Selection>) => void;
   updateSelectionBatch: (id: string, selection: Selection) => void;
   finishBatchOperation: () => void;
   beginBatchOperation: () => void;
@@ -71,6 +73,8 @@ interface SelectionContextValue {
   // Page operations
   toggleSelectionGlobal: (id: string, currentPageNumber?: number | null) => void;
   setSelectionPage: (id: string, pageNumber: number | null) => void;
+  // Convenience operations
+  toggleSelectionScope: (id: string) => void;
   
   // Data loading
   loadSavedSelections: (selections: Selection[]) => void;
@@ -221,6 +225,10 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
   
   const updateSelection = useCallback((id: string, selection: Selection) => {
     dispatch('UPDATE_ITEM', { id, updates: selection });
+  }, [dispatch]);
+  
+  const updateSelectionFields = useCallback((id: string, updates: Partial<Selection>) => {
+    dispatch('UPDATE_ITEM', { id, updates });
   }, [dispatch]);
   
   const updateSelectionBatch = useCallback((id: string, selection: Selection) => {
@@ -477,6 +485,13 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
     dispatch('UPDATE_ITEM', { id, updates: { page_number: pageNumber } });
   }, [dispatch]);
   
+  const toggleSelectionScope = useCallback((id: string) => {
+    const item = manager.getItemById(id);
+    if (!item) return;
+    const nextScope = (item as any).scope === 'project' ? 'document' : 'project';
+    dispatch('UPDATE_ITEM', { id, updates: { scope: nextScope } as any });
+  }, [dispatch, manager]);
+  
   // ========================================
   // DATA LOADING
   // ========================================
@@ -661,6 +676,7 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
     
     // Edit new/saved selections
     updateSelection,
+    updateSelectionFields,
     updateSelectionBatch,
     finishBatchOperation,
     beginBatchOperation,
@@ -694,6 +710,7 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
     // Page operations
     toggleSelectionGlobal,
     setSelectionPage,
+    toggleSelectionScope,
     
     // Data loading
     loadSavedSelections,
@@ -724,10 +741,10 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
     getPageSelections,
   }), [
     state, dispatch, startDraw, updateDraw, finishDraw, cancelDraw,
-    updateSelection, updateSelectionBatch, finishBatchOperation, beginBatchOperation,
+    updateSelection, updateSelectionFields, updateSelectionBatch, finishBatchOperation, beginBatchOperation,
     deleteSelection, deleteSelectedSelection, undo, redo, canUndo, canRedo,
     clearPage, clearAll, save, commitChanges, discardAllChanges,
-    selectSelection, selectedSelection, toggleSelectionGlobal, setSelectionPage,
+    selectSelection, selectedSelection, toggleSelectionGlobal, setSelectionPage, toggleSelectionScope,
     loadSavedSelections, reload, onSelectionDoubleClick, setOnSelectionDoubleClick,
     allSelections, uiSelections, hasUnsavedChanges,
     

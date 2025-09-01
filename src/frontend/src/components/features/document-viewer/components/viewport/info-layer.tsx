@@ -82,8 +82,8 @@ export default function InfoLayer({ document, documentSize, isVisible }: Props) 
       </InfoSection>
 
       <InfoSection name="AI Prompts" variant="list">
-        <InfoDetail name="Total">{allPrompts.length}</InfoDetail>
-          <InfoDetail name="Pending">
+        <InfoDetail name="Total" variant="numeric">{allPrompts.length}</InfoDetail>
+          <InfoDetail name="Pending" variant="numeric">
             {promptPendingCount > 0 ? (
               <>c:{promptPending.creates.length}, u:{promptPending.updates.length}, d:{promptPending.deletes.length}</>
             ) : (
@@ -120,6 +120,7 @@ function InfoContainer({ children, className, isVisible }: InfoProps & { isVisib
   return (
     <div
       className={cn(
+        "pointer-events-none",
         "absolute top-0 left-0 bottom-0",
         "flex flex-col gap-2 max-w-full p-4",
         "text-xs transition-all duration-200 ease-out",
@@ -160,7 +161,7 @@ function InfoSection({ children, className, name, variant }: InfoProps & { name:
       <h3 className={cn(
         "uppercase tracking-wider text-muted-foreground",
         "bg-black/90 w-fit p-1",
-        variant === "list" && "text-foreground",
+        variant === "list" && "text-muted-foreground",
         className,
       )}>{name}</h3>
       <div className={cn(
