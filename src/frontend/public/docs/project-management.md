@@ -1,9 +1,3 @@
----
-slug: project-management
-title: Project Management
-date: 2025-08-26T10:03:00.000Z
----
-
 # Project Management
 
 Projects are the backbone of SERO. They give you a clean perimeter for everything related to a redaction effort—documents, templates, processing history—and they enforce the central security primitive of SERO: a project password that gates decryption. If you remember one mental model, make it this one: a project is a sealed box; the password is the key. Without that key, encrypted artifacts are indistinguishable from noise.
@@ -32,11 +26,22 @@ You can rename a project at any time without touching encryption. Rotating the p
 
 ## Creating projects
 
-In the UI, the “New Project” button brings up a small form: name, optional description, password. SERO validates that the password meets your policy and persists the project atomically so that you don’t risk creating half-configured storage. If the project is created successfully, you land on its dashboard, which shows an empty document list and convenient entry points for uploading files or creating templates. In the data table views, SERO uses sensible defaults and confirmation dialogs to protect you from accidental destructive actions.
+In the UI, the “New Project” button brings up a small form: name, optional description, password. On the web, the password is encrypted in transit using a fresh ephemeral RSA key from the server before being sent, then the server decrypts and hashes it for storage. If the project is created successfully, you land on its dashboard, which shows an empty document list and convenient entry points for uploading files or creating templates. In the data table views, SERO uses sensible defaults and confirmation dialogs to protect you from accidental destructive actions.
 
-Via API, creation is intentionally boring:
+Via API, creation supports encrypted-in-transit passwords as well:
 
 ```bash
+# Recommended: encrypted-in-transit (fields may differ by build)
+curl -X POST http://localhost:8000/projects \
+  -H "Content-Type: application/json" \
+  -d '{
+        "name": "Cardio Trials 2024",
+        "description": "Phase II anonymization set",
+        "key_id": "<ephemeral-key-id>",
+        "encrypted_password": "<base64-ciphertext>"
+      }'
+
+# Legacy (plaintext-in-transit); some deployments may still accept this
 curl -X POST http://localhost:8000/projects \
   -H "Content-Type: application/json" \
   -d '{
@@ -113,13 +118,23 @@ PROJECT_ID=(
   | jq -r .id
 )
 
-# 2) upload two PDFs into it
+# 2) upload two PDFs into it (legacy plaintext example)
 for f in scans/*.pdf; do
   curl -X POST "http://localhost:8000/projects/$PROJECT_ID/documents" \
     -H "Content-Type: multipart/form-data" \
     -F "password=horse-battery-staple" \
     -F "file=@$f"
 done
+
+# Recommended: encrypted-in-transit bulk upload (fields may differ by build)
+# 1) fetch ephemeral key and encrypt password client-side, then:
+curl -X POST "http://localhost:8000/documents/bulk-upload" \
+  -H "Content-Type: multipart/form-data" \
+  -F "project_id=$PROJECT_ID" \
+  -F "key_id=<ephemeral-key-id>" \
+  -F "encrypted_password=<base64-ciphertext>" \
+  -F "template_description=Initial intake set" \
+  -F "files=@scans/doc1.pdf" -F "files=@scans/doc2.pdf"
 ```
 
 List projects and show counts:

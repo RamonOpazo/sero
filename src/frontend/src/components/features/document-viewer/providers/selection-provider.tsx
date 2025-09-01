@@ -34,6 +34,8 @@ interface SelectionContextValue {
   
   // *** EDIT NEW/SAVED SELECTIONS ***
   updateSelection: (id: string, selection: Selection) => void;
+  // Partial field update convenience
+  updateSelectionFields: (id: string, updates: Partial<Selection>) => void;
   updateSelectionBatch: (id: string, selection: Selection) => void;
   finishBatchOperation: () => void;
   beginBatchOperation: () => void;
@@ -59,7 +61,7 @@ interface SelectionContextValue {
   save: () => Promise<Result<void, unknown>>;
   commitChanges: () => void;
   discardAllChanges: () => void;
-
+  
   // Lifecycle-based operations (new)
   saveLifecycle: () => Promise<Result<void, unknown>>;
   commitLifecycle: () => Promise<Result<void, unknown>>;
@@ -71,6 +73,8 @@ interface SelectionContextValue {
   // Page operations
   toggleSelectionGlobal: (id: string, currentPageNumber?: number | null) => void;
   setSelectionPage: (id: string, pageNumber: number | null) => void;
+  // Convenience operations
+  toggleSelectionScope: (id: string) => void;
   
   // Data loading
   loadSavedSelections: (selections: Selection[]) => void;
@@ -87,6 +91,11 @@ interface SelectionContextValue {
   allSelections: readonly Selection[];
   uiSelections: readonly UISelection[];
   hasUnsavedChanges: boolean;
+  
+  // Template (project-scoped) selections
+  templateSelections: readonly Selection[];
+  getTemplateSelectionsForPage: (page: number | null, numPages: number) => readonly Selection[];
+  reloadTemplateSelections: () => Promise<void>;
   
   // Utility methods
   hasSelections: boolean;
@@ -132,6 +141,7 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
   
   // Subscribe to state changes
   const [state, setState] = useState(manager.getState());
+  const [templateSelections, setTemplateSelections] = useState<Selection[]>([]);
   
   // Double-click callback management
   const [onSelectionDoubleClick, setOnSelectionDoubleClickState] = useState<((selection: Selection) => void) | undefined>();
@@ -215,6 +225,10 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
   
   const updateSelection = useCallback((id: string, selection: Selection) => {
     dispatch('UPDATE_ITEM', { id, updates: selection });
+  }, [dispatch]);
+  
+  const updateSelectionFields = useCallback((id: string, updates: Partial<Selection>) => {
+    dispatch('UPDATE_ITEM', { id, updates });
   }, [dispatch]);
   
   const updateSelectionBatch = useCallback((id: string, selection: Selection) => {
@@ -367,7 +381,7 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
         let updateState: 'staged_edition' | 'staged_deletion' | 'staged_creation' | undefined = undefined;
         if (sel.stage === UISelectionStage.StagedDeletion) updateState = 'staged_deletion';
         else if (sel.stage === UISelectionStage.StagedCreation) updateState = 'staged_creation';
-        else if (sel.stage === UISelectionStage.StagedEdition) updateState = 'staged_creation';
+        else if (sel.stage === UISelectionStage.StagedEdition) updateState = 'staged_edition';
         else if (sel.dirty) updateState = 'staged_edition';
 
         const payload: any = {};
@@ -403,6 +417,8 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
         }
         // Capture baseline after syncing
         dispatch('CAPTURE_BASELINE' as any, undefined as any);
+        // After staging (saveLifecycle), wipe undo/redo history to start clean
+        dispatch('CLEAR_HISTORY' as any, undefined as any);
       }
 
       return { ok: true, value: undefined } as Result<void, unknown>;
@@ -413,6 +429,8 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
   
   const commitChanges = useCallback(() => {
     dispatch('COMMIT_CHANGES');
+    // After committing locally, wipe undo/redo history so we start clean
+    dispatch('CLEAR_HISTORY' as any, undefined as any);
   }, [dispatch]);
 
   // Lifecycle-based COMMIT: commit all staged on backend and reload
@@ -428,6 +446,8 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
       if (fetched.ok) {
         dispatch('LOAD_ITEMS', fetched.value as any);
         dispatch('CAPTURE_BASELINE' as any, undefined as any);
+        // After a successful backend commit and reload, clear history for a clean slate
+        dispatch('CLEAR_HISTORY' as any, undefined as any);
       }
       return { ok: true, value: undefined } as Result<void, unknown>;
     } catch (e) {
@@ -465,6 +485,13 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
     dispatch('UPDATE_ITEM', { id, updates: { page_number: pageNumber } });
   }, [dispatch]);
   
+  const toggleSelectionScope = useCallback((id: string) => {
+    const item = manager.getItemById(id);
+    if (!item) return;
+    const nextScope = (item as any).scope === 'project' ? 'document' : 'project';
+    dispatch('UPDATE_ITEM', { id, updates: { scope: nextScope } as any });
+  }, [dispatch, manager]);
+  
   // ========================================
   // DATA LOADING
   // ========================================
@@ -480,15 +507,65 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
     try {
       const docId = (state as any)?.contextId as string | undefined;
       if (!docId) return;
-      const fetched = await DocumentViewerAPI.fetchDocumentSelections(docId);
-      if (fetched.ok) {
-        dispatch('LOAD_ITEMS', fetched.value as any);
+      const [selRes, tplRes] = await Promise.all([
+        DocumentViewerAPI.fetchDocumentSelections(docId),
+        DocumentViewerAPI.fetchDocumentTemplateSelections(docId),
+      ]);
+      if (selRes.ok) {
+        dispatch('LOAD_ITEMS', selRes.value as any);
         dispatch('CAPTURE_BASELINE' as any, undefined as any);
+      }
+      if (tplRes.ok) {
+        setTemplateSelections((tplRes.value as unknown as Selection[]) ?? []);
+      } else {
+        setTemplateSelections([]);
       }
     } catch {
       // noop
     }
   }, [state, dispatch]);
+  
+  // Placeholder implementations (Phase 1): template selections loading/filtering
+  const reloadTemplateSelections = useCallback(async (): Promise<void> => {
+    try {
+      const docId = (state as any)?.contextId as string | undefined;
+      if (!docId) {
+        setTemplateSelections([]);
+        return;
+      }
+      const res = await DocumentViewerAPI.fetchDocumentTemplateSelections(docId);
+      if (res.ok) {
+        setTemplateSelections((res.value as unknown as Selection[]) ?? []);
+      } else {
+        setTemplateSelections([]);
+      }
+    } catch {
+      setTemplateSelections([]);
+    }
+  }, [state]);
+  
+  const getTemplateSelectionsForPage = useCallback((page: number | null, numPages: number) => {
+    // Include only in-range selections; allow globals (null) always
+    const inRange = (s: Selection) => (
+      s.page_number == null || (
+        Number.isInteger(s.page_number) && (s.page_number as number) >= 0 && (s.page_number as number) < numPages
+      )
+    );
+
+    const filtered = (templateSelections || []).filter(inRange);
+
+    if (page == null) {
+      // When no specific page (global view), show only global template selections
+      return filtered.filter(s => s.page_number == null) as readonly Selection[];
+    }
+    // On a concrete page, show globals and selections targeted to this page
+    return filtered.filter(s => s.page_number == null || s.page_number === page) as readonly Selection[];
+  }, [templateSelections]);
+  
+  // Auto-load template selections on mount and when document changes
+  useEffect(() => {
+    void reloadTemplateSelections();
+  }, [documentId, reloadTemplateSelections]);
   
   // ========================================
   // EVENT CALLBACKS
@@ -517,12 +594,22 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
         ...((pending.updates || []).map((u: any) => u?.id).filter(Boolean)),
         ...((pending.deletes || []).map((d: any) => d?.id).filter(Boolean)),
       ] as string[]);
+      // Detect pending staged_deletion updates specifically
+      const stagedDeletionIds = new Set<string>(
+        ((pending.updates || []).filter((u: any) => (u?.state === 'staged_deletion')).map((u: any) => u?.id).filter(Boolean)) as string[],
+      );
 
       const persisted: UISelection[] = ((state as any).persistedItems || []).map((s: any) => {
         const ui = fromApiSelection(s);
-        const isDirty = dirtyIds.has((s as any).id);
-        // If a persisted selection is edited locally and not staged for deletion, reflect it as staged_edition in UI
-        const stage = (isDirty && ui.stage !== UISelectionStage.StagedDeletion) ? UISelectionStage.StagedEdition : ui.stage;
+        const id = (s as any).id as string;
+        const isDirty = dirtyIds.has(id);
+        let stage = ui.stage;
+        if (stagedDeletionIds.has(id)) {
+          stage = UISelectionStage.StagedDeletion;
+        } else if (isDirty && stage !== UISelectionStage.StagedDeletion) {
+          // If a persisted selection is edited locally and not staged for deletion, reflect it as staged_edition in UI
+          stage = UISelectionStage.StagedEdition;
+        }
         return { ...ui, dirty: isDirty, stage } as UISelection;
       });
       const drafts: UISelection[] = ((state as any).draftItems || []).map((s: any) => ({
@@ -589,6 +676,7 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
     
     // Edit new/saved selections
     updateSelection,
+    updateSelectionFields,
     updateSelectionBatch,
     finishBatchOperation,
     beginBatchOperation,
@@ -622,6 +710,7 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
     // Page operations
     toggleSelectionGlobal,
     setSelectionPage,
+    toggleSelectionScope,
     
     // Data loading
     loadSavedSelections,
@@ -637,6 +726,11 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
     uiSelections,
     hasUnsavedChanges,
     
+    // Template (project-scoped) selections
+    templateSelections,
+    getTemplateSelectionsForPage,
+    reloadTemplateSelections,
+    
     // Utility methods
     hasSelections,
     selectionCount,
@@ -647,14 +741,17 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
     getPageSelections,
   }), [
     state, dispatch, startDraw, updateDraw, finishDraw, cancelDraw,
-    updateSelection, updateSelectionBatch, finishBatchOperation, beginBatchOperation,
+    updateSelection, updateSelectionFields, updateSelectionBatch, finishBatchOperation, beginBatchOperation,
     deleteSelection, deleteSelectedSelection, undo, redo, canUndo, canRedo,
     clearPage, clearAll, save, commitChanges, discardAllChanges,
-    selectSelection, selectedSelection, toggleSelectionGlobal, setSelectionPage,
+    selectSelection, selectedSelection, toggleSelectionGlobal, setSelectionPage, toggleSelectionScope,
     loadSavedSelections, reload, onSelectionDoubleClick, setOnSelectionDoubleClick,
     allSelections, uiSelections, hasUnsavedChanges,
+    
+    templateSelections, getTemplateSelectionsForPage, reloadTemplateSelections,
+    
     hasSelections, selectionCount, getCurrentDraw, isCurrentlyDrawing,
-    getSelectionsForPage, getGlobalSelections, getPageSelections
+    getSelectionsForPage, getGlobalSelections, getPageSelections,
   ]);
   
   return (

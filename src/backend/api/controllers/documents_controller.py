@@ -7,8 +7,8 @@ from sqlalchemy.orm import Session
 from backend.core.security import security_manager
 from backend.core.pdf_redactor import AreaSelection
 from backend.service.redactor_service import get_redactor_service
-from backend.crud import support_crud, documents_crud, prompts_crud, selections_crud, files_crud
-from backend.api.schemas import documents_schema, generics_schema, files_schema, prompts_schema, selections_schema
+from backend.crud import support_crud, documents_crud, prompts_crud, selections_crud, files_crud, templates_crud
+from backend.api.schemas import documents_schema, generics_schema, files_schema, prompts_schema, selections_schema, templates_schema
 from backend.api.enums import FileType, CommitState
 
 
@@ -67,7 +67,7 @@ def search_list(db: Session, skip: int, limit: int, name: str | None, project_id
         skip=skip,
         limit=limit,
         order_by=[("name", "asc"), ("created_at", "desc")],
-        join_with=["files", "prompts", "selections"],
+        join_with=["files", "prompts", "selections", "template"],
         project_id=project_id,
         **({"name": ("like", name.replace("*", "%"))} if name is not None else {})  # dismiss name field filter if name is None, else, replace wildcard
     )
@@ -127,6 +127,14 @@ def create_with_file(db: Session, upload_data: files_schema.FileUpload, password
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to upload document: {str(err)}"
         )
+
+
+def create_with_file_encrypted(db: Session, upload_data: files_schema.FileUpload, key_id: str, encrypted_password: str) -> documents_schema.Document:
+    """Create a document with file using encrypted password fields from multipart form.
+    Decrypts the password using ephemeral RSA and delegates to create_with_file.
+    """
+    decrypted_password = support_crud._decrypt_password_or_400(encrypted_password_b64=encrypted_password, key_id=key_id)
+    return create_with_file(db=db, upload_data=upload_data, password=decrypted_password)
 
 
 def bulk_create_with_files(db: Session, uploads_data: list[files_schema.FileUpload], password: str, template_description: str | None = None) -> generics_schema.Success:
@@ -192,6 +200,23 @@ def bulk_create_with_files(db: Session, uploads_data: list[files_schema.FileUplo
     )
 
 
+def bulk_create_with_files_encrypted(
+    db: Session,
+    uploads_data: list[files_schema.FileUpload],
+    key_id: str,
+    encrypted_password: str,
+    template_description: str | None = None,
+) -> generics_schema.Success:
+    """Bulk upload handler that accepts encrypted password fields and delegates to plaintext variant after decryption."""
+    decrypted_password = support_crud._decrypt_password_or_400(encrypted_password_b64=encrypted_password, key_id=key_id)
+    return bulk_create_with_files(
+        db=db,
+        uploads_data=uploads_data,
+        password=decrypted_password,
+        template_description=template_description,
+    )
+
+
 def get_prompts(db: Session, document_id: UUID, skip: int = 0, limit: int = 100) -> list[prompts_schema.Prompt]:
     # Verify document exists
     support_crud.apply_or_404(documents_crud.read, db=db, id=document_id)
@@ -218,6 +243,18 @@ def get_selections(db: Session, document_id: UUID, skip: int = 0, limit: int = 1
     # Get selections by document ID
     selections = selections_crud.read_list_by_document(db=db, document_id=document_id, skip=skip, limit=limit)
     return [selections_schema.Selection.model_validate(selection) for selection in selections]
+
+
+def get_template_selections(db: Session, document_id: UUID, skip: int = 0, limit: int = 100) -> list[selections_schema.Selection]:
+    # Load document to determine project
+    doc = get_shallow(db=db, document_id=document_id)
+    # Fetch committed PROJECT-scoped selections from the project's template document (404 if no template)
+    tpl_selections = support_crud._get_template_committed_selections_or_404(db=db, project_id=doc.project_id)
+    # Sort by created_at desc for consistency with other list endpoints
+    ordered = sorted(tpl_selections, key=lambda x: x.created_at, reverse=True)
+    # Apply pagination
+    window = ordered[skip: skip + limit if limit is not None else None]
+    return [selections_schema.Selection.model_validate(i) for i in window]
 
 
 def add_selection(db: Session, document_id: UUID, selection_data: selections_schema.SelectionCreate) -> selections_schema.Selection:
@@ -298,7 +335,6 @@ def summarize(db: Session, document_id: UUID) -> documents_schema.DocumentSummar
             "is_template": lambda ctx: bool(getattr(ctx["model"], "template", None)),
             "ai_selections_count": lambda ctx: sum(1 for s in ctx["model"].selections if s.is_ai_generated),
             "manual_selections_count": lambda ctx: sum(1 for s in ctx["model"].selections if not s.is_ai_generated),
-            "prompt_languages": lambda ctx: [],
         },
     )
 
@@ -385,22 +421,15 @@ def process(
     )
 
 
-def download_original_file(
-    db: Session, 
-    document_id: UUID, 
-    request: files_schema.EncryptedFileDownloadRequest
-) -> StreamingResponse:
+def download_original_file(db: Session, document_id: UUID, request: files_schema.EncryptedFileDownloadRequest) -> StreamingResponse:
     # Centralized retrieval + decryption of original file data
-    document, original_file, decrypted_data = support_crud.get_original_file_data_or_400_401_404_500(
+    _, original_file, decrypted_data = support_crud.get_original_file_data_or_400_401_404_500(
         db=db,
         document_or_id=document_id,
         encrypted_password_b64=request.encrypted_password,
         key_id=request.key_id,
         join_with=["files"],
     )
-
-    # Generate filename
-    safe_filename = f"{document.name}_original.pdf"
 
     # Determine headers based on stream parameter
     if request.stream:
@@ -412,7 +441,7 @@ def download_original_file(
         }
     else:
         headers = {
-            "Content-Disposition": f'attachment; filename="{safe_filename}"'
+            "Content-Disposition": f'attachment; filename="{original_file.id}.pdf"'
         }
 
     return StreamingResponse(
@@ -422,19 +451,13 @@ def download_original_file(
     )
 
 
-def download_redacted_file(
-    db: Session, 
-    document_id: UUID
-) -> StreamingResponse:
+def download_redacted_file(db: Session, document_id: UUID) -> StreamingResponse:
     # Use helpers to fetch document and validated redacted file data
-    document, redacted_file, file_data = support_crud.get_redacted_file_data_or_404_500(db=db, document_id=document_id, join_with=["files"])
-
-    # Generate filename: use document ID to avoid leaking names
-    safe_filename = f"{document.id}.pdf"
+    _, redacted_file, file_data = support_crud.get_redacted_file_data_or_404_500(db=db, document_id=document_id, join_with=["files"])
 
     # Always download as attachment for redacted files and disable caching
     headers = {
-        "Content-Disposition": f'attachment; filename=\"{safe_filename}\"',
+        "Content-Disposition": f'attachment; filename=\"{redacted_file.id}.pdf\"',
         "Cache-Control": "no-cache, no-store, must-revalidate",
         "Pragma": "no-cache",
         "Expires": "0",
@@ -443,5 +466,13 @@ def download_redacted_file(
     return StreamingResponse(
         io.BytesIO(file_data),
         media_type=redacted_file.mime_type,
-        headers=headers
+        headers=headers,
     )
+
+
+def set_as_project_template(db: Session, document_id: UUID) -> templates_schema.Template:
+    # Ensure document exists
+    doc = support_crud.apply_or_404(documents_crud.read, db=db, id=document_id)
+    # Set or replace project template mapping
+    updated = templates_crud.update_by_project(db=db, project_id=doc.project_id, data=templates_schema.TemplateUpdate(document_id=document_id))
+    return templates_schema.Template.model_validate(updated)

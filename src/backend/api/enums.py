@@ -29,6 +29,12 @@ class ScopeType(StrEnum):
     DOCUMENT = auto()
 
 
+class RedactionScope(StrEnum):
+    DOCUMENT = auto()
+    PROJECT = auto()
+    PAN = auto()
+
+
 class CommitState(StrEnum):
     STAGED_CREATION = auto()
     STAGED_EDITION = auto()

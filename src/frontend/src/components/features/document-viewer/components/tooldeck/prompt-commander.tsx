@@ -1,12 +1,10 @@
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { Trash2, Plus, Hourglass, AlertCircle, Bot } from "lucide-react";
-import { AiProgress } from "./ai-progress";
-import { useState, useCallback, useMemo, useEffect, useRef } from "react";
+import { Trash2, Plus, Hourglass, Bot } from "lucide-react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import type { MinimalDocumentType } from "@/types";
 import { FormConfirmationDialog } from "@/components/shared";
-import PromptsList from "./prompt-list";
+import { SimpleConfirmationDialog } from "@/components/shared/simple-confirmation-dialog/simple-confirmation-dialog";
 import { usePrompts } from "../../providers/prompt-provider";
 import { useSelections } from "../../providers/selection-provider";
 import { DocumentViewerAPI } from '@/lib/document-viewer-api';
@@ -27,11 +25,7 @@ export default function PromptManagement({ document }: PromptControlsProps) {
     load,
     save,
     createPrompt,
-    updatePrompt,
-    clearAll,
     allPrompts,
-    hasUnsavedChanges,
-    pendingChangesCount,
   } = usePrompts();
   
   const { state: selectionStateDV } = useSelections() as any;
@@ -44,15 +38,9 @@ export default function PromptManagement({ document }: PromptControlsProps) {
   const isAnyOperationInProgress = !!(isSaving || isLoading || isDeleting);
 
   const [showAddDialog, setShowAddDialog] = useState(false);
-  const [showEditDialog, setShowEditDialog] = useState(false);
-  const [editingPromptId, setEditingPromptId] = useState<string | null>(null);
+  const [showClearAllDialog, setShowClearAllDialog] = useState(false);
   const [isApplyingAI, setIsApplyingAI] = useState(false);
-  const [aiStage, setAiStage] = useState<string | null>(null);
-  const [aiTokenChars, setAiTokenChars] = useState<number>(0);
   const [aiSummary, setAiSummary] = useState<{ returned: number; filtered_out: number; staged: number; min_confidence: number } | null>(null);
-  const [aiStageIndex, setAiStageIndex] = useState<number | null>(null);
-  const [aiStageTotal, setAiStageTotal] = useState<number | null>(null);
-  const [aiStagePercent, setAiStagePercent] = useState<number | null>(null);
   const cancelRef = useRef<(() => void) | null>(null);
 
   // Password dialog state for AI
@@ -63,19 +51,6 @@ export default function PromptManagement({ document }: PromptControlsProps) {
     load();
   }, [load]);
 
-  // Calculate prompt statistics
-  const promptStats = useMemo(() => {
-    const totalCount = allPrompts.length;
-    const savedCount = (state as any).persistedItems?.length || 0;
-    const newCount = (state as any).draftItems?.length || 0;
-    return {
-      totalCount,
-      savedCount,
-      newCount,
-      hasUnsavedChanges,
-      totalUnsavedChanges: pendingChangesCount,
-    };
-  }, [allPrompts.length, (state as any).persistedItems?.length, (state as any).draftItems?.length, hasUnsavedChanges, pendingChangesCount]);
 
   // Add new rule locally (not saved to server until saveAllChanges is called)
   // Declarative create handler
@@ -111,8 +86,6 @@ export default function PromptManagement({ document }: PromptControlsProps) {
   const handleRunAIDetectionWithCredentials = useCallback(async (keyId?: string, encryptedPassword?: string) => {
     try {
       setIsApplyingAI(true);
-      setAiStage('start');
-      setAiTokenChars(0);
       setAiSummary(null);
 
       // Start global job in provider
@@ -130,11 +103,6 @@ export default function PromptManagement({ document }: PromptControlsProps) {
 
       const ctrl = DocumentViewerAPI.applyAiStream(document.id, {
         onStatus: (d: any) => {
-          setAiStage(d.stage);
-          if (typeof d.stage_index === 'number') setAiStageIndex(d.stage_index);
-          if (typeof d.stage_total === 'number') setAiStageTotal(d.stage_total);
-          if (typeof d.percent === 'number') setAiStagePercent(d.percent);
-
           // Provider: map status to job update
           aiProc.updateJob({
             id: document.id,
@@ -147,15 +115,12 @@ export default function PromptManagement({ document }: PromptControlsProps) {
           });
         },
         onModel: (m: any) => {
-          setAiStage((prev) => prev ?? `model:${m.name}`);
           aiProc.updateJob({ id: document.id, hints: [`model: ${m.name}`] });
         },
-        onTokens: (t: any) => {
-          setAiTokenChars(t.chars);
+        onTokens: (_t: any) => {
           aiProc.updateJob({ id: document.id, stage: 'generating' });
         },
         onStagingProgress: (sp: any) => {
-          if (typeof sp.percent === 'number') setAiStagePercent(sp.percent);
           aiProc.updateJob({ id: document.id, percent: typeof sp.percent === 'number' ? sp.percent : undefined as any });
         },
         onSummary: async (s: any) => {
@@ -167,10 +132,6 @@ export default function PromptManagement({ document }: PromptControlsProps) {
         },
         onCompleted: () => {
           setIsApplyingAI(false);
-          setAiStage(null);
-          setAiStagePercent(null);
-          setAiStageIndex(null);
-          setAiStageTotal(null);
           aiProc.completeJob(document.id);
           const s = aiSummary;
           if (s) {
@@ -185,7 +146,6 @@ export default function PromptManagement({ document }: PromptControlsProps) {
         },
         onError: (e: any) => {
           setIsApplyingAI(false);
-          setAiStage(null);
           aiProc.failJob(document.id, { message: e.message ?? 'unknown' });
           toast.error(`AI error: ${e.message ?? 'unknown'}`);
           aiProc.clearJob(document.id);
@@ -196,7 +156,6 @@ export default function PromptManagement({ document }: PromptControlsProps) {
       aiProc.registerCancel(document.id, ctrl.cancel);
     } catch (err) {
       setIsApplyingAI(false);
-      setAiStage(null);
       toast.error('Failed to run AI detection');
     }
   }, [document.id, document.name, selectionStateDV, aiProc, aiSummary]);
@@ -214,37 +173,15 @@ export default function PromptManagement({ document }: PromptControlsProps) {
     }
   }, [document.project_id, ensureProjectTrust, handleRunAIDetectionWithCredentials]);
 
-  // Deprecated: inline password dialog replaced with AiCredentialsProvider
-
-  const stageLabel = aiStage;
-
-  const handleCancelAI = useCallback(() => {
-    try {
-      if (cancelRef.current) {
-        cancelRef.current();
-      }
-      aiProc.cancelJob(document.id);
-      cancelRef.current = null;
-    } finally {
-      setIsApplyingAI(false);
-      setAiStage(null);
-      aiProc.clearJob(document.id);
-      toast.info('AI run canceled');
-    }
-  }, [aiProc, document.id]);
-
   // Clear all prompts
   const handleClearAll = useCallback(() => {
-    if (promptStats.totalCount === 0) {
+    if ((allPrompts?.length ?? 0) === 0) {
       toast.info('No prompts to clear');
       return;
     }
-    
-    clearAll();
-    toast.success(`Cleared all ${promptStats.totalCount} prompts`);
-  }, [clearAll, promptStats.totalCount]);
+    setShowClearAllDialog(true);
+  }, [allPrompts?.length]);
 
-  // Handle add prompt button
   const handleOpenAddDialog = useCallback(() => {
     setShowAddDialog(true);
   }, []);
@@ -253,44 +190,7 @@ export default function PromptManagement({ document }: PromptControlsProps) {
     setShowAddDialog(false);
   }, []);
 
-  // Handle edit prompt
-  const handleEditPrompt = useCallback((promptId: string) => {
-    setEditingPromptId(promptId);
-    setShowEditDialog(true);
-  }, []);
 
-  const handleCloseEditDialog = useCallback(() => {
-    setShowEditDialog(false);
-    setEditingPromptId(null);
-  }, []);
-
-  // Declarative edit handler
-  const handleEditPromptSubmit = useCallback(async (values: Record<string, any>) => {
-    if (!editingPromptId) throw new Error('no-id');
-    const title = String(values.title ?? '').trim();
-    const directive = String(values.directive ?? '').trim();
-    const promptBody = String(values.prompt ?? '').trim();
-    if (!title || !promptBody || !directive) {
-      toast.error('Please fill in title, directive, and prompt');
-      throw new Error('validation');
-    }
-
-    updatePrompt(editingPromptId, {
-      title,
-      prompt: promptBody,
-      directive,
-      state: 'committed',
-      scope: 'document',
-    } as any);
-    const res = await save();
-    if (!res.ok) {
-      toast.error('Failed to update prompt');
-      throw new Error('api');
-    }
-    toast.success('Rule updated and committed');
-    setShowEditDialog(false);
-    setEditingPromptId(null);
-  }, [editingPromptId, updatePrompt, save]);
 
   if (error) {
     return (
@@ -302,54 +202,8 @@ export default function PromptManagement({ document }: PromptControlsProps) {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Prompt Statistics */}
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-muted-foreground">Total Prompts</span>
-          <span className="text-xs font-mono">{promptStats.totalCount}</span>
-        </div>
-        
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-muted-foreground">Saved Prompts</span>
-          <span className="text-xs font-mono">{promptStats.savedCount}</span>
-        </div>
-        
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-muted-foreground">New Prompts</span>
-          <span className="text-xs font-mono">{promptStats.newCount}</span>
-        </div>
-        
-        {promptStats.hasUnsavedChanges && (
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1">
-              <span className="text-xs text-muted-foreground">Unsaved Changes</span>
-              <AlertCircle className="h-3 w-3 text-amber-500" />
-            </div>
-            <span className="text-xs font-mono">{promptStats.totalUnsavedChanges}</span>
-          </div>
-        )}
-      </div>
-      
-      <Separator />
-      
       {/* Action Controls */}
       <div className="flex flex-col gap-2">
-        {isApplyingAI && (
-          <div className="flex flex-col gap-2">
-            <AiProgress
-              currentStageLabel={stageLabel}
-              stageIndex={aiStageIndex}
-              stageTotal={aiStageTotal}
-              stagePercent={aiStagePercent}
-              onCancel={handleCancelAI}
-            />
-            {aiTokenChars > 0 && (
-              <div className="text-[11px] text-muted-foreground flex items-center justify-end">
-                <span className="font-mono">{aiTokenChars} chars</span>
-              </div>
-            )}
-          </div>
-        )}
         <Button
           variant="default"
           size="sm"
@@ -380,7 +234,7 @@ export default function PromptManagement({ document }: PromptControlsProps) {
           variant="destructive"
           size="sm"
           onClick={handleClearAll}
-          disabled={promptStats.totalCount === 0}
+          disabled={(allPrompts?.length ?? 0) === 0}
           className="w-full justify-start h-9 text-xs"
         >
           <Trash2 className="mr-2 h-3 w-3" />
@@ -388,13 +242,41 @@ export default function PromptManagement({ document }: PromptControlsProps) {
         </Button>
       </div>
 
-      <Separator />
-
-      <div className="flex flex-col gap-2 w-full min-w-0">
-        <PromptsList documentId={document.id} onEditPrompt={handleEditPrompt} />
-      </div>
-      
-      {/* Password dialog handled by AiCredentialsProvider globally */}
+      {/* Confirm Clear All Rules dialog */}
+      <SimpleConfirmationDialog
+        isOpen={showClearAllDialog}
+        onClose={() => setShowClearAllDialog(false)}
+        onConfirm={async () => {
+          try {
+            const res = await DocumentViewerAPI.clearDocumentPrompts(document.id);
+            if (res.ok) {
+              await load();
+              toast.success('All rules cleared');
+            } else {
+              throw new Error('api');
+            }
+          } catch (e) {
+            toast.error('Failed to clear all rules');
+            throw e;
+          }
+        }}
+        title="Clear all rules"
+        description={
+          <div className="text-xs">
+            <p className="mb-2">This will permanently delete all AI rules (prompts) for this document.</p>
+            <ul className="list-disc ml-4 space-y-1">
+              <li>This action cannot be undone.</li>
+              <li>All rules will be deleted immediately (no staging).</li>
+            </ul>
+          </div>
+        }
+        confirmButtonText="Delete all rules"
+        cancelButtonText="Cancel"
+        variant="destructive"
+        messages={[
+          { variant: 'warning', title: 'Irreversible operation', description: 'All prompts will be permanently removed from this document.' },
+        ]}
+      />
 
       {/* Add Prompt Dialog using reusable FormConfirmationDialog */}
       <FormConfirmationDialog
@@ -428,46 +310,6 @@ export default function PromptManagement({ document }: PromptControlsProps) {
         ]}
         onSubmit={handleCreatePromptSubmit}
       />
-      
-      {/* Edit Rule Dialog using FormConfirmationDialog */}
-      {editingPromptId ? (
-        <FormConfirmationDialog
-          isOpen={showEditDialog}
-          onClose={handleCloseEditDialog}
-          title="Edit AI Rule"
-          description="Modify the rule. Changes will be saved and committed."
-          confirmButtonText="Save changes"
-          cancelButtonText="Cancel"
-          variant="default"
-          messages={[]}
-          initialValues={() => {
-            const editing = allPrompts.find(p => p.id === editingPromptId) as any;
-            return editing ? { title: editing.title ?? '', directive: editing.directive ?? 'process', prompt: editing.prompt ?? '' } : { title: '', directive: 'process', prompt: '' };
-          }}
-          fields={[
-            { type: 'text', name: 'title', label: 'Title', placeholder: 'Short descriptive title', required: true },
-            {
-              type: 'select',
-              name: 'directive',
-              label: 'Directive',
-              placeholder: 'Select directive',
-              tooltip: 'Choose what the AI should do with this rule',
-              required: true,
-              options: [
-                { value: 'process', label: 'Process (general processing)' },
-                { value: 'identify', label: 'Identify (mark content for review)' },
-                { value: 'redact', label: 'Redact (remove or obfuscate sensitive content)' },
-                { value: 'preserve', label: 'Preserve (explicitly keep content)' },
-                { value: 'exclude', label: 'Exclude (ignore specific content)' },
-              ],
-            },
-            { type: 'textarea', name: 'prompt', label: 'Prompt', placeholder: 'Detailed instructions for the AI', required: true },
-          ]}
-          onSubmit={handleEditPromptSubmit}
-        />
-      ) : null}
-      
-      {/* Save Confirmation Dialog (inline) */}
     </div>
   );
 }

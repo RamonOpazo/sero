@@ -144,7 +144,7 @@ export const ProjectsAPI = {
   },
 
   /**
-   * Create a new project
+   * Create a new project (plaintext password - legacy)
    */
   async createProject(projectData: ProjectCreateType): Promise<Result<ProjectType, unknown>> {
     return AsyncResultWrapper
@@ -152,7 +152,40 @@ export const ProjectsAPI = {
       .tap(() => {
         toast.success(
           "Project created successfully",
-          { description: `Created "${projectData.name}"` }
+          { description: `Created \"${projectData.name}\"` }
+        );
+      })
+      .catch((error: unknown) => {
+        toast.error(
+          "Failed to create project",
+          { description: error instanceof Error ? error.message : "Please try again." }
+        );
+        throw error;
+      })
+      .toResult();
+  },
+
+  /**
+   * Create a new project with encrypted password in transit
+   */
+  async createProjectEncrypted(
+    projectData: Omit<ProjectCreateType, 'password'>,
+    creds: { keyId: string; encryptedPassword: string },
+  ): Promise<Result<ProjectType, unknown>> {
+    const payload = {
+      name: projectData.name?.trim(),
+      description: (projectData.description?.trim?.() || projectData.description) ?? undefined,
+      contact_name: projectData.contact_name?.trim(),
+      contact_email: projectData.contact_email?.trim(),
+      key_id: creds.keyId,
+      encrypted_password: creds.encryptedPassword,
+    };
+    return AsyncResultWrapper
+      .from(api.safe.post(`/projects`, payload) as Promise<Result<ProjectType, unknown>>)
+      .tap(() => {
+        toast.success(
+          "Project created successfully",
+          { description: `Created \"${projectData.name}\"` }
         );
       })
       .catch((error: unknown) => {
@@ -233,5 +266,97 @@ export const ProjectsAPI = {
     } else {
       return { ok: false, error: result.error };
     }
-  }
+  },
+
+  /**
+   * Stream Project Redaction via POST + SSE parser. Returns a cancel handle.
+   */
+  redactProjectStream(
+    projectId: string,
+    params: {
+      scope: 'document' | 'project' | 'pan';
+      keyId: string;
+      encryptedPassword: string;
+      getFreshCreds?: () => Promise<{ keyId: string; encryptedPassword: string }>; // optional single auto-retry supplier
+      onProjectInit?: (data: { total_documents: number }) => void;
+      onProjectProgress?: (data: { processed: number; total: number }) => void;
+      onDocStart?: (data: { index: number; document_id: string }) => void;
+      onDocSummary?: (data: { document_id: string; ok: boolean; reason?: string; redacted_file_id?: string; original_file_size?: number; redacted_file_size?: number; selections_applied?: number }) => void;
+      onStatus?: (data: { stage: string; document_id?: string; message?: string }) => void;
+      onCompleted?: (data: { ok: boolean; total?: number; succeeded?: number; failed?: number }) => void;
+      onError?: (data: { message: string }) => void;
+    }
+  ): { cancel: () => void } {
+    const controller = new AbortController();
+    const signal = controller.signal;
+
+    const parseStream = async () => {
+      const doFetch = async (keyId: string, enc: string) => fetch(`/api/projects/id/${projectId}/redact/stream`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache',
+        },
+        cache: 'no-store',
+        body: JSON.stringify({ key_id: keyId, encrypted_password: enc, scope: params.scope }),
+        signal,
+      });
+      try {
+        let resp = await doFetch(params.keyId, params.encryptedPassword);
+        if (!resp.ok && typeof params.getFreshCreds === 'function') {
+          // one-shot retry with fresh credentials (trust refresh)
+          try {
+            const fresh = await params.getFreshCreds();
+            resp = await doFetch(fresh.keyId, fresh.encryptedPassword);
+          } catch (e) {
+            // fall through to onError below
+          }
+        }
+        if (!resp.ok || !resp.body) throw new Error(`Stream failed: ${resp.status}`);
+        const reader = resp.body.getReader();
+        const decoder = new TextDecoder();
+        let buf = '';
+        let currentEvent: string | null = null;
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buf += decoder.decode(value, { stream: true });
+          let idx;
+          while ((idx = buf.indexOf('\n\n')) !== -1) {
+            const chunk = buf.slice(0, idx);
+            buf = buf.slice(idx + 2);
+            const lines = chunk.split('\n');
+            currentEvent = null;
+            let dataLine = '';
+            for (const ln of lines) {
+              if (ln.startsWith('event: ')) currentEvent = ln.slice(7).trim();
+              if (ln.startsWith('data: ')) dataLine = ln.slice(6).trim();
+            }
+            if (!currentEvent || !dataLine) continue;
+            try {
+              const payload = JSON.parse(dataLine);
+              switch (currentEvent) {
+                case 'project_init': params.onProjectInit?.(payload); break;
+                case 'project_progress': params.onProjectProgress?.(payload); break;
+                case 'project_doc_start': params.onDocStart?.(payload); break;
+                case 'project_doc_summary': params.onDocSummary?.(payload); break;
+                case 'status': params.onStatus?.(payload); break;
+                case 'completed': params.onCompleted?.(payload); break;
+                case 'error': params.onError?.(payload); break;
+              }
+            } catch {
+              // swallow parse errors
+            }
+          }
+        }
+      } catch (err: any) {
+        params.onError?.({ message: err?.message ?? 'stream-error' });
+      }
+    };
+
+    void parseStream();
+    return { cancel: () => controller.abort() };
+  },
 };

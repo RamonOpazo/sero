@@ -40,6 +40,9 @@ export interface UIState {
   showPromptPanel: boolean;
   showHelpOverlay: boolean;
   isPanning: boolean;
+  // Controls/workbench orchestration
+  activeControlsPanel: 'document-controls' | 'workbench';
+  activeWorkbenchTab: 'selections' | 'prompts';
 }
 
 export interface PDFState {
@@ -80,6 +83,8 @@ export type ViewportAction =
   | { type: 'SET_VIEWING_PROCESSED'; payload: boolean }
   | { type: 'SET_VOLATILE_BLOB'; payload: { blob: Blob | null; forProcessed: boolean } }
   | { type: 'REGISTER_PAGE'; payload: { index: number; element: HTMLElement | null } }
+  | { type: 'SET_ACTIVE_CONTROLS_PANEL'; payload: 'document-controls' | 'workbench' }
+  | { type: 'SET_ACTIVE_WORKBENCH_TAB'; payload: 'selections' | 'prompts' }
   | { type: 'RESET_VIEW' };
 
 // Initial state
@@ -110,7 +115,9 @@ const createInitialState = (): ViewportState => ({
     showSelectionsPanel: false,
     showPromptPanel: false,
     showHelpOverlay: false,
-    isPanning: false
+    isPanning: false,
+    activeControlsPanel: 'document-controls',
+    activeWorkbenchTab: 'selections',
   }
 });
 
@@ -318,6 +325,24 @@ function viewportStateReducer(state: ViewportState, action: ViewportAction): Vie
         }
       };
 
+    case 'SET_ACTIVE_CONTROLS_PANEL':
+      return {
+        ...state,
+        ui: {
+          ...state.ui,
+          activeControlsPanel: action.payload,
+        }
+      };
+
+    case 'SET_ACTIVE_WORKBENCH_TAB':
+      return {
+        ...state,
+        ui: {
+          ...state.ui,
+          activeWorkbenchTab: action.payload,
+        }
+      };
+
     default:
       return state;
   }
@@ -494,6 +519,10 @@ export function useViewportState() {
     setShowInfoPanel: useCallback((value: boolean) => dispatch({ type: 'SET_SHOW_INFO_PANEL', payload: value }), [dispatch]),
     setShowSelectionsPanel: useCallback((value: boolean) => dispatch({ type: 'SET_SHOW_SELECTIONS_PANEL', payload: value }), [dispatch]),
     setShowPromptPanel: useCallback((value: boolean) => dispatch({ type: 'SET_SHOW_PROMPT_PANEL', payload: value }), [dispatch]),
+    setActiveControlsPanel: useCallback((value: 'document-controls' | 'workbench') => dispatch({ type: 'SET_ACTIVE_CONTROLS_PANEL', payload: value }), [dispatch]),
+    setActiveWorkbenchTab: useCallback((value: 'selections' | 'prompts') => dispatch({ type: 'SET_ACTIVE_WORKBENCH_TAB', payload: value }), [dispatch]),
+    activeControlsPanel: state.ui.activeControlsPanel,
+    activeWorkbenchTab: state.ui.activeWorkbenchTab,
     userPreferredShowSelections: state.ui.userPreferredShowSelections,
     resetView: useCallback(() => dispatch({ type: 'RESET_VIEW' }), [dispatch]),
     registerPage: useCallback((el: HTMLElement | null, index: number) => {

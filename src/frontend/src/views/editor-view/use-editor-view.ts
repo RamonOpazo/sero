@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { useWorkspace } from '@/providers/workspace-provider';
 import { EditorAPI, type FileWithRelatedData } from '@/lib/editor-api';
 import type { DocumentShallowType, MinimalDocumentType } from '@/types';
+import { useProjectTrust } from '@/providers/project-trust-provider';
 
 /**
  * Business logic hook for EditorView component
@@ -23,11 +24,9 @@ export function useEditorView(fileType: 'original' | 'redacted') {
   const [isLoadingFile, setIsLoadingFile] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Password dialog state management
-  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
-  const [passwordError, setPasswordError] = useState<string | null>(null);
-  const [isValidatingPassword, setIsValidatingPassword] = useState(false);
-  const [userCancelledPassword, setUserCancelledPassword] = useState(false);
+  // Trust flow state
+  const { ensureProjectTrust, clearProjectTrust } = useProjectTrust() as any;
+  const [autoUnlockTried, setAutoUnlockTried] = useState(false);
 
   // Load document metadata for the current document
   const refreshDocumentMetadata = useCallback(async () => {
@@ -56,12 +55,15 @@ export function useEditorView(fileType: 'original' | 'redacted') {
     }
   }, [documentId, refreshDocumentMetadata]);
 
-  // Auto-prompt for password on mount if we haven't cancelled and no file is loaded
+  // Auto-unlock prompt: trigger trust flow once on first load for original file
   useEffect(() => {
-    if (!userCancelledPassword && !fileData && documentId && fileType === 'original') {
-      setIsPasswordDialogOpen(true);
+    if (!autoUnlockTried && !fileData && documentId && projectId && fileType === 'original' && !isLoadingFile) {
+      setAutoUnlockTried(true);
+      void (async () => {
+        await handleUnlockAndLoadOriginal();
+      })();
     }
-  }, [documentId, userCancelledPassword, fileData, fileType]);
+  }, [autoUnlockTried, fileData, documentId, projectId, fileType, isLoadingFile]);
 
   // Load file when it's redacted type and we have metadata
   useEffect(() => {
@@ -92,21 +94,20 @@ export function useEditorView(fileType: 'original' | 'redacted') {
     setIsLoadingFile(false);
   }, [documentId]);
 
-  const handlePasswordConfirm = useCallback(async (password: string) => {
-    if (!documentId) return;
+  const handleUnlockAndLoadOriginal = useCallback(async () => {
+    if (!documentId || !projectId) return;
 
-    setIsValidatingPassword(true);
-    setPasswordError(null);
+    setIsLoadingFile(true);
+    setError(null);
 
     try {
-      const result = await EditorAPI.loadOriginalFile(documentId, password);
+      const { keyId, encryptedPassword } = await ensureProjectTrust(projectId);
+      let result = await EditorAPI.loadOriginalFileEncrypted(documentId, { keyId, encryptedPassword });
 
       if (result.ok) {
         setFileData(result.value);
-        setIsPasswordDialogOpen(false);
-        setPasswordError(null);
         toast.success('File loaded successfully!', {
-          description: `Loaded ${fileType} file`
+          description: `Loaded ${fileType} file`,
         });
 
         // If the document is processed according to metadata, prefetch redacted now
@@ -129,28 +130,37 @@ export function useEditorView(fileType: 'original' | 'redacted') {
           });
         }
       } else {
-        setPasswordError('Failed to load file. Please check your password and try again.');
+        // Possible expired ephemeral token; clear trust and retry once
+        try {
+          clearProjectTrust(projectId);
+          const { keyId: keyId2, encryptedPassword: enc2 } = await ensureProjectTrust(projectId);
+          result = await EditorAPI.loadOriginalFileEncrypted(documentId, { keyId: keyId2, encryptedPassword: enc2 });
+          if (result.ok) {
+            setFileData(result.value);
+          } else {
+            setError(result.error instanceof Error ? result.error.message : 'Failed to load original file');
+          }
+        } catch (e) {
+          setError('Failed to load original file');
+        }
       }
     } catch (error) {
-      console.error('Password validation error:', error);
-      setPasswordError('Failed to load file. Please check your password and try again.');
+      // User may have cancelled the trust dialog or an error occurred
+      if (error instanceof Error && error.message === 'cancelled') {
+        // Silent expected cancellation (no error log)
+        toast.message('Project unlock cancelled');
+      } else {
+        console.error('Failed to unlock or load original file:', error);
+        setError('Failed to load original file');
+      }
     } finally {
-      setIsValidatingPassword(false);
+      setIsLoadingFile(false);
     }
-  }, [documentId, fileType, documentMetadata?.is_processed]);
+  }, [documentId, projectId, fileType, documentMetadata?.is_processed, ensureProjectTrust]);
 
-  const handlePasswordCancel = useCallback(() => {
-    setIsPasswordDialogOpen(false);
-    setPasswordError(null);
-    setUserCancelledPassword(true);
-  }, []);
-
-  const handleRetryPassword = useCallback(() => {
-    if (!userCancelledPassword) return;
-    setIsPasswordDialogOpen(true);
-    setPasswordError(null);
-    setUserCancelledPassword(false);
-  }, [userCancelledPassword]);
+  const handleRetryUnlock = useCallback(() => {
+    void handleUnlockAndLoadOriginal();
+  }, [handleUnlockAndLoadOriginal]);
 
   // Create a minimal document object compatible with DocumentViewer from loaded file data and metadata
   const documentForViewer = useMemo((): MinimalDocumentType | null => {
@@ -212,30 +222,24 @@ export function useEditorView(fileType: 'original' | 'redacted') {
     prefetchedRedacted?.blob,
   ]);
 
-  // Password dialog state and handlers
-  const passwordDialogState = useMemo(() => ({
-    isOpen: isPasswordDialogOpen,
-    onClose: handlePasswordCancel,
-    onConfirm: handlePasswordConfirm,
-    error: passwordError,
-    isLoading: isValidatingPassword,
-  }), [
-    isPasswordDialogOpen,
-    handlePasswordCancel,
-    handlePasswordConfirm,
-    passwordError,
-    isValidatingPassword,
-  ]);
 
   // Action handlers
   const actionHandlers = useMemo(() => ({
     onBackToDocuments: handleBackToDocuments,
-    onRetryPassword: handleRetryPassword,
-    onOpenPasswordDialog: () => setIsPasswordDialogOpen(true),
+    onRetryUnlock: handleRetryUnlock,
   }), [
     handleBackToDocuments,
-    handleRetryPassword,
+    handleRetryUnlock,
   ]);
+
+  // Back-compat no-op password dialog state for legacy component shape
+  const passwordDialogState = useMemo(() => ({
+    isOpen: false,
+    onClose: () => {},
+    onConfirm: () => {},
+    error: null as string | null,
+    isLoading: false,
+  }), []);
 
   // Utility function
   const formatFileSize = useCallback((bytes: number) => {
@@ -257,16 +261,15 @@ export function useEditorView(fileType: 'original' | 'redacted') {
     isLoadingFile,
     isLoading: isLoadingMetadata || isLoadingFile,
     error,
-    userCancelledPassword,
-    
+
     // Document viewer data
     documentForViewer,
     
-    // Password dialog state and handlers
-    passwordDialogState,
-    
     // Action handlers
     actionHandlers,
+
+    // Legacy compatibility for EditorView shape
+    passwordDialogState,
     
     // Utility functions
     formatFileSize,

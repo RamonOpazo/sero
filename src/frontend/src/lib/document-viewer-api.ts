@@ -76,6 +76,22 @@ export const DocumentViewerAPI = {
       .toResult() as Promise<Result<void, unknown>>;
   },
 
+  /**
+   * Delete all prompts for a document
+   */
+  async clearDocumentPrompts(documentId: string): Promise<Result<{ message: string; detail?: any }, unknown>> {
+    return AsyncResultWrapper
+      .from(api.safe.delete(`/prompts/by-document/id/${documentId}`) as Promise<Result<{ message: string; detail?: any }, unknown>>)
+      .tap((resp) => {
+        toast.success('All prompts deleted', { description: resp?.message ?? '' } as any);
+      })
+      .catch((error: unknown) => {
+        toast.error('Failed to clear prompts', { description: 'Please try again.' });
+        throw error;
+      })
+      .toResult();
+  },
+
   // ===== SELECTION OPERATIONS =====
 
   /**
@@ -133,7 +149,13 @@ export const DocumentViewerAPI = {
       try {
         const resp = await fetch(`/api/ai/apply/stream`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache',
+          },
+          cache: 'no-store',
           body: JSON.stringify({ document_id: documentId, key_id: (handlers as any)?.keyId ?? null, encrypted_password: (handlers as any)?.encryptedPassword ?? null }),
           signal,
         });
@@ -232,7 +254,13 @@ export const DocumentViewerAPI = {
       try {
         const resp = await fetch(`/api/ai/apply/project/stream`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache',
+          },
+          cache: 'no-store',
           body: JSON.stringify({ project_id: projectId, key_id: (handlers as any)?.keyId ?? null, encrypted_password: (handlers as any)?.encryptedPassword ?? null }),
           signal,
         });
@@ -344,8 +372,22 @@ export const DocumentViewerAPI = {
       .catch((error: unknown) => {
         toast.error(
           "Failed to load selections",
-          { description: "Please try again." }
+          { description: "Please try again." },
         );
+        throw error;
+      })
+      .toResult();
+  },
+
+  /**
+   * Fetch project-scoped (template) selections for a document's project
+   * These are read-only overlays in the viewer.
+   */
+  async fetchDocumentTemplateSelections(documentId: string): Promise<Result<SelectionType[], unknown>> {
+    return AsyncResultWrapper
+      .from(api.safe.get<SelectionType[]>(`/documents/id/${documentId}/template-selections`))
+      .catch((error: unknown) => {
+        // Soft failure: do not toast; just propagate to Result
         throw error;
       })
       .toResult();
@@ -372,7 +414,7 @@ export const DocumentViewerAPI = {
   /**
    * Update an existing selection
    */
-  async updateSelection(selectionId: string, updates: Partial<Pick<SelectionType, 'x' | 'y' | 'width' | 'height' | 'page_number' | 'confidence' | 'state'>>): Promise<Result<void, unknown>> {
+  async updateSelection(selectionId: string, updates: Partial<Pick<SelectionType, 'x' | 'y' | 'width' | 'height' | 'page_number' | 'confidence' | 'state' | 'scope'>>): Promise<Result<void, unknown>> {
     return AsyncResultWrapper
       .from(api.safe.put(`/selections/id/${selectionId}`, updates))
       .tap(() => void 0)

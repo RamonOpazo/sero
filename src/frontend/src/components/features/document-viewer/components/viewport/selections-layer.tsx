@@ -6,11 +6,11 @@
  */
 
 import React, { useState, useCallback, useRef } from "react";
-import { cn } from "@/lib/utils";
 import { useSelections } from '../../providers/selection-provider';
 import { useViewportState } from '../../providers/viewport-provider';
 import type { Selection, SelectionCreateDraft } from '../../types/viewer';
-import { getNormalizedState, getBoxColorClasses } from '../../utils/selection-styles';
+import { getNormalizedState } from '../../utils/selection-styles';
+import SelectionBox from '@/components/shared/selection-box';
 
 type Corner = 'nw' | 'ne' | 'sw' | 'se';
 
@@ -27,6 +27,7 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     mode,
     isViewingProcessedDocument,
     document: currentDocument,
+    numPages,
   } = useViewportState();
 
   // New selection system
@@ -44,6 +45,8 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     onSelectionDoubleClick,
     getCurrentDraw,
     beginBatchOperation,
+    // Template overlays API
+    getTemplateSelectionsForPage,
   } = useSelections() as any;
   
   // Touch selectionState to avoid TS unused variable during builds
@@ -59,6 +62,9 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
   } | null>(null);
 
   const isDraggingRef = useRef(false);
+
+  // Track which selection is hovered (topmost by render order)
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
 
   // Track double-click timing
   const lastClickRef = useRef<{ time: number; selectionId: string }>({ time: 0, selectionId: '' });
@@ -305,7 +311,7 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
 
   // Render resize handles
   const renderResizeHandles = useCallback((selection: Selection) => {
-    const handleSize = 10;
+    const handleSize = 8;
     const positions = [
       { name: 'nw', style: { top: -handleSize/2, left: -handleSize/2, cursor: 'nw-resize' } },
       { name: 'ne', style: { top: -handleSize/2, right: -handleSize/2, cursor: 'ne-resize' } },
@@ -336,6 +342,35 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     return map;
   }, [uiSelections]);
 
+  // Render read-only template selection box (non-interactive)
+  const renderTemplateSelectionBox = useCallback((selection: Selection) => {
+    const left = selection.x * documentSize.width;
+    const top = selection.y * documentSize.height;
+    const width = Math.abs(selection.width) * documentSize.width;
+    const height = Math.abs(selection.height) * documentSize.height;
+
+    const visualNorm = getNormalizedState((selection as any).state);
+    const visualState = visualNorm === "draft" ? "unstaged" : visualNorm;
+
+    return (
+      <SelectionBox
+        key={`tpl-${selection.id}`}
+        id={`tpl-${selection.id}`}
+        left={left}
+        top={top}
+        width={width}
+        height={height}
+        state={visualState}
+        flag={"project_scope"}
+        isHovered={false}
+        isSelected={false}
+        activityContrast={0.3}
+        handlerSize={8}
+        className="pointer-events-none"
+      />
+    );
+  }, [documentSize]);
+
   // Render selection box
   const renderSelectionBox = useCallback((selection: Selection) => {
     // Convert normalized coordinates to pixel coordinates
@@ -344,104 +379,58 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     const width = Math.abs(selection.width) * documentSize.width;
     const height = Math.abs(selection.height) * documentSize.height;
 
-    const isSelected = selectedSelection?.id === selection.id;
-    const isGlobal = selection.page_number === null;
-
-    // Determine visual state using UI lifecycle meta (dirty/stage) when available
     const ui = uiMetaById.get(selection.id);
-    let visualNorm = getNormalizedState((selection as any).state);
-    if (ui && ui.stage) {
-      if (ui.stage === 'staged_creation') visualNorm = 'staged_creation';
-      else if (ui.stage === 'staged_edition') visualNorm = 'staged_edition';
-      else if (ui.stage === 'staged_deletion') visualNorm = 'staged_deletion';
-      else if (ui.dirty === true) visualNorm = 'draft';
-    } else {
-      // Fallback: if no UI meta, treat unknown states as drafts
-      if (visualNorm === 'draft') {
-        visualNorm = 'draft';
-      }
-    }
-    const colors = getBoxColorClasses(visualNorm);
+    const isDirty = ui?.dirty === true;
+    const isGlobal = selection.page_number === null;
+    const isProjectScope = (selection as any).scope === 'project';
 
-    const selectionElement = (
-      <div
+    const isSelected = selectedSelection?.id === selection.id;
+    const isHovered = hoveredId === selection.id;
+    
+    const visualNorm = getNormalizedState((selection as any).state);
+    const visualState = visualNorm === "draft" ? "unstaged" : visualNorm;
+
+    const visualFlag = 
+      isProjectScope ? "project_scope"
+      : isGlobal ? "global_page"
+      : isDirty ? "dirty"
+      : "off";
+
+    return (
+      <SelectionBox
         key={selection.id}
-        data-testid="selection-box"
-        data-selection-id={selection.id}
-        data-state={visualNorm}
-        className={cn(
-          "absolute pointer-events-auto group overflow-hidden",
-          // Disable transitions during drag operations
-          dragState?.type === 'move' || dragState?.type === 'resize'
-            ? ""
-            : "transition-all duration-200",
-          'border',
-          colors.borderStyle === 'dashed' ? 'border-dashed' : (colors.borderStyle === 'double' ? 'border-double border-4' : 'border-solid'),
-          colors.border,
-          colors.text,
-        )}
-        style={{
-          left: `${left}px`,
-          top: `${top}px`,
-          width: `${width}px`,
-          height: `${height}px`,
-          cursor: isSelected
-            ? (dragState?.type === 'move' ? 'grabbing' : 'grab')
-            : 'pointer',
-        }}
+        id={selection.id}
+        left={left}
+        top={top}
+        width={width}
+        height={height}
+        state={visualState}
+        flag={visualFlag}
+        isHovered={isHovered}
+        isSelected={isSelected}
+        activityContrast={0.35}
+        handlerSize={8}
         onClick={(e) => {
           e.stopPropagation();
           handleSelectionClick(selection);
         }}
         onMouseDown={(e) => {
-          // Start move if this selection is selected and not clicking resize handles
           if (isSelected && e.button === 0 && !e.defaultPrevented) {
             handleMoveStart(e, selection);
           }
         }}
-      >
-        {/* Backdrop brightness to gently lift darker areas */}
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            backdropFilter: 'brightness(1.1)',
-            WebkitBackdropFilter: 'brightness(1.1)',
-            backgroundColor: 'rgba(255,255,255,.40)',
-          }}
-        />
-        {/* Subtle solid tint using currentColor */}
-        <div className="absolute inset-0 pointer-events-none opacity-10" style={{ backgroundColor: 'currentColor' }} />
-        {/* Diagonal stripe overlay (all) */}
-        <div
-          className="absolute inset-0 pointer-events-none opacity-30"
-          style={{
-            backgroundImage: `linear-gradient(135deg, currentColor 2.25%, transparent 2.25%, transparent 50%, currentColor 50%, currentColor 52.25%, transparent 52.25%, transparent 100%)`,
-            backgroundSize: '20px 20px',
-          }}
-        />
-        {/* Crossed stripes for global selections */}
-        {isGlobal && (
-          <div
-            className="absolute inset-0 pointer-events-none opacity-25"
-            style={{
-              backgroundImage: `linear-gradient(45deg, currentColor 2.25%, transparent 2.25%, transparent 50%, currentColor 50%, currentColor 52.25%, transparent 52.25%, transparent 100%)`,
-              backgroundSize: '20px 20px',
-            }}
-          />
-        )}
-
-        {/* Resize handles for selected selection */}
-        {isSelected && renderResizeHandles(selection)}
-      </div>
+        onResizeStart={(corner, e) => handleResizeStart(corner as any, e as any, selection)}
+      />
     );
-
-    return selectionElement;
-  }, [documentSize, selectedSelection, handleSelectionClick, dragState, renderResizeHandles, handleMoveStart, uiMetaById]);
+  }, [documentSize, selectedSelection, handleSelectionClick, dragState, renderResizeHandles, handleMoveStart, uiMetaById, hoveredId]);
 
   // Filter selections for current page
   const pageSelections = allSelections.filter(
     (s: any) => s.page_number === null || s.page_number === currentPage,
   );
+
+  // Template project-scoped overlays for current page (read-only)
+  const templateSelectionsForPage = getTemplateSelectionsForPage?.(currentPage, numPages) ?? [];
 
   // Show current drawing if any
   const currentDraw = getCurrentDraw();
@@ -464,12 +453,19 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
           cursor: mode === 'select' ? 'crosshair' : 'default',
         }}
         onClick={() => selectSelection(null)}
+        onMouseMove={() => {
+          // When moving over empty space, clear hovered marker to avoid stale highlight
+          if (!isDraggingRef.current) setHoveredId(null);
+        }}
         onMouseDown={(e) => {
           if (e.target === e.currentTarget && mode === 'select' && e.button === 0) {
             handleCreateStart(e);
           }
         }}
       >
+        {/* Render template overlays first (beneath interactive selections) */}
+        {templateSelectionsForPage.map(renderTemplateSelectionBox)}
+
         {/* Render all selections for this page */}
         {pageSelections.map(renderSelectionBox)}
         

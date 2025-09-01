@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { useWorkspace } from '@/providers/workspace-provider';
 import { ProjectsAPI } from '@/lib/projects-api';
 import type { ProjectShallowType, ProjectCreateType, ProjectUpdateType, ProjectAiSettingsUpdateType } from '@/types';
+import { encryptPasswordSecurely, isWebCryptoSupported } from '@/lib/crypto';
 
 export function useProjectsView(onProjectSelect?: (project: ProjectShallowType) => void) {
   const { state, selectProject } = useWorkspace();
@@ -76,7 +77,13 @@ export function useProjectsView(onProjectSelect?: (project: ProjectShallowType) 
   }, []);
 
   const handleCreateProjectSubmit = useCallback(async (projectData: ProjectCreateType) => {
-    const result = await ProjectsAPI.createProject(projectData);
+    if (!isWebCryptoSupported()) {
+      // Fail closed - require a modern browser for secure project creation
+      throw new Error('Web Crypto API not supported in this browser');
+    }
+    const encrypted = await encryptPasswordSecurely(projectData.password);
+    const { password, ...rest } = projectData;
+    const result = await ProjectsAPI.createProjectEncrypted(rest, { keyId: encrypted.keyId, encryptedPassword: encrypted.encryptedPassword });
     
     if (result.ok) {
       setIsCreateDialogOpen(false);

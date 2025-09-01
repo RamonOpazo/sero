@@ -3,7 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useWorkspace } from '@/providers/workspace-provider';
 import { DocumentsAPI } from '@/lib/documents-api';
-import type { DocumentShallowType, DocumentUpdateType, DocumentBulkUploadRequestType } from '@/types';
+import type { DocumentShallowType, DocumentUpdateType } from '@/types';
+import { useProjectTrust } from '@/providers/project-trust-provider';
 
 /**
  * Business logic hook for DocumentsView component
@@ -74,8 +75,16 @@ export function useDocumentsView(onDocumentSelect?: (document: DocumentShallowTy
     setIsUploadDialogOpen(true);
   }, []);
 
-  const handleUploadDocumentsSubmit = useCallback(async (uploadData: DocumentBulkUploadRequestType) => {
-    const result = await DocumentsAPI.uploadDocuments(uploadData);
+  const { ensureProjectTrust } = useProjectTrust();
+
+  const handleUploadDocumentsSubmit = useCallback(async (uploadData: { files: FileList; template_description?: string }) => {
+    if (!projectId) throw new Error('missing-project');
+    const { keyId, encryptedPassword } = await ensureProjectTrust(projectId);
+    const result = await DocumentsAPI.uploadDocumentsEncrypted({
+      project_id: projectId,
+      files: uploadData.files,
+      template_description: uploadData.template_description,
+    }, { keyId, encryptedPassword });
     
     if (result.ok) {
       setIsUploadDialogOpen(false);
@@ -85,7 +94,7 @@ export function useDocumentsView(onDocumentSelect?: (document: DocumentShallowTy
       // Error handling is done in the API, just re-throw to keep dialog open
       throw result.error;
     }
-  }, [refreshDocuments]);
+  }, [refreshDocuments, ensureProjectTrust, projectId]);
 
   const handleEditDocument = useCallback((document: DocumentShallowType) => {
     setSelectedDocumentForEdit(document);
@@ -146,6 +155,15 @@ export function useDocumentsView(onDocumentSelect?: (document: DocumentShallowTy
     });
   }, []);
 
+  const handleScopeToProject = useCallback(async (document: DocumentShallowType) => {
+    const result = await DocumentsAPI.setDocumentAsProjectTemplate(document.id);
+    if (result.ok) {
+      await refreshDocuments();
+    } else {
+      // error toast handled inside API
+    }
+  }, [refreshDocuments]);
+
   // Dialog state and handlers
   const dialogState = useMemo(() => ({
     upload: {
@@ -184,6 +202,7 @@ export function useDocumentsView(onDocumentSelect?: (document: DocumentShallowTy
     onEditDocument: handleEditDocument,
     onDeleteDocument: handleDeleteDocument,
     onCopyDocumentId: handleCopyDocumentId,
+    onScopeToProject: handleScopeToProject,
     onBackToProjects: handleBackToProjects,
   }), [
     handleSelectDocument,

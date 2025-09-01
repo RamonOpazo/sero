@@ -4,7 +4,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from backend.core.database import get_db_session
-from backend.api.schemas import documents_schema, generics_schema, files_schema, prompts_schema, selections_schema
+from backend.api.schemas import documents_schema, generics_schema, files_schema, prompts_schema, selections_schema, templates_schema
 from backend.api.controllers import documents_controller
 
 
@@ -59,16 +59,22 @@ async def create_document_with_file(
     project_id: UUID = Form(...),
     file: UploadFile = File(...),
     description: str | None = Form(None),
-    password: str = Form(...),
+    key_id: str = Form(...),
+    encrypted_password: str = Form(...),
     db: Session = Depends(get_db_session)
 ):
-    """Create a document with an associated file upload."""
+    """Create a document with an associated file upload using encrypted password fields (key_id, encrypted_password)."""
     upload_data = files_schema.FileUpload(
         project_id=project_id,
         file=file,
         description=description
     )
-    return documents_controller.create_with_file(db=db, upload_data=upload_data, password=password)
+    return documents_controller.create_with_file_encrypted(
+        db=db,
+        upload_data=upload_data,
+        key_id=key_id,
+        encrypted_password=encrypted_password,
+    )
 
 
 @router.post("/bulk-upload", response_model=generics_schema.Success)
@@ -76,10 +82,11 @@ async def bulk_upload_documents(
     project_id: UUID = Form(...),
     files: list[UploadFile] = File(...),
     template_description: str | None = Form(None),
-    password: str = Form(...),
+    key_id: str = Form(...),
+    encrypted_password: str = Form(...),
     db: Session = Depends(get_db_session)
 ):
-    """Bulk upload multiple documents to a project."""
+    """Bulk upload multiple documents to a project using encrypted password fields (key_id, encrypted_password)."""
     uploads_data = [
         files_schema.FileUpload(
             project_id=project_id,
@@ -88,11 +95,12 @@ async def bulk_upload_documents(
         )
         for file in files
     ]
-    return documents_controller.bulk_create_with_files(
-        db=db, 
-        uploads_data=uploads_data, 
-        password=password, 
-        template_description=template_description
+    return documents_controller.bulk_create_with_files_encrypted(
+        db=db,
+        uploads_data=uploads_data,
+        key_id=key_id,
+        encrypted_password=encrypted_password,
+        template_description=template_description,
     )
 
 
@@ -179,10 +187,21 @@ async def get_document_selections(
     document_id: UUID,
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_db_session)
+    db: Session = Depends(get_db_session),
 ):
     """Get selections for a document."""
     return documents_controller.get_selections(db=db, document_id=document_id, skip=skip, limit=limit)
+
+
+@router.get("/id/{document_id}/template-selections", response_model=list[selections_schema.Selection])
+async def get_document_template_selections(
+    document_id: UUID,
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db_session),
+):
+    """Get committed project-scoped selections from the project's template document for this document's project."""
+    return documents_controller.get_template_selections(db=db, document_id=document_id, skip=skip, limit=limit)
 
 
 @router.post("/id/{document_id}/selections", response_model=selections_schema.Selection)
@@ -257,5 +276,14 @@ async def download_redacted_file(
     """Download the redacted file for a document."""
     return documents_controller.download_redacted_file(
         db=db, 
-        document_id=document_id
+        document_id=document_id,
     )
+
+
+@router.put("/id/{document_id}/template", response_model=templates_schema.Template)
+async def set_document_as_project_template(
+    document_id: UUID,
+    db: Session = Depends(get_db_session),
+):
+    """Set this document as the project-scoped document for its project."""
+    return documents_controller.set_as_project_template(db=db, document_id=document_id)

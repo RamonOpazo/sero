@@ -23,53 +23,42 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2 } from 'lucide-react';
-import type { DocumentBulkUploadRequestType } from '@/types';
 
 interface UploadDocumentsDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (uploadData: DocumentBulkUploadRequestType) => Promise<void>;
-  projectId: string;
+  onSubmit: (uploadData: { files: FileList; template_description?: string }) => Promise<void>;
 }
 
 const formSchema = z.object({
   files: z.any().refine((files) => files && files.length > 0, 'At least one file is required'),
   description: z.string().optional(),
-  password: z.string().min(1, 'Password is required'),
 });
 
 type FormData = {
   files: FileList;
   description?: string;
-  password: string;
 };
 
-export function UploadDocumentsDialog({ isOpen, onClose, onSubmit, projectId }: UploadDocumentsDialogProps) {
+export function UploadDocumentsDialog({ isOpen, onClose, onSubmit }: UploadDocumentsDialogProps) {
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       description: '',
-      password: '',
     },
   });
 
   const onFormSubmit = async (data: FormData) => {
     try {
-      const submitData: DocumentBulkUploadRequestType = {
-        project_id: projectId,
+      const submitData = {
         files: data.files,
-        password: data.password.trim(),
+        template_description: data.description?.trim() || undefined,
       };
-      
-      if (data.description?.trim()) {
-        submitData.template_description = data.description.trim();
-      }
       
       await onSubmit(submitData);
       
       form.reset({
         description: '',
-        password: '',
       });
       onClose();
     } catch (error) {
@@ -81,7 +70,6 @@ export function UploadDocumentsDialog({ isOpen, onClose, onSubmit, projectId }: 
     if (!form.formState.isSubmitting) {
       form.reset({
         description: '',
-        password: '',
       });
       onClose();
     }
@@ -136,19 +124,6 @@ export function UploadDocumentsDialog({ isOpen, onClose, onSubmit, projectId }: 
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Password *</FormLabel>
-                  <FormControl>
-                    <Input type="password" placeholder="Enter password" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
 
             <DialogFooter>
               <Button 

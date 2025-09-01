@@ -138,6 +138,78 @@ export const EditorAPI = {
   },
 
   /**
+   * Load original file by document ID using already-encrypted credentials
+   */
+  async loadOriginalFileEncrypted(
+    documentId: string,
+    creds: { keyId: string; encryptedPassword: string },
+  ): Promise<Result<FileWithRelatedData, unknown>> {
+    return AsyncResultWrapper
+      .from(Promise.all([
+        // Get file blob using document-based endpoint with provided encrypted credentials
+        (async (): Promise<Result<{ blob: Blob; fileName: string }, unknown>> => {
+          try {
+            const response = await api.safe.post(`/documents/id/${documentId}/download/original`, {
+              key_id: creds.keyId,
+              encrypted_password: creds.encryptedPassword,
+              stream: false,
+            }, {
+              responseType: 'blob',
+            });
+            if (!response.ok) {
+              return response as any;
+            }
+            const fileName = `document_${documentId}_original.pdf`;
+            return { ok: true, value: { blob: response.value as Blob, fileName } };
+          } catch (error) {
+            return { ok: false, error };
+          }
+        })(),
+        // For now, return empty arrays for related data
+        Promise.resolve({ ok: true, value: [] } as Result<PromptType[], unknown>),
+        Promise.resolve({ ok: true, value: [] } as Result<SelectionType[], unknown>),
+      ]).then(async ([downloadResult, promptsResult, selectionsResult]) => {
+        if (!downloadResult.ok) return downloadResult;
+        if (!promptsResult.ok) return promptsResult;
+        if (!selectionsResult.ok) return selectionsResult;
+
+        const syntheticFile: FileType = {
+          id: `${documentId}-original`,
+          created_at: new Date().toISOString(),
+          updated_at: null,
+          file_hash: 'unknown',
+          file_type: 'original',
+          file_size: downloadResult.value.blob.size,
+          mime_type: 'application/pdf',
+          data: '',
+          salt: null,
+          document_id: documentId,
+        };
+        const fileWithData: FileWithRelatedData = {
+          file: syntheticFile,
+          blob: downloadResult.value.blob,
+          prompts: promptsResult.value,
+          selections: selectionsResult.value,
+        };
+        return { ok: true, value: fileWithData } as Result<FileWithRelatedData, unknown>;
+      }))
+      .tap(() => {
+        toast.success(
+          'Original file loaded successfully',
+          { description: 'Loaded original file for document' },
+        );
+      })
+      .catch((error: unknown) => {
+        toast.error(
+          'Failed to load original file',
+          { description: error instanceof Error ? error.message : 'Please try again.' },
+        );
+        throw error;
+      })
+      .toResult();
+  },
+
+  /**
    * Load redacted file by document ID (no password required)
    */
   async loadRedactedFile(documentId: string): Promise<Result<FileWithRelatedData, unknown>> {

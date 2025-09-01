@@ -1,75 +1,79 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Hand, MousePointerClick, Eye, EyeOff, Scan, Info, Pen, PenOff, Keyboard, ListTree } from "lucide-react";
+import { ZoomIn, ZoomOut, Scan, Info, Pen, PenOff } from "lucide-react";
 import { useViewportState, useViewportActions } from '../../providers/viewport-provider';
+import type { MinimalDocumentType } from "@/types";
+import { Menubar, MenubarMenu, MenubarTrigger, MenubarContent, MenubarItem, MenubarSeparator, MenubarSub, MenubarSubTrigger, MenubarSubContent, MenubarLabel, MenubarShortcut } from "@/components/ui/menubar";
+import { TypedConfirmationDialog } from "@/components/shared/typed-confirmation-dialog";
+import type { TypedMessage } from "@/components/shared/typed-confirmation-dialog";
+import { useSelections } from "../../providers/selection-provider";
+import { useStageCommit } from "../../hooks/use-stage-commit";
+import { toast } from "sonner";
+import { SimpleConfirmationDialog } from "@/components/shared/simple-confirmation-dialog/simple-confirmation-dialog";
+import { FormConfirmationDialog } from "@/components/shared";
+import { usePrompts } from "../../providers/prompt-provider";
+import { cn } from "@/lib/utils";
+import { Separator } from "@/components/ui/separator";
+import { useActions } from "../../hooks/use-actions";
+import { DocumentViewerAPI } from "@/lib/document-viewer-api";
+import { buildActionsMenuConfig, type MenuItem, type MenuNode } from "../../core/actions-config";
+import { MiniPager } from "./mini-pager";
+import { useZoomControls } from "../../hooks/use-zoom-controls";
 
 interface ActionsLayerProps {
+  document: MinimalDocumentType;
   isInfoVisible?: boolean;
   onToggleInfo?: () => void;
 }
 
-export default function ActionsLayer({ isInfoVisible = false, onToggleInfo }: ActionsLayerProps = {}) {
+export default function ActionsLayer({ document, isInfoVisible = false, onToggleInfo }: ActionsLayerProps) {
   const {
     currentPage,
     numPages,
     mode,
-    zoom,
-    pan,
-    setPan,
     setCurrentPage,
     setMode,
     showSelections,
     dispatch,
-    showPromptPanel,
   } = useViewportState();
-  
-  const { 
+
+  const {
     toggleSelections,
     resetView,
-    toggleSelectionsPanel,
-    togglePromptPanel,
-    toggleHelpOverlay,
   } = useViewportActions();
-  
+
+  // Selection and lifecycle hooks
+  const { uiSelections, allSelections } = useSelections() as any;
+  const {
+    selectionStats: scSel,
+    promptStats: prSel,
+    canStage,
+    canCommit,
+    isStaging,
+    isCommitting,
+    stageAll,
+    commitAll,
+    clearSelections,
+    stageMessages,
+  } = useStageCommit(document.id) as any;
+
+  // Prompts and AI hooks
+  const { load, save, createPrompt } = usePrompts() as any;
+  const actions = useActions(document);
+
+  // Dialog state
+  const [showStageDialog, setShowStageDialog] = useState(false);
+  const [showCommitDialog, setShowCommitDialog] = useState(false);
+  const [commitAutoStage, setCommitAutoStage] = useState(false);
+  const [showClearPageDialog, setShowClearPageDialog] = useState(false);
+  const [showClearAllDialog, setShowClearAllDialog] = useState(false);
+  const [showAddPromptDialog, setShowAddPromptDialog] = useState(false);
+  const [showClearAllPromptsDialog, setShowClearAllPromptsDialog] = useState(false);
+
   // Compatibility function for setShowSelections
   const setShowSelections = (show: boolean) => {
     dispatch({ type: 'SET_SHOW_SELECTIONS', payload: show });
   };
-
-  // Track last mouse position for button-based zooming
-  const mousePositionRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
-
-  // Track temporary panning state for mode indicator
-  const [isTemporaryPanning, setIsTemporaryPanning] = useState(false);
-
-  // Update mouse position and track middle button for temporary panning
-  useEffect(() => {
-    const handleMouseMove = (event: MouseEvent) => {
-      mousePositionRef.current = { x: event.clientX, y: event.clientY };
-    };
-
-    const handleMouseDown = (event: MouseEvent) => {
-      if (event.button === 1) { // Middle button
-        setIsTemporaryPanning(true);
-      }
-    };
-
-    const handleMouseUp = (event: MouseEvent) => {
-      if (event.button === 1) { // Middle button
-        setIsTemporaryPanning(false);
-      }
-    };
-
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mousedown', handleMouseDown);
-    document.addEventListener('mouseup', handleMouseUp);
-
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mousedown', handleMouseDown);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, []);
 
   const handleModeToggle = () => {
     if (mode === "pan") {
@@ -86,286 +90,328 @@ export default function ActionsLayer({ isInfoVisible = false, onToggleInfo }: Ac
     setMode("pan");
   }
 
-  // Mouse-position-aware zoom handlers for button clicks
-  const performZoom = useCallback((zoomFactor: number) => {
-    const newZoom = zoomFactor > 1
-      ? Math.min(zoom * zoomFactor, 3)
-      : Math.max(zoom * zoomFactor, 0.5);
-
-    // Find the viewport element (the unified viewport container)
-    const viewportElement = document.querySelector('.unified-viewport');
-    if (!viewportElement) {
-      // Fallback to center-based zoom if viewport not found
-      const centerX = -pan.x;
-      const centerY = -pan.y;
-      const scaleFactor = newZoom / zoom;
-      const newPanX = -centerX * scaleFactor;
-      const newPanY = -centerY * scaleFactor;
-
-      dispatch({ type: 'SET_ZOOM', payload: newZoom });
-      setPan({ x: newPanX, y: newPanY });
-      return;
-    }
-
-    // Get viewport bounds
-    const rect = viewportElement.getBoundingClientRect();
-
-    // Mouse position relative to viewport center
-    const mouseX = mousePositionRef.current.x - rect.left - rect.width / 2;
-    const mouseY = mousePositionRef.current.y - rect.top - rect.height / 2;
-
-    // Since PDF renders at zoom level, document coordinates are already scaled
-    // Current document point under mouse (before zoom) - no division by zoom needed
-    const docPointX = mouseX - pan.x;
-    const docPointY = mouseY - pan.y;
-
-    // Calculate scale factor for the document coordinates
-    const scaleFactor = newZoom / zoom;
-
-    // Calculate new pan to keep the same document point under mouse (after zoom)
-    const newPanX = mouseX - docPointX * scaleFactor;
-    const newPanY = mouseY - docPointY * scaleFactor;
-
-    // Update zoom and pan simultaneously
-    dispatch({ type: 'SET_ZOOM', payload: newZoom });
-    setPan({ x: newPanX, y: newPanY });
-  }, [zoom, pan, dispatch, setPan]);
-
-  const handleZoomIn = useCallback(() => {
-    performZoom(1.1);
-  }, [performZoom]);
-
-  const handleZoomOut = useCallback(() => {
-    performZoom(0.9);
-  }, [performZoom]);
-
+  // Zoom controls
+  const { zoomIn, zoomOut } = useZoomControls();
+  const handleZoomIn = useCallback(() => { zoomIn(); }, [zoomIn]);
+  const handleZoomOut = useCallback(() => { zoomOut(); }, [zoomOut]);
 
   // State for auto-hide behavior
   const [visible, setVisible] = useState(false); // Start hidden, show on hover
-  const [showBar, setShowBar] = useState(true); // Controls if bar appears at all
-  const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const isMouseOverRenderArea = useRef(false); // Track if mouse is currently over render area
 
   // Handle mouse enter/leave in render layer to show/hide UI based on hover
   useEffect(() => {
     const handleRenderLayerMouseEnter = () => {
-      isMouseOverRenderArea.current = true;
-      if (showBar) {
-        setVisible(true);
-      }
-      
-      // Clear any existing timeout
-      if (hideTimeoutRef.current) {
-        clearTimeout(hideTimeoutRef.current);
-        hideTimeoutRef.current = null;
-      }
+      setVisible(true);
     };
 
     const handleRenderLayerMouseLeave = () => {
-      isMouseOverRenderArea.current = false;
-      if (showBar) {
-        setVisible(false);
-      }
+      setVisible(false);
     };
 
     // Find the render layer element and add mouse enter/leave listeners
-    const renderLayer = document.querySelector('[data-slot="document-viewer-renderer"]');
+    const renderLayer = globalThis.document.querySelector('[data-slot="document-viewer-renderer"]');
     if (renderLayer) {
       renderLayer.addEventListener('mouseenter', handleRenderLayerMouseEnter);
       renderLayer.addEventListener('mouseleave', handleRenderLayerMouseLeave);
-      
+
       return () => {
         renderLayer.removeEventListener('mouseenter', handleRenderLayerMouseEnter);
         renderLayer.removeEventListener('mouseleave', handleRenderLayerMouseLeave);
-        if (hideTimeoutRef.current) {
-          clearTimeout(hideTimeoutRef.current);
-          hideTimeoutRef.current = null;
-        }
       };
     }
 
-    return () => {
-      if (hideTimeoutRef.current) {
-        clearTimeout(hideTimeoutRef.current);
-        hideTimeoutRef.current = null;
-      }
-    };
-  }, []); // Remove showBar dependency to avoid recreating handlers
-
-  // Handle show/hide bar toggle
-  const handleBarToggle = () => {
-    const newShowBar = !showBar;
-    setShowBar(newShowBar);
-    
-    if (newShowBar) {
-      // If enabling bar and mouse is over render area, show it immediately
-      if (isMouseOverRenderArea.current) {
-        setVisible(true);
-      } else {
-        setVisible(false);
-      }
-    } else {
-      // If disabling bar, hide it completely and clear any timers
-      setVisible(false);
-      if (hideTimeoutRef.current) {
-        clearTimeout(hideTimeoutRef.current);
-        hideTimeoutRef.current = null;
-      }
-    }
-  };
+    return () => {};
+  }, []);
 
   return (
-    <div id="__actions_layer__">
-      {/* Mode Toggle Button - Left Side */}
-      <div className="absolute top-4 left-4 z-1000 bg-background/90 rounded-md shadow-md">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={handleModeToggle}
-          // className={(mode === "pan" || isTemporaryPanning) ? 'bg-accent text-accent-foreground' : ''}
-          title={
-            isTemporaryPanning
-              ? "Temporary Pan Mode (Middle Button)"
-              : mode === "pan"
-                ? "Pan Mode - Click to switch to Select"
-                : "Select Mode - Click to switch to Pan"
-          }
-        >
-          {/* Show hand icon if in pan mode OR temporarily panning */}
-          {(mode === "pan" || isTemporaryPanning) ? <Hand /> : <MousePointerClick />}
-        </Button>
-      </div>
-
-      {/* Show/Hide Bar Toggle Button - Right Side */}
-      <div className="absolute top-4 right-4 z-1000 bg-background/90 rounded-md shadow-md">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={handleBarToggle}
-          title={showBar ? "Hide control bar" : "Show control bar"}
-        >
-          {showBar ? <Eye /> : <EyeOff />}
-        </Button>
-      </div>
+    <div id="__actions_layer__" className="w-fit">
 
       {/* Main Control Bar - Center (Top) */}
-      <div className={`
-        absolute top-4 left-1/2 -translate-x-1/2 z-1001 bg-background/90 rounded-md
-        transition-all duration-300 ease-in-out
-        ${(visible && showBar) ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4 pointer-events-none"}
-      `}>
-        <div className="shadow-md flex items-center gap-2">
-          {/* Zoom */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleZoomOut}
-          >
-            <ZoomOut />
-          </Button>
-          
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleResetView}
-          >
-            <Scan />
-          </Button>
+      <div className={cn(
+        "absolute top-2 left-1/2 -translate-x-1/2 z-1001 transition-all duration-300 ease-in-out",
+        "flex flex-row gap-0",
+        visible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4 pointer-events-none",
+      )}>
+        <Menubar>
+          {(() => {
+            const ctx = {
+              view: {
+                zoomIn: handleZoomIn,
+                zoomOut: handleZoomOut,
+                resetView: handleResetView,
+                toggleMode: handleModeToggle,
+                toggleSelections,
+                toggleProcessedView: actions.toggleProcessedView,
+                gotoPrevPage: actions.gotoPrevPage,
+                gotoNextPage: actions.gotoNextPage,
+                onToggleInfo,
+                isInfoVisible,
+                showSelections,
+                mode,
+              },
+              selections: {
+                openCommitDialog: () => setShowCommitDialog(true),
+                openStageDialog: () => setShowStageDialog(true),
+                discardAllUnsaved: actions.discardAllUnsaved,
+                openClearPageDialog: () => setShowClearPageDialog(true),
+                openClearAllDialog: () => setShowClearAllDialog(true),
+                openWorkbenchSelections: actions.openWorkbenchSelections,
+                canStage,
+                canCommit,
+                isStaging,
+                isCommitting,
+                clearPageDisabled: allSelections.filter((s: any) => s.page_number === currentPage).length === 0,
+                clearAllDisabled: (allSelections || []).length === 0,
+              },
+              rules: {
+                runAi: actions.runAi,
+                isApplyingAI: actions.isApplyingAI,
+                openAddRuleDialog: () => setShowAddPromptDialog(true),
+                openClearAllRulesDialog: () => setShowClearAllPromptsDialog(true),
+                openWorkbenchPrompts: actions.openWorkbenchPrompts,
+              },
+              document: {
+                processDocument: actions.processDocument,
+                isProcessingDoc: actions.isProcessingDoc,
+                downloadCurrentView: actions.downloadCurrentView,
+                isDownloadAvailable: actions.isDownloadAvailable,
+              },
+            } as const;
+            const menus = buildActionsMenuConfig(ctx);
 
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleZoomIn}
-          >
-            <ZoomIn />
-          </Button>
+            const renderNode = (c: MenuNode): React.ReactNode => {
+              if (c.type === 'separator') return <MenubarSeparator key={c.key} />;
+              if (c.type === 'label') return <MenubarLabel key={c.key}>{c.label}</MenubarLabel>;
+              if (c.type === 'submenu') {
+                return (
+                  <MenubarSub key={c.key}>
+                    <MenubarSubTrigger>{c.label}</MenubarSubTrigger>
+                    <MenubarSubContent>
+                      {c.children.map(renderNode)}
+                    </MenubarSubContent>
+                  </MenubarSub>
+                );
+              }
+              const item = c as MenuItem;
+              const Icon = item.icon;
+              return (
+                <MenubarItem key={item.key} onClick={item.onSelect} disabled={item.disabled}>
+                  {Icon ? <Icon className="mr-2 h-4 w-4" /> : null}
+                  {item.label}
+                  {item.shortcut ? <MenubarShortcut>{item.shortcut}</MenubarShortcut> : null}
+                </MenubarItem>
+              );
+            };
 
-          {/* Selections visibility toggle */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={toggleSelections}
-            className={showSelections ? 'bg-accent text-accent-foreground' : ''}
-            title={showSelections ? "Hide selections" : "Show selections"}
-          >
-            {showSelections ? <Pen /> : <PenOff />}
-          </Button>
+            return menus.map((menu) => (
+              <MenubarMenu key={menu.key}>
+                <MenubarTrigger>{menu.title}</MenubarTrigger>
+                <MenubarContent align={menu.align ?? 'start'}>
+                  {menu.entries.map(renderNode)}
+                </MenubarContent>
+              </MenubarMenu>
+            ));
+          })()}
 
-          {/* Info panel toggle */}
-          {onToggleInfo && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onToggleInfo}
-              className={isInfoVisible ? 'bg-accent text-accent-foreground' : ''}
-              title="Toggle info"
-            >
-              <Info />
-            </Button>
-          )}
+          <Separator orientation="vertical" />
 
-          {/* Selections panel toggle */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={toggleSelectionsPanel}
-            title="Toggle selections panel"
-          >
-            <ListTree />
-          </Button>
+          <div className="flex flex-row gap-0">
+            <Button variant="ghost" size="icon" onClick={handleZoomOut}><ZoomOut /></Button>
+            <Button variant="ghost" size="icon" onClick={handleZoomIn}><ZoomIn /></Button>
+            <Button variant="ghost" size="icon" onClick={handleResetView}><Scan /></Button>
+            <Button variant="ghost" size="icon" onClick={toggleSelections} title={showSelections ? "Hide selections" : "Show selections"}>{showSelections ? <Pen /> : <PenOff />}</Button>
+            {onToggleInfo && (
+              <Button variant="ghost" size="icon" onClick={onToggleInfo} className={isInfoVisible ? 'bg-accent text-accent-foreground' : ''} title="Toggle info"><Info /></Button>
+            )}
+          </div>
 
-          {/* Prompts panel toggle (R) */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={togglePromptPanel}
-            className={showPromptPanel ? 'bg-accent text-accent-foreground' : ''}
-            title="Toggle rules panel (R)"
-          >
-            <ListTree />
-          </Button>
-
-          {/* Keyboard shortcuts dialog toggle */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={toggleHelpOverlay}
-            title="Keyboard shortcuts (H)"
-          >
-            <Keyboard />
-          </Button>
-
-        </div>
+        </Menubar>
       </div>
 
-      {/* Pagination Bar - Bottom Center */}
-      <div className={`
-        absolute bottom-4 left-1/2 -translate-x-1/2 z-1001 bg-background/90 rounded-md
-        transition-all duration-300 ease-in-out
-        ${(visible && showBar) ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"}
-      `}>
-        <div className="shadow-md flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            disabled={currentPage + 1 <= 1}
-            onClick={() => setCurrentPage(currentPage - 1)}
-          >
-            <ChevronLeft />
-          </Button>
-          <span className="text-sm font-medium w-24 text-center">
-            Page {currentPage + 1} of {numPages}
-          </span>
-          <Button
-            variant="ghost"
-            size="icon"
-            disabled={currentPage + 1 >= numPages}
-            onClick={() => setCurrentPage(currentPage + 1)}
-          >
-            <ChevronRight />
-          </Button>
-        </div>
+      {/* Bottom mini-pager (visible on hover) */}
+      <div className={cn(
+        "absolute bottom-2 left-1/2 -translate-x-1/2 z-1001 bg-background/90 rounded-md",
+        "transition-all duration-300 ease-in-out",
+        visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none",
+      )}>
+        <MiniPager
+          currentPage={currentPage}
+          numPages={numPages}
+          onPrev={() => setCurrentPage(currentPage - 1)}
+          onNext={() => setCurrentPage(currentPage + 1)}
+        />
       </div>
+
+      {/* Dialogs for selections actions */}
+      <TypedConfirmationDialog
+        isOpen={showStageDialog}
+        onClose={() => setShowStageDialog(false)}
+        onConfirm={async () => { setShowStageDialog(false); await stageAll(); }}
+        title="Stage all changes"
+        description="This will stage all pending selections and prompt changes for this document."
+        confirmationText="stage"
+        confirmButtonText="Stage all"
+        cancelButtonText="Cancel"
+        variant="default"
+        messages={stageMessages}
+      />
+
+      <TypedConfirmationDialog
+        isOpen={showCommitDialog}
+        onClose={() => setShowCommitDialog(false)}
+        onConfirm={async () => { setShowCommitDialog(false); await commitAll(commitAutoStage); setCommitAutoStage(false); }}
+        title="Commit all staged"
+        description={undefined}
+        confirmationText="commit"
+        confirmButtonText="Commit"
+        cancelButtonText="Cancel"
+        variant="default"
+        messages={(() => {
+          const totalToCommit = (scSel.stagedPersisted + scSel.created + scSel.updated) + (prSel.stagedPersisted + prSel.created + prSel.updated);
+          const msgs: TypedMessage[] = totalToCommit === 0
+            ? [{ variant: 'warning', title: 'Nothing to commit', description: 'There are no changes to commit.' }]
+            : [
+              { variant: 'warning', title: 'Irreversible operation', description: 'Once committed, changes cannot be undone from here.' },
+              ...(scSel.stagedPersisted + scSel.created + scSel.updated > 0 ? [{ variant: 'info', title: 'Selections to commit', description: `${scSel.stagedPersisted + scSel.created + scSel.updated} selection change(s) will be committed` }] : [] as any),
+              ...(prSel.stagedPersisted + prSel.created + prSel.updated > 0 ? [{ variant: 'info', title: 'Prompts to commit', description: `${prSel.stagedPersisted + prSel.created + prSel.updated} prompt change(s) will be committed` }] : [] as any),
+            ];
+          const autoMsg: TypedMessage = commitAutoStage
+            ? { variant: 'warning', title: 'Auto-stage is ON', description: 'Pending changes will be staged and committed in one step.' }
+            : { variant: 'info', title: 'Optional: auto-stage before commit', description: 'If enabled, any unstaged changes will be staged first, then committed.' };
+          return [...msgs, autoMsg];
+        })()}
+        formFields={[
+          (
+            <div key="autostage" className="flex items-center justify-between text-xs p-2 border rounded">
+              <div className="flex flex-col">
+                <span className="font-medium">Auto-stage before commit</span>
+                <span className="text-muted-foreground">Stage pending changes first, then commit</span>
+              </div>
+              {/* Simple checkbox using button toggle to avoid extra imports */}
+              <Button variant={commitAutoStage ? 'default' : 'outline'} size="sm" onClick={() => setCommitAutoStage(v => !v)}>{commitAutoStage ? 'ON' : 'OFF'}</Button>
+            </div>
+          )
+        ]}
+      />
+
+      {/* Clear page */}
+      <TypedConfirmationDialog
+        isOpen={showClearPageDialog}
+        onClose={() => setShowClearPageDialog(false)}
+        onConfirm={async () => {
+          setShowClearPageDialog(false);
+          const { persistedCount, draftCount } = await clearSelections(currentPage);
+          toast.success(`Staged edition then deletion for ${persistedCount} committed selection${persistedCount === 1 ? '' : 's'} and removed ${draftCount} draft${draftCount === 1 ? '' : 's'} on page ${currentPage + 1}`);
+        }}
+        title={`Clear page ${currentPage + 1}`}
+        confirmationText="stage"
+        confirmButtonText="Stage deletions"
+        cancelButtonText="Cancel"
+        variant="destructive"
+        messages={(() => {
+          const pageSelections = (uiSelections || []).filter((sel: any) => sel.page_number === currentPage);
+          const persistedCount = pageSelections.filter((s: any) => s.isPersisted).length;
+          const draftCount = pageSelections.length - persistedCount;
+          return [
+            { variant: 'warning', title: 'Committed selections will be staged_deletion', description: 'Committed selections will be converted to staged_deletion and will require a Commit to be permanently removed.' },
+            { variant: 'warning', title: 'Draft selections will be removed', description: 'Draft (unsaved) selections will be removed immediately and will not be staged.' },
+            { variant: 'info', title: 'Scope', description: `Page ${currentPage + 1}: ${persistedCount} committed → staged_deletion, ${draftCount} drafts → removed.` },
+          ] as TypedMessage[];
+        })()}
+      />
+
+      {/* Clear all */}
+      <TypedConfirmationDialog
+        isOpen={showClearAllDialog}
+        onClose={() => setShowClearAllDialog(false)}
+        onConfirm={async () => {
+          setShowClearAllDialog(false);
+          const { persistedCount, draftCount } = await clearSelections(undefined);
+          toast.success(`Staged edition then deletion for ${persistedCount} committed selection${persistedCount === 1 ? '' : 's'} and removed ${draftCount} draft${draftCount === 1 ? '' : 's'} across all pages`);
+        }}
+        title="Clear all selections"
+        confirmationText="stage"
+        confirmButtonText="Stage deletions"
+        cancelButtonText="Cancel"
+        variant="destructive"
+        messages={(() => {
+          const total = (uiSelections || []).length;
+          const persistedCount = (uiSelections || []).filter((s: any) => s.isPersisted).length;
+          const draftCount = total - persistedCount;
+          return [
+            { variant: 'warning', title: 'Committed selections will be staged_deletion', description: 'Committed selections will be converted to staged_deletion and will require a Commit to be permanently removed.' },
+            { variant: 'warning', title: 'Draft selections will be removed', description: 'Draft (unsaved) selections will be removed immediately and will not be staged.' },
+            { variant: 'error', title: 'Destructive operation', description: `This will affect all pages: ${persistedCount} committed → staged_deletion, ${draftCount} drafts → removed.` },
+          ] as TypedMessage[];
+        })()}
+      />
+
+      {/* Add Prompt Dialog */}
+      <FormConfirmationDialog
+        isOpen={showAddPromptDialog}
+        onClose={() => setShowAddPromptDialog(false)}
+        title="Create AI Rule"
+        description="Fill in the prompt details. The rule will be created and immediately committed."
+        confirmButtonText="Create rule"
+        cancelButtonText="Cancel"
+        variant="default"
+        messages={[]}
+        initialValues={{ title: '', directive: 'process', prompt: '' }}
+        fields={[
+          { type: 'text', name: 'title', label: 'Title', placeholder: 'Short descriptive title', required: true },
+          {
+            type: 'select', name: 'directive', label: 'Directive', placeholder: 'Select directive', required: true,
+            options: [
+              { value: 'process', label: 'Process' },
+              { value: 'identify', label: 'Identify' },
+              { value: 'redact', label: 'Redact' },
+              { value: 'preserve', label: 'Preserve' },
+              { value: 'exclude', label: 'Exclude' },
+            ],
+          },
+          { type: 'textarea', name: 'prompt', label: 'Prompt', placeholder: 'Detailed instructions for the AI', required: true },
+        ]}
+        onSubmit={async (values: Record<string, any>) => {
+          const title = String(values.title ?? '').trim();
+          const directive = String(values.directive ?? '').trim();
+          const promptBody = String(values.prompt ?? '').trim();
+          if (!title || !promptBody || !directive) {
+            toast.error('Please fill in title, directive, and prompt');
+            throw new Error('validation');
+          }
+          createPrompt({ title, directive, prompt: promptBody, state: 'committed', scope: 'document' } as any);
+          const res = await save();
+          if (!res.ok) { toast.error('Failed to create prompt'); throw new Error('api'); }
+          toast.success(`${title} rule created and committed`);
+          setShowAddPromptDialog(false);
+        }}
+      />
+
+      {/* Clear all prompts */}
+      <SimpleConfirmationDialog
+        isOpen={showClearAllPromptsDialog}
+        onClose={() => setShowClearAllPromptsDialog(false)}
+        onConfirm={async () => {
+          try {
+            const res = await DocumentViewerAPI.clearDocumentPrompts(document.id);
+            if (res.ok) { await load(); toast.success('All rules cleared'); } else { throw new Error('api'); }
+          } catch (e) { toast.error('Failed to clear all rules'); throw e; }
+        }}
+        title="Clear all rules"
+        description={
+          <div className="text-xs">
+            <p className="mb-2">This will permanently delete all AI rules (prompts) for this document.</p>
+            <ul className="list-disc ml-4 space-y-1">
+              <li>This action cannot be undone.</li>
+              <li>All rules will be deleted immediately (no staging).</li>
+            </ul>
+          </div>
+        }
+        confirmButtonText="Delete all rules"
+        cancelButtonText="Cancel"
+        variant="destructive"
+        messages={[{ variant: 'warning', title: 'Irreversible operation', description: 'All prompts will be permanently removed from this document.' }]}
+      />
     </div>
   );
 }

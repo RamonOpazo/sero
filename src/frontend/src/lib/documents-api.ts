@@ -1,5 +1,5 @@
 import { toast } from 'sonner';
-import type { ApiResponse, DocumentShallowType, DocumentCreateType, DocumentUpdateType, DocumentBulkUploadRequestType, DocumentType } from '@/types';
+import type { ApiResponse, DocumentShallowType, DocumentCreateType, DocumentUpdateType, DocumentType } from '@/types';
 import { AsyncResultWrapper, type Result } from '@/lib/result';
 import { api } from '@/lib/axios';
 import { encryptPasswordSecurely, isWebCryptoSupported } from '@/lib/crypto';
@@ -27,7 +27,8 @@ function toShallow(doc: DocumentType): DocumentShallowType {
     prompt_count,
     selection_count,
     is_processed,
-    is_template: (doc as any).is_template ?? false,
+    // backend returns `template` on full Document payloads; treat presence as project-scoped
+    is_template: Boolean((doc as any).template),
   };
 }
 
@@ -211,40 +212,39 @@ export const DocumentsAPI = {
     }
   },
 
+
   /**
-   * Upload documents in bulk
-   * Note: Backend returns a Success response, not the created documents list.
+   * Upload documents in bulk with encrypted password (preferred)
    */
-  async uploadDocuments(uploadData: DocumentBulkUploadRequestType): Promise<Result<ApiResponse, unknown>> {
+  async uploadDocumentsEncrypted(
+    uploadData: { project_id: string; files: FileList; template_description?: string },
+    creds: { keyId: string; encryptedPassword: string },
+  ): Promise<Result<ApiResponse, unknown>> {
     const formData = new FormData();
     formData.append('project_id', uploadData.project_id);
-    formData.append('password', uploadData.password);
-    
+    formData.append('key_id', creds.keyId);
+    formData.append('encrypted_password', creds.encryptedPassword);
     if (uploadData.template_description) {
       formData.append('template_description', uploadData.template_description);
     }
-    
-    // Add all files to the form data
     for (let i = 0; i < uploadData.files.length; i++) {
       formData.append('files', uploadData.files[i]);
     }
 
     return AsyncResultWrapper
       .from(api.safe.post(`/documents/bulk-upload`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+        headers: { 'Content-Type': 'multipart/form-data' },
       }) as Promise<Result<ApiResponse, unknown>>)
       .tap((resp) => {
         toast.success(
-          "Successfully uploaded documents",
-          { description: resp?.message ?? 'Upload complete' } as any
+          'Successfully uploaded documents',
+          { description: resp?.message ?? 'Upload complete' } as any,
         );
       })
       .catch((error: unknown) => {
         toast.error(
-          "Failed to upload documents",
-          { description: error instanceof Error ? error.message : "Please try again." }
+          'Failed to upload documents',
+          { description: error instanceof Error ? error.message : 'Please try again.' },
         );
         throw error;
       })
@@ -283,5 +283,55 @@ export const DocumentsAPI = {
         throw error;
       })
       .toResult();
-  }
+  },
+
+  /**
+   * Set this document as the project-scoped document (template)
+   */
+  async setDocumentAsProjectTemplate(documentId: string): Promise<Result<ApiResponse, unknown>> {
+    return AsyncResultWrapper
+      .from(api.safe.put(`/documents/id/${documentId}/template`) as Promise<Result<ApiResponse, unknown>>)
+      .tap(() => {
+        toast.success(
+          'Document scoped to project',
+          { description: 'This document is now the project-scoped template.' },
+        );
+      })
+      .catch((error: unknown) => {
+        toast.error(
+          'Failed to scope document to project',
+          { description: error instanceof Error ? error.message : 'Please try again.' },
+        );
+        throw error;
+      })
+      .toResult();
+  },
+
+  /**
+   * Process an original document using already-encrypted credentials
+   */
+  async processDocumentEncrypted(
+    documentId: string,
+    creds: { keyId: string; encryptedPassword: string },
+  ): Promise<Result<ApiResponse, unknown>> {
+    return AsyncResultWrapper
+      .from(api.safe.post(`/documents/id/${documentId}/process`, {
+        key_id: creds.keyId,
+        encrypted_password: creds.encryptedPassword,
+      }) as Promise<Result<ApiResponse, unknown>>)
+      .tap(() => {
+        toast.success(
+          'Processing started',
+          { description: 'Your document is being processed. This may take a moment.' },
+        );
+      })
+      .catch((error: unknown) => {
+        toast.error(
+          'Failed to process document',
+          { description: error instanceof Error ? error.message : 'Please try again.' },
+        );
+        throw error;
+      })
+      .toResult();
+  },
 };

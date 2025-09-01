@@ -1,82 +1,96 @@
----
-slug: getting-started
-title: Getting Started
-date: 2025-08-26T10:01:00.000Z
----
-
 # Getting Started
 
-This guide will help you get up and running with SERO in just a few minutes.
+Welcome to SERO! This guide will walk you through installing the application on your local computer and running your first project. SERO is designed to run as a local, desktop-like application, giving you a secure and private environment for all your redaction tasks.
 
-## What is SERO?
+## Installation
 
-SERO (**SE**curely **R**edacts and **O**rganizes) is a secure document redaction platform that uses AI to identify and redact sensitive information in medical documents while maintaining document utility and ensuring privacy through enterprise-grade encryption.
+The installation process is automated with a script for your operating system. Please choose the appropriate guide below.
 
-## Quick Start
+### For Windows Users
 
-### Step 1: Create Your First Project
+Our PowerShell script uses the Windows Package Manager (`winget`) to ensure a clean installation of all dependencies.
 
-1. Navigate to the **Projects** section
-2. Click **"New Project"**
-3. Enter a project name (e.g., "Medical Records Q1")
-4. Add an optional description
-5. Click **"Create Project"**
+**Step 1: Open PowerShell**
 
-Your project is now ready for document uploads.
+Click the Start menu, type "PowerShell", right-click on "Windows PowerShell", and select **"Run as Administrator"** for the best results.
 
-### Step 2: Upload Documents
+**Step 2: Set Execution Policy**
 
-1. Open your project
-2. Click **"Upload Documents"** or drag and drop files
-3. Supported formats: PDF (recommended), DOCX, TXT
-4. Maximum file size: 50MB per document
-5. Wait for the upload to complete
+By default, PowerShell prevents running scripts from the internet. You need to allow the installer to run for your current session. Copy and paste this command into your PowerShell terminal and press Enter:
 
-Documents are encrypted during upload using AES-256 encryption.
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
+```
 
-### Step 3: AI Redaction
+**Step 3: Download and Run the Installer**
 
-1. Select the uploaded document
-2. Click **"Start Redaction"**
-3. SERO's AI will analyze the document for:
-   - Personal Identifiable Information (PII)
-   - Protected Health Information (PHI)
-   - Social Security Numbers
-   - Phone numbers and addresses
-   - Custom sensitive patterns
-4. Review the suggested redactions
-5. Accept, modify, or reject suggestions as needed
+Now, copy and paste the following command. It will download the installer script and immediately run it.
 
-### Step 4: Download Results
+```powershell
+Invoke-RestMethod -Uri https://raw.githubusercontent.com/RamonOpazo/sero/main/install_sero.ps1 | Invoke-Expression
+```
 
-1. Once redaction is complete, click **"Download"**
-2. Enter your project password when prompted
-3. The file is encrypted with RSA-2048 ephemeral keys
-4. Download begins automatically
+The script will now handle everything automatically. It will print color-coded messages to show its progress.
 
-The original document remains secure and unmodified.
+### For macOS and Linux Users
 
-## System Requirements
+On macOS and Linux, you can download and run the installation script with a single command.
 
-### Browser Support
-- Chrome 90+
-- Firefox 88+
-- Safari 14+
-- Edge 90+
+**Step 1: Open Your Terminal**
 
-### Other Requirements
-- JavaScript enabled
-- Stable internet connection
-- Modern browser with Web Crypto API support
+Open your favorite terminal application (e.g., Terminal, iTerm, Konsole).
+
+**Step 2: Download and Run the Installer**
+
+Copy and paste the following command into your terminal and press Enter. This will download the `install_sero.sh` script and execute it.
+
+```bash
+curl -sSL https://raw.githubusercontent.com/RamonOpazo/sero/main/install_sero.sh | bash
+```
+
+The script will guide you through the installation, showing its progress at each step.
+
+## What the Installer Does
+
+To be transparent, here is a summary of the actions the installation script performs:
+
+1.  **Checks for Dependencies**: It verifies that required tools (`winget` on Windows, `curl` on Linux/macOS) are present.
+2.  **Installs Ollama**: If you don't have Ollama, it will be installed. Ollama is the engine used for AI-powered prompt templates.
+3.  **Installs `uv`**: If you don't have `uv`, the high-performance Python package manager is installed.
+4.  **Installs SERO**: The script installs the SERO application itself in a clean, isolated environment so it doesn't interfere with other software on your system.
+5.  **Creates Shortcuts (Windows Only)**: For convenience, shortcuts are created on your Desktop and in your Startup folder.
+
+## Your First Launch
+
+Once the installer is finished, you are ready to launch the application.
+
+1.  **Open a NEW Terminal**: It's important to open a new terminal window (or restart your existing one) so that it recognizes the new `sero` command.
+2.  **Run the Command**: Simply type the following command and press Enter:
+    ```bash
+    sero
+    ```
+    *(On Windows, you can also use the new shortcut on your Desktop.)*
+
+    You will see server logs appear in your terminal window. This means SERO is running! This terminal window must remain open while you use the application.
+
+3.  **Access the Web Interface**: Open your favorite web browser and navigate to:
+    [**http://localhost:8000**](http://localhost:8000)
+
+    You should now see the SERO user interface.
+
+## A Quick Tour: Your First Project
+
+Now that SERO is running, let's quickly walk through the core workflow.
+
+1.  **Create a Project**: From the dashboard, click **"New Project"**. Give it a name (e.g., "My First Redactions") and, most importantly, a **strong password**. This password encrypts everything in the project.
+2.  **Upload a Document**: Inside your new project, click **"Upload"** and select a PDF file from your computer.
+3.  **Apply Redactions**: Once uploaded, you can begin redacting. For now, you can explore creating a **Selection Template** to manually draw redaction boxes on the document.
+4.  **Download the Result**: After applying your redactions, you can download the new, secured version of your document.
 
 ## Next Steps
 
-- [Working with Projects](./projects.md) - Learn advanced project management
-- [Document Management](./documents.md) - Master document workflows
-- [Security Overview](./security.md) - Understand SERO's security model
+You have successfully installed and run SERO. To learn more about its powerful features, please continue with our other documentation:
 
-## Need Help?
-
-- Check our [FAQ](./faq.md) for common questions
-- Visit [Troubleshooting](./troubleshooting.md) for issues
-- Contact support at support@sero.example.com
+-   **[Project Management](./project-management.md)**: Learn the ins and outs of managing your encrypted projects.
+-   **[The Redaction Workflow](./redaction-workflow.md)**: A deeper dive into creating templates and the redaction lifecycle.
+-   **[Security Overview](./security.md)**: Understand the cryptographic principles that keep your data safe.

@@ -1,24 +1,29 @@
 import { useMemo, useCallback, useState } from 'react';
-import { Eye, Plus, Copy, Edit, Trash2, ArrowLeft } from 'lucide-react';
+import { FileInput, Plus, Copy, Edit, Trash2, ArrowLeft, Flag } from 'lucide-react';
 import { toast } from 'sonner';
 import { DataTable } from '@/components/features/data-table';
-import { columns, adaptColumns } from '@/components/features/data-table/columns';
 import { EmptyState } from '@/components/shared/empty-state';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { useWorkspace } from '@/providers/workspace-provider';
-import { useDocumentsView } from './use-documents-view';
-import { UploadDocumentsDialog } from './dialogs/upload-documents-dialog';
-import { EditDocumentDialog } from './dialogs/edit-document-dialog';
-import { DeleteDocumentDialog } from './dialogs/delete-document-dialog';
-import type { DocumentShallowType, DocumentType } from '@/types';
-import type { ColumnConfig } from '@/components/features/data-table/columns';
+import type { DocumentShallowType } from '@/types';
 import type { ColumnOption, CustomButtonOption } from '@/components/features/data-table/types';
 
 interface DocumentsDataTableProps {
-  onDocumentSelect?: (document: DocumentShallowType) => void;
+  documents: DocumentShallowType[]
+  isLoading: boolean
+  error: string | null
+  actionHandlers: {
+    onSelectDocument: (d: DocumentShallowType) => void
+    onCreateDocument: () => void
+    onEditDocument: (d: DocumentShallowType) => void
+    onDeleteDocument: (d: DocumentShallowType) => void
+    onScopeToProject: (d: DocumentShallowType) => void
+    onBackToProjects: () => void
+  }
 }
 
-export function DocumentsDataTable({ onDocumentSelect }: DocumentsDataTableProps) {
+export function DocumentsDataTable({ documents, isLoading, error, actionHandlers }: DocumentsDataTableProps) {
   const { state } = useWorkspace();
 
   // Pagination state
@@ -30,23 +35,14 @@ export function DocumentsDataTable({ onDocumentSelect }: DocumentsDataTableProps
 
   // Column visibility state - exclude pinned columns from state management
   const [visibleColumns, setVisibleColumns] = useState<string[]>([
-    'description', 'file_count', 'prompt_count',
-    'selection_count', 'status', 'created_at'
+    'description', 'scope', 'file_count', 'prompt_count',
+    'selection_count', 'status', 'created_at',
   ])
 
   // Selection state for checkboxes
   const [selectedDocuments, setSelectedDocuments] = useState<DocumentShallowType[]>([])
 
-  // Extract all business logic to custom hook
-  const {
-    projectId,
-    documents,
-    isLoading,
-    error,
-    dialogState,
-    actionHandlers,
-  } = useDocumentsView(onDocumentSelect);
-
+  // Dialogs lifted to DocumentsView; this component is table-focused
 
   const processedStatusRenderer = useCallback((document: DocumentShallowType) => {
     if (document.is_processed) {
@@ -60,140 +56,177 @@ export function DocumentsDataTable({ onDocumentSelect }: DocumentsDataTableProps
     }
   }, []);
 
+  const scopeRenderer = useCallback((document: DocumentShallowType) => {
+    return document.is_template ? (
+      <Badge variant="outline" status="warning">Project</Badge>
+    ) : (
+      <Badge variant="outline" status="muted">Document</Badge>
+    );
+  }, []);
+
   // Pure UI rendering functions
   const nameRenderer = useCallback((document: DocumentShallowType) => {
     return (
-      <button
+      <Button
+        variant="link"
         onClick={() => actionHandlers.onSelectDocument(document)}
-        className="text-left font-medium text-primary hover:text-primary/80 hover:underline focus:outline-none focus:underline transition-colors"
         title={`Select document: ${document.name}`}
+        className="p-0"
       >
         {document.name.length > 25 ? `${document.name.slice(0, 25)}...` : document.name}
-      </button>
+      </Button>
     );
   }, [actionHandlers.onSelectDocument]);
 
-  // Define columns using the new modern column system
-  const documentColumns: ColumnConfig<DocumentShallowType>[] = useMemo(() => [
-    // Document name - pinned, clickable, and custom renderer
-    columns.custom<DocumentShallowType, string>(
-      'name',
-      'name',
-      {
-        header: 'Document Name',
-        pinned: true,
-        sortable: true,
-        width: '200px',
-        render: (_value, row) => nameRenderer(row)
-      }
-    ),
+// Define columns using the simple declarative system
+  const documentColumnDefs = useMemo(() => [
+    // Document name - pinned, clickable, custom renderer (with optional select checkbox)
+    {
+      id: 'name',
+      type: 'select',
+      header: 'Document Name',
+      accessor: 'name',
+      pinned: true,
+      sortable: true,
+      width: '200px',
+      render: (_value: string, row: DocumentShallowType) => nameRenderer(row),
+    },
 
-    // Description - truncated for readability
-    columns.text<DocumentShallowType>('description', {
+    // Description - truncated
+    {
+      id: 'description',
+      type: 'text',
       header: 'Description',
+      accessor: 'description',
       maxLength: 30,
       width: '250px',
-      placeholder: 'No description'
-    }),
+      placeholder: 'No description',
+    },
 
-    // Prompt count - displayed as badge
-    columns.number<DocumentShallowType>('prompt_count', {
+    // Scope - custom badge from is_template
+    {
+      id: 'scope',
+      type: 'custom',
+      header: 'Scope',
+      accessor: 'is_template',
+      width: '120px',
+      align: 'left',
+      render: (_value: boolean, row: DocumentShallowType) => scopeRenderer(row),
+    },
+
+    // Prompt count
+    {
+      id: 'prompt_count',
+      type: 'number',
       header: '# Prompts',
+      accessor: 'prompt_count',
       width: '100px',
       align: 'left',
-      sortable: true
-    }),
+      sortable: true,
+    },
 
-    // Selection count - displayed as badge
-    columns.number<DocumentShallowType>('selection_count', {
+    // Selection count
+    {
+      id: 'selection_count',
+      type: 'number',
       header: '# Selections',
+      accessor: 'selection_count',
       width: '100px',
       align: 'left',
-      sortable: true
-    }),
+      sortable: true,
+    },
 
-    // Custom Status column
-    columns.custom<DocumentShallowType, boolean>(
-      'status',
-      'is_processed',
-      {
-        header: 'Status',
-        width: '120px',
-        align: 'left',
-        render: (_value, row) => processedStatusRenderer(row)
-      }
-    ),
+    // Status - custom badge from is_processed
+    {
+      id: 'status',
+      type: 'custom',
+      header: 'Status',
+      accessor: 'is_processed',
+      width: '120px',
+      align: 'left',
+      render: (_value: boolean, row: DocumentShallowType) => processedStatusRenderer(row),
+    },
 
-    // Created date - relative formatting
-    columns.date<DocumentShallowType>('created_at', {
+    // Created/Updated dates
+    {
+      id: 'created_at',
+      type: 'date',
       header: 'Created',
+      accessor: 'created_at',
       width: '150px',
       sortable: true,
-      format: { style: 'relative' }
-    }),
-
-    // Last updated - relative date formatting
-    columns.date<DocumentShallowType>('updated_at', {
+      format: { style: 'relative' },
+    },
+    {
+      id: 'updated_at',
+      type: 'date',
       header: 'Last Updated',
+      accessor: 'updated_at',
       width: '150px',
       sortable: true,
-      format: { style: 'relative' }
-    }),
+      format: { style: 'relative' },
+    },
 
-    // Actions column - modern action definitions
-    columns.actions<DocumentShallowType>('actions', {
+    // Actions column
+    {
+      id: 'actions',
+      type: 'actions',
       header: 'Actions',
       width: '5rem',
-      align: 'center',
+      align: 'right',
       actions: [
         {
           id: 'copy',
           label: 'Copy document ID',
           icon: Copy,
-          onClick: (document) => {
+          onClick: (document: DocumentShallowType) => {
             navigator.clipboard.writeText(document.id)
             toast.success('Document ID copied to clipboard', {
               description: `ID: ${document.id}`,
             })
-          }
+          },
         },
         {
           id: 'select',
           label: 'Select Document',
-          icon: Eye,
-          onClick: (document) => {
+          icon: FileInput,
+          onClick: (document: DocumentShallowType) => {
             actionHandlers.onSelectDocument(document)
             toast.success('Document selected', {
               description: `Selected document: ${document.name}`,
             })
-          }
+          },
+        },
+        {
+          id: 'scope-to-project',
+          label: 'Scope to Project',
+          icon: Flag,
+          onClick: actionHandlers.onScopeToProject,
+          disabled: (row: DocumentShallowType) => row.is_template === true,
         },
         {
           id: 'edit',
           label: 'Edit document',
           icon: Edit,
-          onClick: actionHandlers.onEditDocument
+          onClick: actionHandlers.onEditDocument,
         },
         {
           id: 'delete',
           label: 'Delete document',
           icon: Trash2,
           variant: 'destructive',
-          onClick: actionHandlers.onDeleteDocument
-        }
-      ]
-    })
+          onClick: actionHandlers.onDeleteDocument,
+        },
+      ],
+    },
   ], [processedStatusRenderer, nameRenderer, actionHandlers]);
 
-  // Column options for visibility toggle - exclude pinned columns
-  const tableColumns: ColumnOption[] = useMemo(() => [
-    { key: 'description', header: 'Description' },
-    { key: 'prompt_count', header: '# Prompts' },
-    { key: 'selection_count', header: '# Selections' },
-    { key: 'status', header: 'Status' },
-    { key: 'created_at', header: 'Created' },
-    { key: 'updated_at', header: 'Last Updated' }
-  ], []);
+// Column options for visibility toggle - derive from defs (exclude pinned/actions)
+  const tableColumns: ColumnOption[] = useMemo(() => {
+    return documentColumnDefs
+      .filter(col => col.id !== 'name' && col.id !== 'actions')
+      .map(col => ({ key: col.id, header: String(col.header ?? col.id) }))
+  }, [documentColumnDefs]);
 
   // Custom buttons for the toolbar - delete button always visible
   const customButtons: CustomButtonOption[] = useMemo(() => [
@@ -223,20 +256,15 @@ export function DocumentsDataTable({ onDocumentSelect }: DocumentsDataTableProps
     });
   }, [documents, searchValue]);
 
-  // Filter columns based on visibility - always include pinned and actions columns
-  const visibleDocumentColumns = useMemo(() => {
-    return documentColumns.filter(col => {
-      // Always include actions column and pinned columns (name)
+// Filter columns based on visibility - always include pinned and actions columns
+  const visibleDocumentColumnDefs = useMemo(() => {
+    return documentColumnDefs.filter(col => {
       if (col.id === 'actions' || col.id === 'name') {
-        return true;
+        return true
       }
-      // Include other columns based on visibility state
-      return visibleColumns.includes(col.id);
-    });
-  }, [documentColumns, visibleColumns]);
-
-  // Convert new column configs to legacy format for DataTable compatibility
-  const legacyColumns = useMemo(() => adaptColumns(visibleDocumentColumns), [visibleDocumentColumns]);
+      return visibleColumns.includes(col.id)
+    })
+  }, [documentColumnDefs, visibleColumns]);
 
   // Handle column visibility changes
   const handleColumnVisibilityChange = useCallback((columnKey: string, visible: boolean) => {
@@ -276,7 +304,7 @@ export function DocumentsDataTable({ onDocumentSelect }: DocumentsDataTableProps
     if (documents.length > 0) {
       return (
         <DataTable
-          columns={legacyColumns}
+          columnDefs={visibleDocumentColumnDefs as any}
           data={paginatedDocuments}
           selectedRows={selectedDocuments}
           onRowSelect={setSelectedDocuments}
@@ -320,39 +348,6 @@ export function DocumentsDataTable({ onDocumentSelect }: DocumentsDataTableProps
   return (
     <>
       {content}
-
-      {/* Document Upload Dialog */}
-      <UploadDocumentsDialog
-        projectId={projectId!}
-        isOpen={dialogState.upload.isOpen}
-        onClose={dialogState.upload.onClose}
-        onSubmit={dialogState.upload.onSubmit}
-      />
-
-      {/* Document Edit Dialog */}
-      {dialogState.edit.document && (
-        <EditDocumentDialog
-          document={{
-            ...dialogState.edit.document,
-            files: [],
-            prompts: [],
-            selections: [],
-            original_file: null,
-            redacted_file: null,
-          } as DocumentType}
-          isOpen={dialogState.edit.isOpen}
-          onClose={dialogState.edit.onClose}
-          onSubmit={dialogState.edit.onSubmit}
-        />
-      )}
-
-      {/* Document Deletion Dialog */}
-      <DeleteDocumentDialog
-        isOpen={dialogState.delete.isOpen}
-        onClose={dialogState.delete.onClose}
-        onConfirm={dialogState.delete.onConfirm}
-        selectedDocument={dialogState.delete.selectedDocument}
-      />
     </>
   );
 }

@@ -2,10 +2,9 @@ import { createContext, useCallback, useContext, useMemo, useRef, useState } fro
 import { encryptPasswordSecurely, isWebCryptoSupported } from '@/lib/crypto';
 import { CredentialConfirmationDialog } from '@/components/shared/credential-confirmation-dialog';
 
-interface EncryptedCreds {
-  keyId: string;
-  encryptedPassword: string;
-  expiresAt: number; // epoch ms
+interface ProviderSecret {
+  password: string,
+  expiresAt: number,
 }
 
 interface AiCredentialsContextValue {
@@ -15,10 +14,10 @@ interface AiCredentialsContextValue {
 
 const AiCredentialsContext = createContext<AiCredentialsContextValue | null>(null);
 
-const TTL_MS = 15 * 60 * 1000; // 15 minutes
+const SAFETY_MARGIN_MS = 5_000;
 
 export function AiCredentialsProvider({ children }: { children: React.ReactNode }) {
-  const cacheRef = useRef<Map<string, EncryptedCreds>>(new Map());
+  const cacheRef = useRef<Map<string, ProviderSecret>>(new Map());
 
   // Dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -33,7 +32,8 @@ export function AiCredentialsProvider({ children }: { children: React.ReactNode 
     const now = Date.now();
     const cached = cacheRef.current.get(providerName);
     if (cached && cached.expiresAt > now) {
-      return { keyId: cached.keyId, encryptedPassword: cached.encryptedPassword };
+      const encrypted = await encryptPasswordSecurely(cached.password);
+      return { keyId: encrypted.keyId, encryptedPassword: encrypted.encryptedPassword };
     }
 
     // Need to prompt
@@ -65,13 +65,13 @@ export function AiCredentialsProvider({ children }: { children: React.ReactNode 
       setIsEncrypting(false);
       setDialogOpen(false);
       const providerName = pendingProvider.current!;
-      const creds: EncryptedCreds = {
-        keyId: encrypted.keyId,
-        encryptedPassword: encrypted.encryptedPassword,
-        expiresAt: Date.now() + TTL_MS,
+      const ttlMs = Math.max(0, (encrypted.expiresInSeconds ?? 0) * 1000 - SAFETY_MARGIN_MS);
+      const secret: ProviderSecret = {
+        password,
+        expiresAt: Date.now() + ttlMs,
       };
-      cacheRef.current.set(providerName, creds);
-      resolverRef.current?.({ keyId: creds.keyId, encryptedPassword: creds.encryptedPassword });
+      cacheRef.current.set(providerName, secret);
+      resolverRef.current?.({ keyId: encrypted.keyId, encryptedPassword: encrypted.encryptedPassword });
     } catch (e) {
       setIsEncrypting(false);
       setError('Failed to encrypt password');

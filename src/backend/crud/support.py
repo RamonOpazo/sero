@@ -1,20 +1,21 @@
 from __future__ import annotations
 from uuid import UUID
 from base64 import b64decode
-from typing import Callable
+from typing import Callable, Iterator
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from backend.core.config import settings as app_settings
-from backend.db.models import Selection as SelectionModel, Project as ProjectModel, Document as DocumentModel, File as FileModel, AiSettings as AiSettingsModel
+from backend.db.models import Selection as SelectionModel, Project as ProjectModel, Document as DocumentModel, File as FileModel, AiSettings as AiSettingsModel, Template as TemplateModel
 from backend.api.schemas import documents_schema, files_schema
 from backend.service.crypto_service import get_security_service
 from backend.core.security import security_manager
-from backend.api.enums import FileType, CommitState
+from backend.api.enums import FileType, CommitState, RedactionScope, ScopeType
 from backend.crud.projects import ProjectCrud
 from backend.crud.documents import DocumentCrud
 from backend.crud.selections import SelectionCrud
 from backend.crud.ai_settings import AiSettingsCrud
+from backend.crud.templates import TemplateCrud
 
 
 class SupportCrud:
@@ -25,12 +26,12 @@ class SupportCrud:
         self.documents_crud = DocumentCrud(DocumentModel)
         self.selections_crud = SelectionCrud(SelectionModel)
         self.ai_settings_crud = AiSettingsCrud(AiSettingsModel)
+        self.templates_crud = TemplateCrud(TemplateModel)
 
 
-    def apply_or_404[T](self, crud_method: Callable[..., T], *, db: Session, id: UUID, **kwargs) -> T:
-        """Call the given CRUD method with db and id; if it returns None, raise 404."""
+    def apply_or_404[T](self, crud_method: Callable[..., T], *, db: Session, **kwargs) -> T:
+        """Call the given CRUD method with db and kwargs; if it returns None, raise 404 with helpful criteria."""
         kwargs.setdefault("db", db)
-        kwargs.setdefault("id", id)
         result = crud_method(**kwargs)
         if result is None:
             # Infer entity name from bound CRUD instance's model
@@ -39,7 +40,7 @@ class SupportCrud:
             entity_name = getattr(model, "__name__", None) or "Entity"
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"{entity_name} with ID {str(id)!r} not found",
+                detail=f"{entity_name} not found)",
             )
         return result
 
@@ -152,6 +153,26 @@ class SupportCrud:
         redacted_file = self._get_redacted_file_or_404(document)
         file_data = self._read_redacted_file_or_500(redacted_file=redacted_file)
         return document, redacted_file, file_data
+
+    def get_original_file_data_with_password_or_401_404_500(
+        self,
+        db: Session,
+        *,
+        document_or_id: DocumentModel | UUID,
+        password: str,
+        join_with: list[str] | None = None,
+    ) -> tuple[DocumentModel, FileModel, bytes]:
+        """Same as get_original_file_data_or_400_401_404_500 but accepts a plaintext password (no ephemeral decrypt)."""
+        doc = document_or_id if isinstance(document_or_id, DocumentModel) else self.apply_or_404(
+            self.documents_crud.read,
+            db=db,
+            id=document_or_id,
+            join_with=join_with or ["files"],
+        )
+        original_file = self._get_original_file_or_404(doc)
+        self.verify_project_password_or_401(db=db, project_id=doc.project_id, password=password)
+        decrypted_data = self._decrypt_original_file_or_500(original_file=original_file, password=password)
+        return doc, original_file, decrypted_data
 
 
     def build_shallow_list(self, records, *, schema_cls, transforms: dict, model_index: int = 0):
@@ -330,3 +351,41 @@ class SupportCrud:
             db.commit()
         staged = [s for s in self.selections_crud.read_list_by_document(db=db, document_id=document_id) if getattr(s, "state", None) == target_state]
         return staged
+
+
+    def _get_template_committed_selections_or_404(self, db: Session, project_id: UUID) -> list[SelectionModel]:
+        # Fail early if template is not set for the project (404 cascades to caller)
+        tpl = self.apply_or_404(
+            lambda *, db, id: self.templates_crud.read_by_project(db=db, project_id=id),
+            db=db,
+            id=project_id,
+        )
+        tpl_doc = self.apply_or_404(
+            self.documents_crud.read,
+            db=db,
+            id=tpl.document_id,
+            join_with=["selections"]
+        )
+        return [
+            i for i in tpl_doc.selections
+            if i.state == CommitState.COMMITTED
+            and i.scope == ScopeType.PROJECT
+        ]
+
+
+    def get_selections_to_apply_or_404(self, *, db: Session, project_id: UUID, scope: RedactionScope, selections: list[SelectionModel]) -> Iterator[SelectionModel]:
+        match scope:
+            case RedactionScope.DOCUMENT:
+                yield from filter(lambda x: x.state == CommitState.COMMITTED and x.scope == scope, selections)
+
+            case RedactionScope.PROJECT:
+                yield from self._get_template_committed_selections_or_404(db=db, project_id=project_id)
+
+            case RedactionScope.PAN:
+                # Include template (project-scoped, if available) and document-scoped committed selections
+                try:
+                    yield from self._get_template_committed_selections_or_404(db=db, project_id=project_id)
+                except HTTPException:
+                    pass
+                yield from filter(lambda x: x.state == CommitState.COMMITTED and x.scope == ScopeType.DOCUMENT, selections)
+    

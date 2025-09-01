@@ -1,5 +1,22 @@
 import { DocumentViewerAPI } from '@/lib/document-viewer-api';
 import type { AiProcessingWarning } from '@/providers/ai-processing-provider';
+import { toast } from 'sonner';
+import { ProjectsAPI } from '@/lib/projects-api';
+
+function humanReason(reason?: string): string {
+  switch (reason) {
+    case 'no_committed_selections_for_scope':
+      return 'No selections for chosen scope; try a different scope';
+    case 'decrypt_failed':
+      return 'Could not decrypt original; verify password';
+    case 'redaction_failed':
+      return 'Redaction engine error; see logs';
+    case 'save_failed':
+      return 'Failed to persist file';
+    default:
+      return reason || 'unknown';
+  }
+}
 
 export interface AiProcessingApi {
   state: { jobs: Record<string, any> };
@@ -18,6 +35,7 @@ export interface AiProcessingApi {
  */
 export function startProjectRun(aiProc: AiProcessingApi, projectId: string, opts?: { keyId?: string; encryptedPassword?: string }) {
   const jobId = `project:${projectId}`;
+  let totalDocs = 0;
 
   // Initialize job early so users see feedback immediately
   aiProc.startJob({
@@ -36,14 +54,15 @@ export function startProjectRun(aiProc: AiProcessingApi, projectId: string, opts
 
   const ctrl = DocumentViewerAPI.applyAiProjectStream(projectId, {
     onProjectInit: ({ total_documents }: { total_documents: number }) => {
-      aiProc.updateJob({ id: jobId, batchTotal: total_documents });
+      totalDocs = total_documents || 0;
+      aiProc.updateJob({ id: jobId, batchTotal: totalDocs, meta: { projectId, currentDocIndex: 0, totalDocs } });
     },
     onProjectProgress: ({ processed, total }: { processed: number; total: number }) => {
       const pct = total > 0 ? Math.round((processed / total) * 100) : 0;
       aiProc.updateJob({ id: jobId, batchProcessed: processed, batchTotal: total, percent: pct });
     },
     onProjectDocStart: ({ index, document_id }: { index: number; document_id: string }) => {
-      aiProc.updateJob({ id: jobId, hints: [`doc ${index + 1}${document_id ? `: ${document_id}` : ''}`] });
+      aiProc.updateJob({ id: jobId, hints: [`doc ${index + 1}${document_id ? `: ${document_id}` : ''}`], meta: { projectId, currentDocIndex: index + 1, totalDocs } });
     },
     onStatus: (d: {
       stage: string;
@@ -84,5 +103,107 @@ export function startProjectRun(aiProc: AiProcessingApi, projectId: string, opts
 
   aiProc.registerCancel(jobId, ctrl.cancel);
   return { cancel: ctrl.cancel };
+}
+
+/**
+ * Start a project-level redaction run and stream progress into AiProcessingProvider.
+ */
+export function startProjectRedaction(
+  aiProc: AiProcessingApi,
+  projectId: string,
+  opts: { keyId: string; encryptedPassword: string; scope: 'project' | 'document' | 'pan'; getFreshCreds?: () => Promise<{ keyId: string; encryptedPassword: string }> },
+) {
+  const jobId = `redact:${projectId}`;
+  let totalDocs = 0;
+
+  // Cancel any previous job for this project to avoid stale UI state and ensure a single active stream
+  try { aiProc.cancelJob(jobId); } catch { /* ignore */ }
+  try { aiProc.clearJob(jobId); } catch { /* ignore */ }
+
+  aiProc.startJob({
+    id: jobId,
+    kind: 'project',
+    title: `Redaction ${projectId}`,
+    stage: 'initializing',
+    stageIndex: 0,
+    stageTotal: 3,
+    percent: 0,
+    hints: [],
+    batchProcessed: 0,
+    batchTotal: 0,
+    meta: { projectId, currentDocIndex: 0, totalDocs: 0 },
+  });
+
+  const handle = ProjectsAPI.redactProjectStream(projectId, {
+    scope: opts.scope,
+    keyId: opts.keyId,
+    encryptedPassword: opts.encryptedPassword,
+    getFreshCreds: opts.getFreshCreds,
+    onProjectInit: ({ total_documents }: { total_documents: number }) => {
+      totalDocs = total_documents || 0;
+      aiProc.updateJob({
+        id: jobId,
+        batchTotal: totalDocs,
+        stage: 'queued',
+        stageIndex: 0,
+        meta: { projectId, currentDocIndex: 0, totalDocs },
+      });
+    },
+    onProjectProgress: ({ processed, total }: { processed: number; total: number }) => {
+      const pct = total > 0 ? Math.round((processed / total) * 100) : 0;
+      aiProc.updateJob({ id: jobId, batchProcessed: processed, batchTotal: total, percent: pct });
+    },
+    onDocStart: ({ index, document_id }: { index: number; document_id: string }) => {
+      // Update current document context (index is 1-based)
+      aiProc.updateJob({
+        id: jobId,
+        hints: [`doc ${index}${document_id ? `: ${document_id}` : ''}`],
+        stage: 'decrypting',
+        stageIndex: 1,
+        meta: { projectId, currentDocIndex: index, totalDocs },
+      });
+    },
+    onStatus: ({ stage, document_id }: { stage: string; document_id?: string }) => {
+      // Map server stages directly when present
+      aiProc.updateJob({ id: jobId, stage, hints: [document_id ? `${stage} (${document_id})` : stage] });
+    },
+    onDocSummary: ({ ok, document_id, reason, selections_applied }: { ok: boolean; document_id: string; reason?: string; selections_applied?: number }) => {
+      const status = ok ? 'saved' : `skipped: ${humanReason(reason)}`;
+      const hint = `doc ${document_id}: ${status}${typeof selections_applied === 'number' ? ` (${selections_applied})` : ''}`;
+      aiProc.updateJob({ id: jobId, hints: [hint], stage: 'saving', stageIndex: 2 });
+    },
+    onCompleted: ({ ok, total, succeeded, failed }: { ok: boolean; total?: number; succeeded?: number; failed?: number }) => {
+      const hasCounts = typeof total === 'number' && typeof succeeded === 'number' && typeof failed === 'number';
+      if (ok) {
+        aiProc.completeJob(jobId);
+        if (hasCounts) {
+          toast.success(
+            'Redaction completed',
+            { description: `${succeeded}/${total} succeeded, ${failed} failed`, },
+          );
+        } else {
+          toast.success('Redaction completed');
+        }
+      } else {
+        aiProc.failJob(jobId, { message: 'redaction-completed-with-errors' });
+        if (hasCounts) {
+          toast.error(
+            'Redaction completed with errors',
+            { description: `${succeeded}/${total} succeeded, ${failed} failed`, },
+          );
+        } else {
+          toast.error('Redaction completed with errors');
+        }
+      }
+      aiProc.clearJob(jobId);
+    },
+    onError: ({ message }: { message: string }) => {
+      aiProc.failJob(jobId, { message: message ?? 'redaction-error' });
+      aiProc.clearJob(jobId);
+    },
+  });
+
+  aiProc.registerCancel(jobId, handle.cancel);
+  return { cancel: handle.cancel };
 }
 

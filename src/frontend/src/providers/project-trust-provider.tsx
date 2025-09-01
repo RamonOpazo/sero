@@ -3,10 +3,9 @@ import { encryptPasswordSecurely, isWebCryptoSupported } from '@/lib/crypto';
 import { CredentialConfirmationDialog } from '@/components/shared/credential-confirmation-dialog';
 import { useWorkspace } from '@/providers/workspace-provider';
 
-interface EncryptedTrustToken {
-  keyId: string;
-  encryptedPassword: string;
-  expiresAt: number; // epoch ms
+interface TrustSecret {
+  password: string,
+  expiresAt: number,
 }
 
 interface ProjectTrustContextValue {
@@ -17,10 +16,8 @@ interface ProjectTrustContextValue {
 
 const ProjectTrustContext = createContext<ProjectTrustContextValue | null>(null);
 
-const DEFAULT_TTL_MS = 30 * 60 * 1000; // 30 minutes
-
 export function ProjectTrustProvider({ children }: { children: React.ReactNode }) {
-  const cacheRef = useRef<Map<string, EncryptedTrustToken>>(new Map());
+  const cacheRef = useRef<Map<string, TrustSecret>>(new Map());
 
   // Dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -36,7 +33,9 @@ export function ProjectTrustProvider({ children }: { children: React.ReactNode }
     const now = Date.now();
     const cached = cacheRef.current.get(projectId);
     if (cached && cached.expiresAt > now) {
-      return { keyId: cached.keyId, encryptedPassword: cached.encryptedPassword };
+      // Regenerate fresh encrypted credentials using cached password and fresh ephemeral key
+      const encrypted = await encryptPasswordSecurely(cached.password);
+      return { keyId: encrypted.keyId, encryptedPassword: encrypted.encryptedPassword };
     }
 
     if (!isWebCryptoSupported()) throw new Error('Web Crypto API not supported');
@@ -68,13 +67,14 @@ export function ProjectTrustProvider({ children }: { children: React.ReactNode }
       setIsEncrypting(false);
       setDialogOpen(false);
       const projectId = pendingProjectId.current!;
-      const token: EncryptedTrustToken = {
-        keyId: encrypted.keyId,
-        encryptedPassword: encrypted.encryptedPassword,
-        expiresAt: Date.now() + DEFAULT_TTL_MS,
+      // Extend trust period to 30 minutes regardless of ephemeral key TTL
+      const TTL_MS = 30 * 60 * 1000;
+      const secret: TrustSecret = {
+        password,
+        expiresAt: Date.now() + TTL_MS,
       };
-      cacheRef.current.set(projectId, token);
-      resolverRef.current?.({ keyId: token.keyId, encryptedPassword: token.encryptedPassword });
+      cacheRef.current.set(projectId, secret);
+      resolverRef.current?.({ keyId: encrypted.keyId, encryptedPassword: encrypted.encryptedPassword });
     } catch (e) {
       setIsEncrypting(false);
       setError('Failed to encrypt password');

@@ -84,18 +84,21 @@ export const DocumentBulkUploadSchema = z.object({
 });
 
 // Document upload schemas (for frontend API calls)
+// Encrypted-in-transit payloads: provide key_id and encrypted_password
 export const DocumentUploadRequestSchema = z.object({
   project_id: z.string(), // UUID as string in frontend
   file: z.any(), // Browser File object
   description: z.string().optional(),
-  password: z.string(),
+  key_id: z.string(),
+  encrypted_password: z.string(),
 });
 
 export const DocumentBulkUploadRequestSchema = z.object({
   project_id: z.string(), // UUID as string in frontend
   files: z.any(), // Browser FileList object
   template_description: z.string().optional(),
-  password: z.string(),
+  key_id: z.string(),
+  encrypted_password: z.string(),
 });
 
 // Search schemas

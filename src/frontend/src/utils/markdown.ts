@@ -1,109 +1,99 @@
 import { z } from 'zod';
-import fm from 'front-matter';
+import axios from 'axios';
 
-const docSchema = z.object({
+// --- Schemas and Types ---
+const docMetaSchema = z.object({
   slug: z.string(),
-  title: z.string(),
-  date: z.string().optional(),
-  is_index: z.boolean().optional(),
-  content: z.string(),
+  title: z.string().optional(),
+  next: z.string().nullable().optional(),
 });
 
-type Doc = z.infer<typeof docSchema>;
+const manifestSchema = z.object({
+  indexSlug: z.string(),
+  docs: z.array(docMetaSchema),
+});
 
-// Cache individual docs by slug
+type Manifest = z.infer<typeof manifestSchema>;
+
+export interface Doc extends z.infer<typeof docMetaSchema> {
+  title: string;
+  content: string;
+  is_index: boolean;
+}
+
+// --- Caching ---
+const manifestCache: { current: Manifest | null } = { current: null };
 const docCache = new Map<string, Doc>();
 
-// Known public docs for navigation (served from /docs/*.md)
-const KNOWN_DOC_SLUGS = [
-  'whats-sero',
-  'getting-started',
-  'project-management',
-  'redaction-workflow',
-  'security',
-  'api-reference',
-] as const;
+// --- Core Functions ---
 
+/**
+ * Fetches and validates the docs manifest.
+ */
+async function fetchManifest(): Promise<Manifest> {
+  if (manifestCache.current) {
+    return manifestCache.current;
+  }
+  const url = '/docs/manifest.json';
+  const { data } = await axios.get(url);
+  const manifest = manifestSchema.parse(data); // .parse throws on error
+  manifestCache.current = manifest;
+  return manifest;
+}
 
-function parseDoc(slug: string, raw: string): Doc | null {
+/**
+ * Gets a single documentation page by its slug, fetching and parsing if not cached.
+ * Handles 'index' as a special case.
+ */
+export async function getDoc(slug: string): Promise<Doc | undefined> {
+  const manifest = await fetchManifest();
+  const effectiveSlug = slug === 'index' ? manifest.indexSlug : slug;
+
+  if (docCache.has(effectiveSlug)) {
+    return docCache.get(effectiveSlug);
+  }
+
+  const meta = manifest.docs.find(d => d.slug === effectiveSlug);
+  if (!meta) return undefined;
+
   try {
-    const { attributes, body } = fm(raw);
-    const attrs = (attributes as Record<string, unknown>) || {};
+    const { data: rawContent } = await axios.get(`/docs/${effectiveSlug}.md`);
 
-    // Normalize date to string (front-matter may parse as Date)
-    const rawDate = attrs.date as unknown;
-    const date = typeof rawDate === 'string'
-      ? rawDate
-      : rawDate instanceof Date
-        ? rawDate.toISOString()
-        : undefined;
+    const h1Match = rawContent.match(/^# (.*)/m);
+    const title = meta.title ?? (h1Match?.[1] || "Untitled!");
 
-    // Coerce is-index to boolean when present
-    const rawIsIndex = (attrs as Record<string, unknown>)["is-index"];
-    const is_index = typeof rawIsIndex === 'boolean'
-      ? rawIsIndex
-      : typeof rawIsIndex === 'string'
-        ? /^(true|1|yes)$/i.test(rawIsIndex)
-        : undefined;
-
-    const docData = {
-      slug,
-      title: (attrs as Record<string, string>).title || slug,
-      date,
-      is_index,
-      content: body as string,
+    const doc: Doc = {
+      ...meta,
+      title,
+      content: rawContent,
+      is_index: effectiveSlug === manifest.indexSlug,
     };
 
-    const validation = docSchema.safeParse(docData);
-    if (!validation.success) {
-      console.error(`Invalid doc: ${slug}`, validation.error);
-      return null;
-    }
-    return validation.data;
+    docCache.set(effectiveSlug, doc);
+    return doc;
   } catch (e) {
-    console.error(`Failed to parse markdown for ${slug}:`, e);
-    return null;
+    console.error(`Failed to fetch or parse doc: ${effectiveSlug}`, e);
+    return undefined;
   }
 }
 
-async function fetchDocBySlug(slug: string): Promise<Doc | undefined> {
-  if (docCache.has(slug)) return docCache.get(slug);
-
-  // Docs are served from the public directory at /docs
-  const url = `/docs/${slug}.md`;
-  const res = await fetch(url);
-  if (!res.ok) return undefined;
-  const raw = await res.text();
-  const parsed = parseDoc(slug, raw);
-  if (!parsed) return undefined;
-  docCache.set(slug, parsed);
-  return parsed;
-}
-
+/**
+ * Gets a list of all documentation pages, ordered as they appear in the manifest.
+ */
 export async function getDocs(): Promise<Doc[]> {
-  // Best-effort: probe known slugs and return those that exist
+  const manifest = await fetchManifest();
   const results = await Promise.all(
-    KNOWN_DOC_SLUGS.map(async (s) => fetchDocBySlug(s).catch(() => undefined)),
+    manifest.docs.map(meta => getDoc(meta.slug))
   );
   return results.filter((d): d is Doc => !!d);
 }
 
-export async function getDoc(slug: string): Promise<Doc | undefined> {
-  if (slug === 'index') {
-    // Redirect-style resolution for the designated index doc
-    const docs = await getDocs();
-    const home = docs.find((d) => d.is_index);
-    if (home) return home;
-    // As a fallback, try an actual index.md if present
-    const indexDoc = await fetchDocBySlug('index');
-    return indexDoc ?? undefined;
-  }
-  return await fetchDocBySlug(slug);
-}
+// --- Utility Functions ---
 
 export async function docExists(slug: string): Promise<boolean> {
-  const doc = await getDoc(slug);
-  return !!doc;
+  const manifest = await fetchManifest();
+  const effectiveSlug = slug === 'index' ? manifest.indexSlug : slug;
+  return manifest.docs.some(d => d.slug === effectiveSlug);
 }
 
 export async function getDocTitle(slug: string): Promise<string> {

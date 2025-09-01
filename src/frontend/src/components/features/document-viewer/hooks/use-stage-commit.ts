@@ -5,6 +5,7 @@ import type { PromptType } from "@/types";
 import { useSelections } from "../providers/selection-provider";
 import { usePrompts } from "../providers/prompt-provider";
 import { UISelectionStage } from "../types/selection-lifecycle";
+import { DocumentViewerAPI } from "@/lib/document-viewer-api";
 
 export interface StageCommitStats {
   committed: number;
@@ -27,6 +28,7 @@ export interface UseStageCommitResult {
   isCommitting: boolean;
   stageAll: () => Promise<void>;
   commitAll: (autoStage?: boolean) => Promise<void>;
+  clearSelections: (page?: number) => Promise<{ persistedCount: number; draftCount: number }>;
   stageMessages: TypedMessage[];
   commitMessages: TypedMessage[];
 }
@@ -37,6 +39,8 @@ export function useStageCommit(documentId: string | number): UseStageCommitResul
     uiSelections,
     saveLifecycle,
     commitLifecycle,
+    deleteSelection,
+    reload,
   } = useSelections() as any;
 
   const {
@@ -133,6 +137,52 @@ export function useStageCommit(documentId: string | number): UseStageCommitResul
       setIsStaging(false);
     }
   }, [canStage, selectionStats.pending, promptStats.pending, saveLifecycle, savePrompts, selectionState, loadPrompts]);
+
+  const clearSelections = useCallback(async (page?: number): Promise<{ persistedCount: number; draftCount: number }> => {
+    const scoped = (uiSelections as any[]).filter(sel => (typeof page === 'number' ? sel.page_number === page : true));
+    const persisted = scoped.filter((s: any) => s.isPersisted);
+    const drafts = scoped.filter((s: any) => !s.isPersisted);
+
+    // Step 0: remove drafts first (do not call saveLifecycle to avoid recreating them)
+    try {
+      for (const sel of drafts) {
+        deleteSelection(sel.id);
+      }
+    } catch {}
+
+    // Phase 1: stage editions for persisted using server APIs only, then reload
+    try {
+      const committed = persisted.filter((s: any) => s.stage === UISelectionStage.Committed);
+      const nonCommitted = persisted.filter((s: any) => s.stage !== UISelectionStage.Committed);
+
+      if (committed.length > 0) {
+        await Promise.allSettled(committed.map((s: any) => DocumentViewerAPI.convertSelectionToStaged(s.id)));
+      }
+
+      if (nonCommitted.length > 0) {
+        const needsEdition = nonCommitted.filter((s: any) => s.stage !== UISelectionStage.StagedEdition);
+        if (needsEdition.length > 0) {
+          await Promise.allSettled(needsEdition.map((s: any) => DocumentViewerAPI.updateSelection(s.id, { state: 'staged_edition' } as any)));
+        }
+      }
+
+      await reload();
+    } catch (e) {
+      // continue
+    }
+
+    // Phase 2: stage deletions for persisted via server, then reload
+    try {
+      if (persisted.length > 0) {
+        await Promise.allSettled(persisted.map((s: any) => DocumentViewerAPI.updateSelection(s.id, { state: 'staged_deletion' } as any)));
+        await reload();
+      }
+    } catch (e) {
+      // swallow
+    }
+
+    return { persistedCount: persisted.length, draftCount: drafts.length };
+  }, [uiSelections, deleteSelection, reload]);
 
   const commitAll = useCallback(async (autoStage: boolean = false) => {
     if (!canCommit) {
@@ -265,6 +315,7 @@ export function useStageCommit(documentId: string | number): UseStageCommitResul
     isCommitting,
     stageAll,
     commitAll,
+    clearSelections,
     stageMessages,
     commitMessages,
   };

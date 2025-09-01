@@ -174,6 +174,73 @@ class TestDocumentsController:
             documents_controller.process(db=test_session, document_id=doc.id, request=req)
         assert exc.value.status_code == status.HTTP_400_BAD_REQUEST
 
+    def test_get_template_selections_success_and_filtering(self, test_session: Session):
+        # Setup: project with two documents; mark the first as template
+        proj = self._create_project(test_session)
+        template_doc = self._create_document(test_session, proj.id)
+        other_doc = self._create_document(test_session, proj.id)
+        # Set template mapping via controller
+        _ = documents_controller.set_as_project_template(db=test_session, document_id=template_doc.id)
+        # Seed selections on the template document with various states/scopes
+        from backend.api.enums import ScopeType
+        s1 = SelectionModel(
+            document_id=template_doc.id,
+            x=0.1,
+            y=0.1,
+            width=0.2,
+            height=0.2,
+            page_number=None,
+            scope=ScopeType.PROJECT,
+            state=CommitState.COMMITTED,
+        )
+        s2 = SelectionModel(
+            document_id=template_doc.id,
+            x=0.3,
+            y=0.3,
+            width=0.1,
+            height=0.1,
+            page_number=0,
+            scope=ScopeType.PROJECT,
+            state=CommitState.COMMITTED,
+        )
+        # Non-qualifying selections (should be filtered out)
+        s3 = SelectionModel(  # document-scoped
+            document_id=template_doc.id,
+            x=0.4,
+            y=0.4,
+            width=0.1,
+            height=0.1,
+            page_number=1,
+            scope=ScopeType.DOCUMENT,
+            state=CommitState.COMMITTED,
+        )
+        s4 = SelectionModel(  # staged
+            document_id=template_doc.id,
+            x=0.5,
+            y=0.5,
+            width=0.1,
+            height=0.1,
+            page_number=2,
+            scope=ScopeType.PROJECT,
+            state=CommitState.STAGED_CREATION,
+        )
+        test_session.add_all([s1, s2, s3, s4])
+        test_session.commit()
+        # Exercise
+        res = documents_controller.get_template_selections(db=test_session, document_id=other_doc.id, skip=0, limit=100)
+        # Assert: only s1 and s2 returned
+        got_ids = {str(i.id) for i in res}
+        assert {str(s1.id), str(s2.id)}.issubset(got_ids)
+        assert str(s3.id) not in got_ids and str(s4.id) not in got_ids
+
+    def test_get_template_selections_404_when_no_template(self, test_session: Session):
+        proj = self._create_project(test_session)
+        doc = self._create_document(test_session, proj.id)
+        # No template set for the project
+        with pytest.raises(HTTPException) as exc:
+            _ = documents_controller.get_template_selections(db=test_session, document_id=doc.id)
+        assert exc.value.status_code == status.HTTP_404_NOT_FOUND
+
     def test_download_original_file_via_controller(self, test_session: Session, client, monkeypatch):
         password = "StrongPW!123"
         proj = self._create_project(test_session, password=password)

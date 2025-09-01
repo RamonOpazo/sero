@@ -19,21 +19,19 @@ class TestBaseCrud:
     def test_create_and_search_project(self, test_session: Session, project_crud):
         """Test creating a project and searching for it."""
         # Create test data
-        project_data = ProjectCreate(
-            name="Test Search Project",
-            description="A project for testing search functionality",
-            contact_name="Test User",
-            contact_email="test@example.com",
-            password="TestPassword123!"
-        )
+        name = "Test Search Project"
+        description = "A project for testing search functionality"
+        contact_name = "Test User"
+        contact_email = "test@example.com"
+        password = "TestPassword123!"
         
         # Create project manually (since base CRUD doesn't handle password hashing)
         project = Project(
-            name=project_data.name,
-            description=project_data.description,
-            contact_name=project_data.contact_name,
-            contact_email=project_data.contact_email,
-            password_hash=security_manager.hash_password(project_data.password).encode("utf-8")
+            name=name,
+            description=description,
+            contact_name=contact_name,
+            contact_email=contact_email,
+            password_hash=security_manager.hash_password(password).encode("utf-8")
         )
         
         test_session.add(project)
@@ -224,20 +222,18 @@ class TestBaseCrud:
         project_crud_local = BaseCrud[Project, ProjectCreate, ProjectUpdate](Project)
 
         # Create via CRUD.create
-        pc = ProjectCreate(
-            name="BaseCrud Project",
-            description="desc",
-            contact_name="Tester",
-            contact_email="tester@example.com",
-            password="StrongPW!123",
-        )
+        name = "BaseCrud Project"
+        description = "desc"
+        contact_name = "Tester"
+        contact_email = "tester@example.com"
+        password = "StrongPW!123"
         # BaseCrud.create uses schema dump; Project requires password_hash, so create ORM manually then use read/update/delete on CRUD
         proj = Project(
-            name=pc.name,
-            description=pc.description,
-            contact_name=pc.contact_name,
-            contact_email=pc.contact_email,
-            password_hash=security_manager.hash_password(pc.password).encode("utf-8"),
+            name=name,
+            description=description,
+            contact_name=contact_name,
+            contact_email=contact_email,
+            password_hash=security_manager.hash_password(password).encode("utf-8"),
         )
         test_session.add(proj)
         test_session.commit()

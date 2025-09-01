@@ -4,6 +4,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 import json
 from loguru import logger
+import asyncio
 
 from backend.api.schemas import documents_schema, ai_schema, selections_schema
 from backend.core.config import settings as app_settings
@@ -110,7 +111,7 @@ async def apply(db: Session, request: ai_schema.AiApplyRequest) -> documents_sch
                 key_id=request.key_id,
                 join_with=["files"],
             )
-            text_context = get_text_extractor_service().extract_text(pdf_data=decrypted_data)
+            text_context = await asyncio.to_thread(get_text_extractor_service().extract_text, pdf_data=decrypted_data)
         except Exception:
             text_context = None
 
@@ -162,6 +163,9 @@ async def apply_stream(db: Session, request: ai_schema.AiApplyRequest) -> Stream
         def ev(event: str, data: dict) -> str:
             return f"event: {event}\ndata: {json.dumps(data)}\n\n"
         try:
+            # Retry hint and initial heartbeat for SSE stability
+            yield "retry: 5000\n\n"
+            yield ": ping\n\n"
             # Load document with prompts & settings
             doc = support_crud.apply_or_404(
                 documents_crud.read,
@@ -182,6 +186,7 @@ async def apply_stream(db: Session, request: ai_schema.AiApplyRequest) -> Stream
             # Compose prompt
             stg = "compose_prompt"
             yield ev("status", {"stage": stg, "stage_index": stage_index(stg), "stage_total": STAGE_TOTAL, "percent": stage_percent(stg)})
+            yield ": ping\n\n"
             rules: list[str] = []
             for p in committed_prompts:
                 rules.append(f"Directive: {p.directive}\nTitle: {p.title}\n\nInstructions:\n{p.prompt}")
@@ -211,6 +216,7 @@ async def apply_stream(db: Session, request: ai_schema.AiApplyRequest) -> Stream
                 yield ev("status", {"stage": "connecting_provider", "ok": False})
             # Loading model stage
             yield ev("status", {"stage": "loading_model", "stage_index": stage_index("request_sent"), "stage_total": STAGE_TOTAL})
+            yield ": ping\n\n"
             client = OllamaClient(base_url=app_settings.ai.host, timeout=app_settings.ai.timeout)
             opts = OllamaOptions()
 
@@ -225,13 +231,14 @@ async def apply_stream(db: Session, request: ai_schema.AiApplyRequest) -> Stream
                         key_id=request.key_id,
                         join_with=["files"],
                     )
-                    text_context = get_text_extractor_service().extract_text(pdf_data=decrypted_data)
+                    text_context = await asyncio.to_thread(get_text_extractor_service().extract_text, pdf_data=decrypted_data)
                 except Exception:
                     text_context = None
 
             # Stream tokens (generating)
             stg = "request_sent"
             yield ev("status", {"stage": stg, "stage_index": stage_index(stg), "stage_total": STAGE_TOTAL, "percent": stage_percent(stg)})
+            yield ": ping\n\n"
             token_chars = 0
             raw_parts: list[str] = []
             try:
@@ -255,6 +262,7 @@ async def apply_stream(db: Session, request: ai_schema.AiApplyRequest) -> Stream
             raw = "".join(raw_parts)
             stg = "parsing"
             yield ev("status", {"stage": stg, "stage_index": stage_index(stg), "stage_total": STAGE_TOTAL, "percent": stage_percent(stg)})
+            yield ": ping\n\n"
 
             # Parse items
             items: list[dict] = []
@@ -290,6 +298,7 @@ async def apply_stream(db: Session, request: ai_schema.AiApplyRequest) -> Stream
 
             stg = "merging"
             yield ev("status", {"stage": stg, "stage_index": stage_index(stg), "stage_total": STAGE_TOTAL, "percent": stage_percent(stg)})
+            yield ": ping\n\n"
             merged = merge_rects(rects)
 
             # Filter then stage
@@ -297,10 +306,12 @@ async def apply_stream(db: Session, request: ai_schema.AiApplyRequest) -> Stream
             min_conf = float(getattr(core_defaults, 'AI_MIN_CONFIDENCE', 0.0))
             stg = "filtering"
             yield ev("status", {"stage": stg, "stage_index": stage_index(stg), "stage_total": STAGE_TOTAL, "percent": stage_percent(stg)})
+            yield ": ping\n\n"
             filtered = [r for r in merged if (float(r.confidence) if r.confidence is not None else 0.0) >= min_conf]
 
             stg = "staging"
             yield ev("status", {"stage": stg, "stage_index": stage_index(stg), "stage_total": STAGE_TOTAL, "percent": stage_percent(stg, staging_created=0, staging_total=len(filtered))})
+            yield ": ping\n\n"
             created = 0
             total = len(filtered)
             for r in filtered:
@@ -316,19 +327,29 @@ async def apply_stream(db: Session, request: ai_schema.AiApplyRequest) -> Stream
                     ))
                     created += 1
                     yield ev("staging_progress", {"created": created, "total": total, "percent": stage_percent("staging", staging_created=created, staging_total=total)})
+                    yield ": ping\n\n"
                 except Exception:
                     continue
 
             yield ev("summary", {"returned": len(merged), "filtered_out": len(merged) - created, "staged": created, "min_confidence": min_conf})
             stg = "done"
             yield ev("status", {"stage": stg, "stage_index": stage_index(stg), "stage_total": STAGE_TOTAL, "percent": stage_percent(stg)})
+            yield ": ping\n\n"
             yield ev("completed", {"ok": True})
         except Exception as e:
             logger.exception("apply_stream failed")
             yield ev("error", {"message": str(e)})
             return
 
-    return StreamingResponse(sse_gen(), media_type="text/event-stream")
+    return StreamingResponse(
+        sse_gen(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 async def apply_project_stream(db: Session, request: ai_schema.AiApplyProjectRequest) -> StreamingResponse:
@@ -348,6 +369,9 @@ async def apply_project_stream(db: Session, request: ai_schema.AiApplyProjectReq
         def ev(event: str, data: dict) -> str:
             return f"event: {event}\ndata: {json.dumps(data)}\n\n"
         try:
+            # Retry hint and initial heartbeat for SSE stability
+            yield "retry: 5000\n\n"
+            yield ": ping\n\n"
             # Fetch documents for project
             docs = documents_crud.search(
                 db=db,
@@ -359,17 +383,20 @@ async def apply_project_stream(db: Session, request: ai_schema.AiApplyProjectReq
             )
             total_docs = len(docs)
             yield ev("project_init", {"total_documents": total_docs})
+            yield ": ping\n\n"
             processed = 0
 
             for idx, doc in enumerate(docs, start=1):
                 did = UUID(str(doc.id))
                 yield ev("project_doc_start", {"index": idx, "document_id": str(did)})
+                yield ": ping\n\n"
 
                 committed_prompts = [p for p in doc.prompts if getattr(p, "state", None) == CommitState.COMMITTED]
                 if not committed_prompts:
                     yield ev("project_doc_summary", {"document_id": str(did), "returned": 0, "filtered_out": 0, "staged": 0, "min_confidence": 0.0})
                     processed += 1
                     yield ev("project_progress", {"processed": processed, "total": total_docs})
+                    yield ": ping\n\n"
                     continue
 
                 # Compose prompt
@@ -411,6 +438,7 @@ async def apply_project_stream(db: Session, request: ai_schema.AiApplyProjectReq
 
                 # generating
                 yield ev("status", {"stage": "request_sent", "stage_index": stage_index("request_sent"), "stage_total": STAGE_TOTAL, "percent": stage_percent("request_sent"), "document_id": str(did)})
+                yield ": ping\n\n"
                 token_chars = 0
                 raw_parts: list[str] = []
                 try:
@@ -431,6 +459,7 @@ async def apply_project_stream(db: Session, request: ai_schema.AiApplyProjectReq
 
                 raw = "".join(raw_parts)
                 yield ev("status", {"stage": "parsing", "stage_index": stage_index("parsing"), "stage_total": STAGE_TOTAL, "percent": stage_percent("parsing"), "document_id": str(did)})
+                yield ": ping\n\n"
 
                 # Parse
                 items: list[dict] = []
@@ -465,14 +494,17 @@ async def apply_project_stream(db: Session, request: ai_schema.AiApplyProjectReq
                         continue
 
                 yield ev("status", {"stage": "merging", "stage_index": stage_index("merging"), "stage_total": STAGE_TOTAL, "percent": stage_percent("merging"), "document_id": str(did)})
+                yield ": ping\n\n"
                 merged = merge_rects(rects)
 
                 from backend.core import defaults as core_defaults
                 min_conf = float(getattr(core_defaults, 'AI_MIN_CONFIDENCE', 0.0))
                 yield ev("status", {"stage": "filtering", "stage_index": stage_index("filtering"), "stage_total": STAGE_TOTAL, "percent": stage_percent("filtering"), "document_id": str(did)})
+                yield ": ping\n\n"
                 filtered = [r for r in merged if (float(r.confidence) if r.confidence is not None else 0.0) >= min_conf]
 
                 yield ev("status", {"stage": "staging", "stage_index": stage_index("staging"), "stage_total": STAGE_TOTAL, "percent": stage_percent("staging", staging_created=0, staging_total=len(filtered)), "document_id": str(did)})
+                yield ": ping\n\n"
                 created = 0
                 total = len(filtered)
                 for r in filtered:
@@ -488,12 +520,14 @@ async def apply_project_stream(db: Session, request: ai_schema.AiApplyProjectReq
                         ))
                         created += 1
                         yield ev("staging_progress", {"created": created, "total": total, "percent": stage_percent("staging", staging_created=created, staging_total=total), "document_id": str(did)})
+                        yield ": ping\n\n"
                     except Exception:
                         continue
 
                 yield ev("project_doc_summary", {"document_id": str(did), "returned": len(merged), "filtered_out": len(merged) - created, "staged": created, "min_confidence": min_conf})
                 processed += 1
                 yield ev("project_progress", {"processed": processed, "total": total_docs})
+                yield ": ping\n\n"
 
             yield ev("completed", {"ok": True})
         except Exception as e:
@@ -501,5 +535,13 @@ async def apply_project_stream(db: Session, request: ai_schema.AiApplyProjectReq
             yield ev("error", {"message": str(e)})
             return
 
-    return StreamingResponse(sse_gen(), media_type="text/event-stream")
+    return StreamingResponse(
+        sse_gen(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
