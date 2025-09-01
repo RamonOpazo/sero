@@ -25,9 +25,26 @@ Phase 2 — Fold selection loading into SelectionProvider
 - [x] Adjust DocumentViewer entry (index.tsx) to stop calling useSelectionLoader
 
 Phase 3 — Dialog access (optional, recommended)
-- [ ] Centralize dialogs within a single owner/provider (or Actions Layer)
-- [ ] Expose dialog controls via hooks (e.g., useRuleDialogs) instead of re-implementing forms
-- [ ] Update empty states/menus to call hooks (no duplication of dialog logic)
+
+Objectives
+- Single source of truth for dialogs (no duplicate inline dialogs)
+- Open dialogs via hooks; UI surfaces (menus, empty states) just call hooks
+- Keep forms and validation in one place
+
+Plan
+- [ ] Introduce Dialogs ownership (choose one):
+  - [ ] A lightweight DialogsProvider mounted in UnifiedDocumentViewerProvider
+  - [ ] Or extend existing ActionsLayer to own dialogs but expose control via a context/hook
+- [ ] Expose hooks:
+  - [ ] useRuleDialogs: { openAddRuleDialog, openEditRuleDialog(id), openClearAllRulesDialog }
+  - [ ] useSelectionDialogs (optional): { openStageAllDialog, openCommitAllDialog, openClearPageDialog, openClearAllDialog }
+- [ ] Refactor callers:
+  - [ ] PromptList empty-state uses useRuleDialogs().openAddRuleDialog
+  - [ ] Menus (actions-config) invoke dialog hooks via useActions or direct hooks
+  - [ ] Remove duplicated FormConfirmationDialog usages from scattered components
+- [ ] Acceptance criteria:
+  - [ ] No component duplicates rule creation/clear dialogs
+  - [ ] Hooks are the only way to trigger dialogs; actual dialog implementations are centralized
 
 Architecture outcomes
 - Domain hooks only: useSelections, usePrompts, useViewportState/useViewportActions, useActions
