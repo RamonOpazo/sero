@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ZoomIn, ZoomOut, Scan, Info, Pen, PenOff, ChevronLeft, ChevronRight, Eye, EyeClosed, MousePointerClick, Bot } from "lucide-react";
+import { ZoomIn, ZoomOut, Scan, Info, Pen, PenOff, ChevronLeft, ChevronRight, Eye, EyeClosed, MousePointerClick, Bot, Hand, Grab } from "lucide-react";
 import { useViewportState, useViewportActions } from '../providers/viewport-provider';
 import type { MinimalDocumentType } from "@/types";
 import { Menubar, MenubarMenu, MenubarTrigger, MenubarContent, MenubarItem, MenubarSeparator, MenubarSub, MenubarSubTrigger, MenubarSubContent, MenubarLabel, MenubarShortcut } from "@/components/ui/menubar";
@@ -122,7 +122,7 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
       };
     }
 
-    return () => {};
+    return () => { };
   }, []);
 
   return (
@@ -229,6 +229,19 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
             <Button variant="ghost" size="icon" onClick={handleZoomOut}><ZoomOut /></Button>
             <Button variant="ghost" size="icon" onClick={handleZoomIn}><ZoomIn /></Button>
             <Button variant="ghost" size="icon" onClick={handleResetView}><Scan /></Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleModeToggle}
+              title={mode === 'pan' ? 'Switch to Select' : 'Switch to Pan'}
+            >
+              {mode === 'pan' ? <Grab /> : <Hand />}
+            </Button>
+          </div>
+
+          <Separator orientation="vertical" />
+
+          <div className="flex flex-row gap-0">
             <Button variant="ghost" size="icon" onClick={toggleSelections} title={showSelections ? "Hide selections" : "Show selections"}>{showSelections ? <Pen /> : <PenOff />}</Button>
             <Button
               variant="ghost"
@@ -246,6 +259,11 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
             >
               {isViewingProcessedDocument ? <EyeClosed /> : <Eye />}
             </Button>
+          </div>
+
+          <Separator orientation="vertical" />
+
+          <div className="flex flex-row gap-0">
             {onToggleInfo && (
               <Button variant="ghost" size="icon" onClick={onToggleInfo} className={isInfoVisible ? 'bg-accent text-accent-foreground' : ''} title="Toggle info"><Info /></Button>
             )}
