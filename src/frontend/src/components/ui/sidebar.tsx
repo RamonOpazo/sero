@@ -158,7 +158,7 @@ function Sidebar({
   ...props
 }: React.ComponentProps<"div"> & {
   side?: "left" | "right"
-  variant?: "sidebar" | "floating" | "inset" | "grid"
+  variant?: "sidebar" | "floating" | "inset"
   collapsible?: "offcanvas" | "icon" | "none"
 }) {
   const { isMobile, state, openMobile, setOpenMobile } = useSidebar()
@@ -200,25 +200,6 @@ function Sidebar({
           <div className="flex h-full w-full flex-col">{children}</div>
         </SheetContent>
       </Sheet>
-    )
-  }
-
-  if (variant === "grid") {
-    return (
-      <div
-        className={cn(
-          "block grid-cols-1 will-change-width transform-translateZ-0",
-          state === "collapsed" ? "w-[3rem]" : "w-[16rem]"
-        )}
-      >
-        <div
-          data-sidebar="sidebar"
-          data-slot="sidebar-inner"
-          className="bg-sidebar flex h-full w-full flex-col transition-all duration-200 ease-linear"
-        >
-          {children}
-        </div>
-      </div>
     )
   }
 

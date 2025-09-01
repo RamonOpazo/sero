@@ -33,7 +33,6 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
     setCurrentPage,
     setMode,
     showSelections,
-    dispatch,
     isViewingProcessedDocument,
     activeWorkbenchTab,
     setActiveWorkbenchTab,
@@ -72,24 +71,17 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
   const [showAddPromptDialog, setShowAddPromptDialog] = useState(false);
   const [showClearAllPromptsDialog, setShowClearAllPromptsDialog] = useState(false);
 
-  // Compatibility function for setShowSelections
-  const setShowSelections = (show: boolean) => {
-    dispatch({ type: 'SET_SHOW_SELECTIONS', payload: show });
-  };
-
   const handleModeToggle = () => {
     if (mode === "pan") {
       setMode("select");
-      setShowSelections(true);
     } else {
       setMode("pan");
-      setShowSelections(false);
     }
   };
 
   const handleResetView = () => {
     resetView();
-    setMode("pan");
+    // setMode("pan");
   }
 
   // Zoom controls

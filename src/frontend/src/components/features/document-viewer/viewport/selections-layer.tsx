@@ -10,7 +10,7 @@ import { useSelections } from '../providers/selections-provider';
 import { useViewportState } from '../providers/viewport-provider';
 import type { Selection, SelectionCreateDraft } from '../types/viewer';
 import { getNormalizedSelectionState } from '../utils';
-import SelectionBox from '@/components/shared/selection-box';
+import { SelectionBox } from '@/components/shared/selection-box';
 
 type Corner = 'nw' | 'ne' | 'sw' | 'se';
 
