@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { MinimalDocumentType } from "@/types";
 import { toast } from "sonner";
 import { useViewportState } from "../providers/viewport-provider";
@@ -11,6 +11,7 @@ import { EditorAPI } from "@/lib/editor-api";
 
 export function useDocumentActions(document: MinimalDocumentType) {
   const {
+    document: liveDocument,
     currentPage,
     numPages,
     isViewingProcessedDocument,
@@ -27,6 +28,12 @@ export function useDocumentActions(document: MinimalDocumentType) {
   const [isApplyingAI, setIsApplyingAI] = useState(false);
   const [isProcessingDoc, setIsProcessingDoc] = useState(false);
 
+  // Track redacted load to avoid repeated network requests
+  const redactedLoad = useRef<{ inFlight: boolean; loaded: boolean }>({ inFlight: false, loaded: Boolean((liveDocument as any)?.redacted_file) });
+  useEffect(() => {
+    redactedLoad.current.loaded = Boolean((liveDocument as any)?.redacted_file);
+  }, [liveDocument?.redacted_file]);
+
   // Explicit view switches
   const viewOriginal = useCallback(() => {
     if (!isViewingProcessedDocument) return;
@@ -36,26 +43,35 @@ export function useDocumentActions(document: MinimalDocumentType) {
   const viewRedacted = useCallback(async () => {
     if (isViewingProcessedDocument) return;
     // If we already have a redacted file pointer, just switch
-    if (document.redacted_file) {
+    if (liveDocument?.redacted_file) {
       dispatch({ type: 'SET_VIEWING_PROCESSED', payload: true });
+      redactedLoad.current.loaded = true;
       return;
     }
-    // Try to fetch the redacted file if it exists server-side
-    const redacted = await EditorAPI.loadRedactedFile(document.id);
-    if (!redacted.ok) {
-      toast.info('No redacted file available', { description: 'Process the document first to generate it.' });
-      return;
+    // Avoid spamming the server if a previous request is in flight or we already loaded successfully
+    if (redactedLoad.current.inFlight || redactedLoad.current.loaded) return;
+    redactedLoad.current.inFlight = true;
+    try {
+      // Try to fetch the redacted file if it exists server-side
+      const redacted = await EditorAPI.loadRedactedFile(liveDocument?.id ?? document.id);
+      if (!redacted.ok) {
+        toast.info('No redacted file available', { description: 'Process the document first to generate it.' });
+        return;
+      }
+      const redFile = redacted.value.file as any;
+      const redBlob = redacted.value.blob;
+      dispatch({ type: 'SET_VOLATILE_BLOB', payload: { blob: redBlob, forProcessed: true } });
+      const baseFiles = Array.isArray((liveDocument as any)?.files) ? [...(liveDocument as any).files] : [];
+      const filtered = baseFiles.filter((f: any) => f.file_type !== 'redacted');
+      filtered.push({ ...redFile, blob: redBlob });
+      const nextDoc: MinimalDocumentType = { ...(liveDocument as any), redacted_file: redFile, files: filtered } as any;
+      dispatch({ type: 'SET_DOCUMENT', payload: nextDoc });
+      dispatch({ type: 'SET_VIEWING_PROCESSED', payload: true });
+      redactedLoad.current.loaded = true;
+    } finally {
+      redactedLoad.current.inFlight = false;
     }
-    const redFile = redacted.value.file as any;
-    const redBlob = redacted.value.blob;
-    dispatch({ type: 'SET_VOLATILE_BLOB', payload: { blob: redBlob, forProcessed: true } });
-    const nextFiles = Array.isArray((document as any).files) ? [...(document as any).files] : [];
-    const filtered = nextFiles.filter((f: any) => f.file_type !== 'redacted');
-    filtered.push({ ...redFile, blob: redBlob });
-    const nextDoc: MinimalDocumentType = { ...(document as any), redacted_file: redFile, files: filtered } as any;
-    dispatch({ type: 'SET_DOCUMENT', payload: nextDoc });
-    dispatch({ type: 'SET_VIEWING_PROCESSED', payload: true });
-  }, [dispatch, document, isViewingProcessedDocument]);
+  }, [dispatch, document, liveDocument, isViewingProcessedDocument]);
 
   // Toggle after explicit views so we avoid TDZ
   const toggleProcessedView = useCallback(() => {
@@ -64,7 +80,7 @@ export function useDocumentActions(document: MinimalDocumentType) {
       viewOriginal();
     } else {
       // Switch to redacted view, attempting to load it if necessary
-      void viewRedacted();
+      if (!redactedLoad.current.inFlight) void viewRedacted();
     }
   }, [isViewingProcessedDocument, viewOriginal, viewRedacted]);
 

@@ -562,10 +562,16 @@ export function SelectionsProvider({ children, documentId, initialSelections }: 
     return filtered.filter(s => s.page_number == null || s.page_number === page) as readonly Selection[];
   }, [templateSelections]);
   
+  // Keep stable refs to avoid re-running effect on every state change
+  const reloadRef = useRef(reload);
+  const reloadTplRef = useRef(reloadTemplateSelections);
+  useEffect(() => { reloadRef.current = reload; reloadTplRef.current = reloadTemplateSelections; }, [reload, reloadTemplateSelections]);
+
   // Auto-load selections and template selections on mount and when document changes
   useEffect(() => {
-    void (async () => { await reload(); await reloadTemplateSelections(); })();
-  }, [documentId, reload, reloadTemplateSelections]);
+    void (async () => { await reloadRef.current(); await reloadTplRef.current(); })();
+    // We intentionally depend only on documentId to avoid loops from changing function identities
+  }, [documentId]);
   
   // ========================================
   // EVENT CALLBACKS
