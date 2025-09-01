@@ -7,22 +7,7 @@
  * - Document coordinates (normalized 0-1 space)
  */
 
-export interface Point {
-  x: number;
-  y: number;
-}
-
-export interface ViewerTransform {
-  pan: Point;
-  zoom: number;
-}
-
-export interface ViewportBounds {
-  left: number;
-  top: number;
-  width: number;
-  height: number;
-}
+import type { Point, ViewerTransform, ViewportBounds } from "../types/viewer";
 
 /**
  * Convert screen coordinates to viewport coordinates

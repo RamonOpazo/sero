@@ -7,23 +7,8 @@
 import React, { useReducer, useCallback, useMemo, createContext, useContext } from 'react';
 import { type MinimalDocumentType } from '@/types';
 
-// Basic types for viewport state
-export type ViewerMode = 'pan' | 'select';
-
-export interface Point {
-  x: number;
-  y: number;
-}
-
-export interface ViewerTransform {
-  pan: Point;
-  zoom: number;
-}
-
-export interface DocumentSize {
-  width: number;
-  height: number;
-}
+// Basic types for viewport state (shared)
+import type { ViewerMode, Point, ViewerTransform, DocumentSize } from "../types/viewer";
 
 export interface NavigationState {
   currentPage: number;

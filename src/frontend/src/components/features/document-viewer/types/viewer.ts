@@ -5,9 +5,6 @@
 
 import { type SelectionCreateType, type SelectionType } from '@/types';
 
-// Re-export SelectionCreateType for internal use
-export type { SelectionCreateType };
-
 // Local draft type (frontend-only) where state can be omitted until staged
 export type SelectionCreateDraft = Omit<SelectionCreateType, 'state'> & { state?: SelectionType['state'] };
 
