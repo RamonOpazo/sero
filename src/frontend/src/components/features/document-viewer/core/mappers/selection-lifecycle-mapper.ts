@@ -1,8 +1,8 @@
 // Mapper utilities to convert between API Selection and UISelection lifecycle model
 
 import type { SelectionCreateType } from "@/types";
-import type { Selection } from "../types/viewer";
-import { UISelectionStage, type UISelection } from "../types/selection-lifecycle";
+import type { Selection } from "../../types/viewer";
+import { UISelectionStage, type UISelection } from "../../types/selection-lifecycle";
 
 export function fromApiSelection(sel: Selection): UISelection {
   const state = (sel as any).state as string | undefined;

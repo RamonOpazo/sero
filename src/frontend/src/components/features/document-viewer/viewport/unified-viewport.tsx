@@ -1,16 +1,16 @@
 import React, { useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { useThrottle } from '@/lib/hooks/use-throttle';
-import { useViewportState } from '../../providers/viewport-provider';
-import { useSelections } from '../../providers/selections-provider';
-import { useKeyboardHandler, useWheelHandler, useMouseButtonHandlers } from './input';
+import { useViewportState } from '../providers/viewport-provider';
+import { useSelections } from '../providers/selections-provider';
+import { useKeyboardHandler, useWheelHandler, useMouseButtonHandlers } from '../input';
 
-interface UnifiedViewportProps {
+interface ViewportProps {
   children: React.ReactNode,
   className?: string,
 }
 
-export function UnifiedViewport({ children, className, }: UnifiedViewportProps) {
+export function Viewport({ children, className, }: ViewportProps) {
   // Get viewport state from minimal system
   const {
     zoom,
@@ -122,4 +122,4 @@ export function UnifiedViewport({ children, className, }: UnifiedViewportProps) 
   );
 }
 
-export default UnifiedViewport;
+export default Viewport;

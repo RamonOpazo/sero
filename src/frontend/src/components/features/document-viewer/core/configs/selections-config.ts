@@ -7,7 +7,7 @@
 
 import type { DomainManagerConfig, ApiAdapter, DataTransforms as ApiTransforms, ItemComparators as Comparators } from '@/lib/domain-manager';
 import { DocumentViewerAPI } from '@/lib/document-viewer-api';
-import type { Selection } from '../types/viewer';
+import type { Selection } from '../../types/viewer';
 import type { SelectionType, SelectionCreateType } from '@/types';
 
 // =============================================================================
@@ -399,5 +399,5 @@ export const selectionDomainConfig: DomainManagerConfig<Selection, Omit<Selectio
 
 export type SelectionDomainManager = ReturnType<typeof import('@/lib/domain-manager').createDomainManager<Selection, Omit<SelectionCreateType, 'document_id'>>>;
 
-export { type Selection } from '../types/viewer';
+export { type Selection } from '../../types/viewer';
 export type { SelectionType, SelectionCreateType } from '@/types';

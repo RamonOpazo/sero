@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useLayoutEffect } from "react";
 import { Document, Page } from "react-pdf";
 import { type MinimalDocumentType } from "@/types";
-import { useViewportState } from '../../providers/viewport-provider';
+import { useViewportState } from '../providers/viewport-provider';
 
 type Props = {
   document: MinimalDocumentType; // initial snapshot; live doc comes from viewport state

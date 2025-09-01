@@ -2,16 +2,16 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { MoreVertical, Trash2, MousePointer2, Globe, Hash, Settings, Telescope, Bot, RotateCcw, GitCommitVertical, GitPullRequestCreateArrow } from "lucide-react";
-import { useSelections } from "../../providers/selections-provider";
-import { useViewportState } from "../../providers/viewport-provider";
+import { useSelections } from "../providers/selections-provider";
+import { useViewportState } from "../providers/viewport-provider";
 import { useMemo, useRef, useEffect, useState, useCallback } from "react";
 import { FormConfirmationDialog } from "@/components/shared";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import type { TypedMessage } from "@/components/shared/typed-confirmation-dialog";
 import { SimpleConfirmationDialog } from "@/components/shared/simple-confirmation-dialog";
-import { CONVERT_TO_STAGED_DIALOG } from "./dialog-text";
-import type { Selection } from "../../types/viewer";
-import { getNormalizedSelectionState } from "../../utils";
+import { CONVERT_TO_STAGED_DIALOG } from "../core/configs/dialogs-config";
+import type { Selection } from "../types/viewer";
+import { getNormalizedSelectionState } from "../utils";
 import { useWorkspace } from "@/providers/workspace-provider";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
@@ -252,7 +252,7 @@ function SelectionItem({
   );
 }
 
-export default function SelectionList() {
+export default function SelectionsListing() {
   const {
     selectedSelection,
     selectSelection,

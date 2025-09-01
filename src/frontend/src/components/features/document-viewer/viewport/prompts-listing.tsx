@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, Bot, MoreVertical, Settings, Trash2, GitCommitVertical, GitPullRequestCreateArrow, Search, EyeOff, Bookmark, Ban, Wand2, AlertTriangle, AlertCircle, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { usePrompts } from "../../providers/prompts-provider";
+import { usePrompts } from "../providers/prompts-provider";
 import { toast } from "sonner";
 import { useMemo, useState } from "react";
 import type { PromptType, PromptCreateType } from "@/types";
@@ -17,7 +17,7 @@ type Props = {
   onEditPrompt?: (promptId: string) => void,
 };
 
-export default function PromptList({ onEditPrompt }: Props) {
+export default function PromptListing({ onEditPrompt }: Props) {
   const {
     state,
     deletePrompt,

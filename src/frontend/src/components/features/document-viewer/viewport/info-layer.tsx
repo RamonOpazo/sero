@@ -1,11 +1,11 @@
 import { useCallback, useMemo } from 'react';
 import type { ClassName } from "react-pdf/dist/shared/types.js"
 import { type MinimalDocumentType } from "@/types";
-import { useViewportState } from '../../providers/viewport-provider';
-import { useSelections } from '../../providers/selections-provider';
-import { usePrompts } from '../../providers/prompts-provider';
+import { useViewportState } from '../providers/viewport-provider';
+import { useSelections } from '../providers/selections-provider';
+import { usePrompts } from '../providers/prompts-provider';
 import { cn } from '@/lib/utils';
-import { UISelectionStage } from '../../types/selection-lifecycle';
+import { UISelectionStage } from '../types/selection-lifecycle';
 
 type Props = {
   document: MinimalDocumentType;

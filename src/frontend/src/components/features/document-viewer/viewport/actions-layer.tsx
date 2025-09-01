@@ -1,23 +1,23 @@
 import { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ZoomIn, ZoomOut, Scan, Info, Pen, PenOff, ChevronLeft, ChevronRight, Eye, EyeClosed } from "lucide-react";
-import { useViewportState, useViewportActions } from '../../providers/viewport-provider';
+import { useViewportState, useViewportActions } from '../providers/viewport-provider';
 import type { MinimalDocumentType } from "@/types";
 import { Menubar, MenubarMenu, MenubarTrigger, MenubarContent, MenubarItem, MenubarSeparator, MenubarSub, MenubarSubTrigger, MenubarSubContent, MenubarLabel, MenubarShortcut } from "@/components/ui/menubar";
 import { TypedConfirmationDialog } from "@/components/shared/typed-confirmation-dialog";
 import type { TypedMessage } from "@/components/shared/typed-confirmation-dialog";
-import { useSelections } from "../../providers/selections-provider";
-import { useStageCommit } from "../../hooks/use-stage-commit";
+import { useSelections } from "../providers/selections-provider";
+import { useStageCommit } from "../hooks/use-stage-commit";
 import { toast } from "sonner";
 import { SimpleConfirmationDialog } from "@/components/shared/simple-confirmation-dialog/simple-confirmation-dialog";
 import { FormConfirmationDialog } from "@/components/shared";
-import { usePrompts } from "../../providers/prompts-provider";
+import { usePrompts } from "../providers/prompts-provider";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
-import { useDocumentActions } from "../../hooks/use-document-actions";
+import { useDocumentActions } from "../hooks/use-document-actions";
 import { DocumentViewerAPI } from "@/lib/document-viewer-api";
-import { buildActionsMenuConfig, type MenuItem, type MenuNode } from "../../core/actions-config";
-import { useZoomControls } from "../../hooks/use-zoom-controls";
+import { buildActionsMenuConfig, type MenuItem, type MenuNode } from "../core/configs/actions-config";
+import { useZoomControls } from "../hooks/use-zoom-controls";
 
 interface ActionsLayerProps {
   document: MinimalDocumentType;

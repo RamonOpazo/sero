@@ -5,7 +5,7 @@
  */
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { createPromptManager, type PromptType } from '../core/prompt-manager';
+import { createPromptManager, type PromptType } from '../core/managers/prompt-manager';
 import type { Result } from '@/lib/result';
 
 interface PromptsContextValue {

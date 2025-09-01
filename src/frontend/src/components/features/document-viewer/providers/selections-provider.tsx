@@ -6,11 +6,11 @@
  */
 
 import React, { createContext, useContext, useEffect, useState, useRef, useMemo, useCallback } from 'react';
-import { createSelectionManager, type SelectionDomainManager, type Selection, type SelectionCreateType } from '../core/selection-manager';
+import { createSelectionManager, type SelectionDomainManager, type Selection, type SelectionCreateType } from '../core/managers/selection-manager';
 import type { SelectionCreateDraft } from '../types/viewer';
 import type { Result } from '@/lib/result';
 import { DocumentViewerAPI } from '@/lib/document-viewer-api';
-import { fromApiSelection } from '../core/selection-lifecycle-mapper';
+import { fromApiSelection } from '../core/mappers/selection-lifecycle-mapper';
 import { UISelectionStage, type UISelection } from '../types/selection-lifecycle';
 
 // =============================================================================

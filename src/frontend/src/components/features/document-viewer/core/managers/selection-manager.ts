@@ -6,7 +6,7 @@
  */
 
 import { createDomainManager } from '@/lib/domain-manager';
-import { selectionDomainConfig, type SelectionDomainManager, type Selection } from './selection-config';
+import { selectionDomainConfig, type SelectionDomainManager, type Selection } from '../configs/selections-config';
 
 // =============================================================================
 // FACTORY FUNCTION
@@ -49,5 +49,5 @@ export function createSelectionManager(
 // TYPE EXPORTS
 // =============================================================================
 
-export type { SelectionDomainManager, Selection } from './selection-config';
+export type { SelectionDomainManager, Selection } from '../configs/selections-config';
 export type { SelectionCreateType } from '@/types';

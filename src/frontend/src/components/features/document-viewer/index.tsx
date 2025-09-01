@@ -1,5 +1,5 @@
 import { DocumentViewerProvider } from "./providers";
-import DocumentViewerLayout from "./components/layouts/main-layout";
+import { ViewportLayout } from "./viewport";
 import { type MinimalDocumentType } from "@/types";
 
 type DocumentViewerProps = {
@@ -9,7 +9,7 @@ type DocumentViewerProps = {
 // Internal component that loads selections and renders the layout
 function DocumentViewerContent({ document }: { document: MinimalDocumentType }) {
   // SelectionProvider now loads selections on mount (no explicit loader hook needed)
-  return <DocumentViewerLayout document={document} />;
+  return <ViewportLayout document={document} />;
 }
 
 /**
@@ -48,9 +48,6 @@ export { DocumentViewer };
 // =============================================================================
 // RE-EXPORTS FOR PUBLIC API
 // =============================================================================
-
-// Components (organized by category)
-export * from "./components";
 
 // Providers and state management
 export * from "./providers";
