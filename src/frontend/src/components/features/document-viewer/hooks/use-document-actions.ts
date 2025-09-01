@@ -9,7 +9,7 @@ import { DocumentViewerAPI } from "@/lib/document-viewer-api";
 import { DocumentsAPI } from "@/lib/documents-api";
 import { EditorAPI } from "@/lib/editor-api";
 
-export function useActions(document: MinimalDocumentType) {
+export function useDocumentActions(document: MinimalDocumentType) {
   const {
     currentPage,
     numPages,

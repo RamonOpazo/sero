@@ -14,7 +14,7 @@ import { FormConfirmationDialog } from "@/components/shared";
 import { usePrompts } from "../../providers/prompts-provider";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
-import { useActions } from "../../hooks/use-actions";
+import { useDocumentActions } from "../../hooks/use-document-actions";
 import { DocumentViewerAPI } from "@/lib/document-viewer-api";
 import { buildActionsMenuConfig, type MenuItem, type MenuNode } from "../../core/actions-config";
 import { MiniPager } from "./mini-pager";
@@ -59,7 +59,7 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
 
   // Prompts and AI hooks
   const { load, save, createPrompt } = usePrompts() as any;
-  const actions = useActions(document);
+  const actions = useDocumentActions(document);
 
   // Dialog state
   const [showStageDialog, setShowStageDialog] = useState(false);

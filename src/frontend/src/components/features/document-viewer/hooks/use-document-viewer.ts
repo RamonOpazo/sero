@@ -1,22 +1,20 @@
 import { useViewportState, useViewportActions } from "../providers/viewport-provider";
 import { useSelections } from "../providers/selections-provider";
 import { usePrompts } from "../providers/prompts-provider";
-import type { MinimalDocumentType } from "@/types";
-import { useActions } from "./use-actions";
 
-// Canonical composed hook (alias of previous useViewer)
-export function useDocumentViewer(document?: MinimalDocumentType) {
+/**
+ * Composed hook for document viewer state (no cross-domain commands)
+ */
+export function useDocumentViewer() {
   const viewportState = useViewportState();
   const viewportActions = useViewportActions();
   const selections = useSelections();
   const prompts = usePrompts();
-  const actions = document ? useActions(document) : null;
 
   return {
     viewport: { ...viewportState, ...viewportActions },
     selections,
     prompts,
-    actions,
   } as const;
 }
 
