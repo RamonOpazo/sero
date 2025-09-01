@@ -47,9 +47,14 @@ Plan
   - [ ] Hooks are the only way to trigger dialogs; actual dialog implementations are centralized
 
 Architecture outcomes
-- Domain hooks only: useSelections, usePrompts, useViewportState/useViewportActions, useActions
-- Composition hook: useViewer (returns composed shape for quick consumers)
-- Unified provider remains the canonical entry point
+- Single source of truth per domain:
+  - SelectionProvider owns selection state, loading, mutations
+  - PromptProvider owns prompt state, loading, mutations
+  - ViewportProvider owns viewport state and commands
+  - DialogsProvider (Phase 3) owns dialog visibility/state
+- Domain hooks are thin facades over providers: useSelections, usePrompts, useViewportState/useViewportActions, useActions
+- Composition hook: useDocumentViewer (preferred) with useViewer as temporary alias
+- Unified provider remains the canonical entry point (composes all providers)
 
 Notes
 - Keep changes incremental and backwards-compatible per phase.
