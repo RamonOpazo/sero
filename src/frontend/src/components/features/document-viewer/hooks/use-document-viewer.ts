@@ -1,6 +1,6 @@
 import { useViewportState, useViewportActions } from "../providers/viewport-provider";
-import { useSelections } from "../providers/selection-provider";
-import { usePrompts } from "../providers/prompt-provider";
+import { useSelections } from "../providers/selections-provider";
+import { usePrompts } from "../providers/prompts-provider";
 import type { MinimalDocumentType } from "@/types";
 import { useActions } from "./use-actions";
 

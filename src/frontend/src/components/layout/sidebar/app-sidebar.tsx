@@ -1,7 +1,7 @@
 import * as React from "react"
 import { BookOpen, Home, SquareTerminal, Settings, Code } from "lucide-react"
 import { AppNavigation, UserMenu } from "@/components/layout/navigation"
-import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarRail, SidebarMenu, SidebarMenuItem, useSidebar } from "@/components/ui-extensions/sidebar"
+import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarRail, SidebarMenu, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar"
 import { Logo } from "@/components/shared"
 import { cn } from "@/lib/utils"
 import { getDocs } from "@/utils/markdown"
@@ -69,7 +69,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   }
 
   return (
-    <Sidebar collapsible="icon" {...props}>
+    <Sidebar variant="grid" collapsible="icon" {...props}>
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>

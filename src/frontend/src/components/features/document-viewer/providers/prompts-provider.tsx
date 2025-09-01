@@ -8,7 +8,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 import { createPromptManager, type PromptType } from '../core/prompt-manager';
 import type { Result } from '@/lib/result';
 
-interface PromptContextValue {
+interface PromptsContextValue {
   state: ReturnType<ReturnType<typeof createPromptManager>['getState']>;
   dispatch: ReturnType<typeof createPromptManager>['dispatch'];
 
@@ -32,15 +32,15 @@ interface PromptContextValue {
   pendingChanges: { creates: readonly PromptType[]; updates: readonly PromptType[]; deletes: readonly PromptType[] };
 }
 
-const PromptContext = createContext<PromptContextValue | null>(null);
+const PromptsContext = createContext<PromptsContextValue | null>(null);
 
-interface PromptProviderProps {
+interface PromptsProviderProps {
   children: React.ReactNode;
   documentId: string;
   initialPrompts?: PromptType[];
 }
 
-export function PromptProvider({ children, documentId, initialPrompts }: PromptProviderProps) {
+export function PromptsProvider({ children, documentId, initialPrompts }: PromptsProviderProps) {
   const managerRef = useRef<ReturnType<typeof createPromptManager> | null>(null);
   const currentId = useRef<string>(documentId);
 
@@ -106,7 +106,7 @@ export function PromptProvider({ children, documentId, initialPrompts }: PromptP
   const pendingChangesCount = useMemo(() => manager.getPendingChangesCount(), [manager, state]);
   const pendingChanges = useMemo(() => manager.getPendingChanges(), [manager, state]);
 
-  const value: PromptContextValue = useMemo(() => ({
+  const value: PromptsContextValue = useMemo(() => ({
     state,
     dispatch,
     createPrompt,
@@ -123,17 +123,14 @@ export function PromptProvider({ children, documentId, initialPrompts }: PromptP
   }), [state, dispatch, createPrompt, updatePrompt, deletePrompt, load, save, clearAll, discardAllChanges, allPrompts, hasUnsavedChanges, pendingChangesCount, pendingChanges]);
 
   return (
-    <PromptContext.Provider value={value}>
+    <PromptsContext.Provider value={value}>
       {children}
-    </PromptContext.Provider>
+    </PromptsContext.Provider>
   );
 }
 
 export function usePrompts() {
-  const ctx = useContext(PromptContext);
+  const ctx = useContext(PromptsContext);
   if (!ctx) throw new Error('usePrompts must be used within a PromptProvider');
   return ctx;
 }
-
-export default PromptProvider;
-

@@ -2,8 +2,8 @@ import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 import type { TypedMessage } from "@/components/shared/typed-confirmation-dialog";
 import type { PromptType } from "@/types";
-import { useSelections } from "../providers/selection-provider";
-import { usePrompts } from "../providers/prompt-provider";
+import { useSelections } from "../providers/selections-provider";
+import { usePrompts } from "../providers/prompts-provider";
 import { UISelectionStage } from "../types/selection-lifecycle";
 import { DocumentViewerAPI } from "@/lib/document-viewer-api";
 

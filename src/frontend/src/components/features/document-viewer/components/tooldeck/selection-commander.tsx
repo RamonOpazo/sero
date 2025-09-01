@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { RotateCcw, AlertCircle, Trash2, FileX, Undo2, Save, CheckCheck } from "lucide-react";
 import { useViewportState } from "../../providers/viewport-provider";
-import { useSelections } from "../../providers/selection-provider";
+import { useSelections } from "../../providers/selections-provider";
 import { toast } from "sonner";
 import { useState, useCallback, useMemo } from "react";
 import type { MinimalDocumentType } from "@/types";

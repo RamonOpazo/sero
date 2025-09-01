@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import type { MinimalDocumentType } from "@/types";
-import { useSelections } from "../../providers/selection-provider";
+import { useSelections } from "../../providers/selections-provider";
 import { useViewportState } from "../../providers/viewport-provider";
 import { PromptsList } from "../tooldeck";
 import SelectionList from "../tooldeck/selection-list";

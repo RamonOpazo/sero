@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 import PromptsList from "../tooldeck/prompt-list";
 import type { MinimalDocumentType } from '@/types';
 import { useMemo } from 'react';
-import { usePrompts } from '../../providers/prompt-provider';
+import { usePrompts } from '../../providers/prompts-provider';
 
 interface Props {
   document: MinimalDocumentType;

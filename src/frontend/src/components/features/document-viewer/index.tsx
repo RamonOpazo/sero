@@ -1,4 +1,4 @@
-import { UnifiedDocumentViewerProvider } from "./providers";
+import { DocumentViewerProvider } from "./providers";
 import DocumentViewerLayout from "./components/layouts/main-layout";
 import { type MinimalDocumentType } from "@/types";
 
@@ -36,9 +36,9 @@ export default function DocumentViewer({ document }: DocumentViewerProps) {
   });
 
   return (
-    <UnifiedDocumentViewerProvider document={document}>
+    <DocumentViewerProvider document={document}>
       <DocumentViewerContent document={document} />
-    </UnifiedDocumentViewerProvider>
+    </DocumentViewerProvider>
   );
 }
 

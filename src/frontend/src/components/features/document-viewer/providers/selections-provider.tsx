@@ -17,7 +17,7 @@ import { UISelectionStage, type UISelection } from '../types/selection-lifecycle
 // CONTEXT INTERFACE - All expected selection functionality
 // =============================================================================
 
-interface SelectionContextValue {
+interface SelectionsContextValue {
   // State access
   state: ReturnType<SelectionDomainManager['getState']>;
   
@@ -107,13 +107,13 @@ interface SelectionContextValue {
   getPageSelections: (page: number) => readonly Selection[];
 }
 
-const SelectionContext = createContext<SelectionContextValue | null>(null);
+const SelectionsContext = createContext<SelectionsContextValue | null>(null);
 
 // =============================================================================
 // PROVIDER PROPS
 // =============================================================================
 
-interface SelectionProviderProps {
+interface SelectionsProviderProps {
   children: React.ReactNode;
   documentId: string;
   initialSelections?: {
@@ -126,7 +126,7 @@ interface SelectionProviderProps {
 // PROVIDER COMPONENT
 // =============================================================================
 
-export function SelectionProvider({ children, documentId, initialSelections }: SelectionProviderProps) {
+export function SelectionsProvider({ children, documentId, initialSelections }: SelectionsProviderProps) {
   // Create and manage domain manager instance
   const managerRef = useRef<SelectionDomainManager | null>(null);
   const currentDocumentId = useRef<string>(documentId);
@@ -663,7 +663,7 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
   // CONTEXT VALUE
   // ========================================
   
-  const contextValue: SelectionContextValue = useMemo(() => ({
+  const contextValue: SelectionsContextValue = useMemo(() => ({
     // State access
     state,
     dispatch,
@@ -755,9 +755,9 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
   ]);
   
   return (
-    <SelectionContext.Provider value={contextValue}>
+    <SelectionsContext.Provider value={contextValue}>
       {children}
-    </SelectionContext.Provider>
+    </SelectionsContext.Provider>
   );
 }
 
@@ -765,8 +765,8 @@ export function SelectionProvider({ children, documentId, initialSelections }: S
 // HOOK
 // =============================================================================
 
-export function useSelections(): SelectionContextValue {
-  const context = useContext(SelectionContext);
+export function useSelections(): SelectionsContextValue {
+  const context = useContext(SelectionsContext);
   if (!context) {
     throw new Error('useSelections must be used within a SelectionProvider');
   }
@@ -777,5 +777,4 @@ export function useSelections(): SelectionContextValue {
 // EXPORTS
 // =============================================================================
 
-export default SelectionProvider;
-export type { SelectionContextValue, Selection, SelectionCreateType };
+export type { SelectionsContextValue as SelectionContextValue, Selection, SelectionCreateType };

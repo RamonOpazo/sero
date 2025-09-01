@@ -2,7 +2,7 @@ import React from 'react';
 import { render, fireEvent } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import SelectionsLayer from '../selections-layer';
-import { SelectionProvider, useSelections } from '../../../providers/selection-provider';
+import { SelectionsProvider, useSelections } from '../../../providers/selections-provider';
 import { ViewportProvider, useViewportState } from '../../../providers/viewport-provider';
 import type { Selection } from '../../../types/viewer';
 
@@ -23,9 +23,9 @@ function Harness(_: { initial: any }) {
 function Providers({ children, initial }: { children: React.ReactNode; initial: any }) {
   return (
     <ViewportProvider>
-      <SelectionProvider documentId="doc1" initialSelections={initial}>
+      <SelectionsProvider documentId="doc1" initialSelections={initial}>
         {children}
-      </SelectionProvider>
+      </SelectionsProvider>
     </ViewportProvider>
   );
 }

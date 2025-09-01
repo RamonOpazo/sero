@@ -3,7 +3,7 @@ import type React from 'react';
 import { toast } from 'sonner';
 import { useViewportState, useViewportActions } from '@/components/features/document-viewer/providers/viewport-provider';
 import type { ViewportAction } from '@/components/features/document-viewer/providers/viewport-provider';
-import { useSelections } from '@/components/features/document-viewer/providers/selection-provider';
+import { useSelections } from '@/components/features/document-viewer/providers/selections-provider';
 
 export interface KeyboardDeps {
   isPanning: boolean,

@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { SelectionProvider, useSelections } from '../selection-provider';
+import { SelectionsProvider, useSelections } from '../selections-provider';
 import type { Selection } from '../../types/viewer';
 
 vi.mock('@/lib/document-viewer-api', async () => {
@@ -48,9 +48,9 @@ describe('SelectionProvider - conversion, deletion, and lifecycle save/commit', 
     (apiMod1.DocumentViewerAPI.fetchDocumentSelections as any).mockResolvedValueOnce({ ok: true, value: [committedSel({ id: 's1', state: 'staged_edition' })] });
 
     render(
-      <SelectionProvider documentId="doc1" initialSelections={initial as any}>
+      <SelectionsProvider documentId="doc1" initialSelections={initial as any}>
         <Probe onReady={(api) => { apiRef = api; }} />
-      </SelectionProvider>
+      </SelectionsProvider>
     );
 
     expect(apiRef).not.toBeNull();
@@ -77,9 +77,9 @@ describe('SelectionProvider - conversion, deletion, and lifecycle save/commit', 
     (apiMod3.DocumentViewerAPI.fetchDocumentSelections as any).mockResolvedValueOnce({ ok: true, value: [committedSel({ id: 's2', state: 'staged_edition' })] });
 
     render(
-      <SelectionProvider documentId="doc1" initialSelections={initial as any}>
+      <SelectionsProvider documentId="doc1" initialSelections={initial as any}>
         <Probe onReady={(api) => { apiRef = api; }} />
-      </SelectionProvider>
+      </SelectionsProvider>
     );
 
     expect(apiRef).not.toBeNull();
@@ -103,9 +103,9 @@ describe('SelectionProvider - conversion, deletion, and lifecycle save/commit', 
     let apiRef: ReturnType<typeof useSelections> | null = null;
 
     render(
-      <SelectionProvider documentId="doc1" initialSelections={initial as any}>
+      <SelectionsProvider documentId="doc1" initialSelections={initial as any}>
         <Probe onReady={(api) => { apiRef = api; }} />
-      </SelectionProvider>
+      </SelectionsProvider>
     );
 
     const { deleteSelection } = apiRef!;
@@ -122,9 +122,9 @@ describe('SelectionProvider - conversion, deletion, and lifecycle save/commit', 
     let apiRef: ReturnType<typeof useSelections> | null = null;
 
     render(
-      <SelectionProvider documentId="doc1" initialSelections={initial as any}>
+      <SelectionsProvider documentId="doc1" initialSelections={initial as any}>
         <Probe onReady={(api) => { apiRef = api; }} />
-      </SelectionProvider>
+      </SelectionsProvider>
     );
 
     expect(apiRef).not.toBeNull();
@@ -155,9 +155,9 @@ describe('SelectionProvider - conversion, deletion, and lifecycle save/commit', 
     (DocumentViewerAPI.fetchDocumentSelections as any).mockResolvedValueOnce({ ok: true, value: [committedSel({ id: 's100' })] });
 
     render(
-      <SelectionProvider documentId="doc1" initialSelections={initial}>
+      <SelectionsProvider documentId="doc1" initialSelections={initial}>
         <Probe onReady={(api) => { apiRef = api; }} />
-      </SelectionProvider>
+      </SelectionsProvider>
     );
 
     expect(apiRef).not.toBeNull();
@@ -188,9 +188,9 @@ describe('SelectionProvider - conversion, deletion, and lifecycle save/commit', 
     (DocumentViewerAPI.fetchDocumentSelections as any).mockResolvedValueOnce({ ok: true, value: [committedSel({ id: 's200', state: 'committed' })] });
 
     render(
-      <SelectionProvider documentId="doc1" initialSelections={initial}>
+      <SelectionsProvider documentId="doc1" initialSelections={initial}>
         <Probe onReady={(api) => { apiRef = api; }} />
-      </SelectionProvider>
+      </SelectionsProvider>
     );
 
     await act(async () => {
@@ -216,9 +216,9 @@ describe('SelectionProvider - conversion, deletion, and lifecycle save/commit', 
     (DocumentViewerAPI.fetchDocumentSelections as any).mockResolvedValueOnce({ ok: true, value: [committedSel({ id: 's10', state: 'staged_creation', x: 0.2, y: 0.2, width: 0.3, height: 0.3 })] });
 
     render(
-      <SelectionProvider documentId="doc1" initialSelections={initial}>
+      <SelectionsProvider documentId="doc1" initialSelections={initial}>
         <Probe onReady={(api) => { apiRef = api; }} />
-      </SelectionProvider>
+      </SelectionsProvider>
     );
 
     await act(async () => {
@@ -247,9 +247,9 @@ describe('SelectionProvider - conversion, deletion, and lifecycle save/commit', 
     (DocumentViewerAPI.fetchDocumentSelections as any).mockResolvedValueOnce({ ok: true, value: [committedSel({ id: 's300', state: 'staged_creation', x: 0.11 })] });
 
     render(
-      <SelectionProvider documentId="doc1" initialSelections={initial}>
+      <SelectionsProvider documentId="doc1" initialSelections={initial}>
         <Probe onReady={(api) => { apiRef = api; }} />
-      </SelectionProvider>
+      </SelectionsProvider>
     );
 
     await act(async () => {

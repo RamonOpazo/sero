@@ -3,7 +3,7 @@ import { render } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import InfoLayer from '../info-layer';
 import { ViewportProvider } from '../../../providers/viewport-provider';
-import { SelectionProvider } from '../../../providers/selection-provider';
+import { SelectionsProvider } from '../../../providers/selections-provider';
 import type { Selection } from '../../../types/viewer';
 import type { MinimalDocumentType } from '@/types';
 
@@ -50,9 +50,9 @@ const doc = (overrides: Partial<MinimalDocumentType> = {}): MinimalDocumentType 
 function Providers({ children, initial }: { children: React.ReactNode; initial: any }) {
   return (
     <ViewportProvider>
-      <SelectionProvider documentId="doc1" initialSelections={initial}>
+      <SelectionsProvider documentId="doc1" initialSelections={initial}>
         {children}
-      </SelectionProvider>
+      </SelectionsProvider>
     </ViewportProvider>
   );
 }

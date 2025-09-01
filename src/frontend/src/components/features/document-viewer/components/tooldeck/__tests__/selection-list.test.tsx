@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SelectionList from '../selection-list';
-import { SelectionProvider, useSelections } from '../../../providers/selection-provider';
+import { SelectionsProvider, useSelections } from '../../../providers/selections-provider';
 import { ViewportProvider } from '../../../providers/viewport-provider';
 import type { Selection } from '../../../types/viewer';
 
@@ -28,9 +28,9 @@ const sel = (id: string, state: Selection['state']): Selection => ({
 function Providers({ children, initial }: { children: React.ReactNode; initial: any }) {
   return (
     <ViewportProvider>
-      <SelectionProvider documentId="doc1" initialSelections={initial}>
+      <SelectionsProvider documentId="doc1" initialSelections={initial}>
         {children}
-      </SelectionProvider>
+      </SelectionsProvider>
     </ViewportProvider>
   );
 }

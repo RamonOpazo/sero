@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { useSelections } from '../../providers/selection-provider';
+import { useSelections } from '../../providers/selections-provider';
 import { getNormalizedState } from '../../utils/selection-styles';
 import SelectionList from "../tooldeck/selection-list";
 import type { MinimalDocumentType } from '@/types';

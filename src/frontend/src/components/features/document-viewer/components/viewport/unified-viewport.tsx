@@ -2,7 +2,7 @@ import React, { useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { useThrottle } from '@/lib/hooks/use-throttle';
 import { useViewportState } from '../../providers/viewport-provider';
-import { useSelections } from '../../providers/selection-provider';
+import { useSelections } from '../../providers/selections-provider';
 import { useKeyboardHandler, useWheelHandler, useMouseButtonHandlers } from './input';
 
 interface UnifiedViewportProps {

@@ -6,7 +6,7 @@
  */
 
 import React, { useState, useCallback, useRef } from "react";
-import { useSelections } from '../../providers/selection-provider';
+import { useSelections } from '../../providers/selections-provider';
 import { useViewportState } from '../../providers/viewport-provider';
 import type { Selection, SelectionCreateDraft } from '../../types/viewer';
 import { getNormalizedState } from '../../utils/selection-styles';

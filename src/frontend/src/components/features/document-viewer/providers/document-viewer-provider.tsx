@@ -1,10 +1,10 @@
 import type { PropsWithChildren } from 'react';
 import type { MinimalDocumentType } from '@/types';
 import { ViewportProvider } from './viewport-provider';
-import { SelectionProvider } from './selection-provider';
-import { PromptProvider } from './prompt-provider';
+import { SelectionsProvider } from './selections-provider';
+import { PromptsProvider } from './prompts-provider';
 
-export type UnifiedDocumentViewerProviderProps = PropsWithChildren<{
+export type DocumentViewerProviderProps = PropsWithChildren<{
   document: MinimalDocumentType;
 }>;
 
@@ -19,10 +19,10 @@ export type UnifiedDocumentViewerProviderProps = PropsWithChildren<{
  * - SelectionProvider (needs documentId; may read viewport state)
  * - PromptProvider (needs documentId)
  */
-export function UnifiedDocumentViewerProvider({
+export function DocumentViewerProvider({
   document,
   children,
-}: UnifiedDocumentViewerProviderProps) {
+}: DocumentViewerProviderProps) {
   // Provider boundary log
   console.info('[UnifiedDocumentViewerProvider] Mount', {
     docId: document.id,
@@ -31,9 +31,9 @@ export function UnifiedDocumentViewerProvider({
   });
   return (
     <ViewportProvider document={document}>
-      <SelectionProvider documentId={document.id}>
-        <PromptProvider documentId={document.id}>{children}</PromptProvider>
-      </SelectionProvider>
+      <SelectionsProvider documentId={document.id}>
+        <PromptsProvider documentId={document.id}>{children}</PromptsProvider>
+      </SelectionsProvider>
     </ViewportProvider>
   );
 }
