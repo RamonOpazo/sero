@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ZoomIn, ZoomOut, Scan, Info, Pen, PenOff, ChevronLeft, ChevronRight } from "lucide-react";
+import { ZoomIn, ZoomOut, Scan, Info, Pen, PenOff, ChevronLeft, ChevronRight, Eye, EyeClosed } from "lucide-react";
 import { useViewportState, useViewportActions } from '../../providers/viewport-provider';
 import type { MinimalDocumentType } from "@/types";
 import { Menubar, MenubarMenu, MenubarTrigger, MenubarContent, MenubarItem, MenubarSeparator, MenubarSub, MenubarSubTrigger, MenubarSubContent, MenubarLabel, MenubarShortcut } from "@/components/ui/menubar";
@@ -34,6 +34,7 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
     setMode,
     showSelections,
     dispatch,
+    isViewingProcessedDocument,
   } = useViewportState();
 
   const {
@@ -42,7 +43,7 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
   } = useViewportActions();
 
   // Selection and lifecycle hooks
-  const { uiSelections, allSelections } = useSelections() as any;
+  const { uiSelections, allSelections, undo, redo, canUndo, canRedo } = useSelections() as any;
   const {
     selectionStats: scSel,
     promptStats: prSel,
@@ -141,6 +142,8 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
                 toggleMode: handleModeToggle,
                 toggleSelections,
                 toggleProcessedView: actions.toggleProcessedView,
+                viewOriginal: actions.viewOriginal,
+                viewRedacted: actions.viewRedacted,
                 gotoPrevPage: actions.gotoPrevPage,
                 gotoNextPage: actions.gotoNextPage,
                 onToggleInfo,
@@ -161,6 +164,10 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
                 isCommitting,
                 clearPageDisabled: allSelections.filter((s: any) => s.page_number === currentPage).length === 0,
                 clearAllDisabled: (allSelections || []).length === 0,
+                undo,
+                redo,
+                canUndo,
+                canRedo,
               },
               rules: {
                 runAi: actions.runAi,
@@ -219,6 +226,14 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
             <Button variant="ghost" size="icon" onClick={handleZoomIn}><ZoomIn /></Button>
             <Button variant="ghost" size="icon" onClick={handleResetView}><Scan /></Button>
             <Button variant="ghost" size="icon" onClick={toggleSelections} title={showSelections ? "Hide selections" : "Show selections"}>{showSelections ? <Pen /> : <PenOff />}</Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={actions.toggleProcessedView}
+              title={isViewingProcessedDocument ? "View original" : "View redacted"}
+            >
+              {isViewingProcessedDocument ? <EyeClosed /> : <Eye />}
+            </Button>
             {onToggleInfo && (
               <Button variant="ghost" size="icon" onClick={onToggleInfo} className={isInfoVisible ? 'bg-accent text-accent-foreground' : ''} title="Toggle info"><Info /></Button>
             )}

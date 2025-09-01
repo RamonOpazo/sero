@@ -1,5 +1,5 @@
 import type React from "react";
-import { ZoomIn as ZoomInIcon, ZoomOut as ZoomOutIcon, Scan as ScanIcon, MousePointerClick as SelectIcon, Hand as PanIcon, Pen as PenIcon, PenOff as PenOffIcon, Info as InfoIcon, ChevronLeft as PrevIcon, ChevronRight as NextIcon, Bot as BotIcon, Save as SaveIcon, CheckCheck as CheckIcon, Undo2 as UndoIcon, FileX as FileXIcon, Scissors as ScissorsIcon, Download as DownloadIcon, Plus as PlusIcon } from "lucide-react";
+import { ZoomIn, ZoomOut, Scan, MousePointerClick, Hand, Pen, PenOff, Info, ChevronLeft, ChevronRight, Bot, Save, CheckCheck, Eraser, Undo2, Redo2, FileX, Scissors, Download, Plus, Eye, EyeClosed } from "lucide-react";
 
 // Icon component type (e.g., lucide-react icons)
 export type IconComp = React.ComponentType<{ className?: string }>;
@@ -53,6 +53,8 @@ export interface ActionsContext {
     toggleMode: () => void;
     toggleSelections: () => void;
     toggleProcessedView: () => void;
+    viewOriginal: () => void;
+    viewRedacted: () => void;
     gotoPrevPage: () => void;
     gotoNextPage: () => void;
     onToggleInfo?: () => void;
@@ -73,6 +75,11 @@ export interface ActionsContext {
     isCommitting: boolean;
     clearPageDisabled: boolean;
     clearAllDisabled: boolean;
+    // history
+    undo: () => void;
+    redo: () => void;
+    canUndo: boolean;
+    canRedo: boolean;
   };
   rules: {
     runAi: () => Promise<void> | void;
@@ -99,27 +106,27 @@ export function buildActionsMenuConfig(ctx: ActionsContext): MenuConfig[] {
     align: 'start',
     entries: [
       { type: 'label', key: 'zoomlabel', label: 'Zoom & Pan' },
-      { type: 'item', key: 'zoomin', label: 'Zoom In', icon: ZoomInIcon, shortcut: 'Ctrl+=', onSelect: view.zoomIn },
-      { type: 'item', key: 'zoomout', label: 'Zoom Out', icon: ZoomOutIcon, shortcut: 'Ctrl+-', onSelect: view.zoomOut },
-      { type: 'item', key: 'reset', label: 'Reset View', icon: ScanIcon, shortcut: 'Ctrl+0', onSelect: view.resetView },
+      { type: 'item', key: 'zoomin', label: 'Zoom In', icon: ZoomIn, shortcut: 'Ctrl+=', onSelect: view.zoomIn },
+      { type: 'item', key: 'zoomout', label: 'Zoom Out', icon: ZoomOut, shortcut: 'Ctrl+-', onSelect: view.zoomOut },
+      { type: 'item', key: 'reset', label: 'Reset View', icon: Scan, shortcut: 'Ctrl+0', onSelect: view.resetView },
       {
         type: 'item', key: 'toggle-mode',
         label: view.mode === 'pan' ? 'Switch to Select' : 'Switch to Pan',
-        icon: view.mode === 'pan' ? SelectIcon : PanIcon,
+        icon: view.mode === 'pan' ? MousePointerClick : Hand,
         onSelect: view.toggleMode,
       },
       { type: 'separator', key: 'sep1' },
       {
         type: 'item', key: 'toggle-sel',
         label: view.showSelections ? 'Hide selections' : 'Show selections',
-        icon: view.showSelections ? PenOffIcon : PenIcon,
+        icon: view.showSelections ? PenOff : Pen,
         shortcut: 'V',
         onSelect: view.toggleSelections,
       },
       ...(view.onToggleInfo ? [{
         type: 'item', key: 'toggle-info',
         label: view.isInfoVisible ? 'Hide info' : 'Show info',
-        icon: InfoIcon,
+        icon: Info,
         shortcut: 'I',
         onSelect: view.onToggleInfo,
       } as MenuItem] : []),
@@ -127,11 +134,18 @@ export function buildActionsMenuConfig(ctx: ActionsContext): MenuConfig[] {
       {
         type: 'submenu', key: 'page', label: 'Page',
         children: [
-          { type: 'item', key: 'prev', label: 'Previous', icon: PrevIcon, shortcut: 'Alt+Left', onSelect: view.gotoPrevPage },
-          { type: 'item', key: 'next', label: 'Next', icon: NextIcon, shortcut: 'Alt+Right', onSelect: view.gotoNextPage },
+          { type: 'item', key: 'prev', label: 'Previous', icon: ChevronLeft, shortcut: 'Alt+Left', onSelect: view.gotoPrevPage },
+          { type: 'item', key: 'next', label: 'Next', icon: ChevronRight, shortcut: 'Alt+Right', onSelect: view.gotoNextPage },
         ],
       },
-      { type: 'item', key: 'toggle-processed', label: 'Toggle View (Original/Redacted)', onSelect: view.toggleProcessedView, shortcut: 'R' },
+      { type: 'separator', key: 'sep3' },
+      {
+        type: 'submenu', key: 'docview', label: 'Document View',
+        children: [
+          { type: 'item', key: 'view-original', label: 'Original', icon: Eye, onSelect: view.viewOriginal },
+          { type: 'item', key: 'view-redacted', label: 'Redacted', icon: EyeClosed, onSelect: view.viewRedacted },
+        ],
+      },
     ],
   };
 
@@ -140,15 +154,18 @@ export function buildActionsMenuConfig(ctx: ActionsContext): MenuConfig[] {
     title: 'Selections',
     align: 'start',
     entries: [
-      { type: 'item', key: 'commit', label: selections.isCommitting ? 'Committing…' : 'Commit staged', icon: CheckIcon, shortcut: 'C', onSelect: selections.openCommitDialog, disabled: !selections.canCommit || selections.isCommitting },
-      { type: 'item', key: 'stage', label: selections.isStaging ? 'Staging…' : 'Stage all changes', icon: SaveIcon, shortcut: 'S', onSelect: selections.openStageDialog, disabled: !selections.canStage || selections.isStaging },
-      { type: 'item', key: 'discard', label: 'Discard all unsaved', icon: UndoIcon, onSelect: selections.discardAllUnsaved },
+      { type: 'item', key: 'undo', label: 'Undo', icon: Undo2, shortcut: 'Ctrl+Z', onSelect: selections.undo, disabled: !selections.canUndo },
+      { type: 'item', key: 'redo', label: 'Redo', icon: Redo2, shortcut: 'Ctrl+Y', onSelect: selections.redo, disabled: !selections.canRedo },
+      { type: 'separator', key: 'sep0' },
+      { type: 'item', key: 'commit', label: selections.isCommitting ? 'Committing…' : 'Commit staged', icon: CheckCheck, shortcut: 'C', onSelect: selections.openCommitDialog, disabled: !selections.canCommit || selections.isCommitting },
+      { type: 'item', key: 'stage', label: selections.isStaging ? 'Staging…' : 'Stage all changes', icon: Save, shortcut: 'S', onSelect: selections.openStageDialog, disabled: !selections.canStage || selections.isStaging },
+      { type: 'item', key: 'discard', label: 'Discard all unsaved', icon: Eraser, onSelect: selections.discardAllUnsaved },
       { type: 'separator', key: 'sep1' },
       {
         type: 'submenu', key: 'clear', label: 'Clear',
         children: [
-          { type: 'item', key: 'clear-page', label: 'Current page', icon: FileXIcon, onSelect: selections.openClearPageDialog, disabled: selections.clearPageDisabled },
-          { type: 'item', key: 'clear-all', label: 'All pages', icon: FileXIcon, onSelect: selections.openClearAllDialog, disabled: selections.clearAllDisabled },
+          { type: 'item', key: 'clear-page', label: 'Current page', icon: FileX, onSelect: selections.openClearPageDialog, disabled: selections.clearPageDisabled },
+          { type: 'item', key: 'clear-all', label: 'All pages', icon: FileX, onSelect: selections.openClearAllDialog, disabled: selections.clearAllDisabled },
         ],
       },
       { type: 'separator', key: 'sep2' },
@@ -161,9 +178,9 @@ export function buildActionsMenuConfig(ctx: ActionsContext): MenuConfig[] {
     title: 'Rules',
     align: 'start',
     entries: [
-      { type: 'item', key: 'run-ai', label: rules.isApplyingAI ? 'Running AI…' : 'Run AI detection', icon: BotIcon, onSelect: rules.runAi, disabled: rules.isApplyingAI, shortcut: 'Ctrl+Alt+A' },
-      { type: 'item', key: 'add-rule', label: 'Add Rule…', icon: PlusIcon, onSelect: rules.openAddRuleDialog, shortcut: 'Ctrl+N' },
-      { type: 'item', key: 'clear-rules', label: 'Clear all rules…', icon: FileXIcon, onSelect: rules.openClearAllRulesDialog, shortcut: 'Shift+Del' },
+      { type: 'item', key: 'run-ai', label: rules.isApplyingAI ? 'Running AI…' : 'Run AI detection', icon: Bot, onSelect: rules.runAi, disabled: rules.isApplyingAI, shortcut: 'Ctrl+Alt+A' },
+      { type: 'item', key: 'add-rule', label: 'Add Rule…', icon: Plus, onSelect: rules.openAddRuleDialog, shortcut: 'Ctrl+N' },
+      { type: 'item', key: 'clear-rules', label: 'Clear all rules…', icon: FileX, onSelect: rules.openClearAllRulesDialog, shortcut: 'Shift+Del' },
       { type: 'separator', key: 'sep1' },
       { type: 'item', key: 'open-wb-rules', label: 'Open Workbench • AI Rules', onSelect: rules.openWorkbenchPrompts },
     ],
@@ -174,8 +191,8 @@ export function buildActionsMenuConfig(ctx: ActionsContext): MenuConfig[] {
     title: 'Document',
     align: 'start',
     entries: [
-      { key: 'process', type: 'item', label: document.isProcessingDoc ? 'Processing…' : 'Process document', icon: ScissorsIcon, onSelect: document.processDocument, disabled: document.isProcessingDoc, shortcut: 'Ctrl+P' },
-      { key: 'download', type: 'item', label: 'Download current view', icon: DownloadIcon, onSelect: document.downloadCurrentView, disabled: !document.isDownloadAvailable, shortcut: 'Ctrl+D' },
+      { key: 'process', type: 'item', label: document.isProcessingDoc ? 'Processing…' : 'Process document', icon: Scissors, onSelect: document.processDocument, disabled: document.isProcessingDoc, shortcut: 'Ctrl+P' },
+      { key: 'download', type: 'item', label: 'Download current view', icon: Download, onSelect: document.downloadCurrentView, disabled: !document.isDownloadAvailable, shortcut: 'Ctrl+D' },
     ],
   };
 

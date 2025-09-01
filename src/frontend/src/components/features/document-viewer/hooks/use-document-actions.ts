@@ -27,9 +27,46 @@ export function useDocumentActions(document: MinimalDocumentType) {
   const [isApplyingAI, setIsApplyingAI] = useState(false);
   const [isProcessingDoc, setIsProcessingDoc] = useState(false);
 
-  const toggleProcessedView = useCallback(() => {
-    dispatch({ type: 'SET_VIEWING_PROCESSED', payload: !isViewingProcessedDocument });
+  // Explicit view switches
+  const viewOriginal = useCallback(() => {
+    if (!isViewingProcessedDocument) return;
+    dispatch({ type: 'SET_VIEWING_PROCESSED', payload: false });
   }, [dispatch, isViewingProcessedDocument]);
+
+  const viewRedacted = useCallback(async () => {
+    if (isViewingProcessedDocument) return;
+    // If we already have a redacted file pointer, just switch
+    if (document.redacted_file) {
+      dispatch({ type: 'SET_VIEWING_PROCESSED', payload: true });
+      return;
+    }
+    // Try to fetch the redacted file if it exists server-side
+    const redacted = await EditorAPI.loadRedactedFile(document.id);
+    if (!redacted.ok) {
+      toast.info('No redacted file available', { description: 'Process the document first to generate it.' });
+      return;
+    }
+    const redFile = redacted.value.file as any;
+    const redBlob = redacted.value.blob;
+    dispatch({ type: 'SET_VOLATILE_BLOB', payload: { blob: redBlob, forProcessed: true } });
+    const nextFiles = Array.isArray((document as any).files) ? [...(document as any).files] : [];
+    const filtered = nextFiles.filter((f: any) => f.file_type !== 'redacted');
+    filtered.push({ ...redFile, blob: redBlob });
+    const nextDoc: MinimalDocumentType = { ...(document as any), redacted_file: redFile, files: filtered } as any;
+    dispatch({ type: 'SET_DOCUMENT', payload: nextDoc });
+    dispatch({ type: 'SET_VIEWING_PROCESSED', payload: true });
+  }, [dispatch, document, isViewingProcessedDocument]);
+
+  // Toggle after explicit views so we avoid TDZ
+  const toggleProcessedView = useCallback(() => {
+    if (isViewingProcessedDocument) {
+      // Switch to original view
+      viewOriginal();
+    } else {
+      // Switch to redacted view, attempting to load it if necessary
+      void viewRedacted();
+    }
+  }, [isViewingProcessedDocument, viewOriginal, viewRedacted]);
 
   const gotoPrevPage = useCallback(() => {
     setCurrentPage(Math.max(0, currentPage - 1));
@@ -135,6 +172,8 @@ export function useDocumentActions(document: MinimalDocumentType) {
   return {
     // View
     toggleProcessedView,
+    viewOriginal,
+    viewRedacted,
     gotoPrevPage,
     gotoNextPage,
 
