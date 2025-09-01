@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ZoomIn, ZoomOut, Scan, Info, Pen, PenOff, ChevronLeft, ChevronRight, Eye, EyeClosed } from "lucide-react";
+import { ZoomIn, ZoomOut, Scan, Info, Pen, PenOff, ChevronLeft, ChevronRight, Eye, EyeClosed, MousePointerClick, Bot } from "lucide-react";
 import { useViewportState, useViewportActions } from '../providers/viewport-provider';
 import type { MinimalDocumentType } from "@/types";
 import { Menubar, MenubarMenu, MenubarTrigger, MenubarContent, MenubarItem, MenubarSeparator, MenubarSub, MenubarSubTrigger, MenubarSubContent, MenubarLabel, MenubarShortcut } from "@/components/ui/menubar";
@@ -35,6 +35,8 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
     showSelections,
     dispatch,
     isViewingProcessedDocument,
+    activeWorkbenchTab,
+    setActiveWorkbenchTab,
   } = useViewportState();
 
   const {
@@ -150,6 +152,8 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
                 isInfoVisible,
                 showSelections,
                 mode,
+                activeWorkbenchTab,
+                toggleWorkbenchTab: () => setActiveWorkbenchTab(activeWorkbenchTab === 'selections' ? 'prompts' : 'selections'),
               },
               selections: {
                 openCommitDialog: () => setShowCommitDialog(true),
@@ -226,6 +230,14 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
             <Button variant="ghost" size="icon" onClick={handleZoomIn}><ZoomIn /></Button>
             <Button variant="ghost" size="icon" onClick={handleResetView}><Scan /></Button>
             <Button variant="ghost" size="icon" onClick={toggleSelections} title={showSelections ? "Hide selections" : "Show selections"}>{showSelections ? <Pen /> : <PenOff />}</Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setActiveWorkbenchTab(activeWorkbenchTab === 'selections' ? 'prompts' : 'selections')}
+              title={activeWorkbenchTab === 'selections' ? 'Open AI Rules' : 'Open Selections'}
+            >
+              {activeWorkbenchTab === 'selections' ? <MousePointerClick /> : <Bot />}
+            </Button>
             <Button
               variant="ghost"
               size="icon"

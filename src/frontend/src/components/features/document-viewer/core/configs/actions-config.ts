@@ -1,5 +1,5 @@
 import type React from "react";
-import { ZoomIn, ZoomOut, Scan, MousePointerClick, Hand, Pen, PenOff, Info, ChevronLeft, ChevronRight, Bot, Save, CheckCheck, Eraser, Undo2, Redo2, FileX, Scissors, Download, Plus, Eye, EyeClosed } from "lucide-react";
+import { ZoomIn, ZoomOut, Scan, MousePointerClick, Hand, Pen, PenOff, Info, ChevronLeft, ChevronRight, Bot, Save, CheckCheck, Eraser, Undo2, Redo2, FileX, Scissors, Download, Plus, Eye, EyeClosed, ArrowLeftRight } from "lucide-react";
 
 // Icon component type (e.g., lucide-react icons)
 export type IconComp = React.ComponentType<{ className?: string }>;
@@ -61,6 +61,9 @@ export interface ActionsContext {
     isInfoVisible?: boolean;
     showSelections: boolean;
     mode: 'pan' | 'select' | string;
+    // Workbench tab
+    activeWorkbenchTab: 'selections' | 'prompts';
+    toggleWorkbenchTab: () => void;
   };
   selections: {
     openCommitDialog: () => void;
@@ -145,6 +148,21 @@ export function buildActionsMenuConfig(ctx: ActionsContext): MenuConfig[] {
           { type: 'item', key: 'view-original', label: 'Original', icon: Eye, onSelect: view.viewOriginal },
           { type: 'item', key: 'view-redacted', label: 'Redacted', icon: EyeClosed, onSelect: view.viewRedacted },
         ],
+      },
+      { type: 'separator', key: 'sep4' },
+      {
+        type: 'submenu', key: 'workbench', label: 'Workbench',
+        children: [
+          { type: 'item', key: 'wb-selections', label: 'Selections', icon: MousePointerClick, onSelect: selections.openWorkbenchSelections },
+          { type: 'item', key: 'wb-prompts', label: 'AI Rules', icon: Bot, onSelect: rules.openWorkbenchPrompts },
+        ],
+      },
+      {
+        type: 'item', key: 'toggle-workbench',
+        label: view.activeWorkbenchTab === 'selections' ? 'Switch to AI Rules' : 'Switch to Selections',
+        icon: ArrowLeftRight,
+        shortcut: 'Ctrl+Shift+W',
+        onSelect: view.toggleWorkbenchTab,
       },
     ],
   };
