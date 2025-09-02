@@ -65,21 +65,21 @@ export interface SelectionBoxProps {
 const DEFAULT_COLORS: ColorMapping = {
   unstaged: "text-emerald-600",
   staged_creation: "text-blue-600",
-  staged_edition: "text-violet-600",
+  staged_edition: "text-blue-600",
   staged_deletion: "text-red-600",
   committed: "text-zinc-600",
 };
 
 const DEFAULT_BORDERS: BorderMapping = {
-  unstaged: "border border-emerald-500/60 hover:border-emerald-600 border-dashed",
+  unstaged: "border border-emerald-500/60 hover:border-emerald-600 border-solid",
   staged_creation: "border border-blue-500/60 hover:border-blue-600 border-solid",
-  staged_edition: "border border-violet-500/60 hover:border-violet-600 border-solid",
+  staged_edition: "border border-blue-500/60 hover:border-blue-600 border-solid",
   staged_deletion: "border border-red-500/60 hover:border-red-600 border-solid",
   committed: "border border-zinc-500/60 hover:border-zinc-600 border-double border-4",
 };
 
 const DEFAULT_BACKGROUNDS: BackgroundVariantMapping = {
-  unstaged: "dotted",
+  unstaged: "stripes",
   staged_creation: "stripes",
   staged_edition: "stripes",
   staged_deletion: "stripes",
@@ -88,9 +88,9 @@ const DEFAULT_BACKGROUNDS: BackgroundVariantMapping = {
 
 const DEFAULT_FLAGS: FlagVariantMapping = {
   off: undefined,
-  dirty: "dotted",
+  dirty: "polka",
   global_page: "crosses",
-  project_scope: "crosses",
+  project_scope: "zigzag",
 };
 
 /**

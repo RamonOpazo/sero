@@ -5,7 +5,8 @@ export type BackgroundVariantName =
   | "solid"
   | "stripes"
   | "crosses"
-  | "dotted";
+  | "polka"
+  | "zigzag";
 
 const stripeStops = "currentColor 2.25%, transparent 2.25% 50%, currentColor 50% 52.25%, transparent 52.25%";
 
@@ -28,11 +29,25 @@ export const BackgroundVariant: Record<
     `,
     backgroundSize: "20px 20px",
   },
-  dotted: {
+  polka: {
     opacity: 0.2,
-    backgroundImage: "radial-gradient(currentColor 1.5px, transparent 1.5px)",
+    background: `
+      radial-gradient(circle, currentColor 10%, transparent 11%),
+      radial-gradient(circle at bottom left, currentColor 5%, transparent 6%),
+      radial-gradient(circle at bottom right, currentColor 5%, transparent 6%),
+      radial-gradient(circle at top left, currentColor 5%, transparent 6%),
+      radial-gradient(circle at top right, currentColor 5%, transparent 6%)
+    `,
     backgroundSize: "12px 12px",
-    backgroundPosition: "0 0, 6px 6px",
+  },
+  zigzag: {
+    opacity: 0.2,
+    background: `
+      linear-gradient(45deg, #ffffff 25%, transparent 25%),
+      linear-gradient(315deg, #ffffff 25%, transparent 25%),
+      linear-gradient(45deg, transparent 24%, currentColor 25%, currentColor 45%, transparent 45%),
+      linear-gradient(315deg, transparent 24%, currentColor 25%, currentColor 45%, transparent 45%)`,
+    backgroundSize: "12px 12px",
   },
 };
 
