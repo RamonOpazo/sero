@@ -1,6 +1,93 @@
 # CHANGELOG
 
 
+## v1.8.0 (2025-09-02)
+
+### Bug Fixes
+
+- **document-viewer**: Stabilize selection reload effect; use live document in redacted toggle to
+  avoid stale state and allow repeated toggling
+  ([`d50cd98`](https://github.com/RamonOpazo/sero/commit/d50cd982797a3a0033037ad69854d01a51cb4dc7))
+
+- **ui**: Wrap prompts list return in fragment and add inline edit+commit flow; align spacing with
+  selections
+  ([`f84abc5`](https://github.com/RamonOpazo/sero/commit/f84abc5a86da00dc5e9fd85d64ad2efb1c4b56b8))
+
+### Chores
+
+- Checkpoint before aligning prompts rules list with selections list style
+  ([`70e97a6`](https://github.com/RamonOpazo/sero/commit/70e97a62ac2193d2d788788b3855821af7dcea5e))
+
+- Commit tweaks to selection box backgrounds
+  ([`0ebd509`](https://github.com/RamonOpazo/sero/commit/0ebd5090ad3fd99be076ac48d6d5a0e555dbc6be))
+
+- Commit user changes after reverting previous cursor tweaks and applying layout/sidebar updates
+  ([`c3606c0`](https://github.com/RamonOpazo/sero/commit/c3606c0ee804b7b4c92133a7f54f8af8e590426a))
+
+- **frontend**: Build passes after reorg; defer lint fixes to incremental follow-ups
+  ([`1003ee6`](https://github.com/RamonOpazo/sero/commit/1003ee6e6ed65f2358bbeb2669c5d46670b4a09e))
+
+- **viewer**: Export useStageCommit and useZoomControls from hooks barrel; build passes
+  ([`b0d6378`](https://github.com/RamonOpazo/sero/commit/b0d637834665c8fe04878369ddf4893b6751c73a))
+
+- **viewer**: Remove legacy hooks (useSelectionLoader, use-document-data) after provider-based
+  loading; verify build
+  ([`c0dae8a`](https://github.com/RamonOpazo/sero/commit/c0dae8a4f46461b303140ca129ce7c726ea9959e))
+
+- **viewer**: Remove unused hook use-pdf-pages; verify build
+  ([`c775045`](https://github.com/RamonOpazo/sero/commit/c775045f72a00b81d5027628c36d6060266c38f6))
+
+### Documentation
+
+- **viewer**: Dry/sot audit integrated; prefer useDocumentViewer (add) and keep useViewer as alias;
+  update exports
+  ([`f485ac0`](https://github.com/RamonOpazo/sero/commit/f485ac04626110661a7637c49bb221b0bdbe7a2f))
+
+- **viewer**: Expand Phase 3 dialog plan; chore: remove legacy hooks stubs (useSelectionLoader,
+  use-document-data) and ensure clean exports
+  ([`5345a95`](https://github.com/RamonOpazo/sero/commit/5345a95e55e237416251e5adc98623ab93410f4f))
+
+### Features
+
+- **document-viewer**: Add Hand/Grab mode toggle button in top bar; use Hand/Grab in menu
+  toggle-mode entry; adjust listings submenu label
+  ([`1e4b612`](https://github.com/RamonOpazo/sero/commit/1e4b6124a31a3886ff67b9807a4b025830c6ccf7))
+
+- **document-viewer**: Add view toggle button; add Undo/Redo to Selections menu using existing icons
+  and wiring
+  ([`90dfae8`](https://github.com/RamonOpazo/sero/commit/90dfae8db01718b8a9f941af787ceec68e748f1e))
+
+- **document-viewer**: Add workbench toggler (Selections/AI Rules) to actions menu and top bar; wire
+  with viewport state
+  ([`f116474`](https://github.com/RamonOpazo/sero/commit/f116474c20722b0b2547e04fc148990c07271a0c))
+
+### Refactoring
+
+- **document-viewer**: Inline status mapping in selection-list; remove unused style helpers from
+  selection-styles
+  ([`be2619b`](https://github.com/RamonOpazo/sero/commit/be2619be2f2678ac3d88b6d68763e49203cbd6c1))
+
+- **viewer**: Decouple state (useDocumentViewer) from commands; rename useActions to
+  useDocumentActions; update imports; build passes
+  ([`b3c535f`](https://github.com/RamonOpazo/sero/commit/b3c535ffbbec8d1823c7dd760ec822b2796961b3))
+
+- **viewer**: Phase 1 provider/hooks cleanup – remove unused useDocumentPrompts, add useViewer,
+  deprecate useSelectionLoader; update docs plan
+  ([`265a9ae`](https://github.com/RamonOpazo/sero/commit/265a9aebc0aa43fb2087fec88bf3e0837ad7e78f))
+
+- **viewer**: Phase 2 – load selections in SelectionProvider; remove loader and document-data hooks;
+  update plan
+  ([`bc3df90`](https://github.com/RamonOpazo/sero/commit/bc3df90dd4763beb2b455ada957cd0962dd1d425))
+
+- **viewer**: Rename providers (document-viewer, prompts, selections) and drop useViewer alias;
+  update imports and barrels; build passes
+  ([`733eefd`](https://github.com/RamonOpazo/sero/commit/733eefd6ec95acb5cfa6c231865c937f457c9b1d))
+
+- **viewer-types**: Stop re-exporting app-wide SelectionCreateType from feature types barrel; keep
+  Selection as feature type; build passes
+  ([`b73f7be`](https://github.com/RamonOpazo/sero/commit/b73f7be111fd68d5d18e90e5fc0fe704bcb7e945))
+
+
 ## v1.7.0 (2025-09-01)
 
 ### Bug Fixes
@@ -31,6 +118,9 @@
 
 - **actions-layer**: Remove dead refs, unused imports and hook returns; simplify hover handlers
   ([`5baf181`](https://github.com/RamonOpazo/sero/commit/5baf181e1fda3e786121dbf62b8b51767ac5c0f7))
+
+- **release**: V1.7.0 [skip ci]
+  ([`b1a1df3`](https://github.com/RamonOpazo/sero/commit/b1a1df37ef408a4f5703a59e443bd7b57452b0d4))
 
 ### Documentation
 
