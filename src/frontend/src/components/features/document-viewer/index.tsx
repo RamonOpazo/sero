@@ -1,7 +1,6 @@
-import { UnifiedDocumentViewerProvider } from "./providers";
-import DocumentViewerLayout from "./components/layouts/main-layout";
+import { DocumentViewerProvider } from "./providers";
+import { ViewportLayout } from "./viewport";
 import { type MinimalDocumentType } from "@/types";
-import { useSelectionLoader } from "./hooks/useSelectionLoader";
 
 type DocumentViewerProps = {
   document: MinimalDocumentType;
@@ -9,10 +8,8 @@ type DocumentViewerProps = {
 
 // Internal component that loads selections and renders the layout
 function DocumentViewerContent({ document }: { document: MinimalDocumentType }) {
-  // Load selections from API directly into SelectionManager system
-  useSelectionLoader(document.id);
-  
-  return <DocumentViewerLayout document={document} />;
+  // SelectionProvider now loads selections on mount (no explicit loader hook needed)
+  return <ViewportLayout document={document} />;
 }
 
 /**
@@ -39,9 +36,9 @@ export default function DocumentViewer({ document }: DocumentViewerProps) {
   });
 
   return (
-    <UnifiedDocumentViewerProvider document={document}>
+    <DocumentViewerProvider document={document}>
       <DocumentViewerContent document={document} />
-    </UnifiedDocumentViewerProvider>
+    </DocumentViewerProvider>
   );
 }
 
@@ -51,9 +48,6 @@ export { DocumentViewer };
 // =============================================================================
 // RE-EXPORTS FOR PUBLIC API
 // =============================================================================
-
-// Components (organized by category)
-export * from "./components";
 
 // Providers and state management
 export * from "./providers";

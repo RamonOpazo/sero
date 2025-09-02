@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { UISelectionStage } from '@/components/features/document-viewer/types/selection-lifecycle'
-import { fromApiSelection, mergeServerResponse, toApiCreate, toApiUpdate } from '@/components/features/document-viewer/core/selection-lifecycle-mapper'
+import { fromApiSelection, mergeServerResponse, toApiCreate, toApiUpdate } from '@/components/features/document-viewer/core/mappers/selection-lifecycle-mapper'
 
 const baseSel = {
   id: 's1', x: 0.1, y: 0.1, width: 0.2, height: 0.2, page_number: 0,

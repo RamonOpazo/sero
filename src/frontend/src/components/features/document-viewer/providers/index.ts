@@ -1,5 +1,5 @@
 // Provider components and hooks
-export { UnifiedDocumentViewerProvider } from './unified-document-viewer-provider'
+export { DocumentViewerProvider } from './document-viewer-provider'
+export { PromptsProvider, usePrompts } from './prompts-provider';
+export { SelectionsProvider, useSelections } from './selections-provider';
 export { ViewportProvider, useViewportState, useViewportActions } from './viewport-provider';
-export { default as PromptProvider, usePrompts } from './prompt-provider';
-export { default as SelectionProvider, useSelections } from './selection-provider';

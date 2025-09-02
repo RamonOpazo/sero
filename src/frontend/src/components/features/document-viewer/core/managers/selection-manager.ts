@@ -1,0 +1,53 @@
+/**
+ * Selection Manager Factory
+ * 
+ * Creates selection manager instances using the V2 domain manager with declarative configuration.
+ * Provides a clean factory interface for creating selection managers.
+ */
+
+import { createDomainManager } from '@/lib/domain-manager';
+import { selectionDomainConfig, type SelectionDomainManager, type Selection } from '../configs/selections-config';
+
+// =============================================================================
+// FACTORY FUNCTION
+// =============================================================================
+
+/**
+ * Creates a new selection manager instance for a document
+ * 
+ * @param documentId - The document ID to associate selections with
+ * @param initialSelections - Optional initial selections to load
+ * @returns A fully configured selection domain manager
+ */
+export function createSelectionManager(
+  documentId: string,
+  initialSelections?: {
+    saved?: Selection[];
+    new?: Selection[];
+  }
+): SelectionDomainManager {
+  // Create the domain manager instance with our declarative config
+  const manager = createDomainManager(selectionDomainConfig, documentId);
+  
+  // Initialize with provided selections if any
+  if (initialSelections?.saved?.length) {
+    manager.dispatch('LOAD_ITEMS', initialSelections.saved);
+    // Capture baseline after loading persisted items so updates are tracked
+    manager.dispatch('CAPTURE_BASELINE' as any, undefined as any);
+  }
+  
+  if (initialSelections?.new?.length) {
+    initialSelections.new.forEach(selection => {
+      manager.dispatch('CREATE_ITEM', selection);
+    });
+  }
+  
+  return manager;
+}
+
+// =============================================================================
+// TYPE EXPORTS
+// =============================================================================
+
+export type { SelectionDomainManager, Selection } from '../configs/selections-config';
+export type { SelectionCreateType } from '@/types';

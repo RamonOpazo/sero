@@ -1,8 +1,11 @@
-// Document data hooks
-export { useDocumentSelections } from './use-document-data';
+// Composition hook (canonical)
+export { useDocumentViewer } from './use-document-viewer';
 
-// Selection loading hook
-export { useSelectionLoader } from './useSelectionLoader';
+// Document actions
+export { useDocumentActions } from './use-document-actions';
 
-// PDF pages hook
-export { usePDFPages } from './use-pdf-pages';
+// Stage/commit lifecycle
+export { useStageCommit } from './use-stage-commit';
+
+// Viewport helpers
+export { useZoomControls } from './use-zoom-controls';

@@ -1,5 +1,6 @@
 // Viewer types
-export type { Selection, SelectionCreateType } from './viewer';
+export type { Selection } from './viewer';
+export type { ViewerMode, Point, ViewerTransform, DocumentSize, ViewportBounds } from './viewer';
 
 // Lifecycle types
 export { UISelectionStage } from './selection-lifecycle';

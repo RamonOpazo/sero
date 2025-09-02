@@ -8,3 +8,4 @@ export * from './ThemeToggle';
 export * from './SettingsToggle';
 export * from './Widget';
 export * from './logo';
+export * from './selection-box';

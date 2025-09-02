@@ -1,29 +1,6 @@
-/**
- * Minimal Viewport State Management
- * Handles only viewport-specific state (zoom, pan, mode, navigation)
- * Selection state is handled by the new SelectionManager system
- */
-
 import React, { useReducer, useCallback, useMemo, createContext, useContext } from 'react';
 import { type MinimalDocumentType } from '@/types';
-
-// Basic types for viewport state
-export type ViewerMode = 'pan' | 'select';
-
-export interface Point {
-  x: number;
-  y: number;
-}
-
-export interface ViewerTransform {
-  pan: Point;
-  zoom: number;
-}
-
-export interface DocumentSize {
-  width: number;
-  height: number;
-}
+import type { ViewerMode, Point, ViewerTransform, DocumentSize } from "../types/viewer";
 
 export interface NavigationState {
   currentPage: number;
@@ -79,11 +56,9 @@ export type ViewportAction =
   | { type: 'SET_SHOW_INFO_PANEL'; payload: boolean }
   | { type: 'SET_SHOW_SELECTIONS_PANEL'; payload: boolean }
   | { type: 'SET_SHOW_PROMPT_PANEL'; payload: boolean }
-  | { type: 'SET_SHOW_HELP_OVERLAY'; payload: boolean }
   | { type: 'SET_VIEWING_PROCESSED'; payload: boolean }
   | { type: 'SET_VOLATILE_BLOB'; payload: { blob: Blob | null; forProcessed: boolean } }
   | { type: 'REGISTER_PAGE'; payload: { index: number; element: HTMLElement | null } }
-  | { type: 'SET_ACTIVE_CONTROLS_PANEL'; payload: 'document-controls' | 'workbench' }
   | { type: 'SET_ACTIVE_WORKBENCH_TAB'; payload: 'selections' | 'prompts' }
   | { type: 'RESET_VIEW' };
 
@@ -260,15 +235,6 @@ function viewportStateReducer(state: ViewportState, action: ViewportAction): Vie
         }
       };
 
-    case 'SET_SHOW_HELP_OVERLAY':
-      return {
-        ...state,
-        ui: {
-          ...state.ui,
-          showHelpOverlay: action.payload
-        }
-      };
-
     case 'SET_VIEWING_PROCESSED':
       return {
         ...state,
@@ -325,15 +291,6 @@ function viewportStateReducer(state: ViewportState, action: ViewportAction): Vie
         }
       };
 
-    case 'SET_ACTIVE_CONTROLS_PANEL':
-      return {
-        ...state,
-        ui: {
-          ...state.ui,
-          activeControlsPanel: action.payload,
-        }
-      };
-
     case 'SET_ACTIVE_WORKBENCH_TAB':
       return {
         ...state,
@@ -360,7 +317,6 @@ export interface ViewportContextType {
   toggleInfoPanel: () => void;
   toggleSelectionsPanel: () => void;
   togglePromptPanel: () => void;
-  toggleHelpOverlay: () => void;
 }
 
 // Context
@@ -431,10 +387,6 @@ export function ViewportProvider({ children, document }: ViewportProviderProps) 
     }
   }, [state.ui.showPromptPanel]);
 
-  const toggleHelpOverlay = useCallback(() => {
-    dispatch({ type: 'SET_SHOW_HELP_OVERLAY', payload: !state.ui.showHelpOverlay });
-  }, [state.ui.showHelpOverlay]);
-
   // Context value
   const contextValue: ViewportContextType = useMemo(() => ({
     state,
@@ -445,7 +397,6 @@ export function ViewportProvider({ children, document }: ViewportProviderProps) 
     toggleInfoPanel,
     toggleSelectionsPanel,
     togglePromptPanel,
-    toggleHelpOverlay,
   }), [
     state,
     resetView,
@@ -454,7 +405,6 @@ export function ViewportProvider({ children, document }: ViewportProviderProps) 
     toggleInfoPanel,
     toggleSelectionsPanel,
     togglePromptPanel,
-    toggleHelpOverlay,
   ]);
 
   return (
@@ -519,7 +469,6 @@ export function useViewportState() {
     setShowInfoPanel: useCallback((value: boolean) => dispatch({ type: 'SET_SHOW_INFO_PANEL', payload: value }), [dispatch]),
     setShowSelectionsPanel: useCallback((value: boolean) => dispatch({ type: 'SET_SHOW_SELECTIONS_PANEL', payload: value }), [dispatch]),
     setShowPromptPanel: useCallback((value: boolean) => dispatch({ type: 'SET_SHOW_PROMPT_PANEL', payload: value }), [dispatch]),
-    setActiveControlsPanel: useCallback((value: 'document-controls' | 'workbench') => dispatch({ type: 'SET_ACTIVE_CONTROLS_PANEL', payload: value }), [dispatch]),
     setActiveWorkbenchTab: useCallback((value: 'selections' | 'prompts') => dispatch({ type: 'SET_ACTIVE_WORKBENCH_TAB', payload: value }), [dispatch]),
     activeControlsPanel: state.ui.activeControlsPanel,
     activeWorkbenchTab: state.ui.activeWorkbenchTab,
@@ -539,7 +488,6 @@ export function useViewportActions() {
     toggleInfoPanel,
     toggleSelectionsPanel,
     togglePromptPanel,
-    toggleHelpOverlay,
   } = useViewportContext();
   
   return {
@@ -549,6 +497,5 @@ export function useViewportActions() {
     toggleInfoPanel,
     toggleSelectionsPanel,
     togglePromptPanel,
-    toggleHelpOverlay,
   };
 }
