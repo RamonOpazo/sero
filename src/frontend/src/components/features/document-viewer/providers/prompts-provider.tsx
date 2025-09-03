@@ -57,6 +57,11 @@ export function PromptsProvider({ children, documentId, initialPrompts }: Prompt
     (manager as any).dispatch(type, payload);
   }, [manager]);
 
+  // Auto-load prompts on mount or when document context changes
+  useEffect(() => {
+    void manager.load();
+  }, [manager]);
+
   // CRUD helpers
   const createPrompt = useCallback((data: Omit<PromptType, 'id' | 'created_at' | 'updated_at' | 'document_id'>) => {
     const inferredScope = (data as any).scope ?? 'document';

@@ -55,6 +55,12 @@ export default function PromptListing({ onEditPrompt }: Props) {
     return [...newOnes, ...saved]; // New prompts first
   }, [savedPrompts, newPrompts, pendingChanges.updates]);
 
+  // Local edit dialog state (must be declared before any early returns to keep hooks order stable)
+  const [editDialog, setEditDialog] = useState<{ open: boolean; promptId: string | null }>({
+    open: false,
+    promptId: null,
+  });
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-6">
@@ -135,8 +141,6 @@ export default function PromptListing({ onEditPrompt }: Props) {
     );
   }
 
-  // Local edit dialog state
-  const [editDialog, setEditDialog] = useState<{ open: boolean; promptId: string | null }>({ open: false, promptId: null });
 
   const openEdit = (id: string) => {
     if (onEditPrompt) {

@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MoreVertical, Trash2, MousePointer2, Globe, Hash, Settings, Telescope, Bot, RotateCcw, GitCommitVertical, GitPullRequestCreateArrow } from "lucide-react";
+import { MoreVertical, Trash2, MousePointer2, Globe, Hash, Settings, Telescope, Bot, RotateCcw, GitCommitVertical, GitPullRequestCreateArrow, GitPullRequestDraft, type LucideIcon } from "lucide-react";
 import { useSelections } from "../providers/selections-provider";
 import { useViewportState } from "../providers/viewport-provider";
 import { useMemo, useRef, useEffect, useState, useCallback } from "react";
@@ -15,7 +15,7 @@ import { getNormalizedSelectionState } from "../utils";
 import { useWorkspace } from "@/providers/workspace-provider";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
-type StatusIndicator = { color: string; title: string; label: string };
+type StatusIndicator = { color: string; title: string; icon: LucideIcon };
 
 const STATUS_META: Record<string, { color: string; title: string; label: string }> = {
   committed: { color: 'text-zinc-500', title: 'Committed', label: 'Committed' },
@@ -33,13 +33,9 @@ function computeSelectionItemState(sel: any) {
   const isModified = !!sel.dirty;
 
   const statusIndicator: StatusIndicator = (() => {
-    if (sel.stage === 'staged_creation' || sel.stage === 'staged_edition' || sel.stage === 'staged_deletion' || sel.stage === 'committed') {
-      const lab = STATUS_META[sel.stage] ?? STATUS_META.draft;
-      return { color: lab.color, title: lab.title, label: lab.label };
-    }
-    if (!sel.isPersisted) return STATUS_META.draft;
-    if (isModified) return { color: 'text-amber-500', title: 'Modified', label: 'Modified' };
-    return { color: 'text-gray-400', title: 'Saved', label: 'Saved' };
+    if (sel.stage === "committed") return { color: "text-emerald-600", title: `Committed`, icon: GitCommitVertical }
+    if (sel.stage.startsWith("staged")) return { color: "text-amber-600", title: `Saved`, icon: GitPullRequestCreateArrow }
+    return { color: "text-red-600", title: `Unsaved`, icon: GitPullRequestDraft }
   })();
 
   return { isGlobal, norm, pageDisplay, isProjectScope, statusIndicator } as const;
@@ -69,9 +65,9 @@ function SelectionItemInfo({
         <span className="font-mono">{formatValue(sel.x)}, {formatValue(sel.y)} • {formatValue(sel.width)} × {formatValue(sel.height)}</span>
       </div>
 
-      <div className="grid grid-cols-2 gap-2  [&>*]:w-full [&>*]:justify-start">
+      <div className="flex flex-row gap-2">
         <Badge
-          title="Selection page"
+          title={`Selection applies to ${isGlobal ? "all pages" : `page ${sel.page_number + 1}`}`}
           variant="outline"
           icon={isGlobal ? Globe : Hash}
           data-testid={`selection-toggle-${sel.id}`}
@@ -80,18 +76,22 @@ function SelectionItemInfo({
         <Badge
           title={statusIndicator.title}
           variant="outline"
-          icon={statusIndicator.label.toLowerCase() === "committed" ? GitCommitVertical : GitPullRequestCreateArrow}
+          icon={statusIndicator.icon}
           status="custom"
           customStatusColor={statusIndicator.color}
-        >{statusIndicator.label}</Badge>
+          className="[&>*]:m-0"
+        />
 
-        <Badge
-          title="Selection scope"
-          variant="outline"
-          icon={Telescope}
-          status={isProjectScope ? "error" : "muted"}
-          data-testid={`selection-scope-${sel.id}`}
-        >{isProjectScope ? 'Project' : 'Document'}</Badge>
+        {sel.scope === "project" && (
+          <Badge
+            title="Template selection"
+            variant="outline"
+            icon={Telescope}
+            status="info"
+            data-testid={`selection-scope-${sel.id}`}
+            className="[&>*]:m-0"
+          />
+        )}
 
         {isAI && (
           <Badge
@@ -103,7 +103,8 @@ function SelectionItemInfo({
                 ? (confidence > 0.9 ? "success" : confidence > 0.7 ? "warning" : "error")
                 : undefined
             }
-          >AIC {confidence}</Badge>
+            className="[&>*]:m-0"
+          />
         )}
       </div>
     </div>
@@ -130,7 +131,7 @@ function SelectionItemMenu({
   onDelete: (id: string) => void;
 }) {
   return (
-    <div className="absolute top-2 right-2">
+    <div className="absolute top-3 right-3">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button

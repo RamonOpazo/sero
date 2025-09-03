@@ -418,6 +418,8 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
           createPrompt({ title, directive, prompt: promptBody, state: 'committed', scope: 'document' } as any);
           const res = await save();
           if (!res.ok) { toast.error('Failed to create prompt'); throw new Error('api'); }
+          // Reload from server to ensure we reflect authoritative state (including committed status)
+          await load();
           toast.success(`${title} rule created and committed`);
           setShowAddPromptDialog(false);
         }}
