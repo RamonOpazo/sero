@@ -27,7 +27,7 @@ describe('selection-lifecycle-mapper', () => {
     const ui = { ...baseSel, stage: UILifecycleStage.Unstaged, isPersisted: false, dirty: true } as any
     const out = toApiCreate(ui)
     expect((out as any).stage).toBeUndefined()
-    expect((out as any).dirty).toBeUndefined()
+    expect((out as any).isDirty).toBeUndefined()
   })
 
   it('toApiUpdate maps stage to state', () => {

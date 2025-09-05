@@ -63,9 +63,9 @@ export function useStageCommit(documentId: string | number): UseStageCommitResul
     const stagedDeletion = (uiSelections || []).filter((s: any) => s.stage === UILifecycleStage.StagedDeletion).length;
     const stagedPersisted = stagedCreation + stagedEdition + stagedDeletion;
     const created = (uiSelections || []).filter((s: any) => s.isPersisted === false).length;
-    const updated = (uiSelections || []).filter((s: any) => s.isPersisted === true && s.stage === UILifecycleStage.Unstaged && s.dirty === true).length;
+    const updated = (uiSelections || []).filter((s: any) => s.isPersisted === true && s.stage === UILifecycleStage.Unstaged && s.isDirty === true).length;
     const deleted = 0;
-    const pending = (uiSelections || []).filter((s: any) => s.dirty === true).length;
+    const pending = (uiSelections || []).filter((s: any) => s.isDirty === true).length;
     return { committed, stagedPersisted, stagedCreation, stagedEdition, stagedDeletion, created, updated, deleted, pending } as StageCommitStats;
   }, [uiSelections]);
 

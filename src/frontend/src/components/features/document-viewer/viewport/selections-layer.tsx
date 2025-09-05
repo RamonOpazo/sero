@@ -1,10 +1,3 @@
-/**
- * Simplified SelectionsLayer using the new SelectionManager
- * 
- * This replaces the complex SelectionsLayer with a much cleaner implementation
- * that uses the new SelectionManager for state management.
- */
-
 import React, { useState, useCallback, useRef } from "react";
 import { useSelections } from '../providers/selections-provider';
 import { useViewportState } from '../providers/viewport-provider';
@@ -352,7 +345,7 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     const state = selection.state || "unstaged";
 
     const ui = uiMetaById.get(selection.id);
-    const isDirty = ui?.dirty === true;
+    const isDirty = ui?.isDirty === true;
     const isGlobal = selection.page_number === null;
     const isTemplate = (selection as any).scope === 'project';
 

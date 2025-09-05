@@ -108,7 +108,7 @@ export function useDocumentActions(document: MinimalDocumentType) {
   }, [setActiveControlsPanel]);
 
   const discardAllUnsaved = useCallback(() => {
-    const totalUnsaved = (uiSelections || []).filter((s: any) => s.dirty === true).length;
+    const totalUnsaved = (uiSelections || []).filter((s: any) => s.isDirty === true).length;
     if (totalUnsaved === 0) { toast.info('No unsaved changes to discard'); return; }
     discardAllChanges();
     toast.success(`Discarded ${totalUnsaved} unsaved change${totalUnsaved === 1 ? '' : 's'}`);

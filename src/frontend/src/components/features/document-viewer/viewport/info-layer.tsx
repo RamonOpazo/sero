@@ -21,7 +21,7 @@ export default function InfoLayer({ document, documentSize, isVisible }: Props) 
 
   const selLifecycle = useMemo(() => {
     const ui = (uiSelections || []) as any[];
-    const unstaged = ui.filter(s => s.dirty === true).length;
+    const unstaged = ui.filter(s => s.isDirty === true).length;
     const stagedCreation = ui.filter(s => s.stage === UILifecycleStage.StagedCreation).length;
     const stagedEdition = ui.filter(s => s.stage === UILifecycleStage.StagedEdition).length;
     const stagedDeletion = ui.filter(s => s.stage === UILifecycleStage.StagedDeletion).length;
