@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { UISelectionStage } from '@/components/features/document-viewer/types/selection-lifecycle'
+import { UILifecycleStage } from '@/components/features/document-viewer/types/lifecycle'
 import { fromApiSelection, mergeServerResponse, toApiCreate, toApiUpdate } from '@/components/features/document-viewer/core/mappers/selection-lifecycle-mapper'
 
 const baseSel = {
@@ -12,37 +12,37 @@ describe('selection-lifecycle-mapper', () => {
   it('fromApiSelection maps committed', () => {
     const api = { ...baseSel, state: 'committed' } as any
     const ui = fromApiSelection(api)
-    expect(ui.stage).toBe(UISelectionStage.Committed)
-    expect(ui.isPersisted).toBe(true)
-    expect(ui.dirty).toBe(false)
+    expect(ui.stage).toBe(UILifecycleStage.Committed)
+    expect(ui.isSaved).toBe(true)
+    expect(ui.isDirty).toBe(false)
   })
 
   it('fromApiSelection maps staged_edition', () => {
     const api = { ...baseSel, state: 'staged_edition' } as any
     const ui = fromApiSelection(api)
-    expect(ui.stage).toBe(UISelectionStage.StagedEdition)
+    expect(ui.stage).toBe(UILifecycleStage.StagedEdition)
   })
 
   it('toApiCreate strips lifecycle fields', () => {
-    const ui = { ...baseSel, stage: UISelectionStage.Unstaged, isPersisted: false, dirty: true } as any
+    const ui = { ...baseSel, stage: UILifecycleStage.Unstaged, isPersisted: false, dirty: true } as any
     const out = toApiCreate(ui)
     expect((out as any).stage).toBeUndefined()
     expect((out as any).dirty).toBeUndefined()
   })
 
   it('toApiUpdate maps stage to state', () => {
-    const ui = { ...baseSel, stage: UISelectionStage.StagedDeletion, isPersisted: true, dirty: true } as any
+    const ui = { ...baseSel, stage: UILifecycleStage.StagedDeletion, isPersisted: true, dirty: true } as any
     const out = toApiUpdate(ui)
     expect((out as any).state).toBe('staged_deletion')
   })
 
   it('mergeServerResponse adopts server state and resets dirty', () => {
-    const ui = { ...baseSel, stage: UISelectionStage.StagedEdition, isPersisted: true, dirty: true } as any
+    const ui = { ...baseSel, stage: UILifecycleStage.StagedEdition, isPersisted: true, dirty: true } as any
     const api = { ...baseSel, state: 'committed' } as any
     const merged = mergeServerResponse(ui, api)
-    expect(merged.stage).toBe(UISelectionStage.Committed)
-    expect(merged.dirty).toBe(false)
-    expect(merged.isPersisted).toBe(true)
+    expect(merged.stage).toBe(UILifecycleStage.Committed)
+    expect(merged.isDirty).toBe(false)
+    expect(merged.isSaved).toBe(true)
   })
 })
 

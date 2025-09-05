@@ -4,7 +4,7 @@ import type { TypedMessage } from "@/components/shared/typed-confirmation-dialog
 import type { PromptType } from "@/types";
 import { useSelections } from "../providers/selections-provider";
 import { usePrompts } from "../providers/prompts-provider";
-import { UISelectionStage } from "../types/selection-lifecycle";
+import { UILifecycleStage } from "../types/lifecycle";
 import { DocumentViewerAPI } from "@/lib/document-viewer-api";
 
 export interface StageCommitStats {
@@ -57,13 +57,13 @@ export function useStageCommit(documentId: string | number): UseStageCommitResul
 
   // Selection stats
   const selectionStats = useMemo<StageCommitStats>(() => {
-    const committed = (uiSelections || []).filter((s: any) => s.stage === UISelectionStage.Committed).length;
-    const stagedCreation = (uiSelections || []).filter((s: any) => s.stage === UISelectionStage.StagedCreation).length;
-    const stagedEdition = (uiSelections || []).filter((s: any) => s.stage === UISelectionStage.StagedEdition).length;
-    const stagedDeletion = (uiSelections || []).filter((s: any) => s.stage === UISelectionStage.StagedDeletion).length;
+    const committed = (uiSelections || []).filter((s: any) => s.stage === UILifecycleStage.Committed).length;
+    const stagedCreation = (uiSelections || []).filter((s: any) => s.stage === UILifecycleStage.StagedCreation).length;
+    const stagedEdition = (uiSelections || []).filter((s: any) => s.stage === UILifecycleStage.StagedEdition).length;
+    const stagedDeletion = (uiSelections || []).filter((s: any) => s.stage === UILifecycleStage.StagedDeletion).length;
     const stagedPersisted = stagedCreation + stagedEdition + stagedDeletion;
     const created = (uiSelections || []).filter((s: any) => s.isPersisted === false).length;
-    const updated = (uiSelections || []).filter((s: any) => s.isPersisted === true && s.stage === UISelectionStage.Unstaged && s.dirty === true).length;
+    const updated = (uiSelections || []).filter((s: any) => s.isPersisted === true && s.stage === UILifecycleStage.Unstaged && s.dirty === true).length;
     const deleted = 0;
     const pending = (uiSelections || []).filter((s: any) => s.dirty === true).length;
     return { committed, stagedPersisted, stagedCreation, stagedEdition, stagedDeletion, created, updated, deleted, pending } as StageCommitStats;
@@ -152,15 +152,15 @@ export function useStageCommit(documentId: string | number): UseStageCommitResul
 
     // Phase 1: stage editions for persisted using server APIs only, then reload
     try {
-      const committed = persisted.filter((s: any) => s.stage === UISelectionStage.Committed);
-      const nonCommitted = persisted.filter((s: any) => s.stage !== UISelectionStage.Committed);
+      const committed = persisted.filter((s: any) => s.stage === UILifecycleStage.Committed);
+      const nonCommitted = persisted.filter((s: any) => s.stage !== UILifecycleStage.Committed);
 
       if (committed.length > 0) {
         await Promise.allSettled(committed.map((s: any) => DocumentViewerAPI.convertSelectionToStaged(s.id)));
       }
 
       if (nonCommitted.length > 0) {
-        const needsEdition = nonCommitted.filter((s: any) => s.stage !== UISelectionStage.StagedEdition);
+        const needsEdition = nonCommitted.filter((s: any) => s.stage !== UILifecycleStage.StagedEdition);
         if (needsEdition.length > 0) {
           await Promise.allSettled(needsEdition.map((s: any) => DocumentViewerAPI.updateSelection(s.id, { state: 'staged_edition' } as any)));
         }

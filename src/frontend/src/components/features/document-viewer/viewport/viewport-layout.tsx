@@ -4,7 +4,7 @@ import React, { useState, useCallback } from 'react';
 import { cn } from "@/lib/utils";
 import Viewport from "./unified-viewport";
 import RenderLayer from "./render-layer";
-import SelectionsLayer from "./selections-layer"; // Note: Will be renamed from SelectionsLayerNew
+import SelectionsLayer from "./selections-layer";
 import InfoLayer from "./info-layer";
 import ActionsLayer from "./actions-layer";
 import { useViewportState, useViewportActions } from '../providers/viewport-provider';
@@ -12,7 +12,6 @@ import { useEffect } from "react";
 import { useSelections } from "../providers/selections-provider";
 import PromptsListing from "./prompts-listing";
 import SelectionsListing from "./selections-listing";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 interface DocumentViewerLayoutProps {
   document: MinimalDocumentType;
@@ -29,11 +28,10 @@ export default function DocumentViewerLayout({ document }: DocumentViewerLayoutP
       </Widget>
 
       {/* Controls sidebar */}
-      <ListingsLayout document={document} className="max-w-(--sidebar-width)"/>
+      <ListingsLayout className="max-w-(--sidebar-width)" />
     </WidgetContainer>
   );
 }
-
 
 interface EditorLayoutProps {
   document: MinimalDocumentType;
@@ -60,25 +58,25 @@ export function EditorLayout({ document, className, ...props }: EditorLayoutProp
     >
       {/* Main viewport with document and selections */}
       <Viewport>
-        <RenderLayer 
-          document={document} 
+        <RenderLayer
+          document={document}
           onDocumentSizeChange={handleDocumentSizeChange}
         />
-        <SelectionsLayer 
+        <SelectionsLayer
           documentSize={documentSize}
         />
       </Viewport>
 
       {/* Actions layer stays outside unified transform for fixed positioning */}
-      <ActionsLayer 
+      <ActionsLayer
         document={document}
         isInfoVisible={showInfoPanel}
         onToggleInfo={toggleInfoPanel}
       />
-      
+
       {/* Info layer covers the entire viewer area */}
-      <InfoLayer 
-        document={document} 
+      <InfoLayer
+        document={document}
         documentSize={documentSize}
         isVisible={showInfoPanel}
         onToggleVisibility={toggleInfoPanel}
@@ -88,16 +86,16 @@ export function EditorLayout({ document, className, ...props }: EditorLayoutProp
 }
 
 interface ListingsLayoutProps {
-  document: MinimalDocumentType;
   className?: string;
 }
 
-export function ListingsLayout({ document }: ListingsLayoutProps) {
+export function ListingsLayout({}: ListingsLayoutProps) {
   const { selectedSelection } = useSelections();
 
   // Viewport state for orchestration
   const {
     activeWorkbenchTab,
+    activeControlsPanel,
     setActiveWorkbenchTab,
   } = (useViewportState() as any);
 
@@ -110,28 +108,45 @@ export function ListingsLayout({ document }: ListingsLayoutProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedSelection?.id]);
 
+  const expanded = activeControlsPanel === 'workbench';
+
+  // Enter animation when workbench mounts
+  const [entered, setEntered] = React.useState(false);
+  
+  useEffect(() => {
+    if (expanded) {
+      setEntered(false);
+      const id = requestAnimationFrame(() => setEntered(true));
+      return () => cancelAnimationFrame(id);
+    }
+    setEntered(false);
+    return () => { };
+  }, [expanded]);
+
+
   return (
-    <div className="w-[300px]">
-      <Tabs value={activeWorkbenchTab} onValueChange={setActiveWorkbenchTab}>
-        <TabsList className="bg-transparent p-0">
-          <TabsTrigger
-            className="border-0 bg-transparent hover:underline"
-            value="selections">Selections</TabsTrigger>
-          <TabsTrigger
-            className="border-0 bg-transparent hover:underline"
-            value="prompts">AI Rules</TabsTrigger>
-        </TabsList>
-        <TabsContent value="selections">
-          <div className="flex-1 min-h-0">
+    <div
+      className={cn(
+        "overflow-hidden rounded-md border transition-[flex-basis,opacity,padding,margin] duration-300 ease-in-out",
+        expanded ? "basis-[250px]" : "basis-0 p-0 opacity-0 -m-2",
+      )}
+    >
+      <div
+        data-role="workbench"
+        className={cn(
+          "h-full min-h-0 transition duration-200",
+          expanded && !entered && "hidden",
+        )}
+        style={{ willChange: 'opacity, transform' }}
+      >
+        <div className="h-full">
+          {activeWorkbenchTab === 'selections' ? (
             <SelectionsListing />
-          </div>
-        </TabsContent>
-        <TabsContent value="prompts">
-          <div className="flex-1 min-h-0">
-            <PromptsListing documentId={document.id} />
-          </div>
-        </TabsContent>
-      </Tabs>
+          ) : (
+            <PromptsListing />
+          )}
+        </div>
+      </div>
     </div>
   );
 }

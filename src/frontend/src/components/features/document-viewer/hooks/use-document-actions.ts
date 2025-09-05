@@ -18,6 +18,7 @@ export function useDocumentActions(document: MinimalDocumentType) {
     setCurrentPage,
     dispatch,
     setActiveWorkbenchTab,
+    setActiveControlsPanel,
   } = useViewportState();
 
   const { uiSelections, discardAllChanges, selectionCount } = useSelections() as any;
@@ -94,11 +95,17 @@ export function useDocumentActions(document: MinimalDocumentType) {
 
   const openWorkbenchSelections = useCallback(() => {
     setActiveWorkbenchTab('selections');
-  }, [setActiveWorkbenchTab]);
+    setActiveControlsPanel('workbench');
+  }, [setActiveWorkbenchTab, setActiveControlsPanel]);
 
   const openWorkbenchPrompts = useCallback(() => {
     setActiveWorkbenchTab('prompts');
-  }, [setActiveWorkbenchTab]);
+    setActiveControlsPanel('workbench');
+  }, [setActiveWorkbenchTab, setActiveControlsPanel]);
+
+  const closeWorkbench = useCallback(() => {
+    setActiveControlsPanel('document-controls');
+  }, [setActiveControlsPanel]);
 
   const discardAllUnsaved = useCallback(() => {
     const totalUnsaved = (uiSelections || []).filter((s: any) => s.dirty === true).length;
@@ -196,6 +203,7 @@ export function useDocumentActions(document: MinimalDocumentType) {
     // Workbench
     openWorkbenchSelections,
     openWorkbenchPrompts,
+    closeWorkbench,
 
     // Selections
     discardAllUnsaved,

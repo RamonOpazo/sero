@@ -1,6 +1,6 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { ZoomIn, ZoomOut, Scan, Info, Pen, PenOff, ChevronLeft, ChevronRight, Eye, EyeClosed, MousePointerClick, Bot, Hand, Grab } from "lucide-react";
+import { ZoomIn, ZoomOut, Scan, Info, Pen, PenOff, ChevronLeft, ChevronRight, Eye, EyeClosed, SquareDashed, Bot, Hand, Grab, ClipboardX, ClipboardList } from "lucide-react";
 import { useViewportState, useViewportActions } from '../providers/viewport-provider';
 import type { MinimalDocumentType } from "@/types";
 import { Menubar, MenubarMenu, MenubarTrigger, MenubarContent, MenubarItem, MenubarSeparator, MenubarSub, MenubarSubTrigger, MenubarSubContent, MenubarLabel, MenubarShortcut } from "@/components/ui/menubar";
@@ -36,6 +36,8 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
     isViewingProcessedDocument,
     activeWorkbenchTab,
     setActiveWorkbenchTab,
+    activeControlsPanel,
+    setActiveControlsPanel,
   } = useViewportState();
 
   const {
@@ -61,6 +63,7 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
   // Prompts and AI hooks
   const { load, save, createPrompt } = usePrompts() as any;
   const actions = useDocumentActions(document);
+  const { closeWorkbench } = actions as any;
 
   // Dialog state
   const [showStageDialog, setShowStageDialog] = useState(false);
@@ -81,41 +84,12 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
 
   const handleResetView = () => {
     resetView();
-    // setMode("pan");
   }
 
   // Zoom controls
   const { zoomIn, zoomOut } = useZoomControls();
   const handleZoomIn = useCallback(() => { zoomIn(); }, [zoomIn]);
   const handleZoomOut = useCallback(() => { zoomOut(); }, [zoomOut]);
-
-  // State for auto-hide behavior
-  const [visible, setVisible] = useState(false); // Start hidden, show on hover
-
-  // Handle mouse enter/leave in render layer to show/hide UI based on hover
-  useEffect(() => {
-    const handleRenderLayerMouseEnter = () => {
-      setVisible(true);
-    };
-
-    const handleRenderLayerMouseLeave = () => {
-      setVisible(false);
-    };
-
-    // Find the render layer element and add mouse enter/leave listeners
-    const renderLayer = globalThis.document.querySelector('[data-slot="document-viewer-renderer"]');
-    if (renderLayer) {
-      renderLayer.addEventListener('mouseenter', handleRenderLayerMouseEnter);
-      renderLayer.addEventListener('mouseleave', handleRenderLayerMouseLeave);
-
-      return () => {
-        renderLayer.removeEventListener('mouseenter', handleRenderLayerMouseEnter);
-        renderLayer.removeEventListener('mouseleave', handleRenderLayerMouseLeave);
-      };
-    }
-
-    return () => { };
-  }, []);
 
   return (
     <div id="__actions_layer__" className="w-fit">
@@ -124,7 +98,6 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
       <div className={cn(
         "absolute top-2 left-1/2 -translate-x-1/2 z-1001 transition-all duration-300 ease-in-out",
         "flex flex-row gap-0",
-        visible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4 pointer-events-none",
       )}>
         <Menubar>
           {(() => {
@@ -179,7 +152,6 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
                 isDownloadAvailable: actions.isDownloadAvailable,
               },
             } as const;
-            const menus = buildActionsMenuConfig(ctx);
 
             const renderNode = (c: MenuNode): React.ReactNode => {
               if (c.type === 'separator') return <MenubarSeparator key={c.key} />;
@@ -198,12 +170,16 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
               const Icon = item.icon;
               return (
                 <MenubarItem key={item.key} onClick={item.onSelect} disabled={item.disabled}>
-                  {Icon ? <Icon className="mr-2 h-4 w-4" /> : null}
+                  {Icon ? <Icon /> : null}
                   {item.label}
                   {item.shortcut ? <MenubarShortcut>{item.shortcut}</MenubarShortcut> : null}
                 </MenubarItem>
               );
             };
+
+            // Inject closeWorkbench for Actions menu config that references it
+            const ctxWithClose = { ...ctx, document: { ...ctx.document, closeWorkbench } } as any;
+            const menus = buildActionsMenuConfig(ctxWithClose);
 
             return menus.map((menu) => (
               <MenubarMenu key={menu.key}>
@@ -217,7 +193,7 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
 
           <Separator orientation="vertical" />
 
-          <div className="flex flex-row gap-0">
+          <div className="flex flex-row gap-0 items-center">
             <Button variant="ghost" size="icon" onClick={handleZoomOut}><ZoomOut /></Button>
             <Button variant="ghost" size="icon" onClick={handleZoomIn}><ZoomIn /></Button>
             <Button variant="ghost" size="icon" onClick={handleResetView}><Scan /></Button>
@@ -237,11 +213,20 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
             <Button variant="ghost" size="icon" onClick={toggleSelections} title={showSelections ? "Hide selections" : "Show selections"}>{showSelections ? <Pen /> : <PenOff />}</Button>
             <Button
               variant="ghost"
+              disabled={activeControlsPanel === "workbench" ? undefined : true}
               size="icon"
               onClick={() => setActiveWorkbenchTab(activeWorkbenchTab === 'selections' ? 'prompts' : 'selections')}
               title={activeWorkbenchTab === 'selections' ? 'Open AI Rules' : 'Open Selections'}
             >
-              {activeWorkbenchTab === 'selections' ? <MousePointerClick /> : <Bot />}
+              {activeWorkbenchTab === 'selections' ? <Bot /> : <SquareDashed />}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setActiveControlsPanel(activeControlsPanel === 'workbench' ? 'document-controls' : 'workbench')}
+              title={activeControlsPanel === 'workbench' ? 'Close Workbench' : 'Open Workbench'}
+            >
+              {activeControlsPanel === "workbench" ? <ClipboardX /> : <ClipboardList />}
             </Button>
             <Button
               variant="ghost"
@@ -268,7 +253,6 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
       <div className={cn(
         "absolute bottom-2 left-1/2 -translate-x-1/2 z-1001 bg-background/90 rounded-md",
         "transition-all duration-300 ease-in-out",
-        visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none",
       )}>
         <MiniPager
           currentPage={currentPage}
@@ -392,16 +376,14 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
         cancelButtonText="Cancel"
         variant="default"
         messages={[]}
-        initialValues={{ title: '', directive: 'process', prompt: '' }}
+        initialValues={{ title: '', directive: 'identify', prompt: '' }}
         fields={[
           { type: 'text', name: 'title', label: 'Title', placeholder: 'Short descriptive title', required: true },
           {
             type: 'select', name: 'directive', label: 'Directive', placeholder: 'Select directive', required: true,
             options: [
-              { value: 'process', label: 'Process' },
               { value: 'identify', label: 'Identify' },
               { value: 'redact', label: 'Redact' },
-              { value: 'preserve', label: 'Preserve' },
               { value: 'exclude', label: 'Exclude' },
             ],
           },

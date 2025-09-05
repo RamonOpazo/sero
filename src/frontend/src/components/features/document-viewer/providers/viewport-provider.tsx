@@ -43,6 +43,7 @@ export interface ViewportState {
 // Actions for viewport state updates
 export type ViewportAction = 
   | { type: 'SET_DOCUMENT'; payload: MinimalDocumentType }
+  | { type: 'SET_ACTIVE_CONTROLS_PANEL'; payload: 'document-controls' | 'workbench' }
   | { type: 'SET_DOCUMENT_SIZE'; payload: DocumentSize }
   | { type: 'SET_PAN'; payload: Point }
   | { type: 'SET_ZOOM'; payload: number }
@@ -112,6 +113,15 @@ function viewportStateReducer(state: ViewportState, action: ViewportAction): Vie
           pan: { x: 0, y: 0 },
           zoom: 1
         }
+      };
+
+    case 'SET_ACTIVE_CONTROLS_PANEL':
+      return {
+        ...state,
+        ui: {
+          ...state.ui,
+          activeControlsPanel: action.payload,
+        },
       };
 
     case 'SET_DOCUMENT_SIZE':
@@ -470,6 +480,7 @@ export function useViewportState() {
     setShowSelectionsPanel: useCallback((value: boolean) => dispatch({ type: 'SET_SHOW_SELECTIONS_PANEL', payload: value }), [dispatch]),
     setShowPromptPanel: useCallback((value: boolean) => dispatch({ type: 'SET_SHOW_PROMPT_PANEL', payload: value }), [dispatch]),
     setActiveWorkbenchTab: useCallback((value: 'selections' | 'prompts') => dispatch({ type: 'SET_ACTIVE_WORKBENCH_TAB', payload: value }), [dispatch]),
+    setActiveControlsPanel: useCallback((panel: 'document-controls' | 'workbench') => dispatch({ type: 'SET_ACTIVE_CONTROLS_PANEL', payload: panel }), [dispatch]),
     activeControlsPanel: state.ui.activeControlsPanel,
     activeWorkbenchTab: state.ui.activeWorkbenchTab,
     userPreferredShowSelections: state.ui.userPreferredShowSelections,

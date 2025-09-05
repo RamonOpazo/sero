@@ -155,6 +155,8 @@ export function buildActionsMenuConfig(ctx: ActionsContext): MenuConfig[] {
         children: [
           { type: 'item', key: 'wb-selections', label: 'Selections', icon: MousePointerClick, onSelect: selections.openWorkbenchSelections },
           { type: 'item', key: 'wb-prompts', label: 'AI Rules', icon: Bot, onSelect: rules.openWorkbenchPrompts },
+          { type: 'separator', key: 'wb-sep' },
+          { type: 'item', key: 'wb-close', label: 'Close Workbench', onSelect: (ctx as any).document?.closeWorkbench ?? ((): void => {}) },
         ],
       },
     ],

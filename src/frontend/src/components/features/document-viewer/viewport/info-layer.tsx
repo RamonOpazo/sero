@@ -5,7 +5,7 @@ import { useViewportState } from '../providers/viewport-provider';
 import { useSelections } from '../providers/selections-provider';
 import { usePrompts } from '../providers/prompts-provider';
 import { cn } from '@/lib/utils';
-import { UISelectionStage } from '../types/selection-lifecycle';
+import { UILifecycleStage } from '../types/lifecycle';
 
 type Props = {
   document: MinimalDocumentType;
@@ -22,10 +22,10 @@ export default function InfoLayer({ document, documentSize, isVisible }: Props) 
   const selLifecycle = useMemo(() => {
     const ui = (uiSelections || []) as any[];
     const unstaged = ui.filter(s => s.dirty === true).length;
-    const stagedCreation = ui.filter(s => s.stage === UISelectionStage.StagedCreation).length;
-    const stagedEdition = ui.filter(s => s.stage === UISelectionStage.StagedEdition).length;
-    const stagedDeletion = ui.filter(s => s.stage === UISelectionStage.StagedDeletion).length;
-    const committed = ui.filter(s => s.stage === UISelectionStage.Committed).length;
+    const stagedCreation = ui.filter(s => s.stage === UILifecycleStage.StagedCreation).length;
+    const stagedEdition = ui.filter(s => s.stage === UILifecycleStage.StagedEdition).length;
+    const stagedDeletion = ui.filter(s => s.stage === UILifecycleStage.StagedDeletion).length;
+    const committed = ui.filter(s => s.stage === UILifecycleStage.Committed).length;
     return { unstaged, stagedCreation, stagedEdition, stagedDeletion, committed };
   }, [uiSelections]);
 
