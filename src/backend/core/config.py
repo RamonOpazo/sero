@@ -26,6 +26,14 @@ def _materialize_secret_key_with_keyring() -> str:
 
     Raises a clear, actionable error if no suitable keyring backend is available.
     """
+    # Import-time safe override to avoid keyring in CI and other non-interactive envs
+    env_secret = (
+        os.getenv("SERO_SECURITY__SECRET_KEY")
+        or os.getenv("SERO_SECRET_KEY")
+    )
+    if env_secret:
+        return env_secret
+
     try:
         secret_key = keyring.get_password(
             defaults.KEYRING_SERVICE_NAME,
