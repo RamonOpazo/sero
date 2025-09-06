@@ -1,4 +1,5 @@
 import os
+import sys
 import secrets
 import keyring
 from pathlib import Path
@@ -21,22 +22,69 @@ def _materialize_secret_key() -> str:
 
 
 def _materialize_secret_key_with_keyring() -> str:
-    secret_key = keyring.get_password(defaults.KEYRING_SERVICE_NAME, defaults.KEYRING_KEY_NAME)
+    """Provision and retrieve the application secret key from the OS keyring.
+
+    Raises a clear, actionable error if no suitable keyring backend is available.
+    """
+    try:
+        secret_key = keyring.get_password(
+            defaults.KEYRING_SERVICE_NAME,
+            defaults.KEYRING_KEY_NAME,
+        )
+    except keyring.errors.KeyringError as exc:
+        # Provide platform-specific guidance to help users enable a real backend
+        platform = sys.platform
+        if platform.startswith("linux"):
+            hint = (
+                "No OS keyring backend detected. On Linux, install and run a Secret Service provider "
+                "(e.g., GNOME Keyring or KWallet) and ensure a D-Bus session is active.\n"
+                "- Python dependency 'secretstorage' is included automatically.\n"
+                "- You still need a Secret Service daemon. Examples:\n"
+                "  * Debian/Ubuntu: sudo apt-get install gnome-keyring\n"
+                "  * Fedora:        sudo dnf install gnome-keyring\n"
+                "  * Arch/Endeavour: sudo pacman -S gnome-keyring libsecret\n"
+                "  * KDE:            install kwallet/kwalletmanager and ensure it runs in your session\n"
+                "After installation, log out and back in (or start the keyring daemon), then retry."
+            )
+        elif platform == "win32":
+            hint = (
+                "Windows Credential Locker backend unavailable. Ensure you're running as a regular user "
+                "(not elevated under a different profile) and that 'pywin32-ctypes' is installed."
+            )
+        elif platform == "darwin":
+            hint = (
+                "macOS Keychain backend unavailable. Ensure your Login keychain is unlocked "
+                "(open Keychain Access) and retry."
+            )
+        else:
+            hint = "No keyring backend available on this platform."
+        raise RuntimeError(
+            "Keyring backend not available: " + str(exc) + "\n" + hint,
+        ) from exc
 
     if secret_key is None:
         secret_key = secrets.token_hex(32)
-        keyring.set_password(defaults.KEYRING_SERVICE_NAME, defaults.KEYRING_KEY_NAME, secret_key)
+        try:
+            keyring.set_password(
+                defaults.KEYRING_SERVICE_NAME,
+                defaults.KEYRING_KEY_NAME,
+                secret_key,
+            )
+        except keyring.errors.KeyringError as exc:
+            raise RuntimeError(
+                "Failed to store secret key in OS keyring: " + str(exc),
+            ) from exc
 
     return secret_key
 
 
 class _LogSettings(BaseModel):
-    filepath: Path = Field(default=defaults.BASE_PATH / "logs/app.jsonl")
+    filepath: Path = Field(default=defaults.LOG_FILE)
     level: str = Field(default="INFO")
 
 
 class _DatabaseSettings(BaseModel):
-    filepath: Path = Field(default=defaults.BASE_PATH / "sero.sqlite")
+    filepath: Path = Field(default=defaults.DB_FILE)
     # SQLite specific settings
     journal_mode: str = Field(default="WAL", description="SQLite journal mode (WAL recommended for concurrency)")
     synchronous: str = Field(default="NORMAL", description="SQLite synchronous mode")
@@ -52,19 +100,24 @@ class _AiSettings(BaseModel):
 
 
 class _SecuritySettings(BaseModel):
-    secret_key: str = Field(default_factory=_materialize_secret_key)
+    secret_key: str = Field(default_factory=_materialize_secret_key_with_keyring)
     algorithm: str = Field(default="HS256")
     access_token_expire_minutes: int = Field(default=30)
 
 
 class _ProcessingSettings(BaseModel):
-    dirpath: Path = Field(default=defaults.BASE_PATH / "output")
+    dirpath: Path = Field(default=defaults.OUTPUT_DIR)
     max_file_size: int = Field(default=50 * 1024 * 1024)
     allowed_mime_types: list[str] = Field(default=['application/pdf'])
 
 
 class _Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", )
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        env_nested_delimiter="__",
+        env_prefix="SERO_",
+    )
 
     default_origin: str = Field(default="http://localhost:8000")
     is_debug_mode: bool = Field(default=True)
