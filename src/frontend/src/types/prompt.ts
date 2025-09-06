@@ -38,3 +38,6 @@ export const PromptUpdateSchema = z.object({
 export type PromptType = z.infer<typeof PromptSchema>;
 export type PromptCreateType = z.infer<typeof PromptCreateSchema>;
 export type PromptUpdateType = z.infer<typeof PromptUpdateSchema>;
+
+// UI types
+export type UIPrompt = PromptType & { isUnsaved: boolean };

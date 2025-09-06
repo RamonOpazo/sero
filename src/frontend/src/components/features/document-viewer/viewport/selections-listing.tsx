@@ -1,7 +1,8 @@
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MoreVertical, Trash2, MousePointer2, Globe, Hash, Settings, Telescope, Bot, RotateCcw, GitCommitVertical, GitPullRequestCreateArrow } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { SquareDashed, MoreHorizontal, Trash2, CheckCheck,  Save, Settings, Telescope, Bot, RotateCcw, X, type LucideIcon } from "lucide-react";
 import { useSelections } from "../providers/selections-provider";
 import { useViewportState } from "../providers/viewport-provider";
 import { useMemo, useRef, useEffect, useState, useCallback } from "react";
@@ -14,98 +15,118 @@ import type { Selection } from "../types/viewer";
 import { getNormalizedSelectionState } from "../utils";
 import { useWorkspace } from "@/providers/workspace-provider";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Separator } from "@/components/ui/separator";
 
-type StatusIndicator = { color: string; title: string; label: string };
-
-const STATUS_META: Record<string, { color: string; title: string; label: string }> = {
-  committed: { color: 'text-zinc-500', title: 'Committed', label: 'Committed' },
-  staged_deletion: { color: 'text-red-500', title: 'Staged deletion', label: 'Deletion' },
-  staged_edition: { color: 'text-violet-500', title: 'Staged edition', label: 'Edition' },
-  staged_creation: { color: 'text-blue-500', title: 'Staged creation', label: 'Creation' },
-  draft: { color: 'text-emerald-500', title: 'Unstaged (local)', label: 'Unstaged' },
-};
+type StatusIndicator = { color: string; title: string; icon: LucideIcon };
 
 function computeSelectionItemState(sel: any) {
   const isGlobal = sel.page_number === null;
   const norm = getNormalizedSelectionState((sel as any).state);
   const pageDisplay = isGlobal ? 'Global' : `Page ${(sel.page_number ?? 0) + 1}`;
   const isProjectScope = (sel as any).scope === 'project';
-  const isModified = !!sel.dirty;
 
   const statusIndicator: StatusIndicator = (() => {
-    if (sel.stage === 'staged_creation' || sel.stage === 'staged_edition' || sel.stage === 'staged_deletion' || sel.stage === 'committed') {
-      const lab = STATUS_META[sel.stage] ?? STATUS_META.draft;
-      return { color: lab.color, title: lab.title, label: lab.label };
-    }
-    if (!sel.isPersisted) return STATUS_META.draft;
-    if (isModified) return { color: 'text-amber-500', title: 'Modified', label: 'Modified' };
-    return { color: 'text-gray-400', title: 'Saved', label: 'Saved' };
+    if (sel.stage === "committed") return { color: "text-emerald-600", title: `Committed`, icon: CheckCheck }
+    if (sel.stage.startsWith("staged")) return { color: "text-amber-500", title: `Saved`, icon: Save }
+    return { color: "text-red-600", title: `Unsaved`, icon: Save }
   })();
 
   return { isGlobal, norm, pageDisplay, isProjectScope, statusIndicator } as const;
 }
 
+function SelectionItemCoord({ sel }: any) {
+  return (
+    <div className="flex flex-col gap-2">
+      <span className="text-sm font-medium overflow-ellipsis line-clamp-1">Coords</span>
+      <span className="border-l-1 pl-2 text-muted-foreground line-clamp-2 break-words overflow-ellipsis">{sel.x.toFixed(2)}, {sel.y.toFixed(2)} • {sel.width.toFixed(2)} × {sel.height.toFixed(2)}</span>
+    </div>
+  )
+}
+
 function SelectionItemInfo({
   sel,
-  isProjectScope,
   statusIndicator,
   pageDisplay,
+  menu,
 }: {
-  sel: any;
-  isProjectScope: boolean;
-  statusIndicator: StatusIndicator;
-  pageDisplay: string;
-  onToggleGlobal: (id: string, e: React.MouseEvent) => void;
+  sel: any,
+  statusIndicator: StatusIndicator,
+  pageDisplay: string,
+  onToggleGlobal: (id: string, e: React.MouseEvent) => void,
+  menu: React.ReactNode,
 }) {
-  const formatValue = (value: number): string => value.toFixed(2);
+  const isCommitted = statusIndicator.title === "Committed"
+  const isSaved = statusIndicator.title !== "Unsaved"
+  const isGlobal = sel.page_number === null;
+  const isTemplate = sel.scope === "project";
   const isAI = !!sel.is_ai_generated;
   const confidence = sel.confidence as number | null | undefined;
-  const isGlobal = sel.page_number === null;
 
   return (
-    <div className="flex flex-col py-2">
-      <div className="text-xs mb-2">
-        <span className="text-muted-foreground">Coords: </span>
-        <span className="font-mono">{formatValue(sel.x)}, {formatValue(sel.y)} • {formatValue(sel.width)} × {formatValue(sel.height)}</span>
-      </div>
-
-      <div className="grid grid-cols-2 gap-2  [&>*]:w-full [&>*]:justify-start">
-        <Badge
-          title="Selection page"
-          variant="outline"
-          icon={isGlobal ? Globe : Hash}
-          data-testid={`selection-toggle-${sel.id}`}
-        >{pageDisplay}</Badge>
-
-        <Badge
-          title={statusIndicator.title}
-          variant="outline"
-          icon={statusIndicator.label.toLowerCase() === "committed" ? GitCommitVertical : GitPullRequestCreateArrow}
-          status="custom"
-          customStatusColor={statusIndicator.color}
-        >{statusIndicator.label}</Badge>
-
-        <Badge
-          title="Selection scope"
-          variant="outline"
-          icon={Telescope}
-          status={isProjectScope ? "error" : "muted"}
-          data-testid={`selection-scope-${sel.id}`}
-        >{isProjectScope ? 'Project' : 'Document'}</Badge>
-
-        {isAI && (
+    <div className="flex flex-row gap-2 items-center">
+      <Tooltip delayDuration={1000}>
+        <TooltipTrigger>
           <Badge
-            title={`AI confidence (AIC) ${confidence}`}
             variant="outline"
-            icon={Bot}
-            status={
-              typeof confidence === "number"
-                ? (confidence > 0.9 ? "success" : confidence > 0.7 ? "warning" : "error")
-                : undefined
-            }
-          >AIC {confidence}</Badge>
-        )}
-      </div>
+            data-testid={`selection-toggle-${sel.id}`}
+          >{pageDisplay}</Badge>
+        </TooltipTrigger>
+        <TooltipContent>Selection applies to {isGlobal ? "all pages" : `page ${sel.page_number + 1}`}</TooltipContent>
+      </Tooltip>
+
+      <Tooltip delayDuration={1000}>
+        <TooltipTrigger>
+          <Save
+            size="1.5em"
+            className={isSaved ? "text-emerald-600" : "text-amber-500"}
+          />
+        </TooltipTrigger>
+        <TooltipContent>{isSaved ? "Saved" : "Unsaved"}</TooltipContent>
+      </Tooltip>
+
+      {isCommitted && (
+        <Tooltip delayDuration={1000}>
+          <TooltipTrigger>
+            <CheckCheck
+              size="1.5em"
+              className="text-emerald-600"
+            />
+          </TooltipTrigger>
+          <TooltipContent>Committed</TooltipContent>
+        </Tooltip>)
+      }
+
+
+      {isTemplate && (
+        <Tooltip delayDuration={1000}>
+          <TooltipTrigger>
+            <Telescope
+              size="1.5em"
+              className="text-blue-600"
+            />
+          </TooltipTrigger>
+          <TooltipContent>Template selection</TooltipContent>
+        </Tooltip>
+      )}
+
+      {isAI && (
+        <Tooltip delayDuration={1000}>
+          <TooltipTrigger>
+            <Bot
+              aria-label={`AI confidence (AIC) ${confidence}`}
+              size="1.5em"
+              className={cn(
+                typeof confidence === "number"
+                  ? (confidence > 0.9 ? "text-emerald-600" : confidence > 0.7 ? "text-amber-500" : "text-red-600")
+                  : undefined
+              )}
+            />
+          </TooltipTrigger>
+          <TooltipContent>{`AI confidence (AIC) ${confidence}`}</TooltipContent>
+        </Tooltip>
+      )}
+
+      {menu}
     </div>
   );
 }
@@ -126,63 +147,61 @@ function SelectionItemMenu({
   onToggleScope: (id: string) => void;
   onOpenConfigDialog: (id: string) => void;
   onOpenConvertDialog: (id: string) => void;
-  onConvertDeletionToEdition: (id: string) => Promise<void> | void;
+  onConvertDeletionToEdition: (id: string) => Promise<boolean> | void;
   onDelete: (id: string) => void;
 }) {
   return (
-    <div className="absolute top-2 right-2">
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-6 w-6 p-0 hover:text-foreground hover:bg-muted/10 opacity-0 group-hover:opacity-100 transition-all duration-200"
-            title="Row actions"
-            aria-label="Row actions"
-          >
-            <MoreVertical />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" sideOffset={4}>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          size="sx"
+          variant="secondary"
+          className="opacity-0 group-hover:opacity-100 transition-all duration-200"
+          title="Row actions"
+          aria-label="Row actions"
+        >
+          <MoreHorizontal />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" sideOffset={4}>
+        <DropdownMenuItem
+          disabled={!isProjectScopedDocument || norm === 'committed' || norm === 'staged_deletion'}
+          onClick={(e) => { e.stopPropagation(); onToggleScope(sel.id); }}
+        >
+          <Telescope /> Toggle scope (project/document)
+        </DropdownMenuItem>
+
+        <DropdownMenuItem
+          onClick={(e) => {
+            e.stopPropagation();
+            if (norm === 'committed' || norm === 'staged_deletion') {
+              onOpenConvertDialog(sel.id);
+            } else {
+              onOpenConfigDialog(sel.id);
+            }
+          }}
+        >
+          <Settings /> Configure selection…
+        </DropdownMenuItem>
+
+        {norm === 'staged_deletion' && (
           <DropdownMenuItem
-            disabled={!isProjectScopedDocument || norm === 'committed' || norm === 'staged_deletion'}
-            onClick={(e) => { e.stopPropagation(); onToggleScope(sel.id); }}
+            onClick={async (e) => { e.stopPropagation(); await onConvertDeletionToEdition(sel.id); }}
           >
-            <Telescope /> Toggle scope (project/document)
+            <RotateCcw /> Convert deletion to edition
           </DropdownMenuItem>
+        )}
 
-          <DropdownMenuItem
-            onClick={(e) => {
-              e.stopPropagation();
-              if (norm === 'committed' || norm === 'staged_deletion') {
-                onOpenConvertDialog(sel.id);
-              } else {
-                onOpenConfigDialog(sel.id);
-              }
-            }}
-          >
-            <Settings /> Configure selection…
-          </DropdownMenuItem>
+        <DropdownMenuSeparator />
 
-          {norm === 'staged_deletion' && (
-            <DropdownMenuItem
-              onClick={async (e) => { e.stopPropagation(); await onConvertDeletionToEdition(sel.id); }}
-            >
-              <RotateCcw /> Convert deletion to edition
-            </DropdownMenuItem>
-          )}
-
-          <DropdownMenuSeparator />
-
-          <DropdownMenuItem
-            className="text-destructive focus:text-destructive"
-            onClick={(e) => { e.stopPropagation(); onDelete(sel.id); }}
-          >
-            <Trash2 /> Delete selection
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </div>
+        <DropdownMenuItem
+          className="text-destructive focus:text-destructive"
+          onClick={(e) => { e.stopPropagation(); onDelete(sel.id); }}
+        >
+          <Trash2 /> Delete selection
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -208,46 +227,51 @@ function SelectionItem({
   onToggleScope: (sel: any) => void;
   onOpenConfigDialog: (id: string) => void;
   onOpenConvertDialog: (id: string) => void;
-  onConvertDeletionToEdition: (id: string) => Promise<void> | void;
+  onConvertDeletionToEdition: (id: string) => Promise<boolean> | void;
   onDelete: (id: string) => void;
 }) {
-  const { norm, pageDisplay, isProjectScope, statusIndicator } = computeSelectionItemState(sel);
+  const { norm, pageDisplay, statusIndicator } = computeSelectionItemState(sel);
+  const menu = (
+    <SelectionItemMenu
+      sel={sel}
+      norm={norm}
+      isProjectScopedDocument={isProjectScopedDocument}
+      onToggleScope={() => onToggleScope(sel)}
+      onOpenConfigDialog={onOpenConfigDialog}
+      onOpenConvertDialog={onOpenConvertDialog}
+      onConvertDeletionToEdition={onConvertDeletionToEdition}
+      onDelete={onDelete}
+    />
+  )
+
   return (
     <div
       key={sel.displayId}
       ref={(el) => { setItemRef(sel.id, el); }}
       className={cn(
-        "relative",
-        "group p-2 text-xs cursor-pointer focus:outline-none focus:ring-0",
+        "relative space-y-2",
+        "group p-4 text-xs cursor-pointer focus:outline-none focus:ring-0",
         "border-l-2 border-transparent",
         "bg-muted/30",
         "transition-all duration-200",
-        "hover:border-l-muted-foreground/30 hover:pl-3 hover:bg-muted/30",
-        "focus:border-l-primary/50 focus:pl-3 focus:bg-muted/70",
-        isSelected && "border-l-2 border-l-primary pl-5 bg-primary/5"
+        "hover:border-l-muted-foreground/30 hover:bg-muted/30",
+        "focus:border-l-primary/50 focus:bg-muted/70",
+        isSelected && "border-l-2 border-l-primary bg-primary/5"
       )}
       onClick={() => onSelect(sel.id)}
       tabIndex={0}
-    >
-      <div>
-        <SelectionItemMenu
-          sel={sel}
-          norm={norm}
-          isProjectScopedDocument={isProjectScopedDocument}
-          onToggleScope={() => onToggleScope(sel)}
-          onOpenConfigDialog={onOpenConfigDialog}
-          onOpenConvertDialog={onOpenConvertDialog}
-          onConvertDeletionToEdition={onConvertDeletionToEdition}
-          onDelete={onDelete}
-        />
-        <SelectionItemInfo
-          sel={sel}
-          isProjectScope={isProjectScope}
-          statusIndicator={statusIndicator}
-          pageDisplay={pageDisplay}
-          onToggleGlobal={onToggleGlobal}
-        />
-      </div>
+      >
+      <SelectionItemCoord
+        sel={sel}
+      />
+
+      <SelectionItemInfo
+        sel={sel}
+        statusIndicator={statusIndicator}
+        pageDisplay={pageDisplay}
+        onToggleGlobal={onToggleGlobal}
+        menu={menu}
+      />
     </div>
   );
 }
@@ -262,9 +286,9 @@ export default function SelectionsListing() {
     convertSelectionToStagedEdition,
     uiSelections,
     toggleSelectionScope,
-  } = useSelections() as any;
+  } = useSelections();
 
-  const { setCurrentPage, currentPage, numPages } = useViewportState();
+  const { setCurrentPage, currentPage, numPages, setActiveControlsPanel } = useViewportState();
   const { state: workspace } = useWorkspace();
   const isProjectScopedDocument = !!workspace.currentDocument?.is_template;
 
@@ -293,35 +317,42 @@ export default function SelectionsListing() {
 
   // Use lifecycle-aware UI selections with dirty/stage metadata
   const selectionsWithTypeInfo = useMemo(() => {
-    const ui = (uiSelections || []) as any[];
-    return ui.map((sel: any) => {
-      const type = sel.isPersisted ? 'saved' : 'new';
-      const isModified = !!sel.dirty;
-      const isAi = !!(sel as any).is_ai_generated;
-      const confidence = (sel as any).confidence as number | null | undefined;
-      return { ...sel, type, isModified, is_ai_generated: isAi, confidence, displayId: sel.id } as any;
+    const ui = (uiSelections || []);
+    return ui.map((sel) => {
+      const isModified = sel.isDirty;
+      const isSaved = sel.isSaved;
+      const isCommitted = sel.stage === "committed";
+      const isGlobal = typeof sel.page_number !== "number";
+      const isTemplate = sel.scope === "project";
+      const isAiGenerated = typeof sel.confidence === "number";
+      const confidence = sel.confidence;
+      return { ...sel, isModified, isSaved, isCommitted, isGlobal, isTemplate, isAiGenerated, confidence, displayId: sel.id };
     });
   }, [uiSelections]);
 
   // Group selections by type for better organization
   // Filter: optionally hide AI-generated selections
-  type FilterMode = 'all' | 'ai' | 'manual';
+  type FilterMode = 'all' | 'ai' | 'paged' | 'global' | 'template';
   const [filterMode, setFilterMode] = useState<FilterMode>('all');
 
   const filteredSelections = useMemo(() => {
     switch (filterMode) {
       case 'ai':
-        return selectionsWithTypeInfo.filter(sel => !!sel.is_ai_generated);
-      case 'manual':
-        return selectionsWithTypeInfo.filter(sel => !sel.is_ai_generated);
+        return selectionsWithTypeInfo.filter(sel => sel.isAiGenerated);
+      case 'paged':
+          return selectionsWithTypeInfo.filter(sel => !sel.isGlobal);
+      case 'global':
+        return selectionsWithTypeInfo.filter(sel => sel.isGlobal);
+      case 'template':
+        return selectionsWithTypeInfo.filter(sel => sel.isTemplate);
       default:
         return selectionsWithTypeInfo;
     }
   }, [selectionsWithTypeInfo, filterMode]);
 
   const groupedSelections = useMemo(() => {
-    const saved = filteredSelections.filter(sel => sel.type === 'saved');
-    const newOnes = filteredSelections.filter(sel => sel.type === 'new');
+    const saved = filteredSelections.filter(sel => sel.isSaved);
+    const newOnes = filteredSelections.filter(sel => !sel.isSaved);
     return { saved, new: newOnes };
   }, [filteredSelections]);
 
@@ -404,42 +435,57 @@ export default function SelectionsListing() {
 
   // Render one selection via component
   const setItemRef = (id: string, el: HTMLDivElement | null) => { itemRefs.current[id] = el; };
-  // no-op placeholder retained for diff context
 
   if (selectionsWithTypeInfo.length === 0) {
     return (
-      <div className="text-xs text-muted-foreground text-center py-6 border border-dashed rounded-md">
-        <MousePointer2 className="h-8 w-8 mx-auto mb-2 opacity-50" />
-        <div>No selections yet</div>
-        <div className="text-xs opacity-70 mt-1">Click and drag to create selections</div>
+      <div className="flex flex-col gap-2 items-center p-4 m-4 text-xs text-muted-foreground text-center border border-dashed rounded-md">
+        <SquareDashed className="h-8 w-8 mb-2" />
+        <span className="font-medium text-sm">No selections yet</span>
+        <span>Click and drag to create selections</span>
       </div>
     );
   }
 
   return (
-    <>
-      {/* Filter controls */}
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Select value={filterMode} onValueChange={(v) => setFilterMode(v as any)}>
-            <SelectTrigger className="h-7 w-[12rem] text-xs">
-              <SelectValue placeholder="All selections" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All selections</SelectItem>
-              <SelectItem value="ai">AI-generated</SelectItem>
-              <SelectItem value="global">Document-spannig</SelectItem>
-              <SelectItem value="project">Project-scoped</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="text-xs text-muted-foreground">
-          <span className="font-mono">{filteredSelections.length}</span> / <span className="font-mono">{selectionsWithTypeInfo.length}</span>
-        </div>
+    <div className="h-full flex flex-col gap-4">
+      <div className="flex items-center gap-2 p-4 pb-0 ">
+        <SquareDashed size="1.2rem" />
+        <div className="font-medium truncate">Selections</div>
+        <Button
+          variant="secondary"
+          size="sx"
+          className="ml-auto"
+          aria-label="Close Workbench"
+          title="Close Workbench"
+          onClick={() => setActiveControlsPanel('document-controls')}
+        >
+          <X />
+        </Button>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-auto h-[80vh]">
-        <div className="space-y-1">
+      <Separator />
+      
+      {/* Filter controls */}
+      <div className="flex flex-0 items-center justify-between px-4">
+        <div className="text-xs text-muted-foreground">
+          {filteredSelections.length} of {selectionsWithTypeInfo.length}
+        </div>
+        <Select value={filterMode} onValueChange={(v) => setFilterMode(v as any)}>
+          <SelectTrigger size="sm" className="text-xs">
+            <SelectValue placeholder="All selections" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All selections</SelectItem>
+            <SelectItem value="ai">AI-generated</SelectItem>
+            <SelectItem value="paged">Paged selections</SelectItem>
+            <SelectItem value="global">Global selections</SelectItem>
+            <SelectItem value="template">template selections</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="flex-1 overflow-auto min-h-0">
+        <div className="space-y-2">
           {/* Show all selections in order: new first, then saved */}
           {[...groupedSelections.new, ...groupedSelections.saved].map((sel) => (
             <SelectionItem
@@ -508,6 +554,6 @@ export default function SelectionsListing() {
         }}
         {...CONVERT_TO_STAGED_DIALOG}
       />
-    </>
+    </div>
   );
 }

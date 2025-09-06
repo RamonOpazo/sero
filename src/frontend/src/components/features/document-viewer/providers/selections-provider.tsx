@@ -11,7 +11,7 @@ import type { SelectionCreateDraft } from '../types/viewer';
 import type { Result } from '@/lib/result';
 import { DocumentViewerAPI } from '@/lib/document-viewer-api';
 import { fromApiSelection } from '../core/mappers/selection-lifecycle-mapper';
-import { UISelectionStage, type UISelection } from '../types/selection-lifecycle';
+import { UILifecycleStage, type UISelectionLifecycle } from '../types/lifecycle';
 
 // =============================================================================
 // CONTEXT INTERFACE - All expected selection functionality
@@ -89,7 +89,7 @@ interface SelectionsContextValue {
   
   // Computed values
   allSelections: readonly Selection[];
-  uiSelections: readonly UISelection[];
+  uiSelections: readonly UISelectionLifecycle[];
   hasUnsavedChanges: boolean;
   
   // Template (project-scoped) selections
@@ -354,17 +354,17 @@ export function SelectionsProvider({ children, documentId, initialSelections }: 
       const currentState = state as any;
       const docId = currentState?.contextId as string;
       // Derive UI selections lifecycle view from current state (avoid TDZ on uiSelections)
-      const persisted: UISelection[] = ((state as any).persistedItems || []).map((s: any) => fromApiSelection(s));
-      const drafts: UISelection[] = ((state as any).draftItems || []).map((s: any) => ({
+      const persisted: UISelectionLifecycle[] = ((state as any).persistedItems || []).map((s: any) => fromApiSelection(s));
+      const drafts: UISelectionLifecycle[] = ((state as any).draftItems || []).map((s: any) => ({
         ...(s as any),
-        stage: UISelectionStage.Unstaged,
-        isPersisted: false,
-        dirty: true,
-      } as UISelection));
+        stage: UILifecycleStage.Unstaged,
+        isSaved: false,
+        isDirty: true,
+      } as UISelectionLifecycle));
       const ui = [...persisted, ...drafts];
 
       // Create new selections (not persisted)
-      const creates = ui.filter(s => !s.isPersisted);
+      const creates = ui.filter(s => !s.isSaved);
       for (const sel of creates) {
         const createData = (sel as any);
         const { id: _id, dirty: _dirty, dirtyFields: _df, isPersisted: _p, stage: _st, ...rest } = createData;
@@ -375,14 +375,14 @@ export function SelectionsProvider({ children, documentId, initialSelections }: 
       }
 
       // Update persisted selections with staged state transitions
-      const updates = ui.filter(s => s.isPersisted && (s.dirty || s.stage === UISelectionStage.StagedEdition || s.stage === UISelectionStage.StagedDeletion || s.stage === UISelectionStage.StagedCreation));
+      const updates = ui.filter(s => s.isSaved && (s.isDirty || s.stage === UILifecycleStage.StagedEdition || s.stage === UILifecycleStage.StagedDeletion || s.stage === UILifecycleStage.StagedCreation));
       for (const sel of updates) {
         // If locally edited (dirty), stage as edition; otherwise preserve explicit staged_* state
         let updateState: 'staged_edition' | 'staged_deletion' | 'staged_creation' | undefined = undefined;
-        if (sel.stage === UISelectionStage.StagedDeletion) updateState = 'staged_deletion';
-        else if (sel.stage === UISelectionStage.StagedCreation) updateState = 'staged_creation';
-        else if (sel.stage === UISelectionStage.StagedEdition) updateState = 'staged_edition';
-        else if (sel.dirty) updateState = 'staged_edition';
+        if (sel.stage === UILifecycleStage.StagedDeletion) updateState = 'staged_deletion';
+        else if (sel.stage === UILifecycleStage.StagedCreation) updateState = 'staged_creation';
+        else if (sel.stage === UILifecycleStage.StagedEdition) updateState = 'staged_edition';
+        else if (sel.isDirty) updateState = 'staged_edition';
 
         const payload: any = {};
         if (updateState) payload.state = updateState;
@@ -605,28 +605,28 @@ export function SelectionsProvider({ children, documentId, initialSelections }: 
         ((pending.updates || []).filter((u: any) => (u?.state === 'staged_deletion')).map((u: any) => u?.id).filter(Boolean)) as string[],
       );
 
-      const persisted: UISelection[] = ((state as any).persistedItems || []).map((s: any) => {
+      const persisted: UISelectionLifecycle[] = ((state as any).persistedItems || []).map((s: any) => {
         const ui = fromApiSelection(s);
         const id = (s as any).id as string;
         const isDirty = dirtyIds.has(id);
         let stage = ui.stage;
         if (stagedDeletionIds.has(id)) {
-          stage = UISelectionStage.StagedDeletion;
-        } else if (isDirty && stage !== UISelectionStage.StagedDeletion) {
+          stage = UILifecycleStage.StagedDeletion;
+        } else if (isDirty && stage !== UILifecycleStage.StagedDeletion) {
           // If a persisted selection is edited locally and not staged for deletion, reflect it as staged_edition in UI
-          stage = UISelectionStage.StagedEdition;
+          stage = UILifecycleStage.StagedEdition;
         }
-        return { ...ui, dirty: isDirty, stage } as UISelection;
+        return { ...ui, isDirty: isDirty, stage } as UISelectionLifecycle;
       });
-      const drafts: UISelection[] = ((state as any).draftItems || []).map((s: any) => ({
+      const drafts: UISelectionLifecycle[] = ((state as any).draftItems || []).map((s: any) => ({
         ...(s as any),
-        stage: UISelectionStage.Unstaged,
-        isPersisted: false,
-        dirty: true,
-      } as UISelection));
+        stage: UILifecycleStage.Unstaged,
+        isSaved: false,
+        isDirty: true,
+      } as UISelectionLifecycle));
       return [...persisted, ...drafts];
     } catch {
-      return [] as UISelection[];
+      return [] as UISelectionLifecycle[];
     }
   }, [state, manager]);
   

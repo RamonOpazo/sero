@@ -41,6 +41,9 @@ def init_logging():
     intercept_handler = _InterceptHandler()
     logging.getLogger("uvicorn").handlers = [intercept_handler]
 
+    # Ensure log directory exists
+    settings.log.filepath.parent.mkdir(parents=True, exist_ok=True)
+
     # set logs output, level and format
     logger.configure(
         handlers=[
@@ -54,7 +57,7 @@ def init_logging():
                 "level": settings.log.level,
                 "rotation": "10 MB",
                 "retention": "10 days",
-                "serialize": True
-            }
+                "serialize": True,
+            },
         ]
     )

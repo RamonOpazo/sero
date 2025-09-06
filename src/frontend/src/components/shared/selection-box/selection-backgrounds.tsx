@@ -5,76 +5,64 @@ export type BackgroundVariantName =
   | "solid"
   | "stripes"
   | "crosses"
-  | "polka"
-  | "zigzag";
+  | "polka";
 
-const stripeStops = "currentColor 2.25%, transparent 2.25% 50%, currentColor 50% 52.25%, transparent 52.25%";
-
-export const BackgroundVariant: Record<
-  BackgroundVariantName,
-  React.CSSProperties | undefined
-> = {
+export const BackgroundVariant: Record<BackgroundVariantName, React.CSSProperties | undefined> = {
   none: undefined,
-  solid: { backgroundColor: "currentColor", opacity: 0.12 },
+  solid: { backgroundImage: "currentColor" },
   stripes: {
-    opacity: 0.18,
-    backgroundImage: `linear-gradient(135deg, ${stripeStops})`,
-    backgroundSize: "20px 20px",
+    backgroundImage: `
+      linear-gradient(135deg, currentColor 2.25%, transparent 2.25% 50%, currentColor 50% 52.25%, transparent 52.25%)
+    `,
+    backgroundSize: "15px 15px",
   },
   crosses: {
-    opacity: 0.2,
     backgroundImage: `
-      linear-gradient(135deg, ${stripeStops}),
-      linear-gradient(45deg, ${stripeStops})
+      linear-gradient(135deg, currentColor 2.25%, transparent 2.25% 50%, currentColor 50% 52.25%, transparent 52.25%),
+      linear-gradient(45deg, currentColor 2.25%, transparent 2.25% 50%, currentColor 50% 52.25%, transparent 52.25%)
     `,
-    backgroundSize: "20px 20px",
+    backgroundSize: "15px 15px",
+
   },
   polka: {
-    opacity: 0.2,
-    background: `
-      radial-gradient(circle, currentColor 10%, transparent 11%),
-      radial-gradient(circle at bottom left, currentColor 5%, transparent 6%),
-      radial-gradient(circle at bottom right, currentColor 5%, transparent 6%),
-      radial-gradient(circle at top left, currentColor 5%, transparent 6%),
-      radial-gradient(circle at top right, currentColor 5%, transparent 6%)
-    `,
-    backgroundSize: "12px 12px",
-  },
-  zigzag: {
-    opacity: 0.2,
-    background: `
-      linear-gradient(45deg, #ffffff 25%, transparent 25%),
-      linear-gradient(315deg, #ffffff 25%, transparent 25%),
-      linear-gradient(45deg, transparent 24%, currentColor 25%, currentColor 45%, transparent 45%),
-      linear-gradient(315deg, transparent 24%, currentColor 25%, currentColor 45%, transparent 45%)`,
-    backgroundSize: "12px 12px",
-  },
+    backgroundImage: `
+      radial-gradient(circle at center, currentColor 2px, transparent 0),
+      radial-gradient(circle at center, currentColor 2px, transparent 0)
+  `,
+  backgroundSize: "10px 10px",
+  backgroundPosition: "0 0, 5px 5px",
+  }
 };
 
 interface Props {
-  variant?: BackgroundVariantName
-  contrast?: number // 0..1 multiplier between base and target
+  variant?: BackgroundVariantName;
+  contrast?: number; // 0..1 multiplier
 }
 
-const mix = (b: number, t: number, c: number) => b + (t - b) * Math.max(0, Math.min(1, c));
+const BASE_OPACITY = 0;
+const MAX_OPACITY = 0.5;
 
-const BASE_TINT = 0;
-const TARGET_TINT = 0.2;
+const mix = (base: number, target: number, contrast: number) =>
+  base + (target - base) * Math.max(0, Math.min(1, contrast));
 
-export function SelectionBackground({ variant = "none", contrast = 0.5 }: Props): React.ReactNode | null {
-  const style = BackgroundVariant[variant]
-  if (!style) return null
-  const tint = mix(BASE_TINT, TARGET_TINT, contrast);
+export function SelectionBackground({
+  variant = "none",
+  contrast = 1,
+}: Props): React.ReactNode | null {
+  const style = BackgroundVariant[variant];
+  if (!style) return null;
+
+  // Compute final opacity
+  const opacity = mix(BASE_OPACITY, MAX_OPACITY, contrast);
+
   return (
-    <>
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{ backgroundColor: "currentColor", opacity: tint }}
-      />
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={style}
-      />
-    </>
-  )
+    <div
+      className="absolute inset-0 pointer-events-none bg-current/20 transition duration-150 ease-in-out"
+      style={{
+        ...style,
+        backgroundImage: style.backgroundImage ?? "currentColor",
+        opacity,
+      }}
+    />
+  );
 }

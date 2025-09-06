@@ -144,6 +144,22 @@ export const ProjectsAPI = {
   },
 
   /**
+   * Download a ZIP containing all redacted files for the project (no password required).
+   */
+  async downloadProjectRedactionsZip(projectId: string): Promise<Result<Blob, unknown>> {
+    return AsyncResultWrapper
+      .from(api.safe.get(`/projects/id/${projectId}/download/redactions?ts=${Date.now()}`, { responseType: 'blob' }) as Promise<Result<Blob, unknown>>)
+      .catch((error: unknown) => {
+        toast.error(
+          'Failed to download redactions',
+          { description: 'Please try again.' },
+        );
+        throw error;
+      })
+      .toResult();
+  },
+
+  /**
    * Create a new project (plaintext password - legacy)
    */
   async createProject(projectData: ProjectCreateType): Promise<Result<ProjectType, unknown>> {

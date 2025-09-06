@@ -576,6 +576,15 @@ bcrypt = [
 ]
 
 [[package]]
+name = "platformdirs"
+version = "4.4.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/23/e8/21db9c9987b0e728855bd57bff6984f67952bea55d6f75e055c46b5383e8/platformdirs-4.4.0.tar.gz", hash = "sha256:ca753cf4d81dc309bc67b0ea38fd15dc97bc30ce419a7f58d13eb3bf14c4febf", size = 21634 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/40/4b/2028861e724d3bd36227adfa20d3fd24c3fc6d52032f4a93c133be5d17ce/platformdirs-4.4.0-py3-none-any.whl", hash = "sha256:abd01743f24e5287cd7a5db3752faf1a2d65353f38ec26d98e25a6db65958c85", size = 18654 },
+]
+
+[[package]]
 name = "pluggy"
 version = "1.6.0"
 source = { registry = "https://pypi.org/simple" }
@@ -889,7 +898,7 @@ wheels = [
 
 [[package]]
 name = "sero"
-version = "0.1.1.dev319+gc700f7e65.d20250826"
+version = "0.1.1.dev438+gd55777fe2.d20250906"
 source = { editable = "." }
 dependencies = [
     { name = "cryptography" },
@@ -899,11 +908,14 @@ dependencies = [
     { name = "keyring" },
     { name = "loguru" },
     { name = "passlib", extra = ["bcrypt"] },
+    { name = "platformdirs" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "pymupdf" },
     { name = "python-jose", extra = ["cryptography"] },
     { name = "pytz" },
+    { name = "pywin32-ctypes", marker = "sys_platform == 'win32'" },
+    { name = "secretstorage", marker = "sys_platform == 'linux'" },
     { name = "sqlalchemy" },
     { name = "uvicorn" },
 ]
@@ -923,11 +935,14 @@ requires-dist = [
     { name = "keyring", specifier = ">=25.6.0" },
     { name = "loguru", specifier = ">=0.7.3" },
     { name = "passlib", extras = ["bcrypt"], specifier = ">=1.7.4" },
+    { name = "platformdirs", specifier = ">=4.3.6" },
     { name = "pydantic", specifier = ">=2.11.7" },
     { name = "pydantic-settings", specifier = ">=2.10.1" },
     { name = "pymupdf", specifier = ">=1.26.3" },
     { name = "python-jose", extras = ["cryptography"], specifier = ">=3.5.0" },
     { name = "pytz", specifier = ">=2025.2" },
+    { name = "pywin32-ctypes", marker = "sys_platform == 'win32'", specifier = ">=0.2" },
+    { name = "secretstorage", marker = "sys_platform == 'linux'", specifier = ">=3.3" },
     { name = "sqlalchemy", specifier = ">=2.0.41" },
     { name = "uvicorn", specifier = ">=0.35.0" },
 ]

@@ -29,52 +29,103 @@ Sero is built with a focus on security, performance, and maintainability. The te
 
 ## Getting Started
 
-### Prerequisites
-
-Ensure you have Python 3.13 or higher installed on your system.
+Sero is packaged as a uv tool and can be installed via provided install scripts or directly with uv. Python dependencies and all project actions are managed with uv.
 
 ### Installation
 
-1.  **Clone the repository:**
-    ```sh
-    git clone <your-repository-url>
-    cd sero
-    ```
+Fastest: one-liners
+- Linux/macOS:
+  ```bash
+  curl -LsSf https://raw.githubusercontent.com/RamonOpazo/sero/main/install.sh | sh
+  ```
+- Windows (PowerShell):
+  ```powershell
+  powershell -NoProfile -ExecutionPolicy Bypass -Command "iex (irm https://raw.githubusercontent.com/RamonOpazo/sero/main/install.ps1)"
+  ```
+  If you are already in PowerShell:
+  ```powershell
+  Set-ExecutionPolicy -Scope Process Bypass -Force
+  iex (irm https://raw.githubusercontent.com/RamonOpazo/sero/main/install.ps1)
+  ```
 
-2.  **Create a virtual environment and install dependencies:**
-    This project uses `uv` for dependency management.
-    ```sh
-    # Create a virtual environment
-    python -m venv .venv
-    source .venv/bin/activate
+From a local clone
+- Linux/macOS:
+  ```bash
+  ./install.sh
+  ```
+- Windows (PowerShell):
+  ```powershell
+  Unblock-File .\install.ps1
+  .\install.ps1
+  ```
 
-    # Install dependencies using uv
-    pip install uv
-    uv pip install -r requirements.txt
-    ```
+Where the sero command is installed
+- Linux/macOS: ~/.local/bin/sero (or $XDG_BIN_HOME/sero)
+- Windows: %LOCALAPPDATA%\uv\bin\sero.exe
+If the command isn’t found, add the directory above to your PATH or restart the terminal.
+
+Install directly with uv (no scripts)
+```bash
+uv tool install --from git+https://github.com/RamonOpazo/sero.git sero
+```
+
+From source (development)
+```bash
+git clone https://github.com/RamonOpazo/sero.git
+cd sero
+uv sync --all-groups
+# Run with hot reload (dev):
+uv run sero-dev
+# Or run the server (prod):
+uv run sero
+```
+
+### Keyring backend (required)
+Sero stores its application secret key in the OS keyring. On Linux you must have a Secret Service provider running; macOS and Windows typically work out of the box.
+- Linux examples:
+  - Debian/Ubuntu: `sudo apt-get install gnome-keyring`
+  - Fedora: `sudo dnf install gnome-keyring`
+  - Arch/Endeavour: `sudo pacman -S gnome-keyring libsecret`
+  - KDE users can use KWallet (kwallet/kwalletmanager)
+After installation, log out and back in (or ensure the keyring daemon is running).
+
+Verify the backend:
+```bash
+uv run python -m keyring --list-backends
+```
+You should see a real backend (e.g., SecretService on Linux, macOS Keychain, or Windows Credential Locker).
+
+### Data locations
+By default, Sero uses per-user OS-appropriate directories:
+- Linux:
+  - DB: ~/.local/share/sero/sero.sqlite
+  - Logs: ~/.local/state/sero/logs/app.jsonl
+  - Output: ~/.local/share/sero/output
+- macOS:
+  - DB: ~/Library/Application Support/sero/sero.sqlite
+  - Logs: ~/Library/Logs/sero/app.jsonl
+  - Output: ~/Library/Application Support/sero/output
+- Windows:
+  - DB: %LOCALAPPDATA%\sero\sero.sqlite
+  - Logs: %LOCALAPPDATA%\sero\logs\app.jsonl
+  - Output: %LOCALAPPDATA%\sero\output
+
+Environment overrides
+Use environment variables with prefix SERO_ and nested keys separated by __:
+- SERO_DB__FILEPATH=/custom/path/sero.sqlite
+- SERO_LOG__FILEPATH=/custom/path/app.jsonl
+- SERO_PROCESSING__DIRPATH=/custom/output
+These can be set in your shell or a .env file in your working directory.
 
 ### Running the Service
-
-Once the dependencies are installed, you can start the service with a single command:
-
-```sh
+Once installed, run:
+```bash
 sero
 ```
 
-This will launch the Uvicorn server. You should see output similar to this:
-
-```
-INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-INFO:     Started reloader process [12345] using watchfiles
-INFO:     Started server process [12347]
-INFO:     Waiting for application startup.
-INFO:     Starting sero...
-INFO:     Initializing DuckDB database: duckdb:////path/to/sero.duckdb
-INFO:     DuckDB database tables created successfully
-INFO:     Application startup complete.
-```
-
-Your Sero instance is now live. You can access the interactive API documentation at **http://localhost:8000/docs**.
+This starts the FastAPI server. API documentation:
+- Swagger UI: http://localhost:8000/api/docs
+- OpenAPI schema: http://localhost:8000/api/openapi.json
 
 ## Usage Workflow
 

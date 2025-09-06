@@ -23,40 +23,43 @@ const buttonVariants = cva(
       },
       size: {
         default: "h-9 px-4 py-2 has-[>svg]:px-3",
+        sx: "h-6 w-6 rounded-sm gap-1 px-2 has-[>svg]:px-2",
         sm: "h-8 rounded-sm gap-1.5 px-3 has-[>svg]:px-2.5",
         lg: "h-10 rounded-sm px-6 has-[>svg]:px-4",
         icon: "size-9",
       },
+      status: {
+        default: undefined,
+        info: "border-blue-500/70 bg-blue-500/50",
+        success: "border-emerald-500/70 bg-emerald-500/50",
+        warning: "border-amber-500/70 bg-amber-500/50",
+        error:  "border-red-500/70 bg-red-500/50",
+      }
     },
     defaultVariants: {
       variant: "default",
       size: "default",
+      status: "default",
     },
   }
 )
 
-type statusVariants = "default" | "info" | "success" | "warning" | "error"
-
 function Button({
   className,
   variant,
-  status = "default",
+  status,
   size,
   asChild = false,
   ...props
 }: React.ComponentProps<"button"> &
-  VariantProps<typeof buttonVariants> & { asChild?: boolean } & { status?: statusVariants }) {
+  VariantProps<typeof buttonVariants> & { asChild?: boolean }) {
   const Comp = asChild ? Slot : "button"
 
   return (
     <Comp
       data-slot="button"
       className={cn(
-        buttonVariants({ variant, size, className }),
-        status === "info" && "border-blue-500/50",
-        status === "success" && "border-green-500/50",
-        status === "warning" && "border-yellow-500/50",
-        status === "error" && "border-red-500/50",
+        buttonVariants({ variant, size, status, className }),
       )}
       {...props}
     />

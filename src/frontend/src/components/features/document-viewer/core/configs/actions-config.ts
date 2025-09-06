@@ -95,7 +95,6 @@ export interface ActionsContext {
     processDocument: () => Promise<void> | void;
     isProcessingDoc: boolean;
     downloadCurrentView: () => void;
-    isDownloadAvailable: boolean;
   };
 }
 
@@ -155,6 +154,8 @@ export function buildActionsMenuConfig(ctx: ActionsContext): MenuConfig[] {
         children: [
           { type: 'item', key: 'wb-selections', label: 'Selections', icon: MousePointerClick, onSelect: selections.openWorkbenchSelections },
           { type: 'item', key: 'wb-prompts', label: 'AI Rules', icon: Bot, onSelect: rules.openWorkbenchPrompts },
+          { type: 'separator', key: 'wb-sep' },
+          { type: 'item', key: 'wb-close', label: 'Close Workbench', onSelect: (ctx as any).document?.closeWorkbench ?? ((): void => {}) },
         ],
       },
     ],
@@ -203,7 +204,7 @@ export function buildActionsMenuConfig(ctx: ActionsContext): MenuConfig[] {
     align: 'start',
     entries: [
       { key: 'process', type: 'item', label: document.isProcessingDoc ? 'Processing…' : 'Process document', icon: Scissors, onSelect: document.processDocument, disabled: document.isProcessingDoc, shortcut: 'Ctrl+P' },
-      { key: 'download', type: 'item', label: 'Download current view', icon: Download, onSelect: document.downloadCurrentView, disabled: !document.isDownloadAvailable, shortcut: 'Ctrl+D' },
+      { key: 'download', type: 'item', label: 'Download current view', icon: Download, onSelect: document.downloadCurrentView, shortcut: 'Ctrl+D' },
     ],
   };
 

@@ -1,33 +1,50 @@
 import React from "react";
 import { cn } from "@/lib/utils";
+
 import { type BackgroundVariantName, SelectionBackground } from "./selection-backgrounds";
 
 // Visual states supported explicitly
-export type SelectionVisualState =
+export type SelectionBoxState =
   | "unstaged"
   | "staged_creation"
   | "staged_edition"
   | "staged_deletion"
   | "committed";
 
-// Boolean flags we support for style overrides
-export type SelectionBooleanFlag =
-  | "off"
+export type SelectionBoxFlag =
   | "dirty"
-  | "global_page"
-  | "project_scope";
+  | "global"
+  | "template";
 
-export type cornerName = 
+export type cornerName =
   | "nw"
   | "ne"
   | "sw"
-  | "se"
+  | "se";
+
+interface SelectionBoxVisual {
+  color?: string
+  border?: string
+  background?: BackgroundVariantName
+}
+
+interface SelectionBoxStateVisual {
+  unstaged?: SelectionBoxVisual
+  staged_creation?: SelectionBoxVisual
+  staged_edition?: SelectionBoxVisual
+  staged_deletion?: SelectionBoxVisual
+  committed?: SelectionBoxVisual
+}
+
+interface SelectionBoxFlagVisual {
+  dirty?: SelectionBoxVisual
+  global?: SelectionBoxVisual
+  template?: SelectionBoxVisual
+}
 
 // Mapping types
-export type ColorMapping = Record<SelectionVisualState, string>; // text-* color classes
-export type BorderMapping = Record<SelectionVisualState, string>; // border classes (including style)
-export type BackgroundVariantMapping = Record<SelectionVisualState, BackgroundVariantName>; // choose a named background preset
-export type FlagVariantMapping = Record<SelectionBooleanFlag, BackgroundVariantName | undefined>; // choose a named background preset
+export type SelectionBoxStateVisualMapping = Record<SelectionBoxState, SelectionBoxVisual>; // text-* color classes
+export type SelectionBoxFlagVisualMapping = Record<SelectionBoxFlag, SelectionBoxVisual>; // text-* color classes
 
 export interface SelectionBoxProps {
   id?: string;
@@ -36,62 +53,50 @@ export interface SelectionBoxProps {
   width: number;
   height: number;
 
-  state: SelectionVisualState;
-  flag: SelectionBooleanFlag;
+  state: SelectionBoxState;
+
+  isDirty: boolean;
+  isGlobal: boolean;
+  isTemplate: boolean;
+
+  defaultVisual?: Required<SelectionBoxVisual>;
+  stateVisuals?: SelectionBoxStateVisual;
+  flagVisuals?: SelectionBoxFlagVisual;
+  flagPriority?: SelectionBoxFlag[];
 
   isHovered?: boolean;
   isSelected?: boolean;
-
-  // Declarative mappings with good defaults
-  colorMapping?: Partial<ColorMapping>;
-  borderMapping?: Partial<BorderMapping>;
-  backgroundVariantMapping?: Partial<BackgroundVariantMapping>;
-  flagVariantMappings?: Partial<FlagVariantMapping>;
 
   // Visual behavior controls
   activityContrast?: number; // 0..1
   handlerSize?: number; // corner handle size in px
 
+  // Interactivity
+  interactive?: boolean;
+
   // Events
   onClick?: (e: React.MouseEvent<HTMLDivElement>) => void;
   onMouseDown?: (e: React.MouseEvent<HTMLDivElement>) => void;
   onResizeStart?: (corner: cornerName, e: React.MouseEvent<HTMLDivElement>) => void;
-
-  // Misc
-  className?: string;
-  style?: React.CSSProperties;
 }
 
-const DEFAULT_COLORS: ColorMapping = {
-  unstaged: "text-emerald-600",
-  staged_creation: "text-blue-600",
-  staged_edition: "text-blue-600",
-  staged_deletion: "text-red-600",
-  committed: "text-zinc-600",
+const DEFAULT_VISUAL: Required<SelectionBoxVisual> = { color: "text-blue-600 border-blue-600/50 hover:border-blue-600", border: "border border-solid", background: "stripes" }
+
+const DEFAULT_STATE_VISUALS: SelectionBoxStateVisualMapping = {
+  unstaged: {},
+  staged_creation: {},
+  staged_edition: { color: "text-emerald-600 border-emerald-600 hover:border-emerald-600" },
+  staged_deletion: { color: "text-red-600 border-red-600 hover:border-red-600" },
+  committed: { color: "text-zinc-600 border-zinc-600 hover:border-zinc-600", background: "crosses" },
 };
 
-const DEFAULT_BORDERS: BorderMapping = {
-  unstaged: "border border-emerald-500/60 hover:border-emerald-600 border-solid",
-  staged_creation: "border border-blue-500/60 hover:border-blue-600 border-solid",
-  staged_edition: "border border-blue-500/60 hover:border-blue-600 border-solid",
-  staged_deletion: "border border-red-500/60 hover:border-red-600 border-solid",
-  committed: "border border-zinc-500/60 hover:border-zinc-600 border-double border-4",
-};
+const DEFAULT_FLAG_VISUALS: SelectionBoxFlagVisualMapping = {
+  dirty: { border: "border border-dashed" },
+  global: { color: "text-amber-600 border-amber-600/50 hover:border-amber-600" },
+  template: { border: "border-double border-4" },
+}
 
-const DEFAULT_BACKGROUNDS: BackgroundVariantMapping = {
-  unstaged: "stripes",
-  staged_creation: "stripes",
-  staged_edition: "stripes",
-  staged_deletion: "stripes",
-  committed: "stripes",
-};
-
-const DEFAULT_FLAGS: FlagVariantMapping = {
-  off: undefined,
-  dirty: "polka",
-  global_page: "crosses",
-  project_scope: "zigzag",
-};
+const DEFAULT_FLAG_PRIORITY: SelectionBoxFlag[] = ["dirty", "global", "template"]
 
 /**
  * SelectionBox - A declarative selection renderer with strong defaults
@@ -107,36 +112,62 @@ export function SelectionBox(props: SelectionBoxProps) {
     width,
     height,
     state,
-    flag,
+    isDirty = false,
+    isGlobal = false,
+    isTemplate = false,
+    defaultVisual = DEFAULT_VISUAL,
+    stateVisuals = DEFAULT_STATE_VISUALS,
+    flagVisuals = DEFAULT_FLAG_VISUALS,
+    flagPriority = DEFAULT_FLAG_PRIORITY,
     isHovered = false,
     isSelected = false,
-    colorMapping,
-    borderMapping,
-    backgroundVariantMapping: backgroundMapping,
-    flagVariantMappings: flagMappings,
     activityContrast = 0.6,
     handlerSize = 8,
+    interactive = true,
     onClick,
     onMouseDown,
     onResizeStart,
-    className,
-    style,
+    // style,
   } = props;
 
-  const colors = { ...DEFAULT_COLORS, ...(colorMapping || {}) } as ColorMapping;
-  const borders = { ...DEFAULT_BORDERS, ...(borderMapping || {}) } as BorderMapping;
-  const backgrounds = { ...DEFAULT_BACKGROUNDS, ...(backgroundMapping || {}) } as BackgroundVariantMapping;
-  const flags = { ...DEFAULT_FLAGS, ...(flagMappings || {}) } as FlagVariantMapping;
+  const resolveVisualField = <K extends keyof SelectionBoxVisual>(
+    field: K,
+    stateVisual: SelectionBoxVisual | undefined,
+    flagVisuals: SelectionBoxFlagVisual, // allow optional values
+    flags: Record<SelectionBoxFlag, boolean>,
+    priority: SelectionBoxFlag[],
+    defaultVisual: Required<SelectionBoxVisual>
+  ): SelectionBoxVisual[K] => {
+    const base = stateVisual?.[field] ?? defaultVisual[field];
+  
+    return priority.reduce<SelectionBoxVisual[K]>(
+      (current, key) => (flags[key] ? flagVisuals[key]?.[field] ?? current : current),
+      base
+    );
+  }; 
 
-  const bgClass = colors[state];
-  const borderClass = borders[state];
-  const bgVariant = backgrounds[state];
-  const flagVariant = flags[flag]
-  const variant = flagVariant || bgVariant;
+  const flags: Record<SelectionBoxFlag, boolean> = {
+    dirty: isDirty,
+    global: isGlobal,
+    template: isTemplate
+  }
+
+  const unifiedVisual: Required<SelectionBoxVisual> = (["color", "border", "background"] as const).reduce(
+    (acc, field) => ({
+      ...acc,
+      [field]: resolveVisualField(field, stateVisuals[state], flagVisuals, flags, flagPriority, defaultVisual),
+    }),
+    {} as Required<SelectionBoxVisual>
+  );
+
+  const className = cn(
+    unifiedVisual.color,
+    unifiedVisual.border,
+  )
 
   const active = isHovered || isSelected;
   const contrast = active ? 1 : activityContrast;
-  
+
   // Corner handles positions
   const handlePositions: { corner: cornerName; style: React.CSSProperties }[] = [
     { corner: "nw", style: { top: -handlerSize / 2, left: -handlerSize / 2, cursor: "nw-resize" } },
@@ -150,23 +181,22 @@ export function SelectionBox(props: SelectionBoxProps) {
       id={id}
       data-selection-id={id}
       className={cn(
-        "absolute pointer-events-auto group overflow-visible",
-        bgClass,
-        borderClass,
+        "absolute group overflow-visible",
+        interactive ? "pointer-events-auto" : "pointer-events-none",
         className,
       )}
-      style={{ left, top, width, height, ...style }}
-      onClick={onClick}
-      onMouseDown={onMouseDown}
+      style={{ left, top, width, height, }}
+      onClick={interactive ? onClick : undefined}
+      onMouseDown={interactive ? onMouseDown : undefined}
     >
       {/* Background preset */}
       <SelectionBackground
-        variant={variant}
+        variant={unifiedVisual.background}
         contrast={contrast}
       />
 
       {/* Resize handles when selected */}
-      {active && (
+      {interactive && active && state !== "committed" && state !== "staged_deletion" && (
         <SelectionBoxHandlers
           color="bg-blue-600 hover:bg-blue-700"
           border="border border-white"

@@ -30,6 +30,7 @@ interface PromptsContextValue {
   hasUnsavedChanges: boolean;
   pendingChangesCount: number;
   pendingChanges: { creates: readonly PromptType[]; updates: readonly PromptType[]; deletes: readonly PromptType[] };
+  uiPrompts: ReadonlyArray<PromptType & { isUnsaved: boolean }>;
 }
 
 const PromptsContext = createContext<PromptsContextValue | null>(null);
@@ -55,6 +56,11 @@ export function PromptsProvider({ children, documentId, initialPrompts }: Prompt
 
   const dispatch = useCallback(<K extends any>(type: K, payload?: any) => {
     (manager as any).dispatch(type, payload);
+  }, [manager]);
+
+  // Auto-load prompts on mount or when document context changes
+  useEffect(() => {
+    void manager.load();
   }, [manager]);
 
   // CRUD helpers
@@ -106,6 +112,26 @@ export function PromptsProvider({ children, documentId, initialPrompts }: Prompt
   const pendingChangesCount = useMemo(() => manager.getPendingChangesCount(), [manager, state]);
   const pendingChanges = useMemo(() => manager.getPendingChanges(), [manager, state]);
 
+  // UI-enhanced prompts list with unsaved flag (drafts or pending updates/deletes)
+  const uiPrompts = useMemo(() => {
+    const persisted: readonly PromptType[] = (state as any).persistedItems || [];
+    const drafts: readonly PromptType[] = (state as any).draftItems || [];
+
+    const updateIds = new Set((pendingChanges.updates || []).map((p: any) => p?.id).filter(Boolean));
+    const deleteIds = new Set((pendingChanges.deletes || []).map((p: any) => p?.id).filter(Boolean));
+
+    const persistedUI = persisted.map((p) => ({
+      ...(p as PromptType),
+      isUnsaved: updateIds.has((p as any).id) || deleteIds.has((p as any).id),
+    }));
+    const draftUI = drafts.map((p) => ({
+      ...(p as PromptType),
+      isUnsaved: true,
+    }));
+
+    return [...draftUI, ...persistedUI] as ReadonlyArray<PromptType & { isUnsaved: boolean }>;
+  }, [state, pendingChanges]);
+
   const value: PromptsContextValue = useMemo(() => ({
     state,
     dispatch,
@@ -120,7 +146,8 @@ export function PromptsProvider({ children, documentId, initialPrompts }: Prompt
     hasUnsavedChanges,
     pendingChangesCount,
     pendingChanges,
-  }), [state, dispatch, createPrompt, updatePrompt, deletePrompt, load, save, clearAll, discardAllChanges, allPrompts, hasUnsavedChanges, pendingChangesCount, pendingChanges]);
+    uiPrompts,
+  }), [state, dispatch, createPrompt, updatePrompt, deletePrompt, load, save, clearAll, discardAllChanges, allPrompts, hasUnsavedChanges, pendingChangesCount, pendingChanges, uiPrompts]);
 
   return (
     <PromptsContext.Provider value={value}>

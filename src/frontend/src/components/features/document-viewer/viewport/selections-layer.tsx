@@ -1,16 +1,10 @@
-/**
- * Simplified SelectionsLayer using the new SelectionManager
- * 
- * This replaces the complex SelectionsLayer with a much cleaner implementation
- * that uses the new SelectionManager for state management.
- */
-
 import React, { useState, useCallback, useRef } from "react";
 import { useSelections } from '../providers/selections-provider';
 import { useViewportState } from '../providers/viewport-provider';
 import type { Selection, SelectionCreateDraft } from '../types/viewer';
 import { getNormalizedSelectionState } from '../utils';
 import { SelectionBox } from '@/components/shared/selection-box';
+import { useWorkspace } from '@/providers/workspace-provider';
 
 type Corner = 'nw' | 'ne' | 'sw' | 'se';
 
@@ -29,6 +23,7 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     document: currentDocument,
     numPages,
   } = useViewportState();
+  const { state: workspace } = useWorkspace();
 
   // New selection system
   const {
@@ -334,7 +329,6 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     ));
   }, [handleResizeStart]);
 
-
   // Build UI meta map for quick lookup
   const uiMetaById = React.useMemo(() => {
     const map = new Map<string, any>();
@@ -342,36 +336,7 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     return map;
   }, [uiSelections]);
 
-  // Render read-only template selection box (non-interactive)
-  const renderTemplateSelectionBox = useCallback((selection: Selection) => {
-    const left = selection.x * documentSize.width;
-    const top = selection.y * documentSize.height;
-    const width = Math.abs(selection.width) * documentSize.width;
-    const height = Math.abs(selection.height) * documentSize.height;
-
-    const visualNorm = getNormalizedSelectionState((selection as any).state);
-    const visualState = visualNorm === "draft" ? "unstaged" : visualNorm;
-
-    return (
-      <SelectionBox
-        key={`tpl-${selection.id}`}
-        id={`tpl-${selection.id}`}
-        left={left}
-        top={top}
-        width={width}
-        height={height}
-        state={visualState}
-        flag={"project_scope"}
-        isHovered={false}
-        isSelected={false}
-        activityContrast={0.3}
-        handlerSize={8}
-        className="pointer-events-none"
-      />
-    );
-  }, [documentSize]);
-
-  // Render selection box
+  // Render selection box (interactive)
   const renderSelectionBox = useCallback((selection: Selection) => {
     // Convert normalized coordinates to pixel coordinates
     const left = selection.x * documentSize.width;
@@ -379,22 +344,15 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     const width = Math.abs(selection.width) * documentSize.width;
     const height = Math.abs(selection.height) * documentSize.height;
 
+    const state = selection.state || "unstaged";
+
     const ui = uiMetaById.get(selection.id);
-    const isDirty = ui?.dirty === true;
+    const isDirty = ui?.isDirty === true;
     const isGlobal = selection.page_number === null;
-    const isProjectScope = (selection as any).scope === 'project';
+    const isTemplate = (selection as any).scope === 'project';
 
     const isSelected = selectedSelection?.id === selection.id;
     const isHovered = hoveredId === selection.id;
-    
-    const visualNorm = getNormalizedSelectionState((selection as any).state);
-    const visualState = visualNorm === "draft" ? "unstaged" : visualNorm;
-
-    const visualFlag = 
-      isProjectScope ? "project_scope"
-      : isGlobal ? "global_page"
-      : isDirty ? "dirty"
-      : "off";
 
     return (
       <SelectionBox
@@ -404,12 +362,15 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
         top={top}
         width={width}
         height={height}
-        state={visualState}
-        flag={visualFlag}
+        state={state}
+        isDirty={isDirty}
+        isGlobal={isGlobal}
+        isTemplate={isTemplate}
         isHovered={isHovered}
         isSelected={isSelected}
         activityContrast={0.35}
         handlerSize={8}
+        interactive={true}
         onClick={(e) => {
           e.stopPropagation();
           handleSelectionClick(selection);
@@ -424,13 +385,45 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     );
   }, [documentSize, selectedSelection, handleSelectionClick, dragState, renderResizeHandles, handleMoveStart, uiMetaById, hoveredId]);
 
+  // Render template selection box (read-only)
+  const renderTemplateSelectionBox = useCallback((selection: Selection) => {
+    const left = selection.x * documentSize.width;
+    const top = selection.y * documentSize.height;
+    const width = Math.abs(selection.width) * documentSize.width;
+    const height = Math.abs(selection.height) * documentSize.height;
+
+    const state = selection.state || "unstaged";
+    const isGlobal = selection.page_number === null;
+
+    return (
+      <SelectionBox
+        key={`tpl-${selection.id}`}
+        id={selection.id}
+        left={left}
+        top={top}
+        width={width}
+        height={height}
+        state={state}
+        isDirty={false}
+        isGlobal={isGlobal}
+        isTemplate={true}
+        isHovered={false}
+        isSelected={false}
+        activityContrast={0.35}
+        handlerSize={8}
+        interactive={false}
+      />
+    );
+  }, [documentSize]);
+
   // Filter selections for current page
   const pageSelections = allSelections.filter(
     (s: any) => s.page_number === null || s.page_number === currentPage,
   );
 
   // Template project-scoped overlays for current page (read-only)
-  const templateSelectionsForPage = getTemplateSelectionsForPage?.(currentPage, numPages) ?? [];
+  const isTemplateDocument = !!workspace.currentDocument?.is_template;
+  const templateSelectionsForPage = isTemplateDocument ? [] : (getTemplateSelectionsForPage?.(currentPage, numPages) ?? []);
 
   // Show current drawing if any
   const currentDraw = getCurrentDraw();
@@ -471,8 +464,7 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
         
         {/* Render current drawing */}
         {drawingThisPage && currentDraw && (
-          <div
-            className="absolute pointer-events-none border border-blue-400 text-blue-500 overflow-hidden"
+          <div className="absolute pointer-events-none border border-zinc-600 bg-white/25 overflow-hidden backdrop-saturate-50"
             style={{
               left: `${currentDraw.x * documentSize.width}px`,
               top: `${currentDraw.y * documentSize.height}px`,
@@ -480,25 +472,6 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
               height: `${Math.abs(currentDraw.height) * documentSize.height}px`,
             }}
           >
-            {/* Backdrop brightness to gently lift darker areas under live drawing */}
-            <div
-              className="absolute inset-0 pointer-events-none"
-              style={{
-                backdropFilter: 'brightness(1.08)',
-                WebkitBackdropFilter: 'brightness(1.08)',
-                backgroundColor: 'rgba(255,255,255,0.001)',
-              }}
-            />
-            {/* Subtle solid tint using currentColor */}
-            <div className="absolute inset-0 pointer-events-none opacity-10" style={{ backgroundColor: 'currentColor' }} />
-            {/* Diagonal stripe overlay */}
-            <div
-              className="absolute inset-0 pointer-events-none opacity-30"
-              style={{
-                backgroundImage: `linear-gradient(135deg, currentColor 2.25%, transparent 2.25%, transparent 50%, currentColor 50%, currentColor 52.25%, transparent 52.25%, transparent 100%)`,
-                backgroundSize: '20px 20px',
-              }}
-            />
           </div>
         )}
       </div>

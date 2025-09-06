@@ -146,3 +146,14 @@ async def redact_project_stream(
     The request supplies encrypted credentials; project_id is taken from the path.
     """
     return await projects_controller.redact_stream(db=db, project_id=project_id, request=payload)
+
+
+@router.get("/id/{project_id}/download/redactions", response_class=StreamingResponse)
+async def download_project_redactions(
+    project_id: UUID,
+    db: Session = Depends(get_db_session),
+) -> StreamingResponse:
+    """Download a ZIP containing all redacted files for the specified project.
+    Password is not required for redacted files.
+    """
+    return projects_controller.download_project_redactions_zip(db=db, project_id=project_id)

@@ -8,6 +8,7 @@ import { useProjectTrust } from "@/providers/project-trust-provider";
 import { DocumentViewerAPI } from "@/lib/document-viewer-api";
 import { DocumentsAPI } from "@/lib/documents-api";
 import { EditorAPI } from "@/lib/editor-api";
+import type { DocumentShallowType } from "@/types";
 
 export function useDocumentActions(document: MinimalDocumentType) {
   const {
@@ -18,20 +19,29 @@ export function useDocumentActions(document: MinimalDocumentType) {
     setCurrentPage,
     dispatch,
     setActiveWorkbenchTab,
+    setActiveControlsPanel,
   } = useViewportState();
 
-  const { uiSelections, discardAllChanges, selectionCount } = useSelections() as any;
+  const { uiSelections, discardAllChanges, selectionCount } = useSelections();
 
   const aiProc = useAiProcessing();
   const { ensureProjectTrust } = useProjectTrust();
 
   const [isApplyingAI, setIsApplyingAI] = useState(false);
   const [isProcessingDoc, setIsProcessingDoc] = useState(false);
+  const [shallowDocument, setShallowDocument] = useState<DocumentShallowType>();
+
+  useEffect(() => {
+    (async () => {
+      const res = await DocumentsAPI.fetchDocumentShallow(document.id);
+      if (res.ok) { setShallowDocument(res.value) }
+    })();
+  }, [document.id]);
 
   // Track redacted load to avoid repeated network requests
-  const redactedLoad = useRef<{ inFlight: boolean; loaded: boolean }>({ inFlight: false, loaded: Boolean((liveDocument as any)?.redacted_file) });
+  const redactedLoad = useRef<{ inFlight: boolean; loaded: boolean }>({ inFlight: false, loaded: Boolean(liveDocument?.redacted_file) });
   useEffect(() => {
-    redactedLoad.current.loaded = Boolean((liveDocument as any)?.redacted_file);
+    redactedLoad.current.loaded = Boolean(liveDocument?.redacted_file);
   }, [liveDocument?.redacted_file]);
 
   // Explicit view switches
@@ -94,14 +104,20 @@ export function useDocumentActions(document: MinimalDocumentType) {
 
   const openWorkbenchSelections = useCallback(() => {
     setActiveWorkbenchTab('selections');
-  }, [setActiveWorkbenchTab]);
+    setActiveControlsPanel('workbench');
+  }, [setActiveWorkbenchTab, setActiveControlsPanel]);
 
   const openWorkbenchPrompts = useCallback(() => {
     setActiveWorkbenchTab('prompts');
-  }, [setActiveWorkbenchTab]);
+    setActiveControlsPanel('workbench');
+  }, [setActiveWorkbenchTab, setActiveControlsPanel]);
+
+  const closeWorkbench = useCallback(() => {
+    setActiveControlsPanel('document-controls');
+  }, [setActiveControlsPanel]);
 
   const discardAllUnsaved = useCallback(() => {
-    const totalUnsaved = (uiSelections || []).filter((s: any) => s.dirty === true).length;
+    const totalUnsaved = (uiSelections || []).filter((s: any) => s.isDirty === true).length;
     if (totalUnsaved === 0) { toast.info('No unsaved changes to discard'); return; }
     discardAllChanges();
     toast.success(`Discarded ${totalUnsaved} unsaved change${totalUnsaved === 1 ? '' : 's'}`);
@@ -165,25 +181,83 @@ export function useDocumentActions(document: MinimalDocumentType) {
     }
   }, [dispatch, document, ensureProjectTrust, selectionCount]);
 
-  const isDownloadAvailable = useMemo(() => {
-    return Boolean(document.original_file || document.redacted_file);
-  }, [document.original_file, document.redacted_file]);
+  const isProcessed = useMemo(() => {
+    return shallowDocument?.is_processed || false;
+  }, [shallowDocument]);
+
+  const isTemplate = useMemo(() => {
+    return shallowDocument?.is_template || false;
+  }, [shallowDocument]);
+
+  const hasSelections = useMemo(() => {
+    return Boolean(shallowDocument?.selection_count);
+  }, [shallowDocument]);
+
+  const hasPropmts = useMemo(() => {
+    return Boolean(shallowDocument?.prompt_count);
+  }, [shallowDocument]);
 
   const downloadCurrentView = useCallback(() => {
-    const currentFile = isViewingProcessedDocument ? document.redacted_file : document.original_file;
-    if (currentFile && document.files) {
-      const fileWithBlob = (document.files as any[]).find((f: any) => f.id === (currentFile as any).id);
-      if (fileWithBlob && 'blob' in fileWithBlob && fileWithBlob.blob instanceof Blob) {
-        const url = URL.createObjectURL(fileWithBlob.blob);
-        const link = globalThis.document.createElement('a');
-        link.href = url;
-        const fname = isViewingProcessedDocument ? `${document.id}.pdf` : `${document.name}_original.pdf`;
-        link.download = fname;
-        link.click();
-        URL.revokeObjectURL(url);
+    const doDownload = (blob: Blob, fileName: string): void => {
+      const url = URL.createObjectURL(blob);
+      const link = globalThis.document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      link.click();
+      URL.revokeObjectURL(url);
+    };
+
+    const tryBlobFromState = (): Blob | null => {
+      const currentFile = isViewingProcessedDocument ? document.redacted_file : document.original_file;
+      if (currentFile && document.files) {
+        const fileWithBlob = (document.files as any[]).find((f: any) => f.id === (currentFile as any).id);
+        if (fileWithBlob && 'blob' in fileWithBlob && fileWithBlob.blob instanceof Blob) {
+          return fileWithBlob.blob as Blob;
+        }
       }
+      return null;
+    };
+
+    const stateBlob = tryBlobFromState();
+    if (stateBlob) {
+      const fname = isViewingProcessedDocument ? `${document.id}.pdf` : `${document.name}_original.pdf`;
+      doDownload(stateBlob, fname);
+      return;
     }
-  }, [document.files, document.id, document.name, document.original_file, document.redacted_file, isViewingProcessedDocument]);
+
+    // Fallback: fetch the blob on demand
+    if (isViewingProcessedDocument) {
+      // Redacted view does not require password
+      void (async () => {
+        const red = await EditorAPI.loadRedactedFile(document.id);
+        if (!red.ok) {
+          toast.info('No redacted file available', { description: 'Process the document first to generate it.', });
+          return;
+        }
+        // Make the blob available to the viewer for future use
+        dispatch({ type: 'SET_VOLATILE_BLOB', payload: { blob: red.value.blob, forProcessed: true }, });
+        doDownload(red.value.blob, `${document.id}.pdf`);
+      })();
+      return;
+    }
+
+    // Original view requires trusted project password
+    void (async () => {
+      try {
+        const { keyId, encryptedPassword } = await ensureProjectTrust(document.project_id);
+        const orig = await EditorAPI.loadOriginalFileEncrypted(document.id, { keyId, encryptedPassword, });
+        if (!orig.ok) {
+          toast.error('Failed to download original');
+          return;
+        }
+        // Surface blob for future use in viewer
+        dispatch({ type: 'SET_VOLATILE_BLOB', payload: { blob: orig.value.blob, forProcessed: false }, });
+        doDownload(orig.value.blob, `${document.name}_original.pdf`);
+      } catch (e) {
+        if (e instanceof Error && e.message === 'cancelled') { toast.message('Project unlock cancelled'); }
+      }
+    })();
+  }, [dispatch, document.files, document.id, document.name, document.original_file, document.project_id, document.redacted_file, ensureProjectTrust, isViewingProcessedDocument]);
 
   return {
     // View
@@ -196,6 +270,7 @@ export function useDocumentActions(document: MinimalDocumentType) {
     // Workbench
     openWorkbenchSelections,
     openWorkbenchPrompts,
+    closeWorkbench,
 
     // Selections
     discardAllUnsaved,
@@ -208,7 +283,10 @@ export function useDocumentActions(document: MinimalDocumentType) {
     processDocument,
     isProcessingDoc,
     downloadCurrentView,
-    isDownloadAvailable,
+    isProcessed,
+    isTemplate,
+    hasSelections,
+    hasPropmts,
   } as const;
 }
 

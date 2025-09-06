@@ -2,62 +2,62 @@
 
 import type { SelectionCreateType } from "@/types";
 import type { Selection } from "../../types/viewer";
-import { UISelectionStage, type UISelection } from "../../types/selection-lifecycle";
+import { UILifecycleStage, type UISelectionLifecycle } from "../../types/lifecycle";
 
-export function fromApiSelection(sel: Selection): UISelection {
+export function fromApiSelection(sel: Selection): UISelectionLifecycle {
   const state = (sel as any).state as string | undefined;
   const stage =
     state === "staged_edition"
-      ? UISelectionStage.StagedEdition
+      ? UILifecycleStage.StagedEdition
       : state === "staged_deletion"
-      ? UISelectionStage.StagedDeletion
+      ? UILifecycleStage.StagedDeletion
       : state === "staged_creation"
-      ? UISelectionStage.StagedCreation
-      : UISelectionStage.Committed;
+      ? UILifecycleStage.StagedCreation
+      : UILifecycleStage.Committed;
 
   return {
     ...(sel as any),
     stage,
-    isPersisted: true,
-    dirty: false,
-  } as UISelection;
+    isSaved: true,
+    isDirty: false,
+  } as UISelectionLifecycle;
 }
 
-export function toApiCreate(sel: UISelection): SelectionCreateType {
+export function toApiCreate(sel: UISelectionLifecycle): SelectionCreateType {
   // Assume caller ensures sel.isPersisted === false
   // We let server decide final state; include known fields for create
   const { id: _id, dirty: _dirty, dirtyFields: _df, isPersisted: _p, stage: _st, ...rest } = sel as any;
   return rest as SelectionCreateType;
 }
 
-export function toApiUpdate(sel: UISelection): Partial<Selection> {
+export function toApiUpdate(sel: UISelectionLifecycle): Partial<Selection> {
   // Only include fields likely relevant to an update
   // For now, include stage as mapped to API state; refine with dirtyFields in later PRs
   const state =
-    sel.stage === UISelectionStage.StagedEdition
+    sel.stage === UILifecycleStage.StagedEdition
       ? "staged_edition"
-      : sel.stage === UISelectionStage.StagedDeletion
+      : sel.stage === UILifecycleStage.StagedDeletion
       ? "staged_deletion"
-      : sel.stage === UISelectionStage.StagedCreation
+      : sel.stage === UILifecycleStage.StagedCreation
       ? "staged_creation"
       : "committed";
 
   return { state } as Partial<Selection>;
 }
 
-export function mergeServerResponse(sel: UISelection, apiSel: Selection): UISelection {
-  const merged = { ...sel, ...(apiSel as any) } as UISelection;
+export function mergeServerResponse(sel: UISelectionLifecycle, apiSel: Selection): UISelectionLifecycle {
+  const merged = { ...sel, ...(apiSel as any) } as UISelectionLifecycle;
   const state = (merged as any).state as string | undefined;
   merged.stage =
     state === "staged_edition"
-      ? UISelectionStage.StagedEdition
+      ? UILifecycleStage.StagedEdition
       : state === "staged_deletion"
-      ? UISelectionStage.StagedDeletion
+      ? UILifecycleStage.StagedDeletion
       : state === "staged_creation"
-      ? UISelectionStage.StagedCreation
-      : UISelectionStage.Committed;
-  merged.isPersisted = true;
-  merged.dirty = false;
+      ? UILifecycleStage.StagedCreation
+      : UILifecycleStage.Committed;
+  merged.isSaved = true;
+  merged.isDirty = false;
   return merged;
 }
 

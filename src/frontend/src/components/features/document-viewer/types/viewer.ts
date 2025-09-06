@@ -3,13 +3,15 @@
  * Phase 2: State Consolidation - Unified types for simplified state management
  */
 
-import { type SelectionCreateType, type SelectionType } from '@/types';
+import { type SelectionCreateType, type PromptCreateType, type SelectionType, type PromptType } from '@/types';
 
 // Local draft type (frontend-only) where state can be omitted until staged
 export type SelectionCreateDraft = Omit<SelectionCreateType, 'state'> & { state?: SelectionType['state'] };
+export type PromptCreateDraft = Omit<PromptCreateType, 'state'> & { state?: SelectionType['state'] };
 
 // Selection type alias for the new selection manager (supports both saved and new selections)
 export type Selection = SelectionType | (SelectionCreateDraft & { id: string });
+export type Prompt = PromptType | (PromptCreateDraft & { id: string });
 
 // Viewer modes
 export type ViewerMode = 'pan' | 'select';
