@@ -34,6 +34,11 @@ jobs:
       run: uv sync --all-groups
 
     - name: Run tests
+      env:
+        SERO_SECURITY__SECRET_KEY: ci-test-secret-key
+        SERO_DB__FILEPATH: ${{ runner.temp }}/sero.sqlite
+        SERO_LOG__FILEPATH: ${{ runner.temp }}/sero_logs/app.jsonl
+        SERO_PROCESSING__DIRPATH: ${{ runner.temp }}/sero_output
       run: uv run pytest
 
     - name: Python Semantic Release
