@@ -46,7 +46,7 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
   } = useViewportActions();
 
   // Selection and lifecycle hooks
-  const { uiSelections, allSelections, undo, redo, canUndo, canRedo } = useSelections() as any;
+  const { uiSelections, allSelections, undo, redo, canUndo, canRedo } = useSelections();
   const {
     selectionStats: scSel,
     promptStats: prSel,
@@ -58,12 +58,12 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
     commitAll,
     clearSelections,
     stageMessages,
-  } = useStageCommit(document.id) as any;
+  } = useStageCommit(document.id);
 
   // Prompts and AI hooks
-  const { load, save, createPrompt } = usePrompts() as any;
+  const { load, save, createPrompt } = usePrompts();
   const actions = useDocumentActions(document);
-  const { closeWorkbench } = actions as any;
+  const { closeWorkbench } = actions;
 
   // Dialog state
   const [showStageDialog, setShowStageDialog] = useState(false);
@@ -131,7 +131,7 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
                 canCommit,
                 isStaging,
                 isCommitting,
-                clearPageDisabled: allSelections.filter((s: any) => s.page_number === currentPage).length === 0,
+                clearPageDisabled: allSelections.filter((s) => s.page_number === currentPage).length === 0,
                 clearAllDisabled: (allSelections || []).length === 0,
                 undo,
                 redo,
@@ -149,7 +149,6 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
                 processDocument: actions.processDocument,
                 isProcessingDoc: actions.isProcessingDoc,
                 downloadCurrentView: actions.downloadCurrentView,
-                isDownloadAvailable: actions.isDownloadAvailable,
               },
             } as const;
 
@@ -178,7 +177,7 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
             };
 
             // Inject closeWorkbench for Actions menu config that references it
-            const ctxWithClose = { ...ctx, document: { ...ctx.document, closeWorkbench } } as any;
+            const ctxWithClose = { ...ctx, document: { ...ctx.document, closeWorkbench } };
             const menus = buildActionsMenuConfig(ctxWithClose);
 
             return menus.map((menu) => (
@@ -233,6 +232,7 @@ export default function ActionsLayer({ document, isInfoVisible = false, onToggle
               size="icon"
               onClick={actions.toggleProcessedView}
               title={isViewingProcessedDocument ? "View original" : "View redacted"}
+              disabled={!actions.isProcessed}
             >
               {isViewingProcessedDocument ? <EyeClosed /> : <Eye />}
             </Button>

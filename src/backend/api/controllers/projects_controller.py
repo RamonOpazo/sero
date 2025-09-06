@@ -4,6 +4,9 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from loguru import logger
 import asyncio
+import io
+import zipfile
+from datetime import datetime, timezone
 
 from backend.crud import projects_crud, support_crud, ai_settings_crud, documents_crud, templates_crud, files_crud
 from backend.api.schemas import projects_schema, generics_schema, settings_schema, templates_schema, files_schema
@@ -417,5 +420,54 @@ async def redact_stream(
             "Connection": "keep-alive",
             # If behind Nginx, this disables proxy buffering for streaming responses
             "X-Accel-Buffering": "no",
+        },
+    )
+
+
+def download_project_redactions_zip(
+    db: Session,
+    project_id: UUID,
+) -> StreamingResponse:
+    """Package all existing redacted files for the given project into a ZIP and return it.
+
+    This operation does not require a password because redacted files are not encrypted.
+    If no redacted files are present, returns a small empty ZIP.
+    """
+    # Ensure project exists (will raise 404 if not)
+    project = support_crud.apply_or_404(projects_crud.read, db=db, id=project_id)
+
+    # Load documents with files to find redacted ones
+    docs = documents_crud.search(
+        db=db,
+        skip=0,
+        limit=10_000,
+        project_id=project_id,
+        join_with=["files"],
+        order_by=[("created_at", "asc")],
+    )
+
+    # Prepare in-memory ZIP (acceptable for typical project sizes; can be optimized later)
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
+        for doc in docs:
+            red = next((f for f in (doc.files or []) if f.file_type == FileType.REDACTED), None)
+            if red is None:
+                continue
+            # Derive a safe filename
+            fname = f"{red.id}.pdf"
+            # Write file bytes
+            data_bytes: bytes = red.data if isinstance(red.data, (bytes, bytearray)) else bytes(red.data or b"")
+            zf.writestr(fname, data_bytes)
+
+    buf.seek(0)
+    ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    out_name = f"project_{project.name or project.id}_redactions_{ts}.zip"
+
+    return StreamingResponse(
+        buf,
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": f"attachment; filename={out_name}",
+            "Cache-Control": "no-store",
         },
     )

@@ -1,5 +1,5 @@
 import { useMemo, useCallback, useState } from 'react';
-import { FolderInput, Plus, Copy, Edit, Trash2, Settings2, ArrowLeft, Bot, Scissors } from 'lucide-react';
+import { FolderInput, Plus, Copy, Edit, Trash2, Settings2, ArrowLeft, Bot, Scissors, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { DataTable } from '@/components/features/data-table';
 import { Badge } from '@/components/ui/badge';
@@ -22,6 +22,7 @@ interface ProjectsDataTableProps {
     onOpenAiSettings: (p: ProjectShallowType) => void
     onRunAiDetection?: (p: ProjectShallowType) => void
     onRunRedaction?: (p: ProjectShallowType) => void
+    onDownloadRedactions?: (p: ProjectShallowType) => void
     onRowSelectionChange: (rows: ProjectShallowType[]) => void
     onBulkDelete: () => void
     onBackHome?: () => void
@@ -189,6 +190,12 @@ export function ProjectsDataTable({ projects, selectedProjects, isLoading, error
           icon: Scissors,
           onClick: (project: ProjectShallowType) => actionHandlers.onRunRedaction?.(project),
           disabled: (row: ProjectShallowType) => !row.has_template,
+        },
+        {
+          id: 'download-redactions',
+          label: 'Download redactions',
+          icon: Download,
+          onClick: (project: ProjectShallowType) => actionHandlers.onDownloadRedactions?.(project),
         },
         {
           id: 'delete',

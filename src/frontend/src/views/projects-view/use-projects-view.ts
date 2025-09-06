@@ -155,6 +155,26 @@ export function useProjectsView(onProjectSelect?: (project: ProjectShallowType) 
     });
   }, []);
 
+  const handleDownloadRedactions = useCallback(async (project: ProjectShallowType) => {
+    try {
+      const res = await ProjectsAPI.downloadProjectRedactionsZip(project.id);
+      if (!res.ok) {
+        toast.error('Failed to download redactions');
+        return;
+      }
+      const blob = res.value as Blob;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const ts = new Date().toISOString().replace(/[-:]/g, '').replace(/\..+$/, '') + 'Z';
+      a.href = url;
+      a.download = `project_${project.name || project.id}_redactions_${ts}.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      toast.error('Failed to download redactions');
+    }
+  }, []);
+
   // Bulk selection handlers
   const handleRowSelectionChange = useCallback((selectedRows: ProjectShallowType[]) => {
     setSelectedProjects(selectedRows);
@@ -279,6 +299,7 @@ export function useProjectsView(onProjectSelect?: (project: ProjectShallowType) 
     onRowSelectionChange: handleRowSelectionChange,
     onBulkDelete: handleBulkDelete,
     onOpenAiSettings: openAiSettings,
+    onDownloadRedactions: handleDownloadRedactions,
     onBackHome: () => navigate('/'),
   }), [
     handleSelectProject,
@@ -289,6 +310,7 @@ export function useProjectsView(onProjectSelect?: (project: ProjectShallowType) 
     handleRowSelectionChange,
     handleBulkDelete,
     openAiSettings,
+    handleDownloadRedactions,
     navigate,
   ]);
 
