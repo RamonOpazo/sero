@@ -71,6 +71,9 @@ export interface SelectionBoxProps {
   activityContrast?: number; // 0..1
   handlerSize?: number; // corner handle size in px
 
+  // Interactivity
+  interactive?: boolean;
+
   // Events
   onClick?: (e: React.MouseEvent<HTMLDivElement>) => void;
   onMouseDown?: (e: React.MouseEvent<HTMLDivElement>) => void;
@@ -120,6 +123,7 @@ export function SelectionBox(props: SelectionBoxProps) {
     isSelected = false,
     activityContrast = 0.6,
     handlerSize = 8,
+    interactive = true,
     onClick,
     onMouseDown,
     onResizeStart,
@@ -177,12 +181,13 @@ export function SelectionBox(props: SelectionBoxProps) {
       id={id}
       data-selection-id={id}
       className={cn(
-        "absolute pointer-events-auto group overflow-visible",
+        "absolute group overflow-visible",
+        interactive ? "pointer-events-auto" : "pointer-events-none",
         className,
       )}
       style={{ left, top, width, height, }}
-      onClick={onClick}
-      onMouseDown={onMouseDown}
+      onClick={interactive ? onClick : undefined}
+      onMouseDown={interactive ? onMouseDown : undefined}
     >
       {/* Background preset */}
       <SelectionBackground
@@ -191,7 +196,7 @@ export function SelectionBox(props: SelectionBoxProps) {
       />
 
       {/* Resize handles when selected */}
-      {active && state !== "committed" && state !== "staged_deletion" && (
+      {interactive && active && state !== "committed" && state !== "staged_deletion" && (
         <SelectionBoxHandlers
           color="bg-blue-600 hover:bg-blue-700"
           border="border border-white"

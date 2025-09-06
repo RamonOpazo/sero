@@ -4,6 +4,7 @@ import { useViewportState } from '../providers/viewport-provider';
 import type { Selection, SelectionCreateDraft } from '../types/viewer';
 import { getNormalizedSelectionState } from '../utils';
 import { SelectionBox } from '@/components/shared/selection-box';
+import { useWorkspace } from '@/providers/workspace-provider';
 
 type Corner = 'nw' | 'ne' | 'sw' | 'se';
 
@@ -22,6 +23,7 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     document: currentDocument,
     numPages,
   } = useViewportState();
+  const { state: workspace } = useWorkspace();
 
   // New selection system
   const {
@@ -334,7 +336,7 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     return map;
   }, [uiSelections]);
 
-  // Render selection box
+  // Render selection box (interactive)
   const renderSelectionBox = useCallback((selection: Selection) => {
     // Convert normalized coordinates to pixel coordinates
     const left = selection.x * documentSize.width;
@@ -368,6 +370,7 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
         isSelected={isSelected}
         activityContrast={0.35}
         handlerSize={8}
+        interactive={true}
         onClick={(e) => {
           e.stopPropagation();
           handleSelectionClick(selection);
@@ -382,13 +385,45 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
     );
   }, [documentSize, selectedSelection, handleSelectionClick, dragState, renderResizeHandles, handleMoveStart, uiMetaById, hoveredId]);
 
+  // Render template selection box (read-only)
+  const renderTemplateSelectionBox = useCallback((selection: Selection) => {
+    const left = selection.x * documentSize.width;
+    const top = selection.y * documentSize.height;
+    const width = Math.abs(selection.width) * documentSize.width;
+    const height = Math.abs(selection.height) * documentSize.height;
+
+    const state = selection.state || "unstaged";
+    const isGlobal = selection.page_number === null;
+
+    return (
+      <SelectionBox
+        key={`tpl-${selection.id}`}
+        id={selection.id}
+        left={left}
+        top={top}
+        width={width}
+        height={height}
+        state={state}
+        isDirty={false}
+        isGlobal={isGlobal}
+        isTemplate={true}
+        isHovered={false}
+        isSelected={false}
+        activityContrast={0.35}
+        handlerSize={8}
+        interactive={false}
+      />
+    );
+  }, [documentSize]);
+
   // Filter selections for current page
   const pageSelections = allSelections.filter(
     (s: any) => s.page_number === null || s.page_number === currentPage,
   );
 
   // Template project-scoped overlays for current page (read-only)
-  const templateSelectionsForPage = getTemplateSelectionsForPage?.(currentPage, numPages) ?? [];
+  const isTemplateDocument = !!workspace.currentDocument?.is_template;
+  const templateSelectionsForPage = isTemplateDocument ? [] : (getTemplateSelectionsForPage?.(currentPage, numPages) ?? []);
 
   // Show current drawing if any
   const currentDraw = getCurrentDraw();
@@ -422,7 +457,7 @@ export default function SelectionsLayerNew({ documentSize }: Props) {
         }}
       >
         {/* Render template overlays first (beneath interactive selections) */}
-        {templateSelectionsForPage.map(renderSelectionBox)}
+        {templateSelectionsForPage.map(renderTemplateSelectionBox)}
 
         {/* Render all selections for this page */}
         {pageSelections.map(renderSelectionBox)}
