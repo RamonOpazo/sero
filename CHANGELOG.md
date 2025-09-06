@@ -1,725 +1,44 @@
 # CHANGELOG
 
 
+## v1.9.0 (2025-09-06)
+
+### Continuous Integration
+
+- **tests**: Bypass OS keyring via env during test collection and set tmp data/log paths in workflow
+  ([`6d2552f`](https://github.com/RamonOpazo/sero/commit/6d2552ff27ae5ddad05d4db354da97d682a4e5b6))
+
+
 ## v1.8.0 (2025-09-02)
-
-### Bug Fixes
-
-- **document-viewer**: Stabilize selection reload effect; use live document in redacted toggle to
-  avoid stale state and allow repeated toggling
-  ([`d50cd98`](https://github.com/RamonOpazo/sero/commit/d50cd982797a3a0033037ad69854d01a51cb4dc7))
-
-- **ui**: Wrap prompts list return in fragment and add inline edit+commit flow; align spacing with
-  selections
-  ([`f84abc5`](https://github.com/RamonOpazo/sero/commit/f84abc5a86da00dc5e9fd85d64ad2efb1c4b56b8))
 
 ### Chores
 
-- Checkpoint before aligning prompts rules list with selections list style
-  ([`70e97a6`](https://github.com/RamonOpazo/sero/commit/70e97a62ac2193d2d788788b3855821af7dcea5e))
-
-- Commit tweaks to selection box backgrounds
-  ([`0ebd509`](https://github.com/RamonOpazo/sero/commit/0ebd5090ad3fd99be076ac48d6d5a0e555dbc6be))
-
-- Commit user changes after reverting previous cursor tweaks and applying layout/sidebar updates
-  ([`c3606c0`](https://github.com/RamonOpazo/sero/commit/c3606c0ee804b7b4c92133a7f54f8af8e590426a))
-
-- **frontend**: Build passes after reorg; defer lint fixes to incremental follow-ups
-  ([`1003ee6`](https://github.com/RamonOpazo/sero/commit/1003ee6e6ed65f2358bbeb2669c5d46670b4a09e))
-
-- **viewer**: Export useStageCommit and useZoomControls from hooks barrel; build passes
-  ([`b0d6378`](https://github.com/RamonOpazo/sero/commit/b0d637834665c8fe04878369ddf4893b6751c73a))
-
-- **viewer**: Remove legacy hooks (useSelectionLoader, use-document-data) after provider-based
-  loading; verify build
-  ([`c0dae8a`](https://github.com/RamonOpazo/sero/commit/c0dae8a4f46461b303140ca129ce7c726ea9959e))
-
-- **viewer**: Remove unused hook use-pdf-pages; verify build
-  ([`c775045`](https://github.com/RamonOpazo/sero/commit/c775045f72a00b81d5027628c36d6060266c38f6))
-
-### Documentation
-
-- **viewer**: Dry/sot audit integrated; prefer useDocumentViewer (add) and keep useViewer as alias;
-  update exports
-  ([`f485ac0`](https://github.com/RamonOpazo/sero/commit/f485ac04626110661a7637c49bb221b0bdbe7a2f))
-
-- **viewer**: Expand Phase 3 dialog plan; chore: remove legacy hooks stubs (useSelectionLoader,
-  use-document-data) and ensure clean exports
-  ([`5345a95`](https://github.com/RamonOpazo/sero/commit/5345a95e55e237416251e5adc98623ab93410f4f))
-
-### Features
-
-- **document-viewer**: Add Hand/Grab mode toggle button in top bar; use Hand/Grab in menu
-  toggle-mode entry; adjust listings submenu label
-  ([`1e4b612`](https://github.com/RamonOpazo/sero/commit/1e4b6124a31a3886ff67b9807a4b025830c6ccf7))
-
-- **document-viewer**: Add view toggle button; add Undo/Redo to Selections menu using existing icons
-  and wiring
-  ([`90dfae8`](https://github.com/RamonOpazo/sero/commit/90dfae8db01718b8a9f941af787ceec68e748f1e))
-
-- **document-viewer**: Add workbench toggler (Selections/AI Rules) to actions menu and top bar; wire
-  with viewport state
-  ([`f116474`](https://github.com/RamonOpazo/sero/commit/f116474c20722b0b2547e04fc148990c07271a0c))
-
-### Refactoring
-
-- **document-viewer**: Inline status mapping in selection-list; remove unused style helpers from
-  selection-styles
-  ([`be2619b`](https://github.com/RamonOpazo/sero/commit/be2619be2f2678ac3d88b6d68763e49203cbd6c1))
-
-- **viewer**: Decouple state (useDocumentViewer) from commands; rename useActions to
-  useDocumentActions; update imports; build passes
-  ([`b3c535f`](https://github.com/RamonOpazo/sero/commit/b3c535ffbbec8d1823c7dd760ec822b2796961b3))
-
-- **viewer**: Phase 1 provider/hooks cleanup – remove unused useDocumentPrompts, add useViewer,
-  deprecate useSelectionLoader; update docs plan
-  ([`265a9ae`](https://github.com/RamonOpazo/sero/commit/265a9aebc0aa43fb2087fec88bf3e0837ad7e78f))
-
-- **viewer**: Phase 2 – load selections in SelectionProvider; remove loader and document-data hooks;
-  update plan
-  ([`bc3df90`](https://github.com/RamonOpazo/sero/commit/bc3df90dd4763beb2b455ada957cd0962dd1d425))
-
-- **viewer**: Rename providers (document-viewer, prompts, selections) and drop useViewer alias;
-  update imports and barrels; build passes
-  ([`733eefd`](https://github.com/RamonOpazo/sero/commit/733eefd6ec95acb5cfa6c231865c937f457c9b1d))
-
-- **viewer-types**: Stop re-exporting app-wide SelectionCreateType from feature types barrel; keep
-  Selection as feature type; build passes
-  ([`b73f7be`](https://github.com/RamonOpazo/sero/commit/b73f7be111fd68d5d18e90e5fc0fe704bcb7e945))
+- **release**: V1.8.0 [skip ci]
+  ([`5faad08`](https://github.com/RamonOpazo/sero/commit/5faad082151b98ac88293a175b679906686c6912))
 
 
 ## v1.7.0 (2025-09-01)
 
-### Bug Fixes
-
-- Compute frontend is_template from template; include template in documents search join
-  ([`bc1b9ee`](https://github.com/RamonOpazo/sero/commit/bc1b9eed5e224ad1c005c6241796e29b678c0c5c))
-
-- **actions-layer**: Narrow MenuNode to MenuItem when rendering config items to satisfy TS; support
-  nested submenus
-  ([`afbe828`](https://github.com/RamonOpazo/sero/commit/afbe828336a9264f2ffaa26078b3e1e06bb4e97c))
-
-- **api**: Adjust prompts delete-all route to /by-document/id/{document_id} and update frontend
-  consumer
-  ([`cacd0a7`](https://github.com/RamonOpazo/sero/commit/cacd0a728588496fa4e1f26bf75eb07880cd7bca))
-
-- **support**: Use yield from and correct helper name for selections
-  ([`f0af77d`](https://github.com/RamonOpazo/sero/commit/f0af77d348b34b0452ea51d7f2acda2ab9732b07))
-
-- **trust**: Regenerate encrypted credentials per request using in-memory password cache; avoid
-  reusing consumed ephemeral key pairs
-  ([`dd83e7c`](https://github.com/RamonOpazo/sero/commit/dd83e7cce19667a062a5188d615001decb4313aa))
-
 ### Chores
-
-- **actions-layer**: Clean unused hover state, simplify visibility logic, and guard info
-  quick-button
-  ([`6988154`](https://github.com/RamonOpazo/sero/commit/698815493d2a5be1bcd292c71623b9305f18f476))
-
-- **actions-layer**: Remove dead refs, unused imports and hook returns; simplify hover handlers
-  ([`5baf181`](https://github.com/RamonOpazo/sero/commit/5baf181e1fda3e786121dbf62b8b51767ac5c0f7))
 
 - **release**: V1.7.0 [skip ci]
   ([`b1a1df3`](https://github.com/RamonOpazo/sero/commit/b1a1df37ef408a4f5703a59e443bd7b57452b0d4))
 
-### Documentation
-
-- Added correct paths to docs.
-  ([`89908d3`](https://github.com/RamonOpazo/sero/commit/89908d390450d54b8fcbb7e094a7b15b087d9af0))
-
-- **projects**: Document encrypted-in-transit project creation and mark task complete
-  ([`6a06981`](https://github.com/RamonOpazo/sero/commit/6a06981f828bc452eb0f9fc2a2888d1602433910))
-
-- **trust**: Document per-request re-encryption, in-memory password TTL; add Phase 2 plan and guide
-  updates
-  ([`438255d`](https://github.com/RamonOpazo/sero/commit/438255d32cd8bb3f34cd52fc60f0e7cb2f398e9d))
-
-- **ui**: Update guides for encrypted bulk uploads, trust session reuse, and per-request
-  re-encryption
-  ([`2cf7fd1`](https://github.com/RamonOpazo/sero/commit/2cf7fd18a143901214c2980ada3c3a96b0d167ad))
-
-### Features
-
-- **api**: Add project-scoped document (template) management with CRUD, endpoints, and tests
-  ([`3e9e6c1`](https://github.com/RamonOpazo/sero/commit/3e9e6c19b9534efa7e16b8349412e70eddb5606e))
-
-- **api**: Improve project redaction stream (summary counters, NOOP, structured logs); fix PAN
-  scope; tests: add rerun, empty-project, and template-missing cases
-  ([`a870693`](https://github.com/RamonOpazo/sero/commit/a87069304a8dd0735ebac72267d6e52f5ed63af7))
-
-- **api**: Typed SSE events for project redaction; template-aware selection resolution; robust
-  apply_or_404 and error handling
-  ([`943804c`](https://github.com/RamonOpazo/sero/commit/943804c47dcbd93fe06f3525a1e868c23fc18a47))
-
-- **backend**: Enforce secure project creation via key_id+encrypted_password; decrypt and hash
-  server-side in CRUD.create
-  ([`3e47509`](https://github.com/RamonOpazo/sero/commit/3e475099a7647dbb7eab670241b3208882aedb82))
-
-- **data-table**: Add simple declarative columnDefs and adapt DataTable to consume them
-  ([`eaff05f`](https://github.com/RamonOpazo/sero/commit/eaff05f4e8f483fcdaa296ff0de4aed0a9671e49))
-
-- refactor(projects/documents): migrate tables to columnDefs - refactor(projects/documents): lift
-  dialogs from tables to views - refactor(table): extract HeaderRow and BodyRows components -
-  fix(table): render actions via column cell (simple config) - chore(ux): align name link to Button
-  variant=link
-
-- **documents**: Add template selections endpoint and render read-only template overlays\n\n-
-  backend: add GET /documents/id/{document_id}/template-selections in controller/router\n- frontend:
-  API client method, provider loading + filtering (ignore out-of-range pages), read-only overlay
-  rendering\n- provider: single reload() refreshes document and template selections
-  ([`42855f5`](https://github.com/RamonOpazo/sero/commit/42855f575acad7adf1d3aa9c6c8278bd2b7668dd))
-
-- **frontend**: Add 'Scope to Project' action in documents table and API call to set project-scoped
-  template
-  ([`38189ba`](https://github.com/RamonOpazo/sero/commit/38189ba4117e445b14ebee5c27880bb113242721))
-
-- **frontend**: Add encrypted credential API methods and update trust migration plan
-  ([`6bf31f0`](https://github.com/RamonOpazo/sero/commit/6bf31f0c3182c43dae1efad1a2f00cca95105611))
-
-- **frontend**: Add Scope column to documents table using badges (outline; warning for project,
-  muted for document)
-  ([`0946ea4`](https://github.com/RamonOpazo/sero/commit/0946ea46563ce67c6c35354f22690bad2d271e46))
-
-- **frontend**: Auto-retry project redaction once on trust refresh; extend trust session to 30
-  minutes
-  ([`74125d2`](https://github.com/RamonOpazo/sero/commit/74125d23c9098c7c193c5ae5d929cb42a89864ad))
-
-- **frontend**: Encrypt bulk upload via ProjectTrustProvider; remove password field from upload
-  dialog
-  ([`9153c83`](https://github.com/RamonOpazo/sero/commit/9153c83c1bbc572bcaf275fd4896bcc0a77668ca))
-
-- **frontend**: Extract keyboard, wheel, and mouse handlers from unified-viewport into input modules
-  ([`0b9d512`](https://github.com/RamonOpazo/sero/commit/0b9d5129ae96b48fc8c372be6da97b07e47daddf))
-
-- **frontend**: Show completion summary with totals for project redaction; default scope to pan and
-  persist; cancel stale jobs
-  ([`f700624`](https://github.com/RamonOpazo/sero/commit/f700624e56f3555239f0188807ba6e0eaa48cf7f))
-
-- **frontend**: User-friendly hints for per-document outcomes in batch redaction
-  ([`025e7d2`](https://github.com/RamonOpazo/sero/commit/025e7d26a1d1a9bf6ce4c9e7a9656421238e2f17))
-
-- **projects**: Project-scoped document handling updates across backend and frontend
-  ([`bb4a564`](https://github.com/RamonOpazo/sero/commit/bb4a56430e075f983a80922eb04d205ac8c19421))
-
-- **projects**: Streaming redaction with required scope
-  ([`f6b6426`](https://github.com/RamonOpazo/sero/commit/f6b6426c9446c213946f071f3294121214282a04))
-
-- Backend: - Add RedactionScope enum (DOCUMENT, PROJECT, PAN) - Define ProjectRedactionRequest with
-  required scope - Add /projects/id/{project_id}/redact/stream SSE endpoint - Implement
-  redact_stream in projects_controller with scope filtering, decrypt+redact, file save, and events -
-  Tests: - Integrate SSE redaction tests into test_projects_controller (happy path, scope filtering)
-  - Frontend: - Add RedactionScope enum to types/enums - Implement ProjectsAPI.redactProjectStream
-  (SSE client) - Update projects-data-table Run Redaction dialog to select scope and use streaming
-  API
-
-- **selection-list**: Replace per-row action buttons with a single actions dropdown menu; keep
-  badges and dialogs intact
-  ([`c716fa2`](https://github.com/RamonOpazo/sero/commit/c716fa28fc946445af6f7dc58b1f19686b999ee9))
-
-- **viewer**: Centralize actions in Actions Layer, tabbed workbench, and hover pager\n\n- Actions
-  Layer: add View/Selections/AI Rules/Document menus; integrate pan/select in View; remove overlay
-  panel toggles; quick zoom/info shortcuts\n- Workbench: Selections and AI Rules as tabs in the
-  tooldeck (lists/details only)\n- Viewport: remove legacy selections/prompt overlay panels; pass
-  document to ActionsLayer\n- Provider: add activeControlsPanel + activeWorkbenchTab with setters to
-  sync tooldeck state\n- UI: restore bottom mini-pager, visible on hover like the top bar\n- Fix:
-  avoid DOM shadowing by using globalThis.document in ActionsLayer
-  ([`9dea6b5`](https://github.com/RamonOpazo/sero/commit/9dea6b5ea547f427957586c880ef8acf39ea80b8))
-
-- **viewer**: Introduce Menubar (View menu) in Actions Layer\n\n- Add shadcn Menubar to top Actions
-  bar with a View menu\n- Migrate View actions: Zoom In/Out, Reset, Pan/Select toggle, Selections
-  visibility, Info toggle, Page prev/next, Toggle Original/Redacted\n- Keep Selections, AI Rules,
-  and Document as DropdownMenus (to be migrated next)\n- Show shortcut hints with MenubarShortcut
-  ([`5767f6b`](https://github.com/RamonOpazo/sero/commit/5767f6bae1cc627875f253591e7d4f8fe81c0d3b))
-
-- **viewer**: Migrate AI Rules menu to Menubar in Actions Layer\n\n- Replace AI Rules DropdownMenu
-  with Menubar (Run AI detection, Add Rule, Clear all rules, Open Workbench)\n- Add shortcut hints
-  for common actions (Ctrl+Alt+A, Ctrl+N, Shift+Del)\n- Handlers unchanged; dialogs retained
-  ([`871672b`](https://github.com/RamonOpazo/sero/commit/871672b6e625b6d668ff58bc62a4ff0f019175c1))
-
-- **viewer**: Migrate Document menu to Menubar in Actions Layer\n\n- Replace Document DropdownMenu
-  with Menubar (Process document, Download current view)\n- Add shortcut hints (Ctrl+P, Ctrl+D)\n-
-  Remove unused DropdownMenu imports from ActionsLayer
-  ([`c7534a6`](https://github.com/RamonOpazo/sero/commit/c7534a673273140f124d437d53468b4e58df524b))
-
-- **viewer**: Migrate Selections menu to Menubar in Actions Layer\n\n- Add Selections menu to shadcn
-  Menubar (Commit staged, Stage all, Discard unsaved, Clear Current/All, Open Workbench)\n- Remove
-  Selections DropdownMenu (AI Rules and Document remain dropdowns for now)\n- Show shortcut hints
-  for common actions
-  ([`76c9806`](https://github.com/RamonOpazo/sero/commit/76c9806db4ea676e603d6e762cbbc9d7b13243ba))
-
-- **viewer**: Scaffold new viewport architecture and add migration plan
-  ([`d7ac0e7`](https://github.com/RamonOpazo/sero/commit/d7ac0e74dc676ea6eec01aa06f5122c0951045fb))
-
-- **viewer**: Show prompt lifecycle summary (total, saved, new, staged, pending) in prompt panel
-  ([`7b6d7e8`](https://github.com/RamonOpazo/sero/commit/7b6d7e826685bd2071ff655b43928bc41f3ef5a9))
-
-### Refactoring
-
-- **actions-layer**: Expand declarative menu config to View/Selections/Rules; render all menus from
-  config with icons and shortcuts
-  ([`b476691`](https://github.com/RamonOpazo/sero/commit/b4766916c7cdd8711e57f1a8902edeb235cb4a04))
-
-- **actions-layer**: Extract cursor-aware zoom/pan math into useZoomControls hook and wire it
-  ([`05e8ee8`](https://github.com/RamonOpazo/sero/commit/05e8ee867bb9ad995ea2e9bdb7091dadc3ceb4da))
-
-- **actions-layer**: Extract heavy action handlers into useActions hook; fix imports and missing
-  DocumentViewerAPI reference
-  ([`ffea526`](https://github.com/RamonOpazo/sero/commit/ffea526b07c3d5cf506dedc79215eec9e12736e9))
-
-- **actions-layer**: Extract MiniPager presentational component and use it in ActionsLayer
-  ([`b2a54a3`](https://github.com/RamonOpazo/sero/commit/b2a54a34f7b2709e5427796d006f8dd7b2caf132))
-
-- **actions-layer**: Introduce declarative menu config types (scaffold)
-  ([`1f9a165`](https://github.com/RamonOpazo/sero/commit/1f9a165f7f50667bf54600d4c8ea3ee3f267d3ad))
-
-- **actions-layer**: Render Document menu from declarative config; add buildActionsMenuConfig
-  ([`4723c98`](https://github.com/RamonOpazo/sero/commit/4723c98bf0ad9ecc05d98a806e970db32334c7ba))
-
-- **data-table**: Remove legacy column factories/presets; align adapter and actions cell with
-  declarative API
-  ([`48d61dc`](https://github.com/RamonOpazo/sero/commit/48d61dc20a6abe5ebc427fa2a4d6efeba90f0246))
-
-- Delete columns/factories.tsx and columns/presets.tsx (unused after migration)
-
-- Prune legacy exports in columns/index.ts and main data-table index
-
-- Tighten adapter to focus on ColumnConfig->Column mapping; drop dev helpers
-
-- Render actions cells using columnDefs via getCellValue in table-content; remove old dropdown impl
-
-- Misc cleanup across viewer/components and providers (unused imports/props, minor tidy)
-
-- **frontend**: Add useKeyboardHandler adapter hook and use it in unified-viewport
-  ([`fa69fb7`](https://github.com/RamonOpazo/sero/commit/fa69fb7f32eaba18d2bca05f29dd84002975c01e))
-
-- **frontend**: Add useMouseButtonHandlers adapter hook and use it in unified-viewport
-  ([`26e08eb`](https://github.com/RamonOpazo/sero/commit/26e08ebec4901242defe6fe14e9228fa875267c9))
-
-- **frontend**: Add useWheelHandler adapter hook and use it in unified-viewport
-  ([`52a03a1`](https://github.com/RamonOpazo/sero/commit/52a03a1fc05b86d27fad40e58360e7afc49405d2))
-
-- **frontend**: Internalize mouse event state in adapter and add input barrel exports
-  ([`3f11350`](https://github.com/RamonOpazo/sero/commit/3f11350d9349909adb0566343e7f9c09185c7148))
-
-- **frontend**: Migrate DocumentControls to project trust flow and remove legacy password dialog
-  ([`9631b33`](https://github.com/RamonOpazo/sero/commit/9631b33fde0fe48ef90aaa7834ae23560f030cc1))
-
-- **frontend**: Migrate EditorView to project trust flow and update migration status
-  ([`3a5bd4d`](https://github.com/RamonOpazo/sero/commit/3a5bd4d081f3dbe6297749d3586b2a4ce4138f60))
-
-- **frontend**: Move useThrottle to shared hook use-throttle and update unified-viewport
-  ([`5adcd55`](https://github.com/RamonOpazo/sero/commit/5adcd55225256e1f4059e70c9b269c81dca5a7e7))
-
-- **frontend**: Optimize keyboard zoom handling and stabilize keyboard/mouse/wheel handler
-  identities
-  ([`5c0f288`](https://github.com/RamonOpazo/sero/commit/5c0f288c932f97b66f2d73ce2a45f559954f054d))
-
-- **frontend**: Optimize mouse input handlers (wheel early-return, robust leave handling, remove
-  unused state)
-  ([`ab2c8a3`](https://github.com/RamonOpazo/sero/commit/ab2c8a37087b543c21b2a74bbcf1771b3a31b8a1))
-
-- **frontend**: Simplify UnifiedViewport props and effects; remove unused documentSize; tighten
-  listeners
-  ([`99332ae`](https://github.com/RamonOpazo/sero/commit/99332aeaaa6c27d1cd0e02ac695abac5d69d8284))
-
-- **types**: Remove plaintext password from upload request types; drop legacy bulk upload method
-  ([`b947074`](https://github.com/RamonOpazo/sero/commit/b947074b30caf09aa9909aba1c875c88f20348e3))
-
-- **viewer**: Audit step 1 — fix illegal hook usage in ActionsLayer\n\n- Avoid calling hooks inside
-  handlers; use isViewingProcessedDocument from state\n- Update View->Toggle View and
-  Document->Download to use state value
-  ([`bab15ec`](https://github.com/RamonOpazo/sero/commit/bab15eceae90e167cce8af371bbc19122806a991))
-
-- **viewer**: Clean up layers and selection UI; enable selection list scrolling
-  ([`214c8cd`](https://github.com/RamonOpazo/sero/commit/214c8cde9100ed5960882fae8773eeaebf6999d0))
-
-SelectionList: make the list container the scroll area (min-h-0, overflow-y-auto, padding)
-
-Layouts: ensure scroll region sizing with proper flex/min-h-0 where needed
-
-Layers: remove unused state/refs and simplify hover/visibility logic
-
-Selection styles/provider: align state normalization and badges UI: adjust Badge styles
-
-chore: remove unused FileCommander component
-
-- **viewer**: Declarative SelectionBox + background presets; activity-driven contrast and minor
-  fixes
-  ([`a558b4f`](https://github.com/RamonOpazo/sero/commit/a558b4f04fa37b05aef8964560985a1918daebbf))
-
-- **viewer**: Simplify prompt commander by removing legacy UI and edit flows
-  ([`1d1e5f5`](https://github.com/RamonOpazo/sero/commit/1d1e5f5432fd8ca855aa265767c8a6cfe8a1868d))
-
-### Testing
-
-- Prefer smallest available Ollama model in live test for speed
-  ([`34a8449`](https://github.com/RamonOpazo/sero/commit/34a8449474882da5eaf752e587523cf84a38b025))
-
 
 ## v1.6.0 (2025-08-27)
 
-### Bug Fixes
-
-- **docs**: Serve home doc (path './') at /docs and slug; coerce frontmatter date to string; load
-  markdown from public
-  ([`f0289ea`](https://github.com/RamonOpazo/sero/commit/f0289ea3332f892bb928af6ada685213f5acaf08))
-
-- **esc**: Ensure ESC closes selections panel with one press by including panel state in key handler
-  deps
-  ([`c3678e9`](https://github.com/RamonOpazo/sero/commit/c3678e99e7bcac95f3d1060bc97a4a4ab76b4864))
-
-- **frontend**: Make app build pass by excluding tests from tsc, removing unused imports, adding
-  types, and silencing unused vars
-  ([`9a01db8`](https://github.com/RamonOpazo/sero/commit/9a01db8d6f3c903d8344c6e96e5b31b8f4ad9bc1))
-
-- **prompt panel**: Ensure keyboard handler updates with showPromptPanel/togglePromptPanel and avoid
-  panel state fighting; ESC closes prompt panel reliably; R toggles consistently
-  ([`ab25f55`](https://github.com/RamonOpazo/sero/commit/ab25f557263ac67d92df1f1a8fcc51eaa467d136))
-
-- **viewer-panels**: Panels close only via quit button or clicking outside (backdrop); remove
-  onClick from panel containers; add transparent backdrop; maintain exclusivity
-  ([`3b281cf`](https://github.com/RamonOpazo/sero/commit/3b281cf3fe96bd14ebef99ef1dc6a8d5df6f196a))
-
 ### Chores
-
-- Added License
-  ([`7934177`](https://github.com/RamonOpazo/sero/commit/7934177df64702a7907b060d034ee94b2e42b5a2))
-
-- Remove obsolete one-off dialog components; use inline dialogs and shared components instead
-  ([`a4432ef`](https://github.com/RamonOpazo/sero/commit/a4432efe662cb61fd41213d85155ded52af0f24e))
-
-- **frontend**: Finalize Project Trust Session migration and docs
-  ([`10453e2`](https://github.com/RamonOpazo/sero/commit/10453e23912cf1cbded207f16a7ac2515794befd))
-
-- Wrap app with ProjectTrustProvider, remove legacy credentials usage\n- Update document and project
-  AI runs to use ensureProjectTrust(projectId)\n- Add shared CredentialConfirmationDialog and
-  password support in FormConfirmationDialog\n- Add docs/project-trust-session.md\n- Build passes
-  (pnpm -C src/frontend build)
 
 - **release**: V1.6.0 [skip ci]
   ([`f0b3496`](https://github.com/RamonOpazo/sero/commit/f0b3496d39113839025441e022f93a16873e30e0))
 
-- **selection-manager**: Remove embedded SelectionsList; use left-side Selections Panel for listing
-  ([`6bc6d30`](https://github.com/RamonOpazo/sero/commit/6bc6d3042516665d1627af16f7d80477a6d56046))
-
-### Code Style
-
-- **selections-panel**: Reorganize entries for Info-like look; add spacing, rounded, muted coords
-  section; maintain badges, config and delete
-  ([`780506c`](https://github.com/RamonOpazo/sero/commit/780506cb0875da17bfa040d46bdee6ce43a431b4))
-
-### Documentation
-
-- Add AI Processing Progress Plan (global chin UI, processing provider, milestones)
-  ([`7e33eff`](https://github.com/RamonOpazo/sero/commit/7e33eff359d225f81a5aeaa3eb5e89af6bd2a687))
-
-### Features
-
-- **ai**: Add AI_MIN_CONFIDENCE default and filter AI detections before staging in
-  apply_ai_and_stage
-  ([`f3dcfeb`](https://github.com/RamonOpazo/sero/commit/f3dcfeb942203b7339037c1fc9d2426696ef631d))
-
-- **ai**: Centralize apply in ai router/controller and add SSE stream; strengthen system prompt
-  ([`e9e0ffb`](https://github.com/RamonOpazo/sero/commit/e9e0ffb9aa4cddddba06c8b6c5756688bba680c7))
-
-- add ai_schema.AiApplyRequest - add ai_controller.apply and apply_stream (SSE) - wire /api/ai/apply
-  and /api/ai/apply/stream - frontend: call /api/ai/apply with {document_id}, keep extended timeout
-  - improve prompt_composer guardrails and schema hint
-
-- **ai**: Introduce AiRuntimeSettings and async apply; stage AI selections
-  ([`f2e4376`](https://github.com/RamonOpazo/sero/commit/f2e4376314e6cdd11a8ffeaa9a5c55bf24a5cec6))
-
-test: add controller and API integration tests, conditional live Ollama test
-
-chore(pdf): add deterministic test PDF generator
-
-- **ai**: Stage AI selections via document-scoped endpoint in DocumentViewerAPI.applyAi; frontend
-  reload now reflects AI-generated staged items
-  ([`79be73a`](https://github.com/RamonOpazo/sero/commit/79be73a6562f03f63f3a0665d68246e9a13e3dac))
-
-- **api**: Add /api/ai/introspect endpoint using AiService; wire frontend DocumentViewerAPI.applyAi
-  to new route
-  ([`85eb671`](https://github.com/RamonOpazo/sero/commit/85eb671968c891c7605976d8570bd25ad3412603))
-
-- **commit dialog**: Gray optional auto-stage warning when OFF; compute commit counts based on
-  auto-stage
-  ([`3e64ca2`](https://github.com/RamonOpazo/sero/commit/3e64ca2d739dc5373f05d4d0a242ad480bce71d3))
-
-- **dialog**: Add checkbox, switch, file input field types and optional tooltip support to
-  declarative forms
-  ([`644ce77`](https://github.com/RamonOpazo/sero/commit/644ce77ed23a72a638f5712ed7a45b90b621d43d))
-
-- **dialog**: Support declarative field descriptors in FormConfirmationDialog and refactor prompts
-  create/edit to use it
-  ([`67583b1`](https://github.com/RamonOpazo/sero/commit/67583b1297f5ab435f52be389cd375f484cf404a))
-
-- **docs**: Support is-index frontmatter; redirect /docs to designated index and show it first in
-  sidebar
-  ([`eba28f8`](https://github.com/RamonOpazo/sero/commit/eba28f8801bc9c2f5adc8b4481dfc3fbfedec745))
-
-- **document-viewer**: Highlight prompts toolbar toggle when active; add AI apply telemetry and
-  update UI
-  ([`c700f7e`](https://github.com/RamonOpazo/sero/commit/c700f7e65bd59f699646ad2d383283ecd2f5db94))
-
-Backend: - Add AiApplyTelemetry and AiApplyResponse to documents schema - Update
-  /documents/id/{id}/ai/apply to return AiApplyResponse - Ensure empty-commit scenario returns empty
-  selections with zeroed telemetry
-
-Frontend: - Update DocumentViewerAPI.applyAi to return { selections, telemetry } - Move AI action to
-  prompt commander with Bot icon and toast including filtered/returned stats - Highlight prompts
-  toolbar button when panel is open - Fix TS build errors (remove unused imports/vars, minor
-  signature cleanup)
-
-- **frontend**: Add zod schemas and types for AI detections (AiDetection, AiBox) with parser
-  ([`aa8a58c`](https://github.com/RamonOpazo/sero/commit/aa8a58c2c6e28c12cc17ce067ffb28decc293b6b))
-
-- **frontend**: Beautiful credentials dialog + document runs use session creds
-  ([`c1dbe83`](https://github.com/RamonOpazo/sero/commit/c1dbe83875fb96128145e41db1b9c1c2c2eeb38b))
-
-- Extend FormConfirmationDialog with password field\n- Add CredentialConfirmationDialog based on
-  shared dialog styling\n- Use AiCredentialsProvider dialog\n- Document PromptCommander now uses
-  ensureCredentials() and passes {keyId, encryptedPassword} to streaming\n- Build passes (pnpm -C
-  src/frontend build)
-
-- **frontend**: Global processing chin + AI streaming progress wiring
-  ([`e6d0b3f`](https://github.com/RamonOpazo/sero/commit/e6d0b3f7b8997b0b41ef6a3e056cb71c7041e8c2))
-
-- Add GlobalProcessingChin UI and container; mount in MainLayout\n- Enhance AiProcessingProvider
-  with cancel registry and job state\n- Extend DocumentViewerAPI streaming handlers with enhanced
-  status fields\n- Wire Prompt Commander to provider and streaming events\n- Build passes (pnpm -C
-  src/frontend build)
-
-- **frontend**: Introduce Swagger page and migrate docs to public/docs
-  ([`3be7fa2`](https://github.com/RamonOpazo/sero/commit/3be7fa214e289ceb0e637add8530030ac8801f11))
-
-- **frontend**: Project Trust Session provider and gating
-  ([`ed2fcf4`](https://github.com/RamonOpazo/sero/commit/ed2fcf4fa68adfbb96f214d3518601e0bb307873))
-
-- Add ProjectTrustProvider (session-scoped, TTL) with beautiful credential dialog\n- Wrap app with
-  ProjectTrustProvider\n- Use ensureProjectTrust(projectId) for project AI runs and document AI
-  runs\n- Keep encryption local; pass {keyId, encryptedPassword} to streaming\n- Build passes (pnpm
-  -C src/frontend build)
-
-- **frontend**: Project-level AI run wiring + global chin cancel
-  ([`bbf264d`](https://github.com/RamonOpazo/sero/commit/bbf264d6413ee4357ec99cab0c9d5621dcbe24b0))
-
-- Add Cancel to GlobalProcessingChin and wire via provider\n- Add ai-runner helper to map project
-  streaming events to provider\n- Add Run AI (project) action in Projects table\n- Build passes:
-  pnpm -C src/frontend build
-
-- **frontend**: Session-scoped encrypted credentials cache + project run integration
-  ([`d9215f8`](https://github.com/RamonOpazo/sero/commit/d9215f886798025039091846495524369be21fe3))
-
-- Add AiCredentialsProvider with TTL in-memory cache; never store plaintext\n- Wrap app with
-  credentials provider\n- Projects: fetch AI settings, ensure credentials via provider, and start
-  project run with {keyId, encryptedPassword}\n- Migration doc:
-  docs/frontend-ai-credentials-session-cache.md\n- Build passes (pnpm -C src/frontend build)
-
-- **frontend**: Wire Run AI Detection to /documents/{id}/ai/apply and refresh selections
-  ([`550cca6`](https://github.com/RamonOpazo/sero/commit/550cca684b6ee4902762b7cdd722d036a3062628))
-
-- add reload() to selection-provider and use after AI apply - keep telemetry toast; align with
-  backend AiApplyResponse
-
-- **panels**: Auto-open Info layer when Document Controls is active; ensure selections are visible
-  when Selection Manager is active
-  ([`8e60b23`](https://github.com/RamonOpazo/sero/commit/8e60b23435b53e0a0d0477465ab8bb12bd8559f5))
-
-- **panels**: Sync Selections Panel open/close with Selection Manager widget; expose
-  setShowSelectionsPanel in viewport state; keep selections visible when managing
-  ([`a9f363a`](https://github.com/RamonOpazo/sero/commit/a9f363a49c6af0b950db702ff88e823f00931e7c))
-
-- **prompts**: Change directive input to select with sensible options in add/edit dialogs
-  ([`a97baaa`](https://github.com/RamonOpazo/sero/commit/a97baaa8b3c03aede6fb4a7d96d705f8b11930d3))
-
-- **prompts**: Create prompts as committed and persist immediately to avoid data loss
-  ([`3f3bc3a`](https://github.com/RamonOpazo/sero/commit/3f3bc3a00df63691d942f0ec1c7874219764931d))
-
-- **prompts**: Stable Prompt Panel toggling via R/ESC + tooldeck state handler; add AI badge and
-  filter select to SelectionList
-  ([`897811e`](https://github.com/RamonOpazo/sero/commit/897811e6f6a8c2a72edcd56fca5e03defb603472))
-
-- **selection-commander**: Add auto-stage option in commit dialog; wire useStageCommit(commitAll) to
-  stage before commit when enabled; introduce warnings and messages; integrate
-  FormConfirmationDialog for prompts UI
-  ([`54e6bdb`](https://github.com/RamonOpazo/sero/commit/54e6bdbc65e71570e6bdd48330ac2c29d575887f))
-
-- **selections-panel**: Add inline switches: Stage (committed→staged) and Global toggle with async
-  handling and toasts; panel-only controls; preserve badge and delete
-  ([`171ea66`](https://github.com/RamonOpazo/sero/commit/171ea66865ad9a70dcf9304d78daa18725caeec5))
-
-- **selections-panel**: Improve list container to use full height; prepare for alternating row
-  backgrounds; ongoing panel integration and actions-layer split
-  ([`d3470f3`](https://github.com/RamonOpazo/sero/commit/d3470f3325164689e14c5065d11be1c887042d63))
-
-- **ui**: Add status variants to Badge/Button and update documents table statuses
-  ([`16cb90c`](https://github.com/RamonOpazo/sero/commit/16cb90ce288b6f435d99425a47e8bbe3254ef43b))
-
-- **ui**: Make processing chin part of layout flow (non-fixed) and render at bottom of content
-  ([`9ef617a`](https://github.com/RamonOpazo/sero/commit/9ef617a049a33d4edfa16fb31b2459aed9a29c07))
-
-- **ui**: Use FormConfirmationDialog for prompt creation and persist as committed; fix typed dialog
-  to render form fields without confirmation input
-  ([`918023d`](https://github.com/RamonOpazo/sero/commit/918023de978a7f55fd23e29cdf501129a73be5cf))
-
-- **viewer**: Introduce Selections Panel layer (right-side panel) with lifecycle summary and
-  redesigned list; add showSelectionsPanel state and toggles; wire into layout and actions bar
-  ([`23049bd`](https://github.com/RamonOpazo/sero/commit/23049bdf13bd41abb7fca82c99db1d3d12e197ea))
-
-- **viewer**: Move Selections Panel to left, match Info layer styling; add panelMode list style and
-  keep delete/global controls; panels are mutually exclusive via provider
-  ([`35e0acc`](https://github.com/RamonOpazo/sero/commit/35e0accc92a515ca9018adf9894298796e325abd))
-
-- **viewer hotkeys**: Esc closes help/info/selections panels (in order); add (L) to toggle
-  Selections panel
-  ([`83a3c52`](https://github.com/RamonOpazo/sero/commit/83a3c523d033324892f94f8a997fc66bd228f6ba))
-
-### Refactoring
-
-- **ai**: Move non-stream apply logic from documents controller to ai controller
-  ([`77db4a2`](https://github.com/RamonOpazo/sero/commit/77db4a21c5054f66bac182da5ec24df2050f2c4e))
-
-- **dialogs**: Migrate save dialogs to TypedConfirmationDialog; use declarative
-  FormConfirmationDialog with number+switch for page selection
-  ([`f22d8f0`](https://github.com/RamonOpazo/sero/commit/f22d8f03e22e42a0400a87c992782be7effb8284))
-
-- **prompts**: Replace legacy AddPromptDialog with FormConfirmationDialog for create/edit; persist
-  changes immediately
-  ([`ee1a071`](https://github.com/RamonOpazo/sero/commit/ee1a0710bf249a1ae9764610d940b101b9484276))
-
-- **ui**: Inline confirmation and page selection dialogs where used to avoid transient one-off
-  components
-  ([`a5d0250`](https://github.com/RamonOpazo/sero/commit/a5d025052af3503f1d770f64152538a4e197b5b5))
-
 
 ## v1.5.0 (2025-08-25)
 
-### Bug Fixes
-
-- **frontend**: Use staged_creation initial state and robust staged detection in selections layer
-  ([`ce52ad7`](https://github.com/RamonOpazo/sero/commit/ce52ad72ca516f2139343736d78b5ce518a94d8b))
-
-### Build System
-
-- Fix TS build issues (test setup guards, typings, unused imports); feat(projects): add onBackHome;
-  chore: extract dialog copy; refactor: selection visuals util
-  ([`0e7fd53`](https://github.com/RamonOpazo/sero/commit/0e7fd537488de19c41e70aa82557f95b7d6e6023))
-
-- **frontend**: Fix TS issues and enum compatibility; lifecycle hook deps; minor typing fixes
-  ([`432756e`](https://github.com/RamonOpazo/sero/commit/432756ee5e5362e30383a570bfa0ac5afca5b725))
-
 ### Chores
-
-- **docs**: Note removal of legacy pending changes adapter for selections
-  ([`7b44e5e`](https://github.com/RamonOpazo/sero/commit/7b44e5efbfddfd9435ef1b31d67d5cfeadfb21fb))
 
 - **release**: V1.5.0 [skip ci]
   ([`b07c81a`](https://github.com/RamonOpazo/sero/commit/b07c81aff1545e43cb3ad640efb330f9aaa4047b))
-
-- **test**: Remove remaining @types/jest devDependency after Vitest migration
-  ([`692e6fc`](https://github.com/RamonOpazo/sero/commit/692e6fc764923c9f7b5ba6c21d1923be9ed5f70a))
-
-### Code Style
-
-- **ui**: Center EmptyState and let it fill available space; simplify visuals using primary color
-  ([`8657ce4`](https://github.com/RamonOpazo/sero/commit/8657ce434576075c7c5f5b2d393404728bdc80ba))
-
-- **ui**: Enhance EmptyState visuals with gradient decorations and card-like container
-  ([`cf5db65`](https://github.com/RamonOpazo/sero/commit/cf5db65d161affeca01386b71ad9186cc93ac753))
-
-### Documentation
-
-- Selection staging and commit workflow plan (frontend/backend, visuals, acceptance criteria)
-  ([`7fed29b`](https://github.com/RamonOpazo/sero/commit/7fed29b554e622bc704acca90af93a6edd1a2119))
-
-- **frontend**: Add selection lifecycle refactor plan and roadmap
-  ([`36ad68f`](https://github.com/RamonOpazo/sero/commit/36ad68fab27c0c7d77267be9b297b97acb0e5625))
-
-- **viewer**: Apply Tailwind Typography (prose) and dark variant; wrap markdown in prose container
-  ([`fd31a7d`](https://github.com/RamonOpazo/sero/commit/fd31a7d453348c5c8fb29a8e75ab59d37d41f941))
-
-- **viewer**: Normalize internal links: map ./page.md and /documentation/page.md to
-  /documentation/page, preserve hashes; fix navigation between docs
-  ([`56c4f9e`](https://github.com/RamonOpazo/sero/commit/56c4f9eec631ab7155fa95e9790878430c47b2e3))
-
-### Features
-
-- **backend**: Introduce granular commit states and hybrid flags; update selection workflows and
-  tests
-  ([`c52adff`](https://github.com/RamonOpazo/sero/commit/c52adff28d7f939f3cf1adb67f5a11ed5466430f))
-
-- **document-viewer**: Migrate InfoLayer selection stats to lifecycle (unstaged/staged/committed)
-  ([`2037c71`](https://github.com/RamonOpazo/sero/commit/2037c71aaf79b3a3777d20a123217cdd033336b9))
-
-- **document-viewer**: Pr1 — introduce lifecycle types and mappers
-  ([`e5d6e42`](https://github.com/RamonOpazo/sero/commit/e5d6e42ba0a656283688b4540f1e1651c33e166f))
-
-- Add UISelectionStage enum and UISelection type for lifecycle model - Add
-  selection-lifecycle-mapper utilities (api<->ui, merge) - Export lifecycle types; add unit tests
-  for mapper - Mark PR1 as completed in the refactor plan doc
-
-- **document-viewer**: Pr2 — add lifecycle-based uiSelections in provider (compat only)\n\n-
-  Introduce uiSelections (UISelection[]) derived from persisted/draft for now\n- Expose in context
-  while keeping existing API stable\n- Update refactor plan doc to mark PR2 complete\n
-  ([`0810535`](https://github.com/RamonOpazo/sero/commit/0810535b4881b88037205cff45ccf2abc8cd3f33))
-
-- **document-viewer**: Pr3 — lifecycle-based save/commit pathways
-  ([`8bbd96a`](https://github.com/RamonOpazo/sero/commit/8bbd96a11b1753b726f8a28d61ca290767fa7aba))
-
-- Add saveLifecycle and commitLifecycle in selection provider, translating UISelection lifecycle to
-  API ops - Avoid TDZ by deriving ui view from state within the saver - Mark PR3 done in plan; tests
-  pass
-
-- **document-viewer**: Pr4 — switch hook to lifecycle model\n\n- use-stage-commit now reads
-  uiSelections lifecycle and uses saveLifecycle/commitLifecycle\n- Plan doc updated to mark PR4
-  complete; tests pass\n
-  ([`2e91bdd`](https://github.com/RamonOpazo/sero/commit/2e91bdd07003163757ad7e085d8cecac34ec5761))
-
-- **editor-view**: Simplify state rendering with compact conditional blocks; keep EmptyState-based
-  UX and password dialog
-  ([`19206fa`](https://github.com/RamonOpazo/sero/commit/19206faf725082861cd581aeda4299a44f78292d))
-
-- **selections**: Add committed→staged conversion flow (dialog + provider), disable page/global on
-  committed, and finalize state-driven visuals
-  ([`9feef7c`](https://github.com/RamonOpazo/sero/commit/9feef7c15decfc6d231b8366e4587dfcd3f47dc9))
-
-- **selections**: Enforce staged workflow backend and frontend; local drafts undefined,
-  staged-deletion marking, conversion endpoint, and state-driven visuals
-  ([`8840092`](https://github.com/RamonOpazo/sero/commit/8840092e6556bd25aa4ab976a456aadb204121fd))
-
-- **ui**: Add SimpleConfirmationDialog wrapper (no input) and align file structure with typed dialog
-  ([`69f92b3`](https://github.com/RamonOpazo/sero/commit/69f92b3053274d17a3085d495d568546a1df58f5))
-
-- **ui**: Add TypedConfirmationDialog and integrate confirmations for Stage & Commit commander
-  (colored alerts, one-word prompts)
-  ([`eceb1ec`](https://github.com/RamonOpazo/sero/commit/eceb1ecbcf7f1af47306a7750e48d2e0de5c48d6))
-
-### Refactoring
-
-- **document-viewer**: Pr5 — switch selection stats to lifecycle and expose uiSelections\n\n- Expose
-  uiSelections on context; convert selection-commander stats to lifecycle-based\n- Mark PR5 complete
-  in the refactor plan; tests pass\n
-  ([`00b63d8`](https://github.com/RamonOpazo/sero/commit/00b63d8531ad5612820a96b494d73f03ed9937cd))
-
-- **selections**: Remove legacy committed->staged wrapper, centralize state->visual mapping, tighten
-  typing; test: add resize-blocked test
-  ([`c929a1d`](https://github.com/RamonOpazo/sero/commit/c929a1d47197ac4f59f45dd0faa4965b30655b24))
-
-- **ui**: Replace legacy ConfirmationDialog with TypedConfirmationDialog in projects data table
-  (warnings, one-word prompt)
-  ([`8927f68`](https://github.com/RamonOpazo/sero/commit/8927f684ceaa213612af7a6e197765ecddf32034))
-
-### Testing
-
-- **frontend**: Fix PageSelectionDialog mock path in SelectionList test
-  ([`07c01a5`](https://github.com/RamonOpazo/sero/commit/07c01a59bc1063a93f6f252012f84f12a4c033ae))
-
-- **frontend**: Fix selections-layer to avoid legacy pendingChanges; all tests green
-  ([`e0732f8`](https://github.com/RamonOpazo/sero/commit/e0732f8861fe40df4e0bb6c7d5d44443a426b5fa))
-
-- **frontend**: Migrate to Vitest, add vitest.config, remove Jest config, add unit tests for
-  selection provider/list/layer, update setup to Vitest
-  ([`d46d803`](https://github.com/RamonOpazo/sero/commit/d46d8038a3f3d932699bca9e15f16b4b319c4c0a))
 
 
 ## v1.4.0 (2025-08-24)
@@ -729,57 +48,6 @@ Frontend: - Update DocumentViewerAPI.applyAi to return { selections, telemetry }
 - **release**: V1.4.0 [skip ci]
   ([`0ac0a4e`](https://github.com/RamonOpazo/sero/commit/0ac0a4eddec83fa77b26c905ad8378b360e4cc15))
 
-### Documentation
-
-- Add DB refactor migration plan (project-scoped settings, scoped prompts/selections, templates)
-  ([`2d57b23`](https://github.com/RamonOpazo/sero/commit/2d57b23257a7685512a8d159cb84ca9c11ea7cf8))
-
-- Update migration plan for document-only prompts/selections and finalized settings
-  ([`20e13b4`](https://github.com/RamonOpazo/sero/commit/20e13b45177a4ecccd34ae2c2f7f3742a45936c1))
-
-### Features
-
-- **db**: Add scope/state enums and default FileType.ORIGINAL; prep for scoped settings refactor
-  ([`ede2ce0`](https://github.com/RamonOpazo/sero/commit/ede2ce072b379adb116df313a228287017f8ac4b))
-
-- **schema**: Align Pydantic schemas with DB constraints; update migration plan
-  ([`b91708d`](https://github.com/RamonOpazo/sero/commit/b91708d7242cf5a26dc83334de83a199a9362912))
-
-- **schemas**: Remove tags; add scope/state to prompts and selections with back-compat computed
-  fields
-  ([`18ce56b`](https://github.com/RamonOpazo/sero/commit/18ce56b77c8db67366761432392e27ff01c8650f))
-
-### Refactoring
-
-- **ai-settings**: Move to project-scoped CRUD and support; fix tests and bulk envelope; update
-  selections tests for state enum
-  ([`6545d41`](https://github.com/RamonOpazo/sero/commit/6545d412c25bc10a138466b4a7a89f5e5489faa0))
-
-- **api**: Move AI settings endpoints from documents to projects; project-scope settings; update
-  tests and routers
-  ([`9107010`](https://github.com/RamonOpazo/sero/commit/9107010c862b3758c7f095d69deed214870fea8a))
-
-- **controllers**: Validate document existence for prompts/selections; default state without legacy
-  flags
-  ([`33410e8`](https://github.com/RamonOpazo/sero/commit/33410e869129fafa8944bb19a9066cce6cd84629))
-
-- **crud**: Align files crud with DB; add tags stub; enrich shallow/summary; minor schema defaults
-  ([`08c92ee`](https://github.com/RamonOpazo/sero/commit/08c92ee468c1e69cc5bb7b0674dd9f0875dec5a6))
-
-- **crud**: Validate order/join fields, guard immutable updates, and default to created_at desc
-  safely
-  ([`6dff9bf`](https://github.com/RamonOpazo/sero/commit/6dff9bf1f6a9a9a3832bcef510f9670ef58cf246))
-
-### Testing
-
-- Patch monkeypatch targets to controller call sites; schema: add selection counts to
-  DocumentSummary; support: shallow builder populates has_template\n\nAll tests passing (114/114).
-  ([`f1d8bbd`](https://github.com/RamonOpazo/sero/commit/f1d8bbded3160435c27345445d48eb64d9b547d5))
-
-- **fixes**: Align tests with controller/schema changes (state enums, file hash length, ephemeral
-  decrypt monkeypatches)
-  ([`661af5e`](https://github.com/RamonOpazo/sero/commit/661af5ee01ddfda93da2586a23c1ae8e72ef301e))
-
 
 ## v1.3.0 (2025-08-22)
 
@@ -788,242 +56,48 @@ Frontend: - Update DocumentViewerAPI.applyAi to return { selections, telemetry }
 - **release**: V1.3.0 [skip ci]
   ([`f0b72de`](https://github.com/RamonOpazo/sero/commit/f0b72dea81fa464b553d339b71fe4c1e7314bb02))
 
-### Documentation
-
-- Update AI_PLAN.md — mark completed frontend alignment, note crypto endpoint fix, and list next UI
-  tasks (selection lifecycle, AI settings panel)
-  ([`5f99e83`](https://github.com/RamonOpazo/sero/commit/5f99e83fb80f2f8209e180c5b8581a463a64df16))
-
-- **plan**: Add steps/actions tracking and phase breakdown to AI_PLAN
-  ([`f24d98e`](https://github.com/RamonOpazo/sero/commit/f24d98efc2293155a97d0ec5eba7dc6ee0c87004))
-
-- **plan**: Track health and staged management; mark commit step done
-  ([`65f5631`](https://github.com/RamonOpazo/sero/commit/65f563167c28a1c23b054f2447aa77325d3d864f))
-
-### Features
-
-- Derive version at runtime via importlib.metadata with git fallback; surface version in FastAPI and
-  CLI
-  ([`8a504a9`](https://github.com/RamonOpazo/sero/commit/8a504a9ff5a339c2e8a7b822062cd38383e9d7b7))
-
-- **ai**: Abstract instruction composition via system_prompt in request; make AiService.health
-  abstract
-  ([`8ec0798`](https://github.com/RamonOpazo/sero/commit/8ec079888b1573ace3211c3d496896a6d0807637))
-
-- **ai**: Add abstract health() to AiService; add AI health endpoint; implement staged
-  clear/uncommit endpoints; add JSON parsing in Ollama service
-  ([`85054db`](https://github.com/RamonOpazo/sero/commit/85054dbc42b45132c5d5b6bedbe0f4cce5ec1cbb))
-
-- **ai**: Add document-scoped AI apply endpoint scaffold under documents routes
-  ([`b59b27d`](https://github.com/RamonOpazo/sero/commit/b59b27dba7fe4d7b361d69db72c0a914c6a590db))
-
-- **ai**: Add per-document AiSettings, simplify Prompt model, and scaffold offline Ollama service
-  ([`f9c48f0`](https://github.com/RamonOpazo/sero/commit/f9c48f06876524dd4211cc0f8adf9ef5b4bc60cf))
-
-- **ai**: Centralize instruction composition via prompt_composer; wire service to use it; update
-  plan
-  ([`3207e48`](https://github.com/RamonOpazo/sero/commit/3207e48bb7d6243d3ef67875432a4eb51de85804))
-
-- **frontend**: Align Help overlay with Info — sidebar width, minimal sections, and smooth
-  enter/exit transitions
-  ([`341cd1e`](https://github.com/RamonOpazo/sero/commit/341cd1ef9ee1142ae7c5788492b1987626e97459))
-
-- **frontend**: Refine selection visuals — add subtle brightness backdrop, solid tint, and tighter
-  135° hatch spacing
-  ([`0140946`](https://github.com/RamonOpazo/sero/commit/01409464eead0b92d94d04d75ab929f2078202be))
-
-- **selection**: Add commit endpoint to flip staged selections to committed; add request schema
-  ([`69bf1c8`](https://github.com/RamonOpazo/sero/commit/69bf1c89b615fab4a0b0f5e9b22397addf09cb5b))
-
-- **selection**: Add staged selections via committed flag and use only committed in redaction
-  ([`d73eecb`](https://github.com/RamonOpazo/sero/commit/d73eecb763fd7ba13f12dc63352f7664b1552513))
-
-- **viewer**: Add T toggle for original/redacted; convert Help to KeyboardShortcutsDialog and wire
-  toolbar + shortcuts
-  ([`b49f814`](https://github.com/RamonOpazo/sero/commit/b49f814b02e9d1ec5451e9e13e9ccb3293eb4bdc))
-
-### Refactoring
-
-- Move project password verify to SupportCrud; remove ProjectCrud.verify_password; apply get_or_404
-  across controllers; break circular imports
-  ([`ef5d4c5`](https://github.com/RamonOpazo/sero/commit/ef5d4c5244b66631df71e58b2650ae26ed44a99b))
-
-- Remove Project.version across backend and tests; migrate Pydantic configs to ConfigDict; fix tests
-  and event loop shutdown; deflake BaseCrud filters
-  ([`04c2dd3`](https://github.com/RamonOpazo/sero/commit/04c2dd3a0797156a5824e54ae8e02a4348adf417))
-
-- Unify shallow and summary builders; centralize original/redacted file flows; clean projects
-  controller most_common_tags
-  ([`90c49fc`](https://github.com/RamonOpazo/sero/commit/90c49fc8927f572f133c101ed56d12fa66c62eb0))
-
-- **ai**: Delegate all AI logic to AiService and keep controllers declarative; update plan
-  ([`593c2a7`](https://github.com/RamonOpazo/sero/commit/593c2a77b8aabc61c4a4ddc19694ba9edcab2bba))
-
-- **controller**: Centralize not-found checks; add SupportCrud helpers for original/redacted file
-  flows; refactor documents controller to use helpers; minor cleanups
-  ([`6ddcb42`](https://github.com/RamonOpazo/sero/commit/6ddcb4201af4f7fd7b8683f8545709499f61e341))
-
-### Testing
-
-- **base_crud**: Deflake filter assertions by increasing limits and using created project's version
-  in 'in' filter
-  ([`157a25f`](https://github.com/RamonOpazo/sero/commit/157a25ff457d187f541f4498854dfa4004ed1e79))
-
 
 ## v1.2.0 (2025-08-21)
-
-### Bug Fixes
-
-- **download**: Use document ID as redacted filename to prevent name leakage; scrub PDF metadata
-  ([`168e090`](https://github.com/RamonOpazo/sero/commit/168e090164781dbe8e9cdd0dfc3224b17ebba938))
-
-- **frontend**: Prevent blob URL ERR_FILE_NOT_FOUND by passing Blob directly to react-pdf\n\n- Use
-  Blob for <Document file> instead of object URL\n- Eliminates lifecycle issues from
-  URL.createObjectURL/revokeObjectURL\n- Fixes toggling between original/redacted without network
-  errors
-  ([`fac1ce6`](https://github.com/RamonOpazo/sero/commit/fac1ce6c0a6db4b764abeea216eb1548be05c74e))
-
-- **viewer**: Force immediate render of processed PDF via volatile blob URL; stabilize URL lifetime
-  and remount logic
-  ([`994d9ca`](https://github.com/RamonOpazo/sero/commit/994d9ca84e75da6cc7a85cbad4aa70c53225ddc6))
 
 ### Chores
 
 - **release**: V1.2.0 [skip ci]
   ([`f499fe1`](https://github.com/RamonOpazo/sero/commit/f499fe10289d849ced94b7d30971c9de19db5b6c))
 
-### Features
-
-- **backend**: Add shallow document by id and fix is_processed computation
-  ([`1d1659b`](https://github.com/RamonOpazo/sero/commit/1d1659b5704a65e2e8a423aa30557b0e735ee98b))
-
-- Add /documents/id/{id}/shallow endpoint - Correct correlated subqueries for is_processed and
-  counts - Align schemas and controller to new shallow representation
-
-- **backend**: Add watermark and visualize selection word boxes; prep coordinate conversion\n\n-
-  Insert watermark 'Processed by SERO - <year>' on each page\n- Draw red rectangles around words
-  inside user selections for debugging\n- Convert normalized (0..1) selection coords to PDF points;
-  clamp to page bounds\n- Leave actual redaction disabled for now; will finalize next
-  ([`a1000fd`](https://github.com/RamonOpazo/sero/commit/a1000fde98c0621a4bcab6ade66409756bc61c27))
-
-- **backend**: Allow reprocessing by replacing existing redacted file\n\n- Remove existing redacted
-  file(s) before processing\n- Maintain single saved redacted copy per document (latest only)\n-
-  Keeps security posture by not keeping older partially redacted versions
-  ([`651f050`](https://github.com/RamonOpazo/sero/commit/651f050f4249d03f5764631948126a7f70b91ffa))
-
-- **document-viewer**: Introduce UnifiedDocumentViewerProvider and migrate usage
-  ([`8ac9584`](https://github.com/RamonOpazo/sero/commit/8ac9584c67203c3ba4972869768407aade47ad9c))
-
-- add providers/unified-document-viewer-provider composing viewport, selection, prompt - export
-  unified provider from providers barrel; use in feature index - fix build: type-only import, avoid
-  unused vars/params warnings - ensure selection loader runs inside providers (kept in content)
-
-- **frontend**: Use shallow metadata and fix redacted toggle wiring\n\n- Switch listing and editor
-  to shallow API\n- Rely on is_processed to enable redacted toggle\n- Plumb shallow fetch by id into
-  editor view
-  ([`9fc2704`](https://github.com/RamonOpazo/sero/commit/9fc270463baeb631f4c87cd114230905b5e20810))
-
-### Testing
-
-- Update pdf redactor tests to use AreaSelection and WatermarkSettings; align page_number to 0-based
-  and relax invalid PDF assertion
-  ([`412015f`](https://github.com/RamonOpazo/sero/commit/412015fe8fc90bdb74af33327288cf13e131e1e6))
-
 
 ## v1.1.0 (2025-08-20)
-
-### Bug Fixes
-
-- Prevent toast layout shifts by moving Toaster outside grid system
-  ([`1e3f457`](https://github.com/RamonOpazo/sero/commit/1e3f457bcb1dfa7acaa5a7d83d2b304307a55c7a))
-
-- Move Toaster component outside SidebarProvider grid layout to prevent horizontal space issues in
-  document-viewer - Change toast position to top-center for better UX - Toasts now use fixed
-  positioning without affecting parent container layouts
-
-- **document-viewer/selections**: Stabilize undo/redo navigation and rendering
-  ([`105aa32`](https://github.com/RamonOpazo/sero/commit/105aa32340e89d6340b6a89a5c4e2f0a9778d9be))
-
-- navigate only when destination page differs to avoid unnecessary rerenders - compute target page
-  from manager history; apply state first, then navigate on next frame - ensure selections redisplay
-  reliably after redo without manual redraw
-
-- **prompt**: Include document_id on create and preserve edit dialog fields
-  ([`b740f0d`](https://github.com/RamonOpazo/sero/commit/b740f0ddef910289e006a900db75698a6eda362c))
-
-- add document_id to prompt creation payload to satisfy backend validation - prevent type-change
-  reset while editing so non-default type/priority data remains populated
-
-refactor(prompt): migrate UI to core provider using Domain Manager v2
-
-- switch components to use new provider/hook and V2 state shape - expose pendingChanges from
-  provider; use it to flag modified prompts
 
 ### Chores
 
 - **release**: V1.1.0 [skip ci]
   ([`0982bee`](https://github.com/RamonOpazo/sero/commit/0982bee7c01fe3b1611f8c0f5eb669f14a7a9e1f))
 
-### Features
-
-- Implement complete selection management system using V2 domain manager
-  ([`6dc0945`](https://github.com/RamonOpazo/sero/commit/6dc0945cb070fdddcd91627199ea560f5d81d1aa))
-
-✨ Features: - Create new selections with drawing workflow (startDraw/updateDraw/finishDraw) - Edit
-  both new and saved selections with real-time updates - Delete selections from both draft and
-  persisted collections - Consolidated history system with undo/redo across all operations - Clear
-  selections by page or clear all selections - Commit staged changes with full database CRUD
-  integration
-
-🏗️ Architecture: - Declarative configuration approach with clean separation of concerns - Generic V2
-  behaviors (CRUD, history, batch operations) + domain extensions - Purpose-built selection domain
-  config with API adapters and transforms - Factory pattern for creating selection manager instances
-  - React provider exposing complete selection functionality
-
-📁 Structure: - /core/selection-config.ts - Declarative domain configuration -
-  /core/selection-manager.ts - Factory for manager instances - /core/selection-provider.tsx - React
-  context provider
-
-🎯 Requirements Satisfied: - ✅ Create/edit/delete new selections - ✅ Create/edit/delete saved
-  selections - ✅ Consolidated history with undo/redo - ✅ Clear page/all selections - ✅ Commit staged
-  changes to database - ✅ Type safety with Result<T, unknown> pattern - ✅ Clean API integration with
-  DocumentViewerAPI
-
-- Implement document processing pipeline with decryption and redaction
-  ([`feecead`](https://github.com/RamonOpazo/sero/commit/feeceadfe676f5b98890b607e0511112ac1a0bf9))
-
-- Implement the function in documents controller to handle full document processing workflow -
-  Integrate password-based decryption for encrypted original files - Apply PDF redaction based on
-  document selections using the redaction service - Store redacted files unencrypted (salt=None) for
-  easy access - Comprehensive validation: document existence, original file, selections, password
-  verification - Error handling for decryption failures, integrity checks, and redaction errors -
-  Return success response with processing details (file sizes, selection count) - Remove obsolete
-  function that used old redaction service interface
-
-The process function now fully integrates: - Document and file management - Project password
-  authentication - File decryption and integrity verification - Selection-based PDF redaction -
-  Redacted file storage
-
-This completes the document processing pipeline implementation.
-
-- **document-viewer/selections**: Align SelectionsLayer and provider with domain-manager v2
-  ([`00e2c95`](https://github.com/RamonOpazo/sero/commit/00e2c9578ffb8b4906df23bfddbdb076a9d0bf24))
-
-- use UPDATE_ITEM for edits and BEGIN/END batch for drag - show live drawing via getCurrentDraw with
-  fallback - preserve temp ID on FINISH_DRAW; add drafts without regenerating ID - capture baseline
-  after loading selections to track updates - style new/modified via pendingChanges
-
-- **document-viewer/selections**: Deterministic history + proper batching
-  ([`53638bb`](https://github.com/RamonOpazo/sero/commit/53638bbddc3a7bcdd8717e17f5fb6e2770adda4a))
-
-- record creates via CRUD in FINISH_DRAW so history captures create - suppress granular updates
-  during drag; snapshot on BEGIN_BATCH, single UPDATE on END_BATCH - route CLEAR_PAGE via
-  DELETE_ITEMS to leverage history - reset baseline and clear history after successful save/commit -
-  rely entirely on domain-manager v2 behaviors (crud, changeTracking, history, historyIntegration,
-  batch)
-
 
 ## v1.0.0 (2025-08-20)
+
+### Chores
+
+- **release**: V1.0.0 [skip ci]
+  ([`fcb9360`](https://github.com/RamonOpazo/sero/commit/fcb93601de3c11268fbceb9db8b0e08217f8023c))
+
+
+## v0.4.0 (2025-07-30)
+
+### Chores
+
+- **release**: V0.4.0 [skip ci]
+  ([`d698ec2`](https://github.com/RamonOpazo/sero/commit/d698ec21aa450c9e1c711e5cac0e8d7e90e5cc76))
+
+
+## v0.3.0 (2025-07-26)
+
+### Chores
+
+- **release**: V0.3.0 [skip ci]
+  ([`48b84ab`](https://github.com/RamonOpazo/sero/commit/48b84ab84fa3fb1916561299f08db7915a44a4f7))
+
+
+## v0.2.0 (2025-07-26)
 
 ### Bug Fixes
 
@@ -1037,6 +111,12 @@ This completes the document processing pipeline implementation.
 
 This fixes the issue where saved selections weren't visible after Phase 5 migration. The new system
   is now the complete owner of selection data flow.
+
+- Compute frontend is_template from template; include template in documents search join
+  ([`bc1b9ee`](https://github.com/RamonOpazo/sero/commit/bc1b9eed5e224ad1c005c6241796e29b678c0c5c))
+
+- Configure semantic release with VCS versioning
+  ([`35c1ae3`](https://github.com/RamonOpazo/sero/commit/35c1ae36cc2b1bd425ec17f140f45ad09d2dfbb2))
 
 - Connect resize functionality to actual selection state
   ([`44b8da1`](https://github.com/RamonOpazo/sero/commit/44b8da10a6968c35d847aed66d8dc520d53ea64f))
@@ -1087,6 +167,18 @@ After saves, selections are now properly reloaded from backend to get real UUIDs
   Stable PDF file object references prevent unnecessary reloads * Maintain performance while
   eliminating console warnings
 
+- Fixed an issue between the selection layer and the document layer, in which the selections were
+  rendered before the page was rendered, thus producing a race condition that affected the
+  calculation of the selections' size.
+  ([`6ef21ab`](https://github.com/RamonOpazo/sero/commit/6ef21abeee3398b5db0ef8e7cd5cf0e1eaa12808))
+
+- Fixed issue in the document layer in which, upon zooming on a given document, it blew up the its
+  container, overflowing and breaking the view.
+  ([`eb8d757`](https://github.com/RamonOpazo/sero/commit/eb8d757ac11337f1d4eea15a9bb050b17610654d))
+
+- Hide template overlays when viewing the template document itself
+  ([`d55777f`](https://github.com/RamonOpazo/sero/commit/d55777fe2c563254bd2999a1ddf463ad485f1654))
+
 - Implement consistent 0-based page system across selection layer
   ([`289a33b`](https://github.com/RamonOpazo/sero/commit/289a33b60e1c096da9cd6086d4a9a83b91f82181))
 
@@ -1135,6 +227,13 @@ This ensures selections are displayed correctly based on their page assignment a
 
 This resolves the issue where editing existing selections would create duplicates instead of
   updating the original selections, as the id fields were being stripped during state storage.
+
+- Prevent toast layout shifts by moving Toaster outside grid system
+  ([`1e3f457`](https://github.com/RamonOpazo/sero/commit/1e3f457bcb1dfa7acaa5a7d83d2b304307a55c7a))
+
+- Move Toaster component outside SidebarProvider grid layout to prevent horizontal space issues in
+  document-viewer - Change toast position to top-center for better UX - Toasts now use fixed
+  positioning without affecting parent container layouts
 
 - Prevent unnecessary page navigation when clicking selection on current page
   ([`60cc37c`](https://github.com/RamonOpazo/sero/commit/60cc37cd9f9791526e69d36b04697d50d46e421d))
@@ -1271,16 +370,180 @@ Both undo and redo now work perfectly with proper keyboard shortcuts
   components from new viewport directory - Update core system exports for clean architecture -
   Maintain all public API exports for components
 
+- **actions-layer**: Narrow MenuNode to MenuItem when rendering config items to satisfy TS; support
+  nested submenus
+  ([`afbe828`](https://github.com/RamonOpazo/sero/commit/afbe828336a9264f2ffaa26078b3e1e06bb4e97c))
+
+- **api**: Adjust prompts delete-all route to /by-document/id/{document_id} and update frontend
+  consumer
+  ([`cacd0a7`](https://github.com/RamonOpazo/sero/commit/cacd0a728588496fa4e1f26bf75eb07880cd7bca))
+
+- **ci**: Disable semantic-release build command
+  ([`1e71ab9`](https://github.com/RamonOpazo/sero/commit/1e71ab9688e32713da0b18424279a6134b7ff58a))
+
+The 'uv' command was not found in the semantic-release action's environment, causing the release
+  workflow to fail. This change disables the build step within semantic-release, as the build is
+  already handled by a separate step in the 'release.yml' workflow.
+
+- **docs**: Serve home doc (path './') at /docs and slug; coerce frontmatter date to string; load
+  markdown from public
+  ([`f0289ea`](https://github.com/RamonOpazo/sero/commit/f0289ea3332f892bb928af6ada685213f5acaf08))
+
+- **document-viewer**: Stabilize selection reload effect; use live document in redacted toggle to
+  avoid stale state and allow repeated toggling
+  ([`d50cd98`](https://github.com/RamonOpazo/sero/commit/d50cd982797a3a0033037ad69854d01a51cb4dc7))
+
+- **document-viewer/selections**: Stabilize undo/redo navigation and rendering
+  ([`105aa32`](https://github.com/RamonOpazo/sero/commit/105aa32340e89d6340b6a89a5c4e2f0a9778d9be))
+
+- navigate only when destination page differs to avoid unnecessary rerenders - compute target page
+  from manager history; apply state first, then navigate on next frame - ensure selections redisplay
+  reliably after redo without manual redraw
+
+- **download**: Use document ID as redacted filename to prevent name leakage; scrub PDF metadata
+  ([`168e090`](https://github.com/RamonOpazo/sero/commit/168e090164781dbe8e9cdd0dfc3224b17ebba938))
+
+- **esc**: Ensure ESC closes selections panel with one press by including panel state in key handler
+  deps
+  ([`c3678e9`](https://github.com/RamonOpazo/sero/commit/c3678e99e7bcac95f3d1060bc97a4a4ab76b4864))
+
+- **frontend**: Make app build pass by excluding tests from tsc, removing unused imports, adding
+  types, and silencing unused vars
+  ([`9a01db8`](https://github.com/RamonOpazo/sero/commit/9a01db8d6f3c903d8344c6e96e5b31b8f4ad9bc1))
+
+- **frontend**: Prevent blob URL ERR_FILE_NOT_FOUND by passing Blob directly to react-pdf\n\n- Use
+  Blob for <Document file> instead of object URL\n- Eliminates lifecycle issues from
+  URL.createObjectURL/revokeObjectURL\n- Fixes toggling between original/redacted without network
+  errors
+  ([`fac1ce6`](https://github.com/RamonOpazo/sero/commit/fac1ce6c0a6db4b764abeea216eb1548be05c74e))
+
+- **frontend**: Use staged_creation initial state and robust staged detection in selections layer
+  ([`ce52ad7`](https://github.com/RamonOpazo/sero/commit/ce52ad72ca516f2139343736d78b5ce518a94d8b))
+
+- **prompt**: Include document_id on create and preserve edit dialog fields
+  ([`b740f0d`](https://github.com/RamonOpazo/sero/commit/b740f0ddef910289e006a900db75698a6eda362c))
+
+- add document_id to prompt creation payload to satisfy backend validation - prevent type-change
+  reset while editing so non-default type/priority data remains populated
+
+refactor(prompt): migrate UI to core provider using Domain Manager v2
+
+- switch components to use new provider/hook and V2 state shape - expose pendingChanges from
+  provider; use it to flag modified prompts
+
+- **prompt panel**: Ensure keyboard handler updates with showPromptPanel/togglePromptPanel and avoid
+  panel state fighting; ESC closes prompt panel reliably; R toggles consistently
+  ([`ab25f55`](https://github.com/RamonOpazo/sero/commit/ab25f557263ac67d92df1f1a8fcc51eaa467d136))
+
+- **prompts**: Load prompts on provider mount to show server state at startup
+  ([`a1ad5ce`](https://github.com/RamonOpazo/sero/commit/a1ad5ce517011db872781654a1c53c93320beffd))
+
+Call manager.load() in PromptsProvider useEffect so prompt list is populated when opening the
+  viewer. Also reload after create to reflect committed state (if previously staged).
+
+- **selection**: Restore borders/background and memoize SelectionBox to cut re-renders
+  ([`30bb4a2`](https://github.com/RamonOpazo/sero/commit/30bb4a266e7bfed32c4d4d2d7dc2fef4b53d542b))
+
+- Correct template flag to apply border classes\n- Fix global flag to use explicit text/border color
+  classes\n- Avoid dynamic Tailwind class generation for color strings\n- Wrap SelectionBox in
+  React.memo with custom comparator
+
+- **support**: Use yield from and correct helper name for selections
+  ([`f0af77d`](https://github.com/RamonOpazo/sero/commit/f0af77d348b34b0452ea51d7f2acda2ab9732b07))
+
+- **trust**: Regenerate encrypted credentials per request using in-memory password cache; avoid
+  reusing consumed ephemeral key pairs
+  ([`dd83e7c`](https://github.com/RamonOpazo/sero/commit/dd83e7cce19667a062a5188d615001decb4313aa))
+
+- **ui**: Wrap prompts list return in fragment and add inline edit+commit flow; align spacing with
+  selections
+  ([`f84abc5`](https://github.com/RamonOpazo/sero/commit/f84abc5a86da00dc5e9fd85d64ad2efb1c4b56b8))
+
+- **viewer**: Force immediate render of processed PDF via volatile blob URL; stabilize URL lifetime
+  and remount logic
+  ([`994d9ca`](https://github.com/RamonOpazo/sero/commit/994d9ca84e75da6cc7a85cbad4aa70c53225ddc6))
+
+- **viewer-panels**: Panels close only via quit button or clicking outside (backdrop); remove
+  onClick from panel containers; add transparent backdrop; maintain exclusivity
+  ([`3b281cf`](https://github.com/RamonOpazo/sero/commit/3b281cf3fe96bd14ebef99ef1dc6a8d5df6f196a))
+
+### Build System
+
+- Fix TS build issues (test setup guards, typings, unused imports); feat(projects): add onBackHome;
+  chore: extract dialog copy; refactor: selection visuals util
+  ([`0e7fd53`](https://github.com/RamonOpazo/sero/commit/0e7fd537488de19c41e70aa82557f95b7d6e6023))
+
+- **frontend**: Fix TS issues and enum compatibility; lifecycle hook deps; minor typing fixes
+  ([`432756e`](https://github.com/RamonOpazo/sero/commit/432756ee5e5362e30383a570bfa0ac5afca5b725))
+
 ### Chores
+
+- Added License
+  ([`7934177`](https://github.com/RamonOpazo/sero/commit/7934177df64702a7907b060d034ee94b2e42b5a2))
+
+- Checkpoint before aligning prompts rules list with selections list style
+  ([`70e97a6`](https://github.com/RamonOpazo/sero/commit/70e97a62ac2193d2d788788b3855821af7dcea5e))
 
 - Cleaned some spurious code leftovers
   ([`6ca6e99`](https://github.com/RamonOpazo/sero/commit/6ca6e9902e1e6baf7121cb1a85efec153f6e5f8b))
 
+- Commit tweaks to selection box backgrounds
+  ([`0ebd509`](https://github.com/RamonOpazo/sero/commit/0ebd5090ad3fd99be076ac48d6d5a0e555dbc6be))
+
+- Commit user changes after reverting previous cursor tweaks and applying layout/sidebar updates
+  ([`c3606c0`](https://github.com/RamonOpazo/sero/commit/c3606c0ee804b7b4c92133a7f54f8af8e590426a))
+
+- Remove obsolete one-off dialog components; use inline dialogs and shared components instead
+  ([`a4432ef`](https://github.com/RamonOpazo/sero/commit/a4432efe662cb61fd41213d85155ded52af0f24e))
+
 - Reviewing selections.
   ([`54269ae`](https://github.com/RamonOpazo/sero/commit/54269aede1237d2200675fc28d8b67acba1accd4))
 
-- **release**: V1.0.0 [skip ci]
-  ([`fcb9360`](https://github.com/RamonOpazo/sero/commit/fcb93601de3c11268fbceb9db8b0e08217f8023c))
+- Snapshot before debugging staging of global template selection
+  ([`21c9a7c`](https://github.com/RamonOpazo/sero/commit/21c9a7cea7d00b01002d9d967a5b8a7f86992a5f))
+
+- Snapshot before implementing template selection overlays
+  ([`be866f5`](https://github.com/RamonOpazo/sero/commit/be866f515c701c7002497ad82bb47f86d600d941))
+
+- **actions-layer**: Clean unused hover state, simplify visibility logic, and guard info
+  quick-button
+  ([`6988154`](https://github.com/RamonOpazo/sero/commit/698815493d2a5be1bcd292c71623b9305f18f476))
+
+- **actions-layer**: Remove dead refs, unused imports and hook returns; simplify hover handlers
+  ([`5baf181`](https://github.com/RamonOpazo/sero/commit/5baf181e1fda3e786121dbf62b8b51767ac5c0f7))
+
+- **docs**: Note removal of legacy pending changes adapter for selections
+  ([`7b44e5e`](https://github.com/RamonOpazo/sero/commit/7b44e5efbfddfd9435ef1b31d67d5cfeadfb21fb))
+
+- **frontend**: Build passes after reorg; defer lint fixes to incremental follow-ups
+  ([`1003ee6`](https://github.com/RamonOpazo/sero/commit/1003ee6e6ed65f2358bbeb2669c5d46670b4a09e))
+
+- **frontend**: Finalize Project Trust Session migration and docs
+  ([`10453e2`](https://github.com/RamonOpazo/sero/commit/10453e23912cf1cbded207f16a7ac2515794befd))
+
+- Wrap app with ProjectTrustProvider, remove legacy credentials usage\n- Update document and project
+  AI runs to use ensureProjectTrust(projectId)\n- Add shared CredentialConfirmationDialog and
+  password support in FormConfirmationDialog\n- Add docs/project-trust-session.md\n- Build passes
+  (pnpm -C src/frontend build)
+
+- **release**: V0.2.0 [skip ci]
+  ([`c7ea276`](https://github.com/RamonOpazo/sero/commit/c7ea2764736b0e146e5d7af213aecd6e59cfefb5))
+
+- **selection-manager**: Remove embedded SelectionsList; use left-side Selections Panel for listing
+  ([`6bc6d30`](https://github.com/RamonOpazo/sero/commit/6bc6d3042516665d1627af16f7d80477a6d56046))
+
+- **test**: Remove remaining @types/jest devDependency after Vitest migration
+  ([`692e6fc`](https://github.com/RamonOpazo/sero/commit/692e6fc764923c9f7b5ba6c21d1923be9ed5f70a))
+
+- **viewer**: Export useStageCommit and useZoomControls from hooks barrel; build passes
+  ([`b0d6378`](https://github.com/RamonOpazo/sero/commit/b0d637834665c8fe04878369ddf4893b6751c73a))
+
+- **viewer**: Remove legacy hooks (useSelectionLoader, use-document-data) after provider-based
+  loading; verify build
+  ([`c0dae8a`](https://github.com/RamonOpazo/sero/commit/c0dae8a4f46461b303140ca129ce7c726ea9959e))
+
+- **viewer**: Remove unused hook use-pdf-pages; verify build
+  ([`c775045`](https://github.com/RamonOpazo/sero/commit/c775045f72a00b81d5027628c36d6060266c38f6))
 
 ### Code Style
 
@@ -1294,7 +557,20 @@ Both undo and redo now work perfectly with proper keyboard shortcuts
   labels - Update CSS for cleaner toolbar layout with proper spacing - Follow modern UI patterns
   with icons + conditional text labels
 
+- **selections-panel**: Reorganize entries for Info-like look; add spacing, rounded, muted coords
+  section; maintain badges, config and delete
+  ([`780506c`](https://github.com/RamonOpazo/sero/commit/780506cb0875da17bfa040d46bdee6ce43a431b4))
+
+- **ui**: Center EmptyState and let it fill available space; simplify visuals using primary color
+  ([`8657ce4`](https://github.com/RamonOpazo/sero/commit/8657ce434576075c7c5f5b2d393404728bdc80ba))
+
+- **ui**: Enhance EmptyState visuals with gradient decorations and card-like container
+  ([`cf5db65`](https://github.com/RamonOpazo/sero/commit/cf5db65d161affeca01386b71ad9186cc93ac753))
+
 ### Documentation
+
+- Add AI Processing Progress Plan (global chin UI, processing provider, milestones)
+  ([`7e33eff`](https://github.com/RamonOpazo/sero/commit/7e33eff359d225f81a5aeaa3eb5e89af6bd2a687))
 
 - Add comprehensive migration plan for component-centric architecture
   ([`9cf5f35`](https://github.com/RamonOpazo/sero/commit/9cf5f35d12c28247f0cac469a1089326d69867a5))
@@ -1306,12 +582,73 @@ Both undo and redo now work perfectly with proper keyboard shortcuts
 
 Ready for execution to migrate to component-centric organization with strict separation of concerns.
 
+- Add DB refactor migration plan (project-scoped settings, scoped prompts/selections, templates)
+  ([`2d57b23`](https://github.com/RamonOpazo/sero/commit/2d57b23257a7685512a8d159cb84ca9c11ea7cf8))
+
+- Added correct paths to docs.
+  ([`89908d3`](https://github.com/RamonOpazo/sero/commit/89908d390450d54b8fcbb7e094a7b15b087d9af0))
+
+- Selection staging and commit workflow plan (frontend/backend, visuals, acceptance criteria)
+  ([`7fed29b`](https://github.com/RamonOpazo/sero/commit/7fed29b554e622bc704acca90af93a6edd1a2119))
+
+- Update AI_PLAN.md — mark completed frontend alignment, note crypto endpoint fix, and list next UI
+  tasks (selection lifecycle, AI settings panel)
+  ([`5f99e83`](https://github.com/RamonOpazo/sero/commit/5f99e83fb80f2f8209e180c5b8581a463a64df16))
+
+- Update migration plan for document-only prompts/selections and finalized settings
+  ([`20e13b4`](https://github.com/RamonOpazo/sero/commit/20e13b45177a4ecccd34ae2c2f7f3742a45936c1))
+
 - Update migration plan progress - mark phases 1-3 complete
   ([`1286c4b`](https://github.com/RamonOpazo/sero/commit/1286c4b02d2adf7c06639fee215a4c02599e5636))
 
 - Phase 1: Directory structure creation ✅ - Phase 2: Pages migration with clean indexes ✅ - Phase 3:
   ProjectsView module migration with hook encapsulation ✅ - Build status: Passing with no errors -
   Ready for phases 4-5 (DocumentsView and DocumentEditor migrations)
+
+- **frontend**: Add selection lifecycle refactor plan and roadmap
+  ([`36ad68f`](https://github.com/RamonOpazo/sero/commit/36ad68fab27c0c7d77267be9b297b97acb0e5625))
+
+- **plan**: Add steps/actions tracking and phase breakdown to AI_PLAN
+  ([`f24d98e`](https://github.com/RamonOpazo/sero/commit/f24d98efc2293155a97d0ec5eba7dc6ee0c87004))
+
+- **plan**: Track health and staged management; mark commit step done
+  ([`65f5631`](https://github.com/RamonOpazo/sero/commit/65f563167c28a1c23b054f2447aa77325d3d864f))
+
+- **projects**: Document encrypted-in-transit project creation and mark task complete
+  ([`6a06981`](https://github.com/RamonOpazo/sero/commit/6a06981f828bc452eb0f9fc2a2888d1602433910))
+
+- **README**: Simplify install section; add curl|sh for Linux/macOS and PowerShell one-liner for
+  Windows
+  ([`392ef89`](https://github.com/RamonOpazo/sero/commit/392ef89598eac9c681f45aec78a4716f448795c9))
+
+- **release**: Add PyPI publishing instructions to pyproject.toml
+  ([`601dedf`](https://github.com/RamonOpazo/sero/commit/601dedf2b82171b4f7cafcc2fbfb26615da23751))
+
+Removed the build_command from semantic-release configuration and added comments explaining how to
+  configure PyPI publishing, including build_command and upload_to_pypi.
+
+- **trust**: Document per-request re-encryption, in-memory password TTL; add Phase 2 plan and guide
+  updates
+  ([`438255d`](https://github.com/RamonOpazo/sero/commit/438255d32cd8bb3f34cd52fc60f0e7cb2f398e9d))
+
+- **ui**: Update guides for encrypted bulk uploads, trust session reuse, and per-request
+  re-encryption
+  ([`2cf7fd1`](https://github.com/RamonOpazo/sero/commit/2cf7fd18a143901214c2980ada3c3a96b0d167ad))
+
+- **viewer**: Apply Tailwind Typography (prose) and dark variant; wrap markdown in prose container
+  ([`fd31a7d`](https://github.com/RamonOpazo/sero/commit/fd31a7d453348c5c8fb29a8e75ab59d37d41f941))
+
+- **viewer**: Dry/sot audit integrated; prefer useDocumentViewer (add) and keep useViewer as alias;
+  update exports
+  ([`f485ac0`](https://github.com/RamonOpazo/sero/commit/f485ac04626110661a7637c49bb221b0bdbe7a2f))
+
+- **viewer**: Expand Phase 3 dialog plan; chore: remove legacy hooks stubs (useSelectionLoader,
+  use-document-data) and ensure clean exports
+  ([`5345a95`](https://github.com/RamonOpazo/sero/commit/5345a95e55e237416251e5adc98623ab93410f4f))
+
+- **viewer**: Normalize internal links: map ./page.md and /documentation/page.md to
+  /documentation/page, preserve hashes; fix navigation between docs
+  ([`56c4f9e`](https://github.com/RamonOpazo/sero/commit/56c4f9eec631ab7155fa95e9790878430c47b2e3))
 
 ### Features
 
@@ -1708,6 +1045,16 @@ NEXT: Phase 10 - Dialog Export Cleanup (finalize architectural separation)
   function * Fixes PDF.js file prop warning and worker errors - Include proper error handling and
   loading states - Maintain navigation flow with back button to documents view
 
+- Complete SQLite migration with timezone-aware datetime handling
+  ([`9d38e82`](https://github.com/RamonOpazo/sero/commit/9d38e82bbb08a72a7b3b4f6c451ef15af541ba33))
+
+- Implement custom TimezoneAwareDateTime type for SQLite compatibility - Add comprehensive database
+  tests for UUID and SQLite functionality - Fix timezone validation issues in Pydantic schemas - Add
+  timezone-aware datetime tests with proper UTC handling - Update static assets after frontend
+  rebuild - Fix trailing slash issues in API test endpoints - Fix file download test parameter
+  requirements - All 114 tests now passing with complete test coverage - Robust SQLite backend with
+  WAL mode and foreign key constraints
+
 - Complete table toolbar and actions implementation
   ([`17927f8`](https://github.com/RamonOpazo/sero/commit/17927f87cdd72a452c62aca236f968c37ad5c06b))
 
@@ -1781,6 +1128,10 @@ This completes the architectural separation between viewport management and sele
 Migration target: PromptManager (465 lines) + SelectionManager (425 lines) → ~80 lines total
   Approach: Extract proven patterns → Create reusable behaviors → Generate managers from config
 
+- Derive version at runtime via importlib.metadata with git fallback; surface version in FastAPI and
+  CLI
+  ([`8a504a9`](https://github.com/RamonOpazo/sero/commit/8a504a9ff5a339c2e8a7b822062cd38383e9d7b7))
+
 - Eliminate document fetching in FileViewer for efficient file loading
   ([`012044c`](https://github.com/RamonOpazo/sero/commit/012044c282d355660fb3ce8546c1dc8e1c7581ac))
 
@@ -1794,6 +1145,34 @@ Migration target: PromptManager (465 lines) + SelectionManager (425 lines) → ~
 This completes the FileViewer architecture improvement, achieving: ✅ Zero unnecessary API calls for
   file loading ✅ Direct document-based file access using existing endpoints ✅ Simplified error
   handling and validation ✅ Better user experience with immediate file loading
+
+- Enhance DataTable and refine UI/layout
+  ([`eda16a5`](https://github.com/RamonOpazo/sero/commit/eda16a57adb3aeabf66c5f563116ae6455665146))
+
+- Enhance document management with file upload and improved table functionality
+  ([`d10f416`](https://github.com/RamonOpazo/sero/commit/d10f4168d4ffa565f2556a20d49162d4d94219fd))
+
+- Replace CreateDocumentDialog with file upload functionality - Support multiple PDF file uploads
+  via bulk API endpoint - Add password field for document security - Include optional description
+  template for uploaded files - Update DocumentsView to use new upload workflow
+
+- Add description column to documents table - Display document descriptions with proper truncation -
+  Position between Status and Selections columns
+
+- Implement comprehensive table sorting - Add sorting to Status, Selections, Prompts, and Size
+  columns - Fix Name column sorting using proper accessorFn - Use numerical priorities for status
+  sorting (pending → processed → failed) - Sort by actual byte values for file sizes with
+  human-readable display
+
+- Update file size handling - Change File interface size field from string to number - Add
+  formatFileSize helper for byte-to-readable conversion - Sort by actual integer byte values while
+  displaying formatted sizes
+
+- Add toast notification for document ID copying - Show success/error feedback when copying document
+  IDs to clipboard - Match ProjectsView toast patterns for consistency
+
+- Improve toast messaging consistency - Align all document operation toasts with ProjectsView
+  patterns - Better error handling and user feedback across all operations
 
 - Enhance DocumentControls with rich metadata and better organization
   ([`043a6fb`](https://github.com/RamonOpazo/sero/commit/043a6fb7580fc72124bfcb0013c9027c1de8f8a1))
@@ -1873,6 +1252,29 @@ Selections now have a professional, modern appearance with interactive elements 
   endpoints - Add integration tests verifying database relations - Include edge case testing for
   large data and concurrent operations
 
+- Implement complete selection management system using V2 domain manager
+  ([`6dc0945`](https://github.com/RamonOpazo/sero/commit/6dc0945cb070fdddcd91627199ea560f5d81d1aa))
+
+✨ Features: - Create new selections with drawing workflow (startDraw/updateDraw/finishDraw) - Edit
+  both new and saved selections with real-time updates - Delete selections from both draft and
+  persisted collections - Consolidated history system with undo/redo across all operations - Clear
+  selections by page or clear all selections - Commit staged changes with full database CRUD
+  integration
+
+🏗️ Architecture: - Declarative configuration approach with clean separation of concerns - Generic V2
+  behaviors (CRUD, history, batch operations) + domain extensions - Purpose-built selection domain
+  config with API adapters and transforms - Factory pattern for creating selection manager instances
+  - React provider exposing complete selection functionality
+
+📁 Structure: - /core/selection-config.ts - Declarative domain configuration -
+  /core/selection-manager.ts - Factory for manager instances - /core/selection-provider.tsx - React
+  context provider
+
+🎯 Requirements Satisfied: - ✅ Create/edit/delete new selections - ✅ Create/edit/delete saved
+  selections - ✅ Consolidated history with undo/redo - ✅ Clear page/all selections - ✅ Commit staged
+  changes to database - ✅ Type safety with Result<T, unknown> pattern - ✅ Clean API integration with
+  DocumentViewerAPI
+
 - Implement comprehensive files API endpoints with full CRUD operations
   ([`5aa2108`](https://github.com/RamonOpazo/sero/commit/5aa21089b16f0926d3485ef01d7e888deab18490))
 
@@ -1904,6 +1306,23 @@ Selections now have a professional, modern appearance with interactive elements 
   options - Proper event handling prevents conflicts between context menu and dragging
 
 The context menu now provides intuitive selection management with pixel-perfect positioning.
+
+- Implement document processing pipeline with decryption and redaction
+  ([`feecead`](https://github.com/RamonOpazo/sero/commit/feeceadfe676f5b98890b607e0511112ac1a0bf9))
+
+- Implement the function in documents controller to handle full document processing workflow -
+  Integrate password-based decryption for encrypted original files - Apply PDF redaction based on
+  document selections using the redaction service - Store redacted files unencrypted (salt=None) for
+  easy access - Comprehensive validation: document existence, original file, selections, password
+  verification - Error handling for decryption failures, integrity checks, and redaction errors -
+  Return success response with processing details (file sizes, selection count) - Remove obsolete
+  function that used old redaction service interface
+
+The process function now fully integrates: - Document and file management - Project password
+  authentication - File decryption and integrity verification - Selection-based PDF redaction -
+  Redacted file storage
+
+This completes the document processing pipeline implementation.
 
 - Implement domain manager library with configuration-driven architecture
   ([`47277e8`](https://github.com/RamonOpazo/sero/commit/47277e824dfa45fbf74340f8be502d6a1c1b8ee9))
@@ -1939,6 +1358,26 @@ Build passes all TypeScript checks ✅
   architectural separation: SelectionsLayer handles UI interactions, SelectionsList handles dialogs
   - Support both global and page-specific selection assignment via double-click - Clean
   implementation without breaking existing functionality
+
+- Implement frontend data integration and 30/70 layout with dark mode
+  ([`6573b9e`](https://github.com/RamonOpazo/sero/commit/6573b9ea892663453b1f54fd8ca4c3f01bf5204f))
+
+Frontend Integration: - Fix API routing issues by removing trailing slash requirements - Connect
+  ProjectsView to backend /api/projects endpoint - Connect DocumentsView to backend
+  /api/projects/id/{id} and /api/documents/search - Update TypeScript types to match actual backend
+  response structure - Fix document status detection and original file handling
+
+UI/UX Improvements: - Implement 30/70 sidebar layout with navigation - Add dark mode support with
+  ThemeProvider and ThemeToggle - Create responsive sidebar with Projects, Documents, Settings
+  navigation - Add smooth theme transitions and system theme detection - Include built frontend
+  assets in backend static directory
+
+Backend API Fixes: - Update API routers to handle routes without trailing slashes - Fix FastAPI
+  routing to prioritize API endpoints over frontend fallback - Add stream parameter to file download
+  endpoint for inline viewing - Update CORS and static file serving configuration
+
+Project Structure: - Frontend builds to src/backend/static for unified serving - API calls work
+  correctly from built frontend - Theme preferences persist in localStorage
 
 - Implement grid-based sidebar layout
   ([`d4ff586`](https://github.com/RamonOpazo/sero/commit/d4ff586f4c2107933ecd59a20d35c81429437426))
@@ -1999,6 +1438,21 @@ Phases completed: ✅ Phase 1: Setup new system ✅ Phase 2: Integrate provider 
 
 This refactor significantly improves performance by loading only essential document data upfront and
   fetching prompts/selections on-demand when components need them.
+
+- Implement PDF redaction and obfuscation functionality
+  ([`83f6399`](https://github.com/RamonOpazo/sero/commit/83f639902137e2e226e014db658db7d4ee2cf06c))
+
+- Add PDFRedactor class with selection-based redaction using PyMuPDF - Implement document processing
+  API endpoint for applying redactions - Add comprehensive tests for PDF redaction and document
+  processing - Update FileViewer component with functional Obfuscate button - Add loading states and
+  error handling for obfuscation process - Implement automatic switching to obfuscated view after
+  processing - Ensure obfuscated files maintain same password encryption as originals - Fix
+  canObfuscate logic to enable button when selections exist - Add redaction markers with unique
+  UUIDs for traceability
+
+The obfuscated files are password-encrypted and created by applying black rectangles over
+  user-selected areas, extracting text content before redaction, and maintaining full audit trail
+  with redaction UUIDs.
 
 - Implement perfect undo/redo for drag operations
   ([`65baee4`](https://github.com/RamonOpazo/sero/commit/65baee4cfc3afd2cf916d6a294cf07091268f2f0))
@@ -2063,6 +1517,24 @@ This replaces the previous insecure URL parameter approach with industry-standar
 
 Co-authored-by: Assistant
 
+- Implement secure password management and fix coordinate normalization
+  ([`e114bd4`](https://github.com/RamonOpazo/sero/commit/e114bd44dbe99489dbb2041ae2ee40b36655ef55))
+
+Security improvements: - Remove passwords from URL parameters to prevent exposure in browser history
+  and server logs - Implement secure sessionStorage-based password management with automatic expiry
+  - Add activity-based password extension with throttling - Clean up expired passwords automatically
+
+PDF coordinate system improvements: - Implement normalized coordinates (0-1 range) for PDF
+  selections - Add coordinate conversion utilities in FilePDFViewer - Update selection rendering to
+  handle zoom-independent coordinates - Fix coordinate display in UI to show percentage values
+
+Technical improvements: - Add utility functions for throttle, debounce, and other common operations
+  - Fix TypeScript compilation errors and variable declaration order - Ensure consistent coordinate
+  handling across all components - Add comprehensive error handling and cleanup logic
+
+This commit addresses critical security vulnerabilities while improving the robustness of the PDF
+  selection system.
+
 - Implement unified undo/redo for all selection operations
   ([`296bad1`](https://github.com/RamonOpazo/sero/commit/296bad136959d8fb8106c3666cfd22a0cca9ecb0))
 
@@ -2090,6 +1562,19 @@ This provides a professional-grade undo/redo system that matches user expectatio
 This eliminates selection lag during panning operations and provides a foundation for future
   performance optimizations.
 
+- Improve DataTable column navigation with fixed-width pagination
+  ([`71fc16f`](https://github.com/RamonOpazo/sero/commit/71fc16f87cdbe1d5a8c6ec28a11195680a1cd144))
+
+- Replace horizontal scrolling with pagination-style column navigation - Add navigation column with
+  left/right buttons for one-column-at-a-time scrolling - Fix Actions column to always stay sticky
+  on the right side - Set fixed widths for navigation column (96px) and actions column (120px) -
+  Maintain selection column sticky on the left side - Show only 4 columns at a time with smooth
+  single-column navigation - Preserve all existing DataTable functionality (sorting, filtering,
+  selection, etc.) - Ensure theme-aware styling for both light and dark modes
+
+This replaces the problematic ScrollArea approach that broke sticky column positioning with a much
+  more intuitive and stable column navigation system.
+
 - Improve selection colors and toolbar behavior
   ([`a321823`](https://github.com/RamonOpazo/sero/commit/a321823a30aec45c0e81a3b61d711df09f2de17c))
 
@@ -2105,6 +1590,9 @@ Toolbar Behavior: - Change from time-based to hover-based visibility - Toolbar s
 
 This provides more intuitive and responsive toolbar behavior while making global selections visually
   distinct from page-specific ones.
+
+- Improve selection layer synchronization and visibility
+  ([`7edd7e9`](https://github.com/RamonOpazo/sero/commit/7edd7e99c371e856e511f93016cc0c72845777de))
 
 - Integrate API-fetched selections with document viewer
   ([`2088d4f`](https://github.com/RamonOpazo/sero/commit/2088d4f4250cf44f6474efeea1b464703ee51fa6))
@@ -2155,6 +1643,344 @@ The new design feels modern, responsive, and professional with delightful hover 
   hierarchy throughout tooldeck - Fix toggle functionality for proper bidirectional view switching -
   Create consolidated DocumentControls component with better UX
 
+- Restructure project with React frontend integration
+  ([`de0d61c`](https://github.com/RamonOpazo/sero/commit/de0d61cfaa0cbd9c4187232cc83031339a423ed7))
+
+- Restructure backend from src/sero to src/backend for better separation - Add complete React + Vite
+  + TypeScript + Tailwind + shadcn/ui frontend - Update pyproject.toml for new project structure and
+  build configuration - Fix CLI functions to use correct module paths and coverage settings - Add
+  comprehensive frontend components: - ProjectsView: searchable grid of projects - DocumentsView:
+  paginated document grid with status badges - DocumentEditor: placeholder for PDF viewer
+  integration - Complete shadcn/ui component library setup - Configure Vite to build assets into
+  backend static directory - Set up React Router for SPA navigation with clean URLs - Add TypeScript
+  types matching backend schema exactly - Fix DocumentsView HTML structure and layout issues -
+  Maintain monorepo structure: src/backend/ (Python) + src/frontend/ (React)
+
+- Visual improvement and new actions in document viewer.
+  ([`e04d95a`](https://github.com/RamonOpazo/sero/commit/e04d95a084e3c447f965bea74654839a4b4c359d))
+
+- Working panning and zooming, with correct positioning (though a little bit laggy) of the selection
+  layer.
+  ([`77aa204`](https://github.com/RamonOpazo/sero/commit/77aa2044a94f801ad5397b17a8ad94bef992debf))
+
+- **ai**: Abstract instruction composition via system_prompt in request; make AiService.health
+  abstract
+  ([`8ec0798`](https://github.com/RamonOpazo/sero/commit/8ec079888b1573ace3211c3d496896a6d0807637))
+
+- **ai**: Add abstract health() to AiService; add AI health endpoint; implement staged
+  clear/uncommit endpoints; add JSON parsing in Ollama service
+  ([`85054db`](https://github.com/RamonOpazo/sero/commit/85054dbc42b45132c5d5b6bedbe0f4cce5ec1cbb))
+
+- **ai**: Add AI_MIN_CONFIDENCE default and filter AI detections before staging in
+  apply_ai_and_stage
+  ([`f3dcfeb`](https://github.com/RamonOpazo/sero/commit/f3dcfeb942203b7339037c1fc9d2426696ef631d))
+
+- **ai**: Add document-scoped AI apply endpoint scaffold under documents routes
+  ([`b59b27d`](https://github.com/RamonOpazo/sero/commit/b59b27dba7fe4d7b361d69db72c0a914c6a590db))
+
+- **ai**: Add per-document AiSettings, simplify Prompt model, and scaffold offline Ollama service
+  ([`f9c48f0`](https://github.com/RamonOpazo/sero/commit/f9c48f06876524dd4211cc0f8adf9ef5b4bc60cf))
+
+- **ai**: Centralize apply in ai router/controller and add SSE stream; strengthen system prompt
+  ([`e9e0ffb`](https://github.com/RamonOpazo/sero/commit/e9e0ffb9aa4cddddba06c8b6c5756688bba680c7))
+
+- add ai_schema.AiApplyRequest - add ai_controller.apply and apply_stream (SSE) - wire /api/ai/apply
+  and /api/ai/apply/stream - frontend: call /api/ai/apply with {document_id}, keep extended timeout
+  - improve prompt_composer guardrails and schema hint
+
+- **ai**: Centralize instruction composition via prompt_composer; wire service to use it; update
+  plan
+  ([`3207e48`](https://github.com/RamonOpazo/sero/commit/3207e48bb7d6243d3ef67875432a4eb51de85804))
+
+- **ai**: Introduce AiRuntimeSettings and async apply; stage AI selections
+  ([`f2e4376`](https://github.com/RamonOpazo/sero/commit/f2e4376314e6cdd11a8ffeaa9a5c55bf24a5cec6))
+
+test: add controller and API integration tests, conditional live Ollama test
+
+chore(pdf): add deterministic test PDF generator
+
+- **ai**: Stage AI selections via document-scoped endpoint in DocumentViewerAPI.applyAi; frontend
+  reload now reflects AI-generated staged items
+  ([`79be73a`](https://github.com/RamonOpazo/sero/commit/79be73a6562f03f63f3a0665d68246e9a13e3dac))
+
+- **api**: Add /api/ai/introspect endpoint using AiService; wire frontend DocumentViewerAPI.applyAi
+  to new route
+  ([`85eb671`](https://github.com/RamonOpazo/sero/commit/85eb671968c891c7605976d8570bd25ad3412603))
+
+- **api**: Add project-scoped document (template) management with CRUD, endpoints, and tests
+  ([`3e9e6c1`](https://github.com/RamonOpazo/sero/commit/3e9e6c19b9534efa7e16b8349412e70eddb5606e))
+
+- **api**: Improve project redaction stream (summary counters, NOOP, structured logs); fix PAN
+  scope; tests: add rerun, empty-project, and template-missing cases
+  ([`a870693`](https://github.com/RamonOpazo/sero/commit/a87069304a8dd0735ebac72267d6e52f5ed63af7))
+
+- **api**: Typed SSE events for project redaction; template-aware selection resolution; robust
+  apply_or_404 and error handling
+  ([`943804c`](https://github.com/RamonOpazo/sero/commit/943804c47dcbd93fe06f3525a1e868c23fc18a47))
+
+- **backend**: Add shallow document by id and fix is_processed computation
+  ([`1d1659b`](https://github.com/RamonOpazo/sero/commit/1d1659b5704a65e2e8a423aa30557b0e735ee98b))
+
+- Add /documents/id/{id}/shallow endpoint - Correct correlated subqueries for is_processed and
+  counts - Align schemas and controller to new shallow representation
+
+- **backend**: Add watermark and visualize selection word boxes; prep coordinate conversion\n\n-
+  Insert watermark 'Processed by SERO - <year>' on each page\n- Draw red rectangles around words
+  inside user selections for debugging\n- Convert normalized (0..1) selection coords to PDF points;
+  clamp to page bounds\n- Leave actual redaction disabled for now; will finalize next
+  ([`a1000fd`](https://github.com/RamonOpazo/sero/commit/a1000fde98c0621a4bcab6ade66409756bc61c27))
+
+- **backend**: Allow reprocessing by replacing existing redacted file\n\n- Remove existing redacted
+  file(s) before processing\n- Maintain single saved redacted copy per document (latest only)\n-
+  Keeps security posture by not keeping older partially redacted versions
+  ([`651f050`](https://github.com/RamonOpazo/sero/commit/651f050f4249d03f5764631948126a7f70b91ffa))
+
+- **backend**: Enforce secure project creation via key_id+encrypted_password; decrypt and hash
+  server-side in CRUD.create
+  ([`3e47509`](https://github.com/RamonOpazo/sero/commit/3e475099a7647dbb7eab670241b3208882aedb82))
+
+- **backend**: Introduce granular commit states and hybrid flags; update selection workflows and
+  tests
+  ([`c52adff`](https://github.com/RamonOpazo/sero/commit/c52adff28d7f939f3cf1adb67f5a11ed5466430f))
+
+- **ci**: Disable build and publish steps in release workflow
+  ([`10aad44`](https://github.com/RamonOpazo/sero/commit/10aad4454d9d84e843a47a20233137cea59f10a4))
+
+Commented out the 'Build package' and 'Publish to PyPI' steps in the release workflow as they are
+  not currently needed and were causing errors.
+
+- **commit dialog**: Gray optional auto-stage warning when OFF; compute commit counts based on
+  auto-stage
+  ([`3e64ca2`](https://github.com/RamonOpazo/sero/commit/3e64ca2d739dc5373f05d4d0a242ad480bce71d3))
+
+- **config**: Use platformdirs for per-user data/log directories; ensure cross-platform keyring
+  backends and actionable errors
+  ([`2e3eeff`](https://github.com/RamonOpazo/sero/commit/2e3eeff23e0871e4050cc64d76a18f5f9e93f4fe))
+
+- **data-table**: Add simple declarative columnDefs and adapt DataTable to consume them
+  ([`eaff05f`](https://github.com/RamonOpazo/sero/commit/eaff05f4e8f483fcdaa296ff0de4aed0a9671e49))
+
+- refactor(projects/documents): migrate tables to columnDefs - refactor(projects/documents): lift
+  dialogs from tables to views - refactor(table): extract HeaderRow and BodyRows components -
+  fix(table): render actions via column cell (simple config) - chore(ux): align name link to Button
+  variant=link
+
+- **db**: Add scope/state enums and default FileType.ORIGINAL; prep for scoped settings refactor
+  ([`ede2ce0`](https://github.com/RamonOpazo/sero/commit/ede2ce072b379adb116df313a228287017f8ac4b))
+
+- **dialog**: Add checkbox, switch, file input field types and optional tooltip support to
+  declarative forms
+  ([`644ce77`](https://github.com/RamonOpazo/sero/commit/644ce77ed23a72a638f5712ed7a45b90b621d43d))
+
+- **dialog**: Support declarative field descriptors in FormConfirmationDialog and refactor prompts
+  create/edit to use it
+  ([`67583b1`](https://github.com/RamonOpazo/sero/commit/67583b1297f5ab435f52be389cd375f484cf404a))
+
+- **docs**: Support is-index frontmatter; redirect /docs to designated index and show it first in
+  sidebar
+  ([`eba28f8`](https://github.com/RamonOpazo/sero/commit/eba28f8801bc9c2f5adc8b4481dfc3fbfedec745))
+
+- **document-viewer**: Add Hand/Grab mode toggle button in top bar; use Hand/Grab in menu
+  toggle-mode entry; adjust listings submenu label
+  ([`1e4b612`](https://github.com/RamonOpazo/sero/commit/1e4b6124a31a3886ff67b9807a4b025830c6ccf7))
+
+- **document-viewer**: Add view toggle button; add Undo/Redo to Selections menu using existing icons
+  and wiring
+  ([`90dfae8`](https://github.com/RamonOpazo/sero/commit/90dfae8db01718b8a9f941af787ceec68e748f1e))
+
+- **document-viewer**: Add workbench toggler (Selections/AI Rules) to actions menu and top bar; wire
+  with viewport state
+  ([`f116474`](https://github.com/RamonOpazo/sero/commit/f116474c20722b0b2547e04fc148990c07271a0c))
+
+- **document-viewer**: Highlight prompts toolbar toggle when active; add AI apply telemetry and
+  update UI
+  ([`c700f7e`](https://github.com/RamonOpazo/sero/commit/c700f7e65bd59f699646ad2d383283ecd2f5db94))
+
+Backend: - Add AiApplyTelemetry and AiApplyResponse to documents schema - Update
+  /documents/id/{id}/ai/apply to return AiApplyResponse - Ensure empty-commit scenario returns empty
+  selections with zeroed telemetry
+
+Frontend: - Update DocumentViewerAPI.applyAi to return { selections, telemetry } - Move AI action to
+  prompt commander with Bot icon and toast including filtered/returned stats - Highlight prompts
+  toolbar button when panel is open - Fix TS build errors (remove unused imports/vars, minor
+  signature cleanup)
+
+- **document-viewer**: Introduce UnifiedDocumentViewerProvider and migrate usage
+  ([`8ac9584`](https://github.com/RamonOpazo/sero/commit/8ac9584c67203c3ba4972869768407aade47ad9c))
+
+- add providers/unified-document-viewer-provider composing viewport, selection, prompt - export
+  unified provider from providers barrel; use in feature index - fix build: type-only import, avoid
+  unused vars/params warnings - ensure selection loader runs inside providers (kept in content)
+
+- **document-viewer**: Migrate InfoLayer selection stats to lifecycle (unstaged/staged/committed)
+  ([`2037c71`](https://github.com/RamonOpazo/sero/commit/2037c71aaf79b3a3777d20a123217cdd033336b9))
+
+- **document-viewer**: Pr1 — introduce lifecycle types and mappers
+  ([`e5d6e42`](https://github.com/RamonOpazo/sero/commit/e5d6e42ba0a656283688b4540f1e1651c33e166f))
+
+- Add UISelectionStage enum and UISelection type for lifecycle model - Add
+  selection-lifecycle-mapper utilities (api<->ui, merge) - Export lifecycle types; add unit tests
+  for mapper - Mark PR1 as completed in the refactor plan doc
+
+- **document-viewer**: Pr2 — add lifecycle-based uiSelections in provider (compat only)\n\n-
+  Introduce uiSelections (UISelection[]) derived from persisted/draft for now\n- Expose in context
+  while keeping existing API stable\n- Update refactor plan doc to mark PR2 complete\n
+  ([`0810535`](https://github.com/RamonOpazo/sero/commit/0810535b4881b88037205cff45ccf2abc8cd3f33))
+
+- **document-viewer**: Pr3 — lifecycle-based save/commit pathways
+  ([`8bbd96a`](https://github.com/RamonOpazo/sero/commit/8bbd96a11b1753b726f8a28d61ca290767fa7aba))
+
+- Add saveLifecycle and commitLifecycle in selection provider, translating UISelection lifecycle to
+  API ops - Avoid TDZ by deriving ui view from state within the saver - Mark PR3 done in plan; tests
+  pass
+
+- **document-viewer**: Pr4 — switch hook to lifecycle model\n\n- use-stage-commit now reads
+  uiSelections lifecycle and uses saveLifecycle/commitLifecycle\n- Plan doc updated to mark PR4
+  complete; tests pass\n
+  ([`2e91bdd`](https://github.com/RamonOpazo/sero/commit/2e91bdd07003163757ad7e085d8cecac34ec5761))
+
+- **document-viewer/selections**: Align SelectionsLayer and provider with domain-manager v2
+  ([`00e2c95`](https://github.com/RamonOpazo/sero/commit/00e2c9578ffb8b4906df23bfddbdb076a9d0bf24))
+
+- use UPDATE_ITEM for edits and BEGIN/END batch for drag - show live drawing via getCurrentDraw with
+  fallback - preserve temp ID on FINISH_DRAW; add drafts without regenerating ID - capture baseline
+  after loading selections to track updates - style new/modified via pendingChanges
+
+- **document-viewer/selections**: Deterministic history + proper batching
+  ([`53638bb`](https://github.com/RamonOpazo/sero/commit/53638bbddc3a7bcdd8717e17f5fb6e2770adda4a))
+
+- record creates via CRUD in FINISH_DRAW so history captures create - suppress granular updates
+  during drag; snapshot on BEGIN_BATCH, single UPDATE on END_BATCH - route CLEAR_PAGE via
+  DELETE_ITEMS to leverage history - reset baseline and clear history after successful save/commit -
+  rely entirely on domain-manager v2 behaviors (crud, changeTracking, history, historyIntegration,
+  batch)
+
+- **documents**: Add template selections endpoint and render read-only template overlays\n\n-
+  backend: add GET /documents/id/{document_id}/template-selections in controller/router\n- frontend:
+  API client method, provider loading + filtering (ignore out-of-range pages), read-only overlay
+  rendering\n- provider: single reload() refreshes document and template selections
+  ([`42855f5`](https://github.com/RamonOpazo/sero/commit/42855f575acad7adf1d3aa9c6c8278bd2b7668dd))
+
+- **editor-view**: Simplify state rendering with compact conditional blocks; keep EmptyState-based
+  UX and password dialog
+  ([`19206fa`](https://github.com/RamonOpazo/sero/commit/19206faf725082861cd581aeda4299a44f78292d))
+
+- **frontend**: Add 'Scope to Project' action in documents table and API call to set project-scoped
+  template
+  ([`38189ba`](https://github.com/RamonOpazo/sero/commit/38189ba4117e445b14ebee5c27880bb113242721))
+
+- **frontend**: Add encrypted credential API methods and update trust migration plan
+  ([`6bf31f0`](https://github.com/RamonOpazo/sero/commit/6bf31f0c3182c43dae1efad1a2f00cca95105611))
+
+- **frontend**: Add Scope column to documents table using badges (outline; warning for project,
+  muted for document)
+  ([`0946ea4`](https://github.com/RamonOpazo/sero/commit/0946ea46563ce67c6c35354f22690bad2d271e46))
+
+- **frontend**: Add zod schemas and types for AI detections (AiDetection, AiBox) with parser
+  ([`aa8a58c`](https://github.com/RamonOpazo/sero/commit/aa8a58c2c6e28c12cc17ce067ffb28decc293b6b))
+
+- **frontend**: Align Help overlay with Info — sidebar width, minimal sections, and smooth
+  enter/exit transitions
+  ([`341cd1e`](https://github.com/RamonOpazo/sero/commit/341cd1ef9ee1142ae7c5788492b1987626e97459))
+
+- **frontend**: Auto-retry project redaction once on trust refresh; extend trust session to 30
+  minutes
+  ([`74125d2`](https://github.com/RamonOpazo/sero/commit/74125d23c9098c7c193c5ae5d929cb42a89864ad))
+
+- **frontend**: Beautiful credentials dialog + document runs use session creds
+  ([`c1dbe83`](https://github.com/RamonOpazo/sero/commit/c1dbe83875fb96128145e41db1b9c1c2c2eeb38b))
+
+- Extend FormConfirmationDialog with password field\n- Add CredentialConfirmationDialog based on
+  shared dialog styling\n- Use AiCredentialsProvider dialog\n- Document PromptCommander now uses
+  ensureCredentials() and passes {keyId, encryptedPassword} to streaming\n- Build passes (pnpm -C
+  src/frontend build)
+
+- **frontend**: Encrypt bulk upload via ProjectTrustProvider; remove password field from upload
+  dialog
+  ([`9153c83`](https://github.com/RamonOpazo/sero/commit/9153c83c1bbc572bcaf275fd4896bcc0a77668ca))
+
+- **frontend**: Extract keyboard, wheel, and mouse handlers from unified-viewport into input modules
+  ([`0b9d512`](https://github.com/RamonOpazo/sero/commit/0b9d5129ae96b48fc8c372be6da97b07e47daddf))
+
+- **frontend**: Global processing chin + AI streaming progress wiring
+  ([`e6d0b3f`](https://github.com/RamonOpazo/sero/commit/e6d0b3f7b8997b0b41ef6a3e056cb71c7041e8c2))
+
+- Add GlobalProcessingChin UI and container; mount in MainLayout\n- Enhance AiProcessingProvider
+  with cancel registry and job state\n- Extend DocumentViewerAPI streaming handlers with enhanced
+  status fields\n- Wire Prompt Commander to provider and streaming events\n- Build passes (pnpm -C
+  src/frontend build)
+
+- **frontend**: Introduce Swagger page and migrate docs to public/docs
+  ([`3be7fa2`](https://github.com/RamonOpazo/sero/commit/3be7fa214e289ceb0e637add8530030ac8801f11))
+
+- **frontend**: Overhaul application layout with responsive sidebar
+  ([`5135021`](https://github.com/RamonOpazo/sero/commit/51350212fe7a81774ac284205b3cf5fc9f41a310))
+
+This commit introduces a complete overhaul of the frontend application layout, replacing the static
+  layout with a modern, responsive, and collapsible sidebar navigation system.
+
+Key changes include: - A new `Sidebar` component, which is collapsible, responsive for mobile, and
+  configurable. - A completely redesigned main `Layout` that integrates the new sidebar. - New UI
+  components such as `Widget`, `Avatar`, `Tooltip`, and `Collapsible` to build a more consistent and
+  polished interface. - Refactored application routing (`App.tsx`) to be more semantic and RESTful
+  (e.g., `/projects/:id/documents`). - An improved `Breadcrumbs` component that dynamically
+  generates paths based on the new routing structure. - A new `HomeView` to serve as the
+  application's landing page. - Enhancements to the `DataTable` component for better alignment and a
+  cleaner look.
+
+- **frontend**: Project Trust Session provider and gating
+  ([`ed2fcf4`](https://github.com/RamonOpazo/sero/commit/ed2fcf4fa68adfbb96f214d3518601e0bb307873))
+
+- Add ProjectTrustProvider (session-scoped, TTL) with beautiful credential dialog\n- Wrap app with
+  ProjectTrustProvider\n- Use ensureProjectTrust(projectId) for project AI runs and document AI
+  runs\n- Keep encryption local; pass {keyId, encryptedPassword} to streaming\n- Build passes (pnpm
+  -C src/frontend build)
+
+- **frontend**: Project-level AI run wiring + global chin cancel
+  ([`bbf264d`](https://github.com/RamonOpazo/sero/commit/bbf264d6413ee4357ec99cab0c9d5621dcbe24b0))
+
+- Add Cancel to GlobalProcessingChin and wire via provider\n- Add ai-runner helper to map project
+  streaming events to provider\n- Add Run AI (project) action in Projects table\n- Build passes:
+  pnpm -C src/frontend build
+
+- **frontend**: Refine selection visuals — add subtle brightness backdrop, solid tint, and tighter
+  135° hatch spacing
+  ([`0140946`](https://github.com/RamonOpazo/sero/commit/01409464eead0b92d94d04d75ab929f2078202be))
+
+- **frontend**: Session-scoped encrypted credentials cache + project run integration
+  ([`d9215f8`](https://github.com/RamonOpazo/sero/commit/d9215f886798025039091846495524369be21fe3))
+
+- Add AiCredentialsProvider with TTL in-memory cache; never store plaintext\n- Wrap app with
+  credentials provider\n- Projects: fetch AI settings, ensure credentials via provider, and start
+  project run with {keyId, encryptedPassword}\n- Migration doc:
+  docs/frontend-ai-credentials-session-cache.md\n- Build passes (pnpm -C src/frontend build)
+
+- **frontend**: Show completion summary with totals for project redaction; default scope to pan and
+  persist; cancel stale jobs
+  ([`f700624`](https://github.com/RamonOpazo/sero/commit/f700624e56f3555239f0188807ba6e0eaa48cf7f))
+
+- **frontend**: Use shallow metadata and fix redacted toggle wiring\n\n- Switch listing and editor
+  to shallow API\n- Rely on is_processed to enable redacted toggle\n- Plumb shallow fetch by id into
+  editor view
+  ([`9fc2704`](https://github.com/RamonOpazo/sero/commit/9fc270463baeb631f4c87cd114230905b5e20810))
+
+- **frontend**: User-friendly hints for per-document outcomes in batch redaction
+  ([`025e7d2`](https://github.com/RamonOpazo/sero/commit/025e7d26a1d1a9bf6ce4c9e7a9656421238e2f17))
+
+- **frontend**: Wire Run AI Detection to /documents/{id}/ai/apply and refresh selections
+  ([`550cca6`](https://github.com/RamonOpazo/sero/commit/550cca684b6ee4902762b7cdd722d036a3062628))
+
+- add reload() to selection-provider and use after AI apply - keep telemetry toast; align with
+  backend AiApplyResponse
+
+- **panels**: Auto-open Info layer when Document Controls is active; ensure selections are visible
+  when Selection Manager is active
+  ([`8e60b23`](https://github.com/RamonOpazo/sero/commit/8e60b23435b53e0a0d0477465ab8bb12bd8559f5))
+
+- **panels**: Sync Selections Panel open/close with Selection Manager widget; expose
+  setShowSelectionsPanel in viewport state; keep selections visible when managing
+  ([`a9f363a`](https://github.com/RamonOpazo/sero/commit/a9f363a49c6af0b950db702ff88e823f00931e7c))
+
 - **Phase 11**: Complete documentation migration and final cleanup
   ([`efbaac0`](https://github.com/RamonOpazo/sero/commit/efbaac008c17a43e526cac2cfb7f755420968591))
 
@@ -2184,6 +2010,85 @@ BREAKING CHANGE: Documentation now served from markdown files, not TSX component
 
 COMPLIANCE: Phase 10/11 complete - all dialogs now domain-owned, zero legacy exports
 
+- **projects**: Project-scoped document handling updates across backend and frontend
+  ([`bb4a564`](https://github.com/RamonOpazo/sero/commit/bb4a56430e075f983a80922eb04d205ac8c19421))
+
+- **projects**: Streaming redaction with required scope
+  ([`f6b6426`](https://github.com/RamonOpazo/sero/commit/f6b6426c9446c213946f071f3294121214282a04))
+
+- Backend: - Add RedactionScope enum (DOCUMENT, PROJECT, PAN) - Define ProjectRedactionRequest with
+  required scope - Add /projects/id/{project_id}/redact/stream SSE endpoint - Implement
+  redact_stream in projects_controller with scope filtering, decrypt+redact, file save, and events -
+  Tests: - Integrate SSE redaction tests into test_projects_controller (happy path, scope filtering)
+  - Frontend: - Add RedactionScope enum to types/enums - Implement ProjectsAPI.redactProjectStream
+  (SSE client) - Update projects-data-table Run Redaction dialog to select scope and use streaming
+  API
+
+- **prompts**: Change directive input to select with sensible options in add/edit dialogs
+  ([`a97baaa`](https://github.com/RamonOpazo/sero/commit/a97baaa8b3c03aede6fb4a7d96d705f8b11930d3))
+
+- **prompts**: Create prompts as committed and persist immediately to avoid data loss
+  ([`3f3bc3a`](https://github.com/RamonOpazo/sero/commit/3f3bc3a00df63691d942f0ec1c7874219764931d))
+
+- **prompts**: Stable Prompt Panel toggling via R/ESC + tooldeck state handler; add AI badge and
+  filter select to SelectionList
+  ([`897811e`](https://github.com/RamonOpazo/sero/commit/897811e6f6a8c2a72edcd56fca5e03defb603472))
+
+- **schema**: Align Pydantic schemas with DB constraints; update migration plan
+  ([`b91708d`](https://github.com/RamonOpazo/sero/commit/b91708d7242cf5a26dc83334de83a199a9362912))
+
+- **schemas**: Remove tags; add scope/state to prompts and selections with back-compat computed
+  fields
+  ([`18ce56b`](https://github.com/RamonOpazo/sero/commit/18ce56b77c8db67366761432392e27ff01c8650f))
+
+- **selection**: Add commit endpoint to flip staged selections to committed; add request schema
+  ([`69bf1c8`](https://github.com/RamonOpazo/sero/commit/69bf1c89b615fab4a0b0f5e9b22397addf09cb5b))
+
+- **selection**: Add staged selections via committed flag and use only committed in redaction
+  ([`d73eecb`](https://github.com/RamonOpazo/sero/commit/d73eecb763fd7ba13f12dc63352f7664b1552513))
+
+- **selection-commander**: Add auto-stage option in commit dialog; wire useStageCommit(commitAll) to
+  stage before commit when enabled; introduce warnings and messages; integrate
+  FormConfirmationDialog for prompts UI
+  ([`54e6bdb`](https://github.com/RamonOpazo/sero/commit/54e6bdbc65e71570e6bdd48330ac2c29d575887f))
+
+- **selection-list**: Replace per-row action buttons with a single actions dropdown menu; keep
+  badges and dialogs intact
+  ([`c716fa2`](https://github.com/RamonOpazo/sero/commit/c716fa28fc946445af6f7dc58b1f19686b999ee9))
+
+- **selections**: Add committed→staged conversion flow (dialog + provider), disable page/global on
+  committed, and finalize state-driven visuals
+  ([`9feef7c`](https://github.com/RamonOpazo/sero/commit/9feef7c15decfc6d231b8366e4587dfcd3f47dc9))
+
+- **selections**: Enforce staged workflow backend and frontend; local drafts undefined,
+  staged-deletion marking, conversion endpoint, and state-driven visuals
+  ([`8840092`](https://github.com/RamonOpazo/sero/commit/8840092e6556bd25aa4ab976a456aadb204121fd))
+
+- **selections-panel**: Add inline switches: Stage (committed→staged) and Global toggle with async
+  handling and toasts; panel-only controls; preserve badge and delete
+  ([`171ea66`](https://github.com/RamonOpazo/sero/commit/171ea66865ad9a70dcf9304d78daa18725caeec5))
+
+- **selections-panel**: Improve list container to use full height; prepare for alternating row
+  backgrounds; ongoing panel integration and actions-layer split
+  ([`d3470f3`](https://github.com/RamonOpazo/sero/commit/d3470f3325164689e14c5065d11be1c887042d63))
+
+- **ui**: Add SimpleConfirmationDialog wrapper (no input) and align file structure with typed dialog
+  ([`69f92b3`](https://github.com/RamonOpazo/sero/commit/69f92b3053274d17a3085d495d568546a1df58f5))
+
+- **ui**: Add status variants to Badge/Button and update documents table statuses
+  ([`16cb90c`](https://github.com/RamonOpazo/sero/commit/16cb90ce288b6f435d99425a47e8bbe3254ef43b))
+
+- **ui**: Add TypedConfirmationDialog and integrate confirmations for Stage & Commit commander
+  (colored alerts, one-word prompts)
+  ([`eceb1ec`](https://github.com/RamonOpazo/sero/commit/eceb1ecbcf7f1af47306a7750e48d2e0de5c48d6))
+
+- **ui**: Make processing chin part of layout flow (non-fixed) and render at bottom of content
+  ([`9ef617a`](https://github.com/RamonOpazo/sero/commit/9ef617a049a33d4edfa16fb31b2459aed9a29c07))
+
+- **ui**: Use FormConfirmationDialog for prompt creation and persist as committed; fix typed dialog
+  to render form fields without confirmation input
+  ([`918023d`](https://github.com/RamonOpazo/sero/commit/918023de978a7f55fd23e29cdf501129a73be5cf))
+
 - **ui-extensions**: Add semantic button and badge variants with clean data table styling
   ([`74a551d`](https://github.com/RamonOpazo/sero/commit/74a551dfbb471c417d4f71d54e77786561b5e561))
 
@@ -2194,6 +2099,59 @@ COMPLIANCE: Phase 10/11 complete - all dialogs now domain-owned, zero legacy exp
   row colors from data table for cleaner appearance - Add solid borders between data table rows
   using border-border - Maintain selected row styling with muted background - Update ui-extensions
   index to export Button and Badge components
+
+- **viewer**: Add T toggle for original/redacted; convert Help to KeyboardShortcutsDialog and wire
+  toolbar + shortcuts
+  ([`b49f814`](https://github.com/RamonOpazo/sero/commit/b49f814b02e9d1ec5451e9e13e9ccb3293eb4bdc))
+
+- **viewer**: Centralize actions in Actions Layer, tabbed workbench, and hover pager\n\n- Actions
+  Layer: add View/Selections/AI Rules/Document menus; integrate pan/select in View; remove overlay
+  panel toggles; quick zoom/info shortcuts\n- Workbench: Selections and AI Rules as tabs in the
+  tooldeck (lists/details only)\n- Viewport: remove legacy selections/prompt overlay panels; pass
+  document to ActionsLayer\n- Provider: add activeControlsPanel + activeWorkbenchTab with setters to
+  sync tooldeck state\n- UI: restore bottom mini-pager, visible on hover like the top bar\n- Fix:
+  avoid DOM shadowing by using globalThis.document in ActionsLayer
+  ([`9dea6b5`](https://github.com/RamonOpazo/sero/commit/9dea6b5ea547f427957586c880ef8acf39ea80b8))
+
+- **viewer**: Introduce Menubar (View menu) in Actions Layer\n\n- Add shadcn Menubar to top Actions
+  bar with a View menu\n- Migrate View actions: Zoom In/Out, Reset, Pan/Select toggle, Selections
+  visibility, Info toggle, Page prev/next, Toggle Original/Redacted\n- Keep Selections, AI Rules,
+  and Document as DropdownMenus (to be migrated next)\n- Show shortcut hints with MenubarShortcut
+  ([`5767f6b`](https://github.com/RamonOpazo/sero/commit/5767f6bae1cc627875f253591e7d4f8fe81c0d3b))
+
+- **viewer**: Introduce Selections Panel layer (right-side panel) with lifecycle summary and
+  redesigned list; add showSelectionsPanel state and toggles; wire into layout and actions bar
+  ([`23049bd`](https://github.com/RamonOpazo/sero/commit/23049bdf13bd41abb7fca82c99db1d3d12e197ea))
+
+- **viewer**: Migrate AI Rules menu to Menubar in Actions Layer\n\n- Replace AI Rules DropdownMenu
+  with Menubar (Run AI detection, Add Rule, Clear all rules, Open Workbench)\n- Add shortcut hints
+  for common actions (Ctrl+Alt+A, Ctrl+N, Shift+Del)\n- Handlers unchanged; dialogs retained
+  ([`871672b`](https://github.com/RamonOpazo/sero/commit/871672b6e625b6d668ff58bc62a4ff0f019175c1))
+
+- **viewer**: Migrate Document menu to Menubar in Actions Layer\n\n- Replace Document DropdownMenu
+  with Menubar (Process document, Download current view)\n- Add shortcut hints (Ctrl+P, Ctrl+D)\n-
+  Remove unused DropdownMenu imports from ActionsLayer
+  ([`c7534a6`](https://github.com/RamonOpazo/sero/commit/c7534a673273140f124d437d53468b4e58df524b))
+
+- **viewer**: Migrate Selections menu to Menubar in Actions Layer\n\n- Add Selections menu to shadcn
+  Menubar (Commit staged, Stage all, Discard unsaved, Clear Current/All, Open Workbench)\n- Remove
+  Selections DropdownMenu (AI Rules and Document remain dropdowns for now)\n- Show shortcut hints
+  for common actions
+  ([`76c9806`](https://github.com/RamonOpazo/sero/commit/76c9806db4ea676e603d6e762cbbc9d7b13243ba))
+
+- **viewer**: Move Selections Panel to left, match Info layer styling; add panelMode list style and
+  keep delete/global controls; panels are mutually exclusive via provider
+  ([`35e0acc`](https://github.com/RamonOpazo/sero/commit/35e0accc92a515ca9018adf9894298796e325abd))
+
+- **viewer**: Scaffold new viewport architecture and add migration plan
+  ([`d7ac0e7`](https://github.com/RamonOpazo/sero/commit/d7ac0e74dc676ea6eec01aa06f5122c0951045fb))
+
+- **viewer**: Show prompt lifecycle summary (total, saved, new, staged, pending) in prompt panel
+  ([`7b6d7e8`](https://github.com/RamonOpazo/sero/commit/7b6d7e826685bd2071ff655b43928bc41f3ef5a9))
+
+- **viewer hotkeys**: Esc closes help/info/selections panels (in order); add (L) to toggle
+  Selections panel
+  ([`83a3c52`](https://github.com/RamonOpazo/sero/commit/83a3c523d033324892f94f8a997fc66bd228f6ba))
 
 ### Performance Improvements
 
@@ -2218,6 +2176,15 @@ The resize experience is now buttery smooth without the delay/lag that was cause
   SelectionProvider context - Refactor SelectionCommander to use SelectionManager.saveAllChanges
   instead of direct API calls - Remove unused imports and variables - Maintain consistent
   architecture pattern with PromptManager - All builds pass successfully
+
+- Added optional ids for selection and prompt creation, and reflected changes on the frontend side.
+  ([`b51c82c`](https://github.com/RamonOpazo/sero/commit/b51c82c7e84201806ad2eeb10e802bf9c94edd1e))
+
+- Better column handling of datatables.
+  ([`adf5112`](https://github.com/RamonOpazo/sero/commit/adf511206da41d57a53178de05ef4c65ea6e8264))
+
+- Clean up file viewer component and minor tweaks to the rest of the UI
+  ([`3b84b6c`](https://github.com/RamonOpazo/sero/commit/3b84b6c45543a46dd242de9dc033f171077b463d))
 
 - Clean up stale selection handlers and redundant code
   ([`be3d410`](https://github.com/RamonOpazo/sero/commit/be3d4102be44367194bd9918234019882116392c))
@@ -2289,6 +2256,9 @@ MAJOR REFACTORING - Document Viewer Module Restructuring:
 This establishes the new standard pattern for all complex component modules: use index.tsx as
   consolidated entry point for components with sub-structure.
 
+- Complete overhaul of the document-viewer component for propper PDF rendering and selection layer.
+  ([`0b8e147`](https://github.com/RamonOpazo/sero/commit/0b8e147d23aa7779bf2aa41bd4e05091a868edfd))
+
 - Create clean API layer architecture and eliminate redundant useProjects hook
   ([`20741ef`](https://github.com/RamonOpazo/sero/commit/20741ef0995be45b0f3ac2a8476c795b05aedd82))
 
@@ -2330,381 +2300,6 @@ Semantic Distinction: - 'Workspace': App-wide state management (persistence, ini
   clear mental model: workspace contains projects, not the other way around
 
 Build Status: ✅ Passing Consistency: ✅ All naming semantically aligned with purpose
-
-- Move utility classes from React components to CSS
-  ([`95b4514`](https://github.com/RamonOpazo/sero/commit/95b4514012e009b8b1940f0299a9e76e744e6086))
-
-- Extracted bg-background, relative, flex, w-full, h-full, flex-col, overflow-hidden from React
-  components to CSS - Simplified GridSidebar and GridSidebarInset components by removing inline
-  utility classes - Removed unused useIsMobile import and variable - Better separation of concerns:
-  CSS handles styling, React handles logic - Improved maintainability with cleaner component code -
-  Preserved all layout functionality and responsive behavior
-
-- Reduce CSS important usage by 76 percent
-  ([`4ec7f60`](https://github.com/RamonOpazo/sero/commit/4ec7f604564c3a67be3e3b0a2c925b927e5e2657))
-
-- Remove 'Refactor' prefix from all components and clean up naming
-  ([`973e0d8`](https://github.com/RamonOpazo/sero/commit/973e0d883e344879d3404e64363b02038c8db1f4))
-
-- Rename RefactorApp.tsx → App.tsx - Rename RefactorProjectProvider.tsx → ProjectProvider.tsx -
-  Rename useRefactor* hooks → use* hooks (useProjects, useDocuments, useFiles) - Rename Refactor*
-  components → clean component names - Update all imports and references throughout the codebase -
-  Remove old unused files (FilesView, etc.) - Clean up component exports in views/index.ts
-
-This removes the temporary 'Refactor' prefixes that were used during development and establishes
-  clean, production-ready naming conventions across the frontend.
-
-- Remove obsolete DocumentEditor and useFiles after editor-view migration
-  ([`d16103e`](https://github.com/RamonOpazo/sero/commit/d16103e543569638d8644aa3387668ef7fd86c63))
-
-- Remove useFiles hook dependency from workspace-provider - Simplify workspace-provider to only
-  manage project/document selections - Move document data hooks to
-  document-viewer/hooks/use-document-data.ts - Add prompts/selections API functions to editor-api.ts
-  - Update SelectionCommander and useSelectionLoader to use new hook location - Remove obsolete
-  DocumentEditor folder and useFiles hook - Clean up unused imports and exports
-
-The editor-view now properly handles its own file management while document-viewer components have
-  their data fetching hooks co-located. Workspace-provider is simplified to focus only on
-  cross-component state.
-
-- Remove unused global hooks and create document-viewer API
-  ([`09ccb5a`](https://github.com/RamonOpazo/sero/commit/09ccb5ac15b387bc9dda2aad07d6f863dc1fedb7))
-
-- Remove obsolete usePrompts.ts and useSelections.ts from global hooks - These were not being used
-  (document-viewer has its own providers) - Create document-viewer-api.ts with centralized API
-  functions: - Prompt operations: fetch, create, update, delete - Selection operations: fetch,
-  create, update, delete - Update DIRECTORY_STRUCTURE.md to reflect changes - Update hooks/index.ts
-  to remove unused exports
-
-Next step: Refactor document-viewer components to use the new API for proper separation of concerns
-  (API logic -> lib/, UI logic -> components/)
-
-- Rename ProjectProvider to WorkspaceProvider with dashed-case naming
-  ([`1c8ac82`](https://github.com/RamonOpazo/sero/commit/1c8ac826a2fcb0212ee093f846550a9852e8493d))
-
-✅ ARCHITECTURAL IMPROVEMENT: Better semantic naming for app-wide state manager
-
-Key Changes: - Renamed ProjectProvider.tsx → workspace-provider.tsx (dashed-case file naming) -
-  Updated ProjectProvider → WorkspaceProvider (more accurate scope) - Updated useProject →
-  useWorkspace (clearer purpose) - Renamed internal types: ProjectState → WorkspaceState,
-  ProjectAction → WorkspaceAction - Updated all imports across codebase to use new naming - Added
-  mandatory dashed-case file naming directive to DIRECTORY_STRUCTURE.md
-
-Rationale: - WorkspaceProvider manages projects, documents, AND files (not just projects) -
-  Dashed-case files provide visual distinction from PascalCase functions/components - useWorkspace
-  is clearer than useProject for accessing app-wide workspace state - Eliminates naming confusion -
-  'Project' now specifically refers to project entities
-
-Build Status: ✅ Passing Architecture: ✅ Fully compliant with DIRECTORY_STRUCTURE.md directives
-
-- Reorganize view components into dedicated views/ directory
-  ([`644f982`](https://github.com/RamonOpazo/sero/commit/644f98271a44ed9f45571f7dabc42a8d4c8247df))
-
-- Move projects-view, documents-view, and editor-view from components/ to views/ - Update all import
-  paths to use new @/views/* structure - Create views/index.ts for clean public API exports - Update
-  DIRECTORY_STRUCTURE.md to reflect new architecture: - Views now properly separated from reusable
-  components - Updated import examples and domain boundaries - Clarified view vs component
-  responsibilities - Maintain all existing functionality with improved organization
-
-This establishes a clearer separation between: - views/: Application-specific view components with
-  business logic - components/: Reusable UI components and shared functionality - features/: Complex
-  self-contained features like document-viewer
-
-- Replace complex tab system with unified DocumentViewer
-  ([`062d84a`](https://github.com/RamonOpazo/sero/commit/062d84a9fb24de55621941f4e4aee49928f5653e))
-
-- Remove unnecessary Preview/Prompts/Selections/Info tabs in FileViewer - Use DocumentViewer's
-  built-in ORIGINAL/REDACTED toggle functionality - Simplify FileViewer to show single
-  DocumentViewer instance - All viewer functions (selections, prompts, info) accessible via right
-  sidebar - Clean up unused imports and state variables - Maintain existing password handling and
-  file loading logic
-
-This leverages the existing toggle button in the Controls component for switching between original
-  and redacted documents, providing a cleaner UX while preserving all functionality.
-
-- Simplify CSS Grid sidebar layout
-  ([`8dd834d`](https://github.com/RamonOpazo/sero/commit/8dd834d3f12d1a66c35eb576ae579b484b3860d2))
-
-- Remove redundant width calculations - let grid handle sizing - Eliminate verbose comments and
-  section dividers - Trust CSS Grid variables for automatic column sizing - Reduce file size by ~60%
-  while maintaining functionality - Clean, minimal comments focused on essential context
-
-- Standardize component structure with dashed-case naming and clean architecture
-  ([`d2cf5bd`](https://github.com/RamonOpazo/sero/commit/d2cf5bdb74f24292143a878f8a6d96308ce90fea))
-
-- Rename all component directories to dashed-case (documents-view, projects-view, layout) - Rename
-  all component files to dashed-case for consistency - Refactor documents management to follow clean
-  architecture pattern: * Extract DocumentsAPI utility for centralized API operations * Consolidate
-  useDocuments functionality into useDocumentsView * Remove document CRUD operations from
-  WorkspaceProvider (keep only selection state) * Update documents to use bulk upload instead of
-  individual creation - Apply same architectural patterns as projects management for consistency -
-  Update all imports and exports to use new dashed-case paths - Maintain component name conventions
-  (PascalCase for React components) - Ensure TypeScript type safety and build integrity
-
-This creates a consistent, maintainable codebase with proper separation of concerns where workspace
-  manages selection state and components manage their own CRUD operations.
-
-- Standardize theme context to follow provider pattern
-  ([`637d773`](https://github.com/RamonOpazo/sero/commit/637d773b8e79becb11367aeeeed4b746749cb6d9))
-
-- Rename ThemeContext.tsx to theme-provider.tsx for dashed-case consistency - Restructure theme
-  context to match workspace-provider pattern: * Separate ThemeState interface for state structure *
-  ThemeContextType interface for provider contract * Proper memoization with useMemo and useCallback
-  * Consistent error handling and context validation - Update ThemeToggle component to use new
-  useTheme hook interface - Maintain all existing functionality while improving code consistency -
-  Follow same architectural patterns as other context providers
-
-This creates consistent provider patterns across all context implementations.
-
-- Update PromptManager to use DocumentViewerAPI
-  ([`b22cc85`](https://github.com/RamonOpazo/sero/commit/b22cc85df3113d001df8ea36ab73f9e9c10a89a5))
-
-- Updated PromptManager to use DocumentViewerAPI instead of direct api calls - Centralized all
-  prompt operations: loadPrompts, createPrompt, updatePrompt, deletePrompt - Improved separation of
-  concerns: API logic -> lib/, business logic -> managers/ - Next: Update SelectionManager to follow
-  the same pattern
-
-- **selections**: Improve selection UI and fix critical page assignment bug
-  ([`74e5a4f`](https://github.com/RamonOpazo/sero/commit/74e5a4f6961baff0991e98864d26f336ae5b01f5))
-
-- Remove context menu from SelectionsLayer for cleaner interaction - Implement comprehensive
-  selection border color system: - Yellow: Global selections (page_number === null) - Green:
-  New/unsaved selections - Purple: Modified saved selections (more vibrant) - Gray: Unchanged saved
-  selections - Blue: Currently selected - Fix critical bug where page_number 0 was converted to null
-  during save - Change || to ?? operator to preserve falsy page numbers - Ensures Page 1 selections
-  stay page-specific instead of becoming global - Remove debug logging after confirming selection
-  logic works correctly
-
-
-## v0.4.0 (2025-07-30)
-
-### Bug Fixes
-
-- Fixed an issue between the selection layer and the document layer, in which the selections were
-  rendered before the page was rendered, thus producing a race condition that affected the
-  calculation of the selections' size.
-  ([`6ef21ab`](https://github.com/RamonOpazo/sero/commit/6ef21abeee3398b5db0ef8e7cd5cf0e1eaa12808))
-
-- Fixed issue in the document layer in which, upon zooming on a given document, it blew up the its
-  container, overflowing and breaking the view.
-  ([`eb8d757`](https://github.com/RamonOpazo/sero/commit/eb8d757ac11337f1d4eea15a9bb050b17610654d))
-
-### Chores
-
-- **release**: V0.4.0 [skip ci]
-  ([`d698ec2`](https://github.com/RamonOpazo/sero/commit/d698ec21aa450c9e1c711e5cac0e8d7e90e5cc76))
-
-### Features
-
-- Enhance DataTable and refine UI/layout
-  ([`eda16a5`](https://github.com/RamonOpazo/sero/commit/eda16a57adb3aeabf66c5f563116ae6455665146))
-
-- Improve selection layer synchronization and visibility
-  ([`7edd7e9`](https://github.com/RamonOpazo/sero/commit/7edd7e99c371e856e511f93016cc0c72845777de))
-
-- Visual improvement and new actions in document viewer.
-  ([`e04d95a`](https://github.com/RamonOpazo/sero/commit/e04d95a084e3c447f965bea74654839a4b4c359d))
-
-- Working panning and zooming, with correct positioning (though a little bit laggy) of the selection
-  layer.
-  ([`77aa204`](https://github.com/RamonOpazo/sero/commit/77aa2044a94f801ad5397b17a8ad94bef992debf))
-
-- **frontend**: Overhaul application layout with responsive sidebar
-  ([`5135021`](https://github.com/RamonOpazo/sero/commit/51350212fe7a81774ac284205b3cf5fc9f41a310))
-
-This commit introduces a complete overhaul of the frontend application layout, replacing the static
-  layout with a modern, responsive, and collapsible sidebar navigation system.
-
-Key changes include: - A new `Sidebar` component, which is collapsible, responsive for mobile, and
-  configurable. - A completely redesigned main `Layout` that integrates the new sidebar. - New UI
-  components such as `Widget`, `Avatar`, `Tooltip`, and `Collapsible` to build a more consistent and
-  polished interface. - Refactored application routing (`App.tsx`) to be more semantic and RESTful
-  (e.g., `/projects/:id/documents`). - An improved `Breadcrumbs` component that dynamically
-  generates paths based on the new routing structure. - A new `HomeView` to serve as the
-  application's landing page. - Enhancements to the `DataTable` component for better alignment and a
-  cleaner look.
-
-### Refactoring
-
-- Added optional ids for selection and prompt creation, and reflected changes on the frontend side.
-  ([`b51c82c`](https://github.com/RamonOpazo/sero/commit/b51c82c7e84201806ad2eeb10e802bf9c94edd1e))
-
-- Better column handling of datatables.
-  ([`adf5112`](https://github.com/RamonOpazo/sero/commit/adf511206da41d57a53178de05ef4c65ea6e8264))
-
-- Complete overhaul of the document-viewer component for propper PDF rendering and selection layer.
-  ([`0b8e147`](https://github.com/RamonOpazo/sero/commit/0b8e147d23aa7779bf2aa41bd4e05091a868edfd))
-
-- Refactored frontend import/exports.
-  ([`9763d29`](https://github.com/RamonOpazo/sero/commit/9763d29204bd5ffb5c265b1c58f3b7e56422ea7c))
-
-- Rename types and resolve map errors
-  ([`562f50f`](https://github.com/RamonOpazo/sero/commit/562f50fdbc52a0fa4bf8052e347c9c98b6415d55))
-
-
-## v0.3.0 (2025-07-26)
-
-### Chores
-
-- **release**: V0.3.0 [skip ci]
-  ([`48b84ab`](https://github.com/RamonOpazo/sero/commit/48b84ab84fa3fb1916561299f08db7915a44a4f7))
-
-### Features
-
-- **ci**: Disable build and publish steps in release workflow
-  ([`10aad44`](https://github.com/RamonOpazo/sero/commit/10aad4454d9d84e843a47a20233137cea59f10a4))
-
-Commented out the 'Build package' and 'Publish to PyPI' steps in the release workflow as they are
-  not currently needed and were causing errors.
-
-
-## v0.2.0 (2025-07-26)
-
-### Bug Fixes
-
-- Configure semantic release with VCS versioning
-  ([`35c1ae3`](https://github.com/RamonOpazo/sero/commit/35c1ae36cc2b1bd425ec17f140f45ad09d2dfbb2))
-
-- **ci**: Disable semantic-release build command
-  ([`1e71ab9`](https://github.com/RamonOpazo/sero/commit/1e71ab9688e32713da0b18424279a6134b7ff58a))
-
-The 'uv' command was not found in the semantic-release action's environment, causing the release
-  workflow to fail. This change disables the build step within semantic-release, as the build is
-  already handled by a separate step in the 'release.yml' workflow.
-
-### Chores
-
-- **release**: V0.2.0 [skip ci]
-  ([`c7ea276`](https://github.com/RamonOpazo/sero/commit/c7ea2764736b0e146e5d7af213aecd6e59cfefb5))
-
-### Documentation
-
-- **release**: Add PyPI publishing instructions to pyproject.toml
-  ([`601dedf`](https://github.com/RamonOpazo/sero/commit/601dedf2b82171b4f7cafcc2fbfb26615da23751))
-
-Removed the build_command from semantic-release configuration and added comments explaining how to
-  configure PyPI publishing, including build_command and upload_to_pypi.
-
-### Features
-
-- Complete SQLite migration with timezone-aware datetime handling
-  ([`9d38e82`](https://github.com/RamonOpazo/sero/commit/9d38e82bbb08a72a7b3b4f6c451ef15af541ba33))
-
-- Implement custom TimezoneAwareDateTime type for SQLite compatibility - Add comprehensive database
-  tests for UUID and SQLite functionality - Fix timezone validation issues in Pydantic schemas - Add
-  timezone-aware datetime tests with proper UTC handling - Update static assets after frontend
-  rebuild - Fix trailing slash issues in API test endpoints - Fix file download test parameter
-  requirements - All 114 tests now passing with complete test coverage - Robust SQLite backend with
-  WAL mode and foreign key constraints
-
-- Enhance document management with file upload and improved table functionality
-  ([`d10f416`](https://github.com/RamonOpazo/sero/commit/d10f4168d4ffa565f2556a20d49162d4d94219fd))
-
-- Replace CreateDocumentDialog with file upload functionality - Support multiple PDF file uploads
-  via bulk API endpoint - Add password field for document security - Include optional description
-  template for uploaded files - Update DocumentsView to use new upload workflow
-
-- Add description column to documents table - Display document descriptions with proper truncation -
-  Position between Status and Selections columns
-
-- Implement comprehensive table sorting - Add sorting to Status, Selections, Prompts, and Size
-  columns - Fix Name column sorting using proper accessorFn - Use numerical priorities for status
-  sorting (pending → processed → failed) - Sort by actual byte values for file sizes with
-  human-readable display
-
-- Update file size handling - Change File interface size field from string to number - Add
-  formatFileSize helper for byte-to-readable conversion - Sort by actual integer byte values while
-  displaying formatted sizes
-
-- Add toast notification for document ID copying - Show success/error feedback when copying document
-  IDs to clipboard - Match ProjectsView toast patterns for consistency
-
-- Improve toast messaging consistency - Align all document operation toasts with ProjectsView
-  patterns - Better error handling and user feedback across all operations
-
-- Implement frontend data integration and 30/70 layout with dark mode
-  ([`6573b9e`](https://github.com/RamonOpazo/sero/commit/6573b9ea892663453b1f54fd8ca4c3f01bf5204f))
-
-Frontend Integration: - Fix API routing issues by removing trailing slash requirements - Connect
-  ProjectsView to backend /api/projects endpoint - Connect DocumentsView to backend
-  /api/projects/id/{id} and /api/documents/search - Update TypeScript types to match actual backend
-  response structure - Fix document status detection and original file handling
-
-UI/UX Improvements: - Implement 30/70 sidebar layout with navigation - Add dark mode support with
-  ThemeProvider and ThemeToggle - Create responsive sidebar with Projects, Documents, Settings
-  navigation - Add smooth theme transitions and system theme detection - Include built frontend
-  assets in backend static directory
-
-Backend API Fixes: - Update API routers to handle routes without trailing slashes - Fix FastAPI
-  routing to prioritize API endpoints over frontend fallback - Add stream parameter to file download
-  endpoint for inline viewing - Update CORS and static file serving configuration
-
-Project Structure: - Frontend builds to src/backend/static for unified serving - API calls work
-  correctly from built frontend - Theme preferences persist in localStorage
-
-- Implement PDF redaction and obfuscation functionality
-  ([`83f6399`](https://github.com/RamonOpazo/sero/commit/83f639902137e2e226e014db658db7d4ee2cf06c))
-
-- Add PDFRedactor class with selection-based redaction using PyMuPDF - Implement document processing
-  API endpoint for applying redactions - Add comprehensive tests for PDF redaction and document
-  processing - Update FileViewer component with functional Obfuscate button - Add loading states and
-  error handling for obfuscation process - Implement automatic switching to obfuscated view after
-  processing - Ensure obfuscated files maintain same password encryption as originals - Fix
-  canObfuscate logic to enable button when selections exist - Add redaction markers with unique
-  UUIDs for traceability
-
-The obfuscated files are password-encrypted and created by applying black rectangles over
-  user-selected areas, extracting text content before redaction, and maintaining full audit trail
-  with redaction UUIDs.
-
-- Implement secure password management and fix coordinate normalization
-  ([`e114bd4`](https://github.com/RamonOpazo/sero/commit/e114bd44dbe99489dbb2041ae2ee40b36655ef55))
-
-Security improvements: - Remove passwords from URL parameters to prevent exposure in browser history
-  and server logs - Implement secure sessionStorage-based password management with automatic expiry
-  - Add activity-based password extension with throttling - Clean up expired passwords automatically
-
-PDF coordinate system improvements: - Implement normalized coordinates (0-1 range) for PDF
-  selections - Add coordinate conversion utilities in FilePDFViewer - Update selection rendering to
-  handle zoom-independent coordinates - Fix coordinate display in UI to show percentage values
-
-Technical improvements: - Add utility functions for throttle, debounce, and other common operations
-  - Fix TypeScript compilation errors and variable declaration order - Ensure consistent coordinate
-  handling across all components - Add comprehensive error handling and cleanup logic
-
-This commit addresses critical security vulnerabilities while improving the robustness of the PDF
-  selection system.
-
-- Improve DataTable column navigation with fixed-width pagination
-  ([`71fc16f`](https://github.com/RamonOpazo/sero/commit/71fc16f87cdbe1d5a8c6ec28a11195680a1cd144))
-
-- Replace horizontal scrolling with pagination-style column navigation - Add navigation column with
-  left/right buttons for one-column-at-a-time scrolling - Fix Actions column to always stay sticky
-  on the right side - Set fixed widths for navigation column (96px) and actions column (120px) -
-  Maintain selection column sticky on the left side - Show only 4 columns at a time with smooth
-  single-column navigation - Preserve all existing DataTable functionality (sorting, filtering,
-  selection, etc.) - Ensure theme-aware styling for both light and dark modes
-
-This replaces the problematic ScrollArea approach that broke sticky column positioning with a much
-  more intuitive and stable column navigation system.
-
-- Restructure project with React frontend integration
-  ([`de0d61c`](https://github.com/RamonOpazo/sero/commit/de0d61cfaa0cbd9c4187232cc83031339a423ed7))
-
-- Restructure backend from src/sero to src/backend for better separation - Add complete React + Vite
-  + TypeScript + Tailwind + shadcn/ui frontend - Update pyproject.toml for new project structure and
-  build configuration - Fix CLI functions to use correct module paths and coverage settings - Add
-  comprehensive frontend components: - ProjectsView: searchable grid of projects - DocumentsView:
-  paginated document grid with status badges - DocumentEditor: placeholder for PDF viewer
-  integration - Complete shadcn/ui component library setup - Configure Vite to build assets into
-  backend static directory - Set up React Router for SPA navigation with clean URLs - Add TypeScript
-  types matching backend schema exactly - Fix DocumentsView HTML structure and layout issues -
-  Maintain monorepo structure: src/backend/ (Python) + src/frontend/ (React)
-
-### Refactoring
-
-- Clean up file viewer component and minor tweaks to the rest of the UI
-  ([`3b84b6c`](https://github.com/RamonOpazo/sero/commit/3b84b6c45543a46dd242de9dc033f171077b463d))
 
 - Major API simplification and Tag model removal
   ([`9395feb`](https://github.com/RamonOpazo/sero/commit/9395febad4f32c825c83bdbd1d40a96b04524aa2))
@@ -2768,6 +2363,199 @@ The result is a cleaner, more maintainable API with reduced complexity while pre
   rule violations by ensuring consistent hook order - Improve error handling for different HTTP
   status codes (401, 500) - Clean architecture with proper separation of concerns
 
+- Move project password verify to SupportCrud; remove ProjectCrud.verify_password; apply get_or_404
+  across controllers; break circular imports
+  ([`ef5d4c5`](https://github.com/RamonOpazo/sero/commit/ef5d4c5244b66631df71e58b2650ae26ed44a99b))
+
+- Move utility classes from React components to CSS
+  ([`95b4514`](https://github.com/RamonOpazo/sero/commit/95b4514012e009b8b1940f0299a9e76e744e6086))
+
+- Extracted bg-background, relative, flex, w-full, h-full, flex-col, overflow-hidden from React
+  components to CSS - Simplified GridSidebar and GridSidebarInset components by removing inline
+  utility classes - Removed unused useIsMobile import and variable - Better separation of concerns:
+  CSS handles styling, React handles logic - Improved maintainability with cleaner component code -
+  Preserved all layout functionality and responsive behavior
+
+- Reduce CSS important usage by 76 percent
+  ([`4ec7f60`](https://github.com/RamonOpazo/sero/commit/4ec7f604564c3a67be3e3b0a2c925b927e5e2657))
+
+- Refactored frontend import/exports.
+  ([`9763d29`](https://github.com/RamonOpazo/sero/commit/9763d29204bd5ffb5c265b1c58f3b7e56422ea7c))
+
+- Remove 'Refactor' prefix from all components and clean up naming
+  ([`973e0d8`](https://github.com/RamonOpazo/sero/commit/973e0d883e344879d3404e64363b02038c8db1f4))
+
+- Rename RefactorApp.tsx → App.tsx - Rename RefactorProjectProvider.tsx → ProjectProvider.tsx -
+  Rename useRefactor* hooks → use* hooks (useProjects, useDocuments, useFiles) - Rename Refactor*
+  components → clean component names - Update all imports and references throughout the codebase -
+  Remove old unused files (FilesView, etc.) - Clean up component exports in views/index.ts
+
+This removes the temporary 'Refactor' prefixes that were used during development and establishes
+  clean, production-ready naming conventions across the frontend.
+
+- Remove obsolete DocumentEditor and useFiles after editor-view migration
+  ([`d16103e`](https://github.com/RamonOpazo/sero/commit/d16103e543569638d8644aa3387668ef7fd86c63))
+
+- Remove useFiles hook dependency from workspace-provider - Simplify workspace-provider to only
+  manage project/document selections - Move document data hooks to
+  document-viewer/hooks/use-document-data.ts - Add prompts/selections API functions to editor-api.ts
+  - Update SelectionCommander and useSelectionLoader to use new hook location - Remove obsolete
+  DocumentEditor folder and useFiles hook - Clean up unused imports and exports
+
+The editor-view now properly handles its own file management while document-viewer components have
+  their data fetching hooks co-located. Workspace-provider is simplified to focus only on
+  cross-component state.
+
+- Remove Project.version across backend and tests; migrate Pydantic configs to ConfigDict; fix tests
+  and event loop shutdown; deflake BaseCrud filters
+  ([`04c2dd3`](https://github.com/RamonOpazo/sero/commit/04c2dd3a0797156a5824e54ae8e02a4348adf417))
+
+- Remove unused global hooks and create document-viewer API
+  ([`09ccb5a`](https://github.com/RamonOpazo/sero/commit/09ccb5ac15b387bc9dda2aad07d6f863dc1fedb7))
+
+- Remove obsolete usePrompts.ts and useSelections.ts from global hooks - These were not being used
+  (document-viewer has its own providers) - Create document-viewer-api.ts with centralized API
+  functions: - Prompt operations: fetch, create, update, delete - Selection operations: fetch,
+  create, update, delete - Update DIRECTORY_STRUCTURE.md to reflect changes - Update hooks/index.ts
+  to remove unused exports
+
+Next step: Refactor document-viewer components to use the new API for proper separation of concerns
+  (API logic -> lib/, UI logic -> components/)
+
+- Rename ProjectProvider to WorkspaceProvider with dashed-case naming
+  ([`1c8ac82`](https://github.com/RamonOpazo/sero/commit/1c8ac826a2fcb0212ee093f846550a9852e8493d))
+
+✅ ARCHITECTURAL IMPROVEMENT: Better semantic naming for app-wide state manager
+
+Key Changes: - Renamed ProjectProvider.tsx → workspace-provider.tsx (dashed-case file naming) -
+  Updated ProjectProvider → WorkspaceProvider (more accurate scope) - Updated useProject →
+  useWorkspace (clearer purpose) - Renamed internal types: ProjectState → WorkspaceState,
+  ProjectAction → WorkspaceAction - Updated all imports across codebase to use new naming - Added
+  mandatory dashed-case file naming directive to DIRECTORY_STRUCTURE.md
+
+Rationale: - WorkspaceProvider manages projects, documents, AND files (not just projects) -
+  Dashed-case files provide visual distinction from PascalCase functions/components - useWorkspace
+  is clearer than useProject for accessing app-wide workspace state - Eliminates naming confusion -
+  'Project' now specifically refers to project entities
+
+Build Status: ✅ Passing Architecture: ✅ Fully compliant with DIRECTORY_STRUCTURE.md directives
+
+- Rename types and resolve map errors
+  ([`562f50f`](https://github.com/RamonOpazo/sero/commit/562f50fdbc52a0fa4bf8052e347c9c98b6415d55))
+
+- Reorganize view components into dedicated views/ directory
+  ([`644f982`](https://github.com/RamonOpazo/sero/commit/644f98271a44ed9f45571f7dabc42a8d4c8247df))
+
+- Move projects-view, documents-view, and editor-view from components/ to views/ - Update all import
+  paths to use new @/views/* structure - Create views/index.ts for clean public API exports - Update
+  DIRECTORY_STRUCTURE.md to reflect new architecture: - Views now properly separated from reusable
+  components - Updated import examples and domain boundaries - Clarified view vs component
+  responsibilities - Maintain all existing functionality with improved organization
+
+This establishes a clearer separation between: - views/: Application-specific view components with
+  business logic - components/: Reusable UI components and shared functionality - features/: Complex
+  self-contained features like document-viewer
+
+- Replace complex tab system with unified DocumentViewer
+  ([`062d84a`](https://github.com/RamonOpazo/sero/commit/062d84a9fb24de55621941f4e4aee49928f5653e))
+
+- Remove unnecessary Preview/Prompts/Selections/Info tabs in FileViewer - Use DocumentViewer's
+  built-in ORIGINAL/REDACTED toggle functionality - Simplify FileViewer to show single
+  DocumentViewer instance - All viewer functions (selections, prompts, info) accessible via right
+  sidebar - Clean up unused imports and state variables - Maintain existing password handling and
+  file loading logic
+
+This leverages the existing toggle button in the Controls component for switching between original
+  and redacted documents, providing a cleaner UX while preserving all functionality.
+
+- Simplify CSS Grid sidebar layout
+  ([`8dd834d`](https://github.com/RamonOpazo/sero/commit/8dd834d3f12d1a66c35eb576ae579b484b3860d2))
+
+- Remove redundant width calculations - let grid handle sizing - Eliminate verbose comments and
+  section dividers - Trust CSS Grid variables for automatic column sizing - Reduce file size by ~60%
+  while maintaining functionality - Clean, minimal comments focused on essential context
+
+- Standardize component structure with dashed-case naming and clean architecture
+  ([`d2cf5bd`](https://github.com/RamonOpazo/sero/commit/d2cf5bdb74f24292143a878f8a6d96308ce90fea))
+
+- Rename all component directories to dashed-case (documents-view, projects-view, layout) - Rename
+  all component files to dashed-case for consistency - Refactor documents management to follow clean
+  architecture pattern: * Extract DocumentsAPI utility for centralized API operations * Consolidate
+  useDocuments functionality into useDocumentsView * Remove document CRUD operations from
+  WorkspaceProvider (keep only selection state) * Update documents to use bulk upload instead of
+  individual creation - Apply same architectural patterns as projects management for consistency -
+  Update all imports and exports to use new dashed-case paths - Maintain component name conventions
+  (PascalCase for React components) - Ensure TypeScript type safety and build integrity
+
+This creates a consistent, maintainable codebase with proper separation of concerns where workspace
+  manages selection state and components manage their own CRUD operations.
+
+- Standardize theme context to follow provider pattern
+  ([`637d773`](https://github.com/RamonOpazo/sero/commit/637d773b8e79becb11367aeeeed4b746749cb6d9))
+
+- Rename ThemeContext.tsx to theme-provider.tsx for dashed-case consistency - Restructure theme
+  context to match workspace-provider pattern: * Separate ThemeState interface for state structure *
+  ThemeContextType interface for provider contract * Proper memoization with useMemo and useCallback
+  * Consistent error handling and context validation - Update ThemeToggle component to use new
+  useTheme hook interface - Maintain all existing functionality while improving code consistency -
+  Follow same architectural patterns as other context providers
+
+This creates consistent provider patterns across all context implementations.
+
+- Unify shallow and summary builders; centralize original/redacted file flows; clean projects
+  controller most_common_tags
+  ([`90c49fc`](https://github.com/RamonOpazo/sero/commit/90c49fc8927f572f133c101ed56d12fa66c62eb0))
+
+- Update PromptManager to use DocumentViewerAPI
+  ([`b22cc85`](https://github.com/RamonOpazo/sero/commit/b22cc85df3113d001df8ea36ab73f9e9c10a89a5))
+
+- Updated PromptManager to use DocumentViewerAPI instead of direct api calls - Centralized all
+  prompt operations: loadPrompts, createPrompt, updatePrompt, deletePrompt - Improved separation of
+  concerns: API logic -> lib/, business logic -> managers/ - Next: Update SelectionManager to follow
+  the same pattern
+
+- **actions-layer**: Expand declarative menu config to View/Selections/Rules; render all menus from
+  config with icons and shortcuts
+  ([`b476691`](https://github.com/RamonOpazo/sero/commit/b4766916c7cdd8711e57f1a8902edeb235cb4a04))
+
+- **actions-layer**: Extract cursor-aware zoom/pan math into useZoomControls hook and wire it
+  ([`05e8ee8`](https://github.com/RamonOpazo/sero/commit/05e8ee867bb9ad995ea2e9bdb7091dadc3ceb4da))
+
+- **actions-layer**: Extract heavy action handlers into useActions hook; fix imports and missing
+  DocumentViewerAPI reference
+  ([`ffea526`](https://github.com/RamonOpazo/sero/commit/ffea526b07c3d5cf506dedc79215eec9e12736e9))
+
+- **actions-layer**: Extract MiniPager presentational component and use it in ActionsLayer
+  ([`b2a54a3`](https://github.com/RamonOpazo/sero/commit/b2a54a34f7b2709e5427796d006f8dd7b2caf132))
+
+- **actions-layer**: Introduce declarative menu config types (scaffold)
+  ([`1f9a165`](https://github.com/RamonOpazo/sero/commit/1f9a165f7f50667bf54600d4c8ea3ee3f267d3ad))
+
+- **actions-layer**: Render Document menu from declarative config; add buildActionsMenuConfig
+  ([`4723c98`](https://github.com/RamonOpazo/sero/commit/4723c98bf0ad9ecc05d98a806e970db32334c7ba))
+
+- **ai**: Delegate all AI logic to AiService and keep controllers declarative; update plan
+  ([`593c2a7`](https://github.com/RamonOpazo/sero/commit/593c2a77b8aabc61c4a4ddc19694ba9edcab2bba))
+
+- **ai**: Move non-stream apply logic from documents controller to ai controller
+  ([`77db4a2`](https://github.com/RamonOpazo/sero/commit/77db4a21c5054f66bac182da5ec24df2050f2c4e))
+
+- **ai-settings**: Move to project-scoped CRUD and support; fix tests and bulk envelope; update
+  selections tests for state enum
+  ([`6545d41`](https://github.com/RamonOpazo/sero/commit/6545d412c25bc10a138466b4a7a89f5e5489faa0))
+
+- **api**: Move AI settings endpoints from documents to projects; project-scope settings; update
+  tests and routers
+  ([`9107010`](https://github.com/RamonOpazo/sero/commit/9107010c862b3758c7f095d69deed214870fea8a))
+
+- **controller**: Centralize not-found checks; add SupportCrud helpers for original/redacted file
+  flows; refactor documents controller to use helpers; minor cleanups
+  ([`6ddcb42`](https://github.com/RamonOpazo/sero/commit/6ddcb4201af4f7fd7b8683f8545709499f61e341))
+
+- **controllers**: Validate document existence for prompts/selections; default state without legacy
+  flags
+  ([`33410e8`](https://github.com/RamonOpazo/sero/commit/33410e869129fafa8944bb19a9066cce6cd84629))
+
 - **core**: Overhaul backend CRUD operations and frontend DataTable
   ([`ec83ac8`](https://github.com/RamonOpazo/sero/commit/ec83ac8626fad17eeae5076ee1c4dcb71218ff09))
 
@@ -2799,6 +2587,186 @@ This commit introduces a significant architectural refactoring of both the backe
   DataTable, providing a more consistent and responsive user experience.
 
 This holistic refactoring establishes a more robust and scalable foundation for future development.
+
+- **crud**: Align files crud with DB; add tags stub; enrich shallow/summary; minor schema defaults
+  ([`08c92ee`](https://github.com/RamonOpazo/sero/commit/08c92ee468c1e69cc5bb7b0674dd9f0875dec5a6))
+
+- **crud**: Validate order/join fields, guard immutable updates, and default to created_at desc
+  safely
+  ([`6dff9bf`](https://github.com/RamonOpazo/sero/commit/6dff9bf1f6a9a9a3832bcef510f9670ef58cf246))
+
+- **data-table**: Remove legacy column factories/presets; align adapter and actions cell with
+  declarative API
+  ([`48d61dc`](https://github.com/RamonOpazo/sero/commit/48d61dc20a6abe5ebc427fa2a4d6efeba90f0246))
+
+- Delete columns/factories.tsx and columns/presets.tsx (unused after migration)
+
+- Prune legacy exports in columns/index.ts and main data-table index
+
+- Tighten adapter to focus on ColumnConfig->Column mapping; drop dev helpers
+
+- Render actions cells using columnDefs via getCellValue in table-content; remove old dropdown impl
+
+- Misc cleanup across viewer/components and providers (unused imports/props, minor tidy)
+
+- **dialogs**: Migrate save dialogs to TypedConfirmationDialog; use declarative
+  FormConfirmationDialog with number+switch for page selection
+  ([`f22d8f0`](https://github.com/RamonOpazo/sero/commit/f22d8f03e22e42a0400a87c992782be7effb8284))
+
+- **document-viewer**: Inline status mapping in selection-list; remove unused style helpers from
+  selection-styles
+  ([`be2619b`](https://github.com/RamonOpazo/sero/commit/be2619be2f2678ac3d88b6d68763e49203cbd6c1))
+
+- **document-viewer**: Pr5 — switch selection stats to lifecycle and expose uiSelections\n\n- Expose
+  uiSelections on context; convert selection-commander stats to lifecycle-based\n- Mark PR5 complete
+  in the refactor plan; tests pass\n
+  ([`00b63d8`](https://github.com/RamonOpazo/sero/commit/00b63d8531ad5612820a96b494d73f03ed9937cd))
+
+- **frontend**: Add useKeyboardHandler adapter hook and use it in unified-viewport
+  ([`fa69fb7`](https://github.com/RamonOpazo/sero/commit/fa69fb7f32eaba18d2bca05f29dd84002975c01e))
+
+- **frontend**: Add useMouseButtonHandlers adapter hook and use it in unified-viewport
+  ([`26e08eb`](https://github.com/RamonOpazo/sero/commit/26e08ebec4901242defe6fe14e9228fa875267c9))
+
+- **frontend**: Add useWheelHandler adapter hook and use it in unified-viewport
+  ([`52a03a1`](https://github.com/RamonOpazo/sero/commit/52a03a1fc05b86d27fad40e58360e7afc49405d2))
+
+- **frontend**: Internalize mouse event state in adapter and add input barrel exports
+  ([`3f11350`](https://github.com/RamonOpazo/sero/commit/3f11350d9349909adb0566343e7f9c09185c7148))
+
+- **frontend**: Migrate DocumentControls to project trust flow and remove legacy password dialog
+  ([`9631b33`](https://github.com/RamonOpazo/sero/commit/9631b33fde0fe48ef90aaa7834ae23560f030cc1))
+
+- **frontend**: Migrate EditorView to project trust flow and update migration status
+  ([`3a5bd4d`](https://github.com/RamonOpazo/sero/commit/3a5bd4d081f3dbe6297749d3586b2a4ce4138f60))
+
+- **frontend**: Move useThrottle to shared hook use-throttle and update unified-viewport
+  ([`5adcd55`](https://github.com/RamonOpazo/sero/commit/5adcd55225256e1f4059e70c9b269c81dca5a7e7))
+
+- **frontend**: Optimize keyboard zoom handling and stabilize keyboard/mouse/wheel handler
+  identities
+  ([`5c0f288`](https://github.com/RamonOpazo/sero/commit/5c0f288c932f97b66f2d73ce2a45f559954f054d))
+
+- **frontend**: Optimize mouse input handlers (wheel early-return, robust leave handling, remove
+  unused state)
+  ([`ab2c8a3`](https://github.com/RamonOpazo/sero/commit/ab2c8a37087b543c21b2a74bbcf1771b3a31b8a1))
+
+- **frontend**: Selection lifecycle reorg and UIPrompt type; update prompts listing and providers
+  ([`ecc098e`](https://github.com/RamonOpazo/sero/commit/ecc098e2dafa792d7c06d489a9d928ec32b4198d))
+
+- **frontend**: Simplify UnifiedViewport props and effects; remove unused documentSize; tighten
+  listeners
+  ([`99332ae`](https://github.com/RamonOpazo/sero/commit/99332aeaaa6c27d1cd0e02ac695abac5d69d8284))
+
+- **prompts**: Replace legacy AddPromptDialog with FormConfirmationDialog for create/edit; persist
+  changes immediately
+  ([`ee1a071`](https://github.com/RamonOpazo/sero/commit/ee1a0710bf249a1ae9764610d940b101b9484276))
+
+- **selections**: Improve selection UI and fix critical page assignment bug
+  ([`74e5a4f`](https://github.com/RamonOpazo/sero/commit/74e5a4f6961baff0991e98864d26f336ae5b01f5))
+
+- Remove context menu from SelectionsLayer for cleaner interaction - Implement comprehensive
+  selection border color system: - Yellow: Global selections (page_number === null) - Green:
+  New/unsaved selections - Purple: Modified saved selections (more vibrant) - Gray: Unchanged saved
+  selections - Blue: Currently selected - Fix critical bug where page_number 0 was converted to null
+  during save - Change || to ?? operator to preserve falsy page numbers - Ensures Page 1 selections
+  stay page-specific instead of becoming global - Remove debug logging after confirming selection
+  logic works correctly
+
+- **selections**: Remove legacy committed->staged wrapper, centralize state->visual mapping, tighten
+  typing; test: add resize-blocked test
+  ([`c929a1d`](https://github.com/RamonOpazo/sero/commit/c929a1d47197ac4f59f45dd0faa4965b30655b24))
+
+- **types**: Remove plaintext password from upload request types; drop legacy bulk upload method
+  ([`b947074`](https://github.com/RamonOpazo/sero/commit/b947074b30caf09aa9909aba1c875c88f20348e3))
+
+- **ui**: Inline confirmation and page selection dialogs where used to avoid transient one-off
+  components
+  ([`a5d0250`](https://github.com/RamonOpazo/sero/commit/a5d025052af3503f1d770f64152538a4e197b5b5))
+
+- **ui**: Replace legacy ConfirmationDialog with TypedConfirmationDialog in projects data table
+  (warnings, one-word prompt)
+  ([`8927f68`](https://github.com/RamonOpazo/sero/commit/8927f684ceaa213612af7a6e197765ecddf32034))
+
+- **viewer**: Audit step 1 — fix illegal hook usage in ActionsLayer\n\n- Avoid calling hooks inside
+  handlers; use isViewingProcessedDocument from state\n- Update View->Toggle View and
+  Document->Download to use state value
+  ([`bab15ec`](https://github.com/RamonOpazo/sero/commit/bab15eceae90e167cce8af371bbc19122806a991))
+
+- **viewer**: Clean up layers and selection UI; enable selection list scrolling
+  ([`214c8cd`](https://github.com/RamonOpazo/sero/commit/214c8cde9100ed5960882fae8773eeaebf6999d0))
+
+SelectionList: make the list container the scroll area (min-h-0, overflow-y-auto, padding)
+
+Layouts: ensure scroll region sizing with proper flex/min-h-0 where needed
+
+Layers: remove unused state/refs and simplify hover/visibility logic
+
+Selection styles/provider: align state normalization and badges UI: adjust Badge styles
+
+chore: remove unused FileCommander component
+
+- **viewer**: Declarative SelectionBox + background presets; activity-driven contrast and minor
+  fixes
+  ([`a558b4f`](https://github.com/RamonOpazo/sero/commit/a558b4f04fa37b05aef8964560985a1918daebbf))
+
+- **viewer**: Decouple state (useDocumentViewer) from commands; rename useActions to
+  useDocumentActions; update imports; build passes
+  ([`b3c535f`](https://github.com/RamonOpazo/sero/commit/b3c535ffbbec8d1823c7dd760ec822b2796961b3))
+
+- **viewer**: Phase 1 provider/hooks cleanup – remove unused useDocumentPrompts, add useViewer,
+  deprecate useSelectionLoader; update docs plan
+  ([`265a9ae`](https://github.com/RamonOpazo/sero/commit/265a9aebc0aa43fb2087fec88bf3e0837ad7e78f))
+
+- **viewer**: Phase 2 – load selections in SelectionProvider; remove loader and document-data hooks;
+  update plan
+  ([`bc3df90`](https://github.com/RamonOpazo/sero/commit/bc3df90dd4763beb2b455ada957cd0962dd1d425))
+
+- **viewer**: Rename providers (document-viewer, prompts, selections) and drop useViewer alias;
+  update imports and barrels; build passes
+  ([`733eefd`](https://github.com/RamonOpazo/sero/commit/733eefd6ec95acb5cfa6c231865c937f457c9b1d))
+
+- **viewer**: Simplify prompt commander by removing legacy UI and edit flows
+  ([`1d1e5f5`](https://github.com/RamonOpazo/sero/commit/1d1e5f5432fd8ca855aa265767c8a6cfe8a1868d))
+
+- **viewer-types**: Stop re-exporting app-wide SelectionCreateType from feature types barrel; keep
+  Selection as feature type; build passes
+  ([`b73f7be`](https://github.com/RamonOpazo/sero/commit/b73f7be111fd68d5d18e90e5fc0fe704bcb7e945))
+
+### Testing
+
+- Patch monkeypatch targets to controller call sites; schema: add selection counts to
+  DocumentSummary; support: shallow builder populates has_template\n\nAll tests passing (114/114).
+  ([`f1d8bbd`](https://github.com/RamonOpazo/sero/commit/f1d8bbded3160435c27345445d48eb64d9b547d5))
+
+- Prefer smallest available Ollama model in live test for speed
+  ([`34a8449`](https://github.com/RamonOpazo/sero/commit/34a8449474882da5eaf752e587523cf84a38b025))
+
+- Update pdf redactor tests to use AreaSelection and WatermarkSettings; align page_number to 0-based
+  and relax invalid PDF assertion
+  ([`412015f`](https://github.com/RamonOpazo/sero/commit/412015fe8fc90bdb74af33327288cf13e131e1e6))
+
+- **base_crud**: Deflake filter assertions by increasing limits and using created project's version
+  in 'in' filter
+  ([`157a25f`](https://github.com/RamonOpazo/sero/commit/157a25ff457d187f541f4498854dfa4004ed1e79))
+
+- **conftest**: Use session-scoped MonkeyPatch, tmp data/logs, and in-memory keyring to stabilize
+  tests
+  ([`4615208`](https://github.com/RamonOpazo/sero/commit/4615208cf21cf3869511c679900ef5efca1d6627))
+
+- **fixes**: Align tests with controller/schema changes (state enums, file hash length, ephemeral
+  decrypt monkeypatches)
+  ([`661af5e`](https://github.com/RamonOpazo/sero/commit/661af5ee01ddfda93da2586a23c1ae8e72ef301e))
+
+- **frontend**: Fix PageSelectionDialog mock path in SelectionList test
+  ([`07c01a5`](https://github.com/RamonOpazo/sero/commit/07c01a59bc1063a93f6f252012f84f12a4c033ae))
+
+- **frontend**: Fix selections-layer to avoid legacy pendingChanges; all tests green
+  ([`e0732f8`](https://github.com/RamonOpazo/sero/commit/e0732f8861fe40df4e0bb6c7d5d44443a426b5fa))
+
+- **frontend**: Migrate to Vitest, add vitest.config, remove Jest config, add unit tests for
+  selection provider/list/layer, update setup to Vitest
+  ([`d46d803`](https://github.com/RamonOpazo/sero/commit/d46d8038a3f3d932699bca9e15f16b4b319c4c0a))
 
 
 ## v0.1.0 (2025-07-21)
