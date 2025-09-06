@@ -7,9 +7,47 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from httpx import AsyncClient
 
-from backend.app import app
-from backend.core.database import get_db_session
-from backend.db.models import Base
+
+@pytest.fixture(scope="session", autouse=True)
+def _test_env_setup(tmp_path_factory):
+    """Session-wide test environment setup.
+
+    - Uses tmp dirs for DB, logs, and output via env var overrides.
+    - Patches keyring get/set to an in-memory store to avoid OS keyring dependency.
+    """
+    from _pytest.monkeypatch import MonkeyPatch
+
+    mp = MonkeyPatch()
+
+    data_dir = tmp_path_factory.mktemp("sero_data")
+    state_dir = tmp_path_factory.mktemp("sero_state")
+
+    db_path = data_dir / "test.sqlite"
+    log_path = state_dir / "logs" / "app.jsonl"
+    output_dir = data_dir / "output"
+
+    # Ensure parent dirs are created lazily by the app, but set env paths now
+    mp.setenv("SERO_DB__FILEPATH", str(db_path))
+    mp.setenv("SERO_LOG__FILEPATH", str(log_path))
+    mp.setenv("SERO_PROCESSING__DIRPATH", str(output_dir))
+
+    # Simple in-memory keyring shim
+    import keyring
+    _store: dict[tuple[str, str], str] = {}
+
+    def _fake_get_password(service: str, username: str):
+        return _store.get((service, username))
+
+    def _fake_set_password(service: str, username: str, password: str):
+        _store[(service, username)] = password
+
+    mp.setattr(keyring, "get_password", _fake_get_password, raising=True)
+    mp.setattr(keyring, "set_password", _fake_set_password, raising=True)
+
+    try:
+        yield
+    finally:
+        mp.undo()
 
 
 @pytest.fixture(scope="session")
@@ -58,6 +96,8 @@ def test_engine(temp_db_path):
         cursor.execute("PRAGMA journal_mode=WAL")
         cursor.close()
     
+    # Import models lazily now that env and keyring are patched
+    from backend.db.models import Base
     Base.metadata.create_all(bind=engine)
     yield engine
     engine.dispose()
@@ -83,6 +123,10 @@ def override_get_db_session(test_session):
         finally:
             pass
     
+    # Import app and dependency only after environment setup
+    from backend.app import app
+    from backend.core.database import get_db_session
+
     app.dependency_overrides[get_db_session] = _get_test_db
     yield
     app.dependency_overrides.clear()
@@ -91,6 +135,7 @@ def override_get_db_session(test_session):
 @pytest.fixture
 def client(override_get_db_session):
     """Create a test client."""
+    from backend.app import app
     with TestClient(app) as test_client:
         yield test_client
 
@@ -98,17 +143,18 @@ def client(override_get_db_session):
 @pytest.fixture
 async def async_client(override_get_db_session):
     """Create an async test client."""
+    from backend.app import app
     async with AsyncClient(app=app, base_url="http://test") as ac:
         yield ac
 
 
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import padding
-from backend.core.security import security_manager
 
 
 def _encrypt_password_for_project(password: str) -> dict:
     """Generate an ephemeral key and return dict with key_id and encrypted_password (base64)."""
+    from backend.core.security import security_manager
     key_id, public_pem = security_manager.generate_ephemeral_rsa_keypair()
     public_key = serialization.load_pem_public_key(public_pem.encode("utf-8"))
     ciphertext = public_key.encrypt(
