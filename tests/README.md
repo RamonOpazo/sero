@@ -4,6 +4,8 @@ This directory contains all backend tests for the Sero project. Tests are writte
 
 ## How to Run Tests
 
+This repo uses uv for running tests and managing environments. Dev dependencies are installed via `uv sync --all-groups`.
+
 You can run the full test suite using the custom script defined in `pyproject.toml`:
 
 ```sh
@@ -54,6 +56,17 @@ uv run pytest -x
 # Show any `print()` statements in the test output
 uv run pytest -s
 ```
+
+## Test Environment and Keyring
+
+- The tests run against a temporary SQLite database and write logs/output to temporary directories.
+- The session-scoped autouse fixture in `tests/conftest.py` sets the following environment variables for the process so paths are deterministic and isolated per run:
+  - `SERO_DB__FILEPATH` → temp sqlite file
+  - `SERO_LOG__FILEPATH` → temp log file
+  - `SERO_PROCESSING__DIRPATH` → temp output directory
+- The same fixture also monkeypatches `keyring.get_password` and `keyring.set_password` to a simple in-memory store, so tests do not depend on any OS keyring.
+- If you want to run tests without that fixture (or in a different process), you can bypass keyring by setting:
+  - `export SERO_SECURITY__SECRET_KEY=dev-secret-key`
 
 ## Test Architecture and Directives
 

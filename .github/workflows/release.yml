@@ -41,6 +41,33 @@ jobs:
         SERO_PROCESSING__DIRPATH: ${{ runner.temp }}/sero_output
       run: uv run pytest
 
+    # Frontend build to ensure main remains buildable
+    - name: Setup Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'pnpm'
+        cache-dependency-path: 'src/frontend/pnpm-lock.yaml'
+
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: 9
+
+    - name: Install frontend dependencies
+      working-directory: src/frontend
+      run: pnpm install --frozen-lockfile
+
+    - name: Build frontend
+      working-directory: src/frontend
+      run: pnpm run build
+
+    - name: Upload frontend build artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: frontend-static
+        path: src/backend/static
+
     - name: Python Semantic Release
       id: release
       uses: python-semantic-release/python-semantic-release@v9.15.0

@@ -117,6 +117,20 @@ Use environment variables with prefix SERO_ and nested keys separated by __:
 - SERO_PROCESSING__DIRPATH=/custom/output
 These can be set in your shell or a .env file in your working directory.
 
+### Testing and CI notes
+- Local testing (with uv):
+  - Run all tests: `uv run sero-test`
+  - With coverage: `uv run sero-test-cov`
+- CI environment (GitHub Actions) does not provide an OS keyring. The test suite bypasses keyring by reading `SERO_SECURITY__SECRET_KEY` from the environment.
+  - In CI we also direct the database, logs, and output to temporary locations via:
+    - `SERO_DB__FILEPATH`, `SERO_LOG__FILEPATH`, `SERO_PROCESSING__DIRPATH`
+- If your local environment lacks a keyring (headless server/container), set a temporary secret to bypass keyring:
+  - `export SERO_SECURITY__SECRET_KEY=dev-secret-key`
+  - Optionally set paths:
+    - `export SERO_DB__FILEPATH=/tmp/sero.sqlite`
+    - `export SERO_LOG__FILEPATH=/tmp/sero_logs/app.jsonl`
+    - `export SERO_PROCESSING__DIRPATH=/tmp/sero_output`
+
 ### Running the Service
 Once installed, run:
 ```bash
