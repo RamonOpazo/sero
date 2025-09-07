@@ -55,6 +55,14 @@ raw-options = { root = "..", search_parent_directories = true }
 
 [tool.hatch.build.targets.wheel]
 packages = ["src"]
+include = [
+  "src/static/**",
+]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "src/static/**",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

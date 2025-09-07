@@ -12,7 +12,8 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: '../backend/src/static',
+    // Use Vite's default output directory within the frontend project
+    outDir: 'dist',
     emptyOutDir: true,
     minify: false,
   },
