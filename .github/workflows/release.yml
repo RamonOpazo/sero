@@ -68,7 +68,28 @@ jobs:
         name: frontend-static
         path: src/backend/static
 
+    - name: Determine if release is needed
+      id: check_release
+      shell: bash
+      run: |
+        git fetch --tags --quiet
+        LAST_TAG=$(git describe --tags --abbrev=0 || true)
+        if [ -n "$LAST_TAG" ]; then
+          RANGE="$LAST_TAG..HEAD"
+        else
+          RANGE="HEAD"
+        fi
+        echo "Using range: $RANGE"
+        MESSAGES=$(git log --format=%s $RANGE || true)
+        echo "$MESSAGES" | sed 's/^/  - /'
+        if echo "$MESSAGES" | grep -E '(^feat(\!|:)|^fix:|^perf:|BREAKING CHANGE:)' -q; then
+          echo "should_release=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "should_release=false" >> "$GITHUB_OUTPUT"
+        fi
+
     - name: Python Semantic Release
+      if: steps.check_release.outputs.should_release == 'true'
       id: release
       uses: python-semantic-release/python-semantic-release@v9.15.0
       with:
