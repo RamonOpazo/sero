@@ -35,6 +35,8 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '20'
+        cache: 'pnpm'
+        cache-dependency-path: 'frontend/pnpm-lock.yaml'
 
     - name: Setup pnpm
       uses: pnpm/action-setup@v4
@@ -61,9 +63,11 @@ jobs:
       if: ${{ steps.semrel.outputs.released == 'true' }}
       uses: softprops/action-gh-release@v2
       with:
+        tag_name: ${{ steps.semrel.outputs.tag }}
         files: |
           sero-backend-with-static.tar.gz
         fail_on_unmatched_files: true
+        overwrite: true
 
     - name: Login to GHCR
       if: ${{ steps.semrel.outputs.released == 'true' }}
@@ -89,7 +93,7 @@ jobs:
         push: true
         tags: |
           ghcr.io/${{ env.OWNER_LC }}/${{ env.REPO_LC }}:latest
-          ghcr.io/${{ env.OWNER_LC }}/${{ env.REPO_LC }}:${{ github.sha }}
+          ghcr.io/${{ env.OWNER_LC }}/${{ env.REPO_LC }}:${{ steps.semrel.outputs.tag }}
 
     - name: Publish GitHub Release artifacts (optional)
       if: ${{ steps.semrel.outputs.released == 'true' }}
