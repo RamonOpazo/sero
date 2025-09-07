@@ -35,13 +35,6 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '20'
-        cache: 'pnpm'
-        cache-dependency-path: 'frontend/pnpm-lock.yaml'
-      
-    # - name: Ensure pnpm available via corepack
-    #   run: |
-    #     corepack enable
-    #     corepack prepare pnpm@10 --activate
 
     - name: Setup pnpm
       uses: pnpm/action-setup@v4
@@ -107,4 +100,3 @@ jobs:
     - name: Summary
       run: |
         echo "Release workflow completed. CI passed, semantic-release evaluated commits, and Docker image pushed to GHCR."
-
