@@ -66,10 +66,6 @@ If the command isn’t found, add the directory above to your PATH or restart th
 
 Install directly with uv (no scripts)
 ```bash
-# From a GitHub release tarball (preferred)
-uv tool install "https://github.com/RamonOpazo/sero/releases/download/vX.Y.Z/sero-backend-with-static.tar.gz#subdirectory=backend"
-
-# Or fallback to VCS if needed
 uv tool install --from git+https://github.com/RamonOpazo/sero.git sero
 ```
 
