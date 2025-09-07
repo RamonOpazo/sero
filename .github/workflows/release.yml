@@ -30,6 +30,17 @@ jobs:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         root_options: "--strict --verbose"
 
+    - name: Set release version in backend pyproject.toml
+      if: ${{ steps.semrel.outputs.released == 'true' }}
+      run: |
+        py=backend/pyproject.toml
+        version="${{ steps.semrel.outputs.version }}"
+        if grep -q '^version[[:space:]]*=' "$py"; then
+          sed -i -E "s/^version[[:space:]]*=.*/version = \"${version}\"/" "$py"
+        else
+          sed -i -E "s/dynamic = \[\"version\"\]/version = \"${version}\"/" "$py"
+        fi
+
     # Build frontend and package backend+static as a release asset (sdist-like archive)
     - name: Setup Node
       uses: actions/setup-node@v4
