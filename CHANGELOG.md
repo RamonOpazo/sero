@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v1.9.9 (2025-09-07)
+
+### Bug Fixes
+
+- Use release tarball for uv tool install; remove Dockerfile secret; fix release action
+  ([#47](https://github.com/RamonOpazo/sero/pull/47),
+  [`b48bc4a`](https://github.com/RamonOpazo/sero/commit/b48bc4a549c4c2fcf5afc79fcc7a984d06e46908))
+
+docs: add tarball install command in backend README
+
+
 ## v1.9.8 (2025-09-07)
 
 ### Bug Fixes
