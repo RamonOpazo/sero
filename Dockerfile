@@ -17,7 +17,7 @@ RUN pnpm build
 
 # ----- Backend stage -----
 FROM python:3.13-slim AS backend
-WORKDIR /app/backend
+WORKDIR /app
 
 # Allow overriding project version in environments without VCS metadata (e.g., Docker builds)
 # Default to 0.0.0 if not provided as a build-arg
@@ -35,12 +35,16 @@ ENV UV_INSTALL_DIR=/root/.local/bin
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 ENV PATH="$UV_INSTALL_DIR:$PATH"
 
-# Copy backend project files
-COPY backend/ ./
+# Copy license and backend project files (pyproject expects ../LICENSE relative to backend)
+COPY LICENSE ./LICENSE
+COPY backend/ ./backend
 
 # Copy built frontend assets into backend static directory
 RUN mkdir -p /app/backend/src/static
 COPY --from=frontend-build /app/frontend/dist/ /app/backend/src/static/
+
+# Switch to backend working directory
+WORKDIR /app/backend
 
 # Sync/install backend deps (no dev)
 RUN uv sync --no-dev
