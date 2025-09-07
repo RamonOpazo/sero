@@ -61,9 +61,11 @@ jobs:
       if: ${{ steps.semrel.outputs.released == 'true' }}
       uses: softprops/action-gh-release@v2
       with:
+        tag_name: ${{ steps.semrel.outputs.tag }}
         files: |
           sero-backend-with-static.tar.gz
         fail_on_unmatched_files: true
+        overwrite: true
 
     - name: Login to GHCR
       if: ${{ steps.semrel.outputs.released == 'true' }}
@@ -89,7 +91,7 @@ jobs:
         push: true
         tags: |
           ghcr.io/${{ env.OWNER_LC }}/${{ env.REPO_LC }}:latest
-          ghcr.io/${{ env.OWNER_LC }}/${{ env.REPO_LC }}:${{ github.sha }}
+          ghcr.io/${{ env.OWNER_LC }}/${{ env.REPO_LC }}:${{ steps.semrel.outputs.tag }}
 
     - name: Publish GitHub Release artifacts (optional)
       if: ${{ steps.semrel.outputs.released == 'true' }}
@@ -98,4 +100,3 @@ jobs:
     - name: Summary
       run: |
         echo "Release workflow completed. CI passed, semantic-release evaluated commits, and Docker image pushed to GHCR."
-
