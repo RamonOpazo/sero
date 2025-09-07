@@ -8,6 +8,16 @@ Sero is a secure FastAPI-based document privacy protection service that "Evilish
 
 ## Development Commands
 
+### Top-level Makefile
+Use the Makefile at the repo root to orchestrate both projects:
+```bash
+# Install backend and frontend deps
+make install
+
+# Run backend and frontend concurrently
+make dev
+```
+
 ### Backend Commands
 ```bash
 # Start development server with hot reload
@@ -32,7 +42,7 @@ uv run sero-version
 ### Frontend Commands
 ```bash
 # Navigate to frontend directory
-cd src/frontend
+cd frontend
 
 # Install dependencies
 pnpm install
@@ -62,48 +72,50 @@ pnpm run test:coverage
 ### Test Commands
 ```bash
 # Run all tests (quieter output)
-uv run pytest -q
+cd backend && uv run pytest -q
 
 # Run specific test file
-uv run pytest tests/test_projects_api.py
+cd backend && uv run pytest tests/test_projects_api.py
 
 # Run specific test class
-uv run pytest tests/test_files_api.py::TestFilesAPI
+cd backend && uv run pytest tests/test_files_api.py::TestFilesAPI
 
 # Run specific test method
-uv run pytest tests/test_integration.py::TestIntegration::test_complete_workflow
+cd backend && uv run pytest tests/test_integration.py::TestIntegration::test_complete_workflow
 
 # Run with verbose output and stop on first failure
-uv run pytest -vvs -x
+cd backend && uv run pytest -vvs -x
 
 # Run tests with coverage (terminal output)
-uv run pytest --cov=src/backend --cov-report=term-missing
+cd backend && uv run pytest --cov=src --cov-report=term-missing
 ```
 
 ### Package Management
 ```bash
-# Install dependencies and create virtual environment
-uv sync
+# Install dependencies and create virtual environment (backend)
+cd backend && uv sync
 
 # Install with dev dependencies
-uv sync --all-groups
+cd backend && uv sync --all-groups
 
-# Add new dependency
-uv add package-name
+# Add new backend dependency
+cd backend && uv add package-name
 
-# Add dev dependency
-uv add --group dev package-name
+# Add backend dev dependency
+cd backend && uv add --group dev package-name
 ```
 
 ## Architecture Overview
 
 ### Project Structure
-- **`src/backend/`** - Main application code
-  - **`api/`** - API layer (routers, controllers, schemas)
-  - **`core/`** - Core services (config, database, security, logging)
-  - **`crud/`** - Database operations with SQLAlchemy
-  - **`db/`** - Database models and custom types
-- **`src/frontend/`** - React TypeScript application
+- **`backend/`** - Python project root
+  - **`src/backend/`** - Main application package
+    - **`api/`** - API layer (routers, controllers, schemas)
+    - **`core/`** - Core services (config, database, security, logging)
+    - **`crud/`** - Database operations with SQLAlchemy
+    - **`db/`** - Database models and custom types
+  - **`tests/`** - Backend test suite (108 tests, 85%+ coverage)
+- **`frontend/`** - React TypeScript application
   - **`src/components/`** - Reusable UI components with shadcn/ui
   - **`src/pages/`** - Main application pages
   - **`src/views/`** - Complex view components
@@ -111,7 +123,6 @@ uv add --group dev package-name
   - **`src/types/`** - TypeScript type definitions
   - **`src/lib/`** - Utility libraries and configurations
   - **`src/utils/`** - Utility functions
-- **`tests/`** - Backend test suite (108 tests, 85% coverage)
 - **`docs/`** - Documentation including ER diagrams
 
 ### Core Components
@@ -265,7 +276,7 @@ uv lock
 #### Frontend Dependencies
 ```bash
 # Navigate to frontend directory
-cd src/frontend
+cd frontend
 
 # Add runtime dependency
 pnpm add new-package
@@ -282,8 +293,8 @@ pnpm install
 ### API Access
 - **Development**: http://localhost:8000 (with hot reload)
 - **Production**: http://0.0.0.0:8000
-- **API Documentation**: http://localhost:8000/docs (Swagger UI)
-- **API Schema**: http://localhost:8000/openapi.json
+- **API Documentation**: http://localhost:8000/api/docs (Swagger UI)
+- **API Schema**: http://localhost:8000/api/openapi.json
 
 ### Frontend Access
 - **Development**: http://localhost:5173 (Vite dev server)

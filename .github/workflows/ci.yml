@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install frontend deps
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: Build frontend
+        working-directory: frontend
+        run: pnpm build
+
+      - name: Sync frontend build into backend static
+        run: |
+          rm -rf backend/src/static && mkdir -p backend/src/static
+          cp -r frontend/dist/* backend/src/static/
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Install backend deps
+        working-directory: backend
+        run: uv sync --all-groups
+
+      - name: Run backend tests
+        working-directory: backend
+        run: uv run pytest -q
+
+      - name: Build backend wheel
+        working-directory: backend
+        run: uv build
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sero-backend-dist
+          path: backend/dist
