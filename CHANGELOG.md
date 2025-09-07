@@ -1,6 +1,28 @@
 # CHANGELOG
 
 
+## v1.9.5 (2025-09-07)
+
+### Bug Fixes
+
+- Setuptools scm ([#39](https://github.com/RamonOpazo/sero/pull/39),
+  [`20309e3`](https://github.com/RamonOpazo/sero/commit/20309e392490f1cbbae9c942ee4554b8f9ea9eed))
+
+* release: push Docker image only when a release is created (gate steps on semrel.outputs.released)
+
+* ci: cache pnpm and uv .venv to speed up runs; release: use semantic tag for Docker images and
+  cache pnpm
+
+* ci/release: ensure pnpm is available via corepack before usage
+
+* ci: apply workflow adjustments (pnpm corepack, caching, tag fixes, gated docker)
+
+* ci: workflow refinements and stability tweaks
+
+* release: set SETUPTOOLS_SCM_PRETEND_VERSION_FOR_SERO to semantic-release plain version (no 'v'
+  prefix)
+
+
 ## v1.9.4 (2025-09-07)
 
 ### Bug Fixes
