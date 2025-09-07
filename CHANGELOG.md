@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v1.9.10 (2025-09-07)
+
+### Bug Fixes
+
+- **frontend**: Handle 404 for template selections as empty list and reduce console noise
+  ([#48](https://github.com/RamonOpazo/sero/pull/48),
+  [`e9d6011`](https://github.com/RamonOpazo/sero/commit/e9d601186fd979908e10c4e4ebea9c52bc5dcde7))
+
+chore(static): restore static assets and index after stash resolution
+
+
 ## v1.9.9 (2025-09-07)
 
 ### Bug Fixes
