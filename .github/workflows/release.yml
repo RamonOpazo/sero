@@ -37,6 +37,12 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
+    - name: Prepare image tags (lowercase owner)
+      id: prep
+      run: |
+        echo "OWNER_LC=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_ENV"
+        echo "REPO_LC=${GITHUB_REPOSITORY#*/}" >> "$GITHUB_ENV"
+
     - name: Build and push Docker image
       uses: docker/build-push-action@v6
       with:
@@ -44,8 +50,8 @@ jobs:
         file: ./Dockerfile
         push: true
         tags: |
-          ghcr.io/${{ github.repository_owner }}/sero:latest
-          ghcr.io/${{ github.repository_owner }}/sero:${{ github.sha }}
+          ghcr.io/${{ env.OWNER_LC }}/${{ env.REPO_LC }}:latest
+          ghcr.io/${{ env.OWNER_LC }}/${{ env.REPO_LC }}:${{ github.sha }}
 
     - name: Publish GitHub Release artifacts (optional)
       if: ${{ steps.semrel.outputs.released == 'true' }}
