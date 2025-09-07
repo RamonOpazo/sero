@@ -113,7 +113,21 @@ export const api: AxiosInstance & {
 api.interceptors.response.use(
   (res) => res,
   (err) => {
+    const status = (err && err.response && err.response.status) || undefined;
+    const url = (err && err.config && err.config.url) || "";
+
+    // Suppress noisy logs for expected 404s when no project template exists
+    // Endpoint: GET /api/documents/id/{document_id}/template-selections
+    if (
+      status === 404 &&
+      typeof url === "string" &&
+      url.includes("/documents/id/") &&
+      url.includes("/template-selections")
+    ) {
+      return Promise.reject(err);
+    }
+
     console.error("API error:", err);
     return Promise.reject(err);
-  }
+  },
 );

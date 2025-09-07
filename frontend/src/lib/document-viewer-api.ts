@@ -384,13 +384,21 @@ export const DocumentViewerAPI = {
    * These are read-only overlays in the viewer.
    */
   async fetchDocumentTemplateSelections(documentId: string): Promise<Result<SelectionType[], unknown>> {
-    return AsyncResultWrapper
-      .from(api.safe.get<SelectionType[]>(`/documents/id/${documentId}/template-selections`))
-      .catch((error: unknown) => {
-        // Soft failure: do not toast; just propagate to Result
-        throw error;
-      })
-      .toResult();
+    // Map 404 (no template set for project) to an empty list instead of error
+    try {
+      const res = await api.safe.get<SelectionType[]>(`/documents/id/${documentId}/template-selections`);
+      if (!res.ok) {
+        const status = (res as any).error?.response?.status;
+        if (status === 404) {
+          return { ok: true, value: [] } as Result<SelectionType[], unknown>;
+        }
+        return res as Result<SelectionType[], unknown>;
+      }
+      return res as Result<SelectionType[], unknown>;
+    } catch (error) {
+      // If something unexpected happens (network failure, etc.), propagate as error
+      return { ok: false, error } as Result<SelectionType[], unknown>;
+    }
   },
 
   /**
