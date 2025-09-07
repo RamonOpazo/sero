@@ -85,6 +85,9 @@ jobs:
     - name: Build and push Docker image
       if: ${{ steps.semrel.outputs.released == 'true' }}
       uses: docker/build-push-action@v6
+      env:
+        # Use the plain version (without 'v' prefix) for setuptools-scm to avoid VCS requirement
+        SETUPTOOLS_SCM_PRETEND_VERSION_FOR_SERO: ${{ steps.semrel.outputs.version }}
       with:
         context: .
         file: ./Dockerfile
