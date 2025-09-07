@@ -27,7 +27,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Install uv (Python package manager)
 ENV UV_INSTALL_DIR=/root/.local/bin
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh -s -- -y
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 ENV PATH="$UV_INSTALL_DIR:$PATH"
 
 # Copy backend project files
