@@ -1,0 +1,132 @@
+[project]
+name = "sero"
+dynamic = ["version"]
+description = "Sero Evilishly Redacts and Obfuscates - Medical document privacy protection platform"
+readme = "README.md"
+authors = [
+    { name = "Ramon Opazo" },
+]
+license = { file = "../LICENSE" }
+requires-python = ">=3.13"
+dependencies = [
+    "cryptography>=45.0.5",
+    "duckdb-engine>=0.17.0",
+    "fastapi[standard]>=0.116.1",
+    "httpx>=0.28.1",
+    "keyring>=25.6.0",
+    # Ensure native OS keyring backends are available on each platform,
+    # so keyring never falls back to the 'fail' backend.
+    "secretstorage>=3.3; sys_platform == 'linux'",
+    "pywin32-ctypes>=0.2; sys_platform == 'win32'",
+    # Cross-platform user directory resolution for DB/logs
+    "platformdirs>=4.3.6",
+    "loguru>=0.7.3",
+    "passlib[bcrypt]>=1.7.4",
+    "pydantic>=2.11.7",
+    "pydantic-settings>=2.10.1",
+    "pymupdf>=1.26.3",
+    "python-jose[cryptography]>=3.5.0",
+    "pytz>=2025.2",
+    "sqlalchemy>=2.0.41",
+    "uvicorn>=0.35.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.1",
+    "pytest-cov>=6.2.1",
+]
+
+[project.scripts]
+sero = "src:main"
+sero-dev = "src:dev"
+sero-test = "src:test"
+sero-test-cov = "src:test_cov"
+sero-db-init = "src:db_init"
+sero-version = "src:version"
+
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "vcs"
+raw-options = { root = "..", search_parent_directories = true }
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--tb=short",
+    "--strict-markers",
+    "--disable-warnings",
+    "--color=yes",
+    "--durations=10",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+    "api: marks tests as API tests",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+    "ignore::ResourceWarning",
+]
+
+[tool.coverage.html]
+directory = ".coverage_html"
+
+[tool.coverage.run]
+source = ["src"]
+omit = [
+    "*/tests/*",
+    "*/__pycache__/*",
+    "*/venv/*",
+    "*/.venv/*",
+    "src/frontend/*",
+]
+
+[tool.semantic_release]
+# Configuration for PyPI publishing:
+# If python-semantic-release is used to publish to PyPI, uncomment and configure the following:
+# build_command = "uv build"
+# upload_to_pypi = true
+major_on_zero = true
+tag_format = "v{version}"
+commit_message = "chore(release): v{version} [skip ci]"
+commit_author = "Ramon Opazo <69599442+RamonOpazo@users.noreply.github.com>"
+changelog_file = "CHANGELOG.md"
+upload_to_vcs_release = true
+
+[tool.semantic_release.branches.main]
+match = "main"
+prerelease = false
+
+[tool.semantic_release.commit_parser_options]
+allowed_tags = [
+    "build",
+    "chore", 
+    "ci",
+    "docs",
+    "feat",
+    "fix",
+    "perf",
+    "style",
+    "refactor",
+    "test",
+]
+minor_tags = ["feat"]
+patch_tags = ["fix", "perf"]
+
+# [tool.setuptools_scm]
+# # Ensure version discovery works from the backend subdirectory
+# search_parent_directories = true
+# root = ".."
