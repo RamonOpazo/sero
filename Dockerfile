@@ -24,6 +24,11 @@ WORKDIR /app
 ARG SETUPTOOLS_SCM_PRETEND_VERSION_FOR_SERO=0.0.0
 ENV SETUPTOOLS_SCM_PRETEND_VERSION_FOR_SERO=${SETUPTOOLS_SCM_PRETEND_VERSION_FOR_SERO}
 
+# Allow overriding project version in environments without VCS metadata (e.g., Docker builds)
+# Default to 0.0.0 if not provided as a build-arg
+ARG SETUPTOOLS_SCM_PRETEND_VERSION_FOR_SERO=0.0.0
+ENV SETUPTOOLS_SCM_PRETEND_VERSION_FOR_SERO=${SETUPTOOLS_SCM_PRETEND_VERSION_FOR_SERO}
+
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
