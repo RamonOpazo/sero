@@ -1,3 +1,6 @@
+packages:
+  - .
+
 ignoredBuiltDependencies:
   - '@scarf/scarf'
   - '@tree-sitter-grammars/tree-sitter-yaml'
