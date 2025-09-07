@@ -17,8 +17,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'pnpm'
-          cache-dependency-path: 'frontend/pnpm-lock.yaml'
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -40,14 +38,6 @@ jobs:
 
       - name: Setup uv
         uses: astral-sh/setup-uv@v3
-
-      - name: Cache uv virtualenv
-        uses: actions/cache@v4
-        with:
-          path: backend/.venv
-          key: ${{ runner.os }}-uv-${{ hashFiles('backend/pyproject.toml', 'backend/uv.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-uv-
 
       - name: Install backend deps
         working-directory: backend
