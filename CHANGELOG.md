@@ -1,6 +1,20 @@
 # CHANGELOG
 
 
+## v1.9.3 (2025-09-07)
+
+### Bug Fixes
+
+- Push Docker image only when a release is created (gate steps on semrel.outputs.released)
+  ([#35](https://github.com/RamonOpazo/sero/pull/35),
+  [`394128f`](https://github.com/RamonOpazo/sero/commit/394128fa62417167b8af49f96eef306396f15117))
+
+### Build System
+
+- **docker**: Fix uv install script (remove unsupported -y flag)
+  ([`3f6885f`](https://github.com/RamonOpazo/sero/commit/3f6885f15f3be48bafbcaecab6f5ce24513fd606))
+
+
 ## v1.9.2 (2025-09-07)
 
 ### Bug Fixes
