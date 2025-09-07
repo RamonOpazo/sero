@@ -54,9 +54,8 @@ WORKDIR /app/backend
 # Sync/install backend deps (no dev)
 RUN uv sync --no-dev
 
-# Default environment overrides to avoid OS keyring in containers
-ENV SERO_SECURITY__SECRET_KEY=container-secret-key \
-    SERO_DB__FILEPATH=/data/sero.sqlite \
+# Default non-sensitive runtime paths; provide secrets (e.g., SERO_SECURITY__SECRET_KEY) at runtime
+ENV SERO_DB__FILEPATH=/data/sero.sqlite \
     SERO_LOG__FILEPATH=/data/logs/app.jsonl \
     SERO_PROCESSING__DIRPATH=/data/output
 
