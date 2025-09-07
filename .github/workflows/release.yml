@@ -1,15 +1,19 @@
 name: Release
 
 on:
-  push:
+  workflow_run:
+    workflows: ["CI"]
     branches: [ main ]
+    types: [ completed ]
 
 permissions:
   contents: write
   id-token: write
+  packages: write
 
 jobs:
   release:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     concurrency: release
     
@@ -18,55 +22,38 @@ jobs:
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
-        token: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
+    - name: Python Semantic Release
+      id: semrel
+      uses: python-semantic-release/python-semantic-release@v9.15.0
       with:
-        python-version: '3.13'
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        root_options: "--strict --verbose"
 
-    - name: Install uv
-      uses: astral-sh/setup-uv@v4
+    - name: Login to GHCR
+      uses: docker/login-action@v3
       with:
-        version: "latest"
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Install dependencies
-      run: uv sync --all-groups
-
-    - name: Run tests
-      env:
-        SERO_SECURITY__SECRET_KEY: ci-test-secret-key
-        SERO_DB__FILEPATH: ${{ runner.temp }}/sero.sqlite
-        SERO_LOG__FILEPATH: ${{ runner.temp }}/sero_logs/app.jsonl
-        SERO_PROCESSING__DIRPATH: ${{ runner.temp }}/sero_output
-      run: uv run pytest
-
-    # Frontend build to ensure main remains buildable
-    - name: Setup pnpm
-      uses: pnpm/action-setup@v4
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v6
       with:
-        version: 9
+        context: .
+        file: ./Dockerfile
+        push: true
+        tags: |
+          ghcr.io/${{ github.repository_owner }}/sero:latest
+          ghcr.io/${{ github.repository_owner }}/sero:${{ github.sha }}
 
-    - name: Setup Node
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-        cache: 'pnpm'
-        cache-dependency-path: 'src/frontend/pnpm-lock.yaml'
+    - name: Publish GitHub Release artifacts (optional)
+      if: ${{ steps.semrel.outputs.released == 'true' }}
+      run: echo "Release created by semantic-release."
 
-    - name: Install frontend dependencies
-      working-directory: src/frontend
-      run: pnpm install --frozen-lockfile
-
-    - name: Build frontend
-      working-directory: src/frontend
-      run: pnpm run build
-
-    - name: Upload frontend build artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: frontend-static
-        path: src/backend/static
+    - name: Summary
+      run: |
+        echo "Release workflow completed. CI passed, semantic-release evaluated commits, and Docker image pushed to GHCR."
 
     - name: Determine if release is needed
       id: check_release
