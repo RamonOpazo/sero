@@ -131,6 +131,25 @@ These can be set in your shell or a .env file in your working directory.
     - `export SERO_LOG__FILEPATH=/tmp/sero_logs/app.jsonl`
     - `export SERO_PROCESSING__DIRPATH=/tmp/sero_output`
 
+#### Frontend build on main
+On push to main, CI verifies the frontend builds and emits static assets consumed by the backend:
+- pnpm is set up before Node using `pnpm/action-setup@v4` (version 9).
+- Node is set up via `actions/setup-node@v4` (Node 20) with cache: pnpm.
+- Dependencies are installed and the build runs in `src/frontend`:
+  - `working-directory: src/frontend`
+  - `pnpm install --frozen-lockfile`
+  - `pnpm run build`
+- The build outputs to `src/backend/static`, which is uploaded as an artifact.
+
+Workspace note (pnpm)
+- If you use a pnpm workspace file, ensure it declares the package:
+  - `src/frontend/pnpm-workspace.yaml` includes:
+    
+    packages:
+      - .
+    
+  This prevents the CI error “packages field missing or empty”.
+
 ### Running the Service
 Once installed, run:
 ```bash
