@@ -92,6 +92,8 @@ jobs:
         context: .
         file: ./Dockerfile
         push: true
+        build-args: |
+          SETUPTOOLS_SCM_PRETEND_VERSION_FOR_SERO=${{ steps.semrel.outputs.version }}
         tags: |
           ghcr.io/${{ env.OWNER_LC }}/${{ env.REPO_LC }}:latest
           ghcr.io/${{ env.OWNER_LC }}/${{ env.REPO_LC }}:${{ steps.semrel.outputs.tag }}
