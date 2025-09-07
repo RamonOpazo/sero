@@ -20,10 +20,10 @@ jobs:
           cache: 'pnpm'
           cache-dependency-path: 'frontend/pnpm-lock.yaml'
       
-      - name: Ensure pnpm available via corepack
-        run: |
-          corepack enable
-          corepack prepare pnpm@10 --activate
+      # - name: Ensure pnpm available via corepack
+      #   run: |
+      #     corepack enable
+      #     corepack prepare pnpm@10 --activate
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
