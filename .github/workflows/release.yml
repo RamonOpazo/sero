@@ -76,7 +76,7 @@ jobs:
         files: |
           sero-backend-with-static.tar.gz
         fail_on_unmatched_files: true
-        overwrite: true
+        overwrite_files: true
 
     - name: Login to GHCR
       if: ${{ steps.semrel.outputs.released == 'true' }}
