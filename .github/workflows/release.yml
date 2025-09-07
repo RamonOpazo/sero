@@ -30,6 +30,41 @@ jobs:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         root_options: "--strict --verbose"
 
+    # Build frontend and package backend+static as a release asset (sdist-like archive)
+    - name: Setup Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: 10
+
+    - name: Install frontend dependencies
+      working-directory: frontend
+      run: pnpm install --frozen-lockfile
+
+    - name: Build frontend
+      working-directory: frontend
+      run: pnpm build
+
+    - name: Sync frontend build into backend static
+      run: |
+        rm -rf backend/src/static && mkdir -p backend/src/static
+        cp -r frontend/dist/* backend/src/static/
+
+    - name: Package backend with static asset
+      run: tar czf sero-backend-with-static.tar.gz backend
+
+    - name: Upload asset to GitHub Release
+      if: ${{ steps.semrel.outputs.released == 'true' }}
+      uses: softprops/action-gh-release@v2
+      with:
+        files: |
+          sero-backend-with-static.tar.gz
+        fail_on_unmatched_files: true
+
     - name: Login to GHCR
       uses: docker/login-action@v3
       with:
