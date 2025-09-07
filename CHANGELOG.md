@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v1.9.11 (2025-09-07)
+
+### Bug Fixes
+
+- Remove tarball-based install; use uv tool install from GitHub repo only
+  ([#49](https://github.com/RamonOpazo/sero/pull/49),
+  [`4eef550`](https://github.com/RamonOpazo/sero/commit/4eef550560d5a7aa4f0fb0e556734e6a45bb6664))
+
+docs: update backend README to reflect repo-based install only
+
+
 ## v1.9.10 (2025-09-07)
 
 ### Bug Fixes
