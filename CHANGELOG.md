@@ -1,6 +1,16 @@
 # CHANGELOG
 
 
+## v1.9.2 (2025-09-07)
+
+### Bug Fixes
+
+- Release pipeline stability and Docker GHCR publishing
+  ([`5241a01`](https://github.com/RamonOpazo/sero/commit/5241a014746a227ad211d5f7ed529164551a0e87))
+
+Ensure CI + release integration with frontend assets packaging and GHCR tagging fixes.
+
+
 ## v1.9.1 (2025-09-07)
 
 ### Bug Fixes
