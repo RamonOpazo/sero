@@ -1,6 +1,25 @@
 # CHANGELOG
 
 
+## v1.9.4 (2025-09-07)
+
+### Bug Fixes
+
+- Caching and naming ([#38](https://github.com/RamonOpazo/sero/pull/38),
+  [`8734a9f`](https://github.com/RamonOpazo/sero/commit/8734a9f2ca69cf740787ce4d0680c775dd6cda1c))
+
+* release: push Docker image only when a release is created (gate steps on semrel.outputs.released)
+
+* ci: cache pnpm and uv .venv to speed up runs; release: use semantic tag for Docker images and
+  cache pnpm
+
+* ci/release: ensure pnpm is available via corepack before usage
+
+* ci: apply workflow adjustments (pnpm corepack, caching, tag fixes, gated docker)
+
+* ci: workflow refinements and stability tweaks
+
+
 ## v1.9.3 (2025-09-07)
 
 ### Bug Fixes
