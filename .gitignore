@@ -20,6 +20,3 @@ wheels/
 
 # Secret files
 *.env
-
-# Untrack changes to sero/src/backend/static
-src/backend/static/
