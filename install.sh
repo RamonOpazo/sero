@@ -99,37 +99,9 @@ ensure_uv() {
 
 install_sero_app() {
   echo_step "Step 4: Installing the SERO application..."
-  echo_info "Installing '$APP_NAME' from GitHub release tarball using 'uv tool install'..."
-
-  # Allow explicit override via env var
-  if [ -n "${SERO_TARBALL_URL:-}" ]; then
-    TAR_URL="$SERO_TARBALL_URL"
-  else
-    # Determine release tag (allow override via RELEASE_TAG)
-    if [ -n "${RELEASE_TAG:-}" ]; then
-      TAG="$RELEASE_TAG"
-    else
-      # Query GitHub API for the latest release tag
-      TAG=$(curl -fsSL "https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest" \
-        | grep -m1 -oE '"tag_name"[[:space:]]*:[[:space:]]*"[^"]+"' \
-        | sed -E 's/.*:\s*"([^"]+)"/\1/') || TAG=""
-    fi
-
-    if [ -z "$TAG" ]; then
-      echo_info "Could not determine release tag (API rate limit or no releases). Falling back to VCS install..."
-      if ! uv tool install --from "$GITHUB_REPO_URL" "$APP_NAME"; then
-        echo_error "Failed to install '$APP_NAME' from GitHub (VCS fallback)."
-        exit 1
-      fi
-      echo_success "'$APP_NAME' installed (VCS fallback)."
-      return
-    fi
-
-    TAR_URL="https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/download/${TAG}/sero-backend-with-static.tar.gz#subdirectory=backend"
-  fi
-
-  if ! uv tool install "$TAR_URL"; then
-    echo_error "Failed to install '$APP_NAME' from release tarball: $TAR_URL"
+  echo_info "Installing '$APP_NAME' from GitHub using 'uv tool install'..."
+  if ! uv tool install --from "$GITHUB_REPO_URL" "$APP_NAME"; then
+    echo_error "Failed to install '$APP_NAME' from GitHub."
     exit 1
   fi
   echo_success "'$APP_NAME' installed."

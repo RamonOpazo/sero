@@ -102,40 +102,12 @@ function Ensure-Uv {
 
 function Install-SeroApp {
     Write-Step "Step 4: Installing the SERO application..."
-    Write-Info "Installing '$appName' from GitHub release tarball using 'uv tool install'..."
-
-    $tarUrl = $env:SERO_TARBALL_URL
-    if (-not $tarUrl) {
-        # Determine tag (allow override via RELEASE_TAG env var)
-        $tag = $env:RELEASE_TAG
-        if (-not $tag) {
-            try {
-                $latest = Invoke-RestMethod -Uri "https://api.github.com/repos/$owner/$repo/releases/latest" -UseBasicParsing
-                $tag = $latest.tag_name
-            } catch {
-                $tag = $null
-            }
-        }
-
-        if (-not $tag) {
-            Write-Info "Could not determine release tag (API rate limit or no releases). Falling back to VCS install..."
-            try {
-                uv tool install --from "git+$repoUrl" $appName
-                Write-Success "'$appName' installed (VCS fallback)."
-            } catch {
-                Write-Error "Failed to install '$appName' from GitHub (VCS fallback)."
-            }
-            return
-        }
-
-        $tarUrl = "https://github.com/$owner/$repo/releases/download/$tag/sero-backend-with-static.tar.gz#subdirectory=backend"
-    }
-
+    Write-Info "Installing '$appName' from GitHub using 'uv tool install'..."
     try {
-        uv tool install $tarUrl
+        uv tool install --from "git+$repoUrl" $appName
         Write-Success "'$appName' installed."
     } catch {
-        Write-Error "Failed to install '$appName' from release tarball: $tarUrl"
+        Write-Error "Failed to install '$appName' from GitHub."
     }
 }
 
