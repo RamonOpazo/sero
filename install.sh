@@ -100,8 +100,10 @@ ensure_uv() {
 install_sero_app() {
   echo_step "Step 4: Installing the SERO application..."
   echo_info "Installing '$APP_NAME' from GitHub using 'uv tool install'..."
-  if ! uv tool install --from "$GITHUB_REPO_URL" "$APP_NAME"; then
-    echo_error "Failed to install '$APP_NAME' from GitHub."
+  # Ensure install from backend subdirectory in monorepo
+  local REPO_URL_WITH_SUBDIR="git+https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}.git#subdirectory=backend"
+  if ! uv tool install --from "$REPO_URL_WITH_SUBDIR" "$APP_NAME"; then
+    echo_error "Failed to install '$APP_NAME' from GitHub (backend subdirectory)."
     exit 1
   fi
   echo_success "'$APP_NAME' installed."
