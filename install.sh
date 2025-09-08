@@ -11,7 +11,7 @@ set -e
 OLLAMA_MODEL="llama2"
 GITHUB_OWNER="RamonOpazo"
 GITHUB_REPO="sero"
-GITHUB_REPO_URL="git+https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}.git"
+GITHUB_REPO_URL="git+https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}.git#subdirectory=backend"
 APP_NAME="sero"
 
 # --- Color Definitions ---
