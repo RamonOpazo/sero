@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v1.9.12 (2025-09-08)
+
+### Bug Fixes
+
+- **install**: Point uv tool install to backend subdirectory for monorepo layout
+  ([#51](https://github.com/RamonOpazo/sero/pull/51),
+  [`3c77795`](https://github.com/RamonOpazo/sero/commit/3c7779554be88ddfddb92b970b19b6e577a3b744))
+
+
 ## v1.9.11 (2025-09-07)
 
 ### Bug Fixes
