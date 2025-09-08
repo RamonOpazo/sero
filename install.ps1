@@ -104,7 +104,8 @@ function Install-SeroApp {
     Write-Step "Step 4: Installing the SERO application..."
     Write-Info "Installing '$appName' from GitHub using 'uv tool install'..."
     try {
-        uv tool install --from "git+$repoUrl" $appName
+        # Ensure install from backend subdirectory in monorepo
+        uv tool install --from "git+$repoUrl#subdirectory=backend" $appName
         Write-Success "'$appName' installed."
     } catch {
         Write-Error "Failed to install '$appName' from GitHub."

@@ -66,7 +66,7 @@ If the command isn’t found, add the directory above to your PATH or restart th
 
 Install directly with uv (no scripts)
 ```bash
-uv tool install --from git+https://github.com/RamonOpazo/sero.git sero
+uv tool install --from git+https://github.com/RamonOpazo/sero.git#subdirectory=backend sero
 ```
 
 From source (development)
